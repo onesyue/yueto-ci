@@ -1,0 +1,62 @@
+# yueto-ci
+
+Yue.to 服务端组件的**统一构建仓**。本仓库公开（公开仓 GitHub Actions 免费、无分钟上限），只含构建脚本，不含业务代码；私有代码仓由 PAT checkout，产物只推 `ghcr.io/onesyue/*`，不留 artifacts。
+
+客户端（yuelink）构建在 [yuelink-ci](https://github.com/onesyue/yuelink-ci)，与本仓并列，即"两个构建仓"架构。
+
+## 覆盖的服务
+
+见 `services.json`：xboard、xboard-node、yueops-web、checkin-api、yue-bot、yueboard。增删服务改这一个文件即可。
+
+## 触发
+
+```sh
+# 手动构建单个服务 / 全部
+gh workflow run build.yml -R onesyue/yueto-ci -f service=xboard-node
+gh workflow run build.yml -R onesyue/yueto-ci -f service=all
+
+# 代码仓 push 后自动触发：在代码仓放 thin workflow（计费落在公开仓）
+```
+
+代码仓 thin workflow 模板（`.github/workflows/trigger-build.yml`）：
+
+```yaml
+name: Trigger yueto-ci build
+on:
+  push:
+    branches: [main] # 按仓库主分支改
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.YUETO_CI_DISPATCH_PAT }}
+          repository: onesyue/yueto-ci
+          event-type: build
+          client-payload: '{"service": "<本服务名>", "ref": "${{ github.sha }}"}'
+```
+
+## 必需的 secrets（仓库 Settings → Secrets → Actions）
+
+- `YUETO_CI_PAT` — classic PAT，勾 `repo` + `write:packages`：checkout 私有代码仓 + 推 GHCR。
+  （已有包如 ghcr.io/onesyue/xboard 归属各代码仓，本仓 GITHUB_TOKEN 推不动，必须用 PAT。）
+- 各代码仓需要 `YUETO_CI_DISPATCH_PAT` — fine-grained PAT，只授 yueto-ci 的 contents:write（发 dispatch 用）。
+
+## ⚠️ 迁移注意：cosign 签名身份变更
+
+构建搬到本仓后，Sigstore keyless 签名的 identity 从 `https://github.com/onesyue/<代码仓>/...`
+变为 `https://github.com/onesyue/yueto-ci/...`。节点侧部署验签（yueops
+`scripts/verify-image-signature.sh` 的 `--certificate-identity-regexp`）必须同步更新为：
+
+```
+^https://github.com/onesyue/yueto-ci/
+```
+
+迁移顺序（每个服务）：本仓构建成功 → 验签脚本 regexp 更新并部署 → 切换部署 pin 到本仓产出的 tag → 删除代码仓里的旧 docker-publish workflow。
+
+## 公开仓纪律
+
+- 日志保持简洁，绝不回显配置/路径细节；敏感值一律走 secrets（Actions 自动打码）。
+- 不产出 artifacts（公开仓 artifacts 任何人可下载），产物只进 GHCR。
+- **绝不给本仓挂 self-hosted runner**（公开仓 fork PR 可在 runner 上执行任意代码）。

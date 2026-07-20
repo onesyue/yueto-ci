@@ -1,0 +1,144 @@
+name: Build & publish images
+
+# 统一构建仓（公开仓 = Actions 免费无上限）。
+# 私有代码仓由 YUETO_CI_PAT checkout；镜像推 ghcr.io/onesyue/<service>。
+# 触发方式：
+#   1) 手动: workflow_dispatch，service 填 services.json 里的名字或 "all"
+#   2) 代码仓 thin workflow: repository_dispatch (event_type: build, client_payload: {service, ref?})
+# ⚠️ 公开仓纪律：日志保持简洁；凡敏感值走 secrets（自动打码）；不产出 artifacts，产物只进 GHCR。
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'service name (see services.json) or "all"'
+        required: true
+        default: 'all'
+      ref:
+        description: 'override git ref (default: per services.json)'
+        required: false
+  repository_dispatch:
+    types: [build]
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write # cosign keyless OIDC
+
+concurrency:
+  group: build-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: plan
+        env:
+          SERVICE: ${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
+          REF_OVERRIDE: ${{ github.event.inputs.ref || github.event.client_payload.ref || '' }}
+        run: |
+          matrix=$(jq -c --arg s "$SERVICE" --arg r "$REF_OVERRIDE" \
+            '[ .[] | select($s == "all" or .service == $s) | if $r != "" then .ref = $r else . end ]' services.json)
+          [ "$(echo "$matrix" | jq 'length')" -gt 0 ] || { echo "unknown service: $SERVICE" >&2; exit 1; }
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    name: ${{ matrix.service }}
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+          token: ${{ secrets.YUETO_CI_PAT }}
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        if: contains(matrix.platforms, 'arm64')
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: 'arm64,amd64'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: onesyue
+          password: ${{ secrets.YUETO_CI_PAT }}
+
+      - name: Prebuild hook
+        if: matrix.prebuild != ''
+        run: ${{ matrix.prebuild }}
+
+      - name: Compute tags
+        id: meta
+        run: |
+          SHA_SHORT=$(git rev-parse --short=7 HEAD)
+          IMG="ghcr.io/onesyue/${{ matrix.service }}"
+          echo "image=${IMG}" >> "$GITHUB_OUTPUT"
+          echo "tags=${IMG}:latest,${IMG}:sha-${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          platforms: ${{ matrix.platforms }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ matrix.repo }}
+            org.opencontainers.image.revision=${{ github.event.client_payload.ref || '' }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          provenance: mode=max
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Generate SBOM (CycloneDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+
+      # OIDC token 手动获取 + 抖动重试：matrix 并发下 GitHub OIDC 端点限流会让
+      # cosign ambient 自取炸掉（yueops 仓 2026-07-09 实测），sign/attest 共用一个 token。
+      - name: Sign & attest image (Sigstore keyless)
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE: ${{ steps.meta.outputs.image }}
+        run: |
+          set -uo pipefail
+          fetch_token() {
+            curl -sSf \
+              -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sigstore" \
+              | jq -er '.value'
+          }
+          TOKEN=""
+          for i in 1 2 3 4 5 6; do
+            if TOKEN=$(fetch_token 2>/dev/null) && [ -n "$TOKEN" ]; then break; fi
+            TOKEN=""
+            echo "OIDC token fetch attempt $i failed, retrying with jitter..." >&2
+            sleep $(( i * 3 + (RANDOM % 7) ))
+          done
+          [ -n "$TOKEN" ] || { echo "FATAL: OIDC token fetch failed after retries" >&2; exit 1; }
+          cosign sign   --yes --identity-token "$TOKEN" "${IMAGE}@${DIGEST}"
+          cosign attest --yes --identity-token "$TOKEN" \
+            --predicate sbom.cdx.json --type cyclonedx "${IMAGE}@${DIGEST}"

@@ -1,0 +1,56 @@
+[
+  {
+    "service": "xboard",
+    "repo": "onesyue/Xboard",
+    "ref": "master",
+    "context": ".",
+    "dockerfile": "Dockerfile",
+    "platforms": "linux/amd64,linux/arm64",
+    "prebuild": "VERSION=\"$(date -u '+%Y.%m.%d')-$(git rev-parse --short HEAD)\"; sed -i \"s/'version' => '.*'/'version' => '$VERSION'/g\" config/app.php"
+  },
+  {
+    "service": "xboard-node",
+    "repo": "onesyue/Xboard-Node",
+    "ref": "master",
+    "context": ".",
+    "dockerfile": "Dockerfile",
+    "platforms": "linux/amd64,linux/arm64",
+    "prebuild": ""
+  },
+  {
+    "service": "yueops-web",
+    "repo": "onesyue/yueops",
+    "ref": "main",
+    "context": ".",
+    "dockerfile": "services/yueops-web/Dockerfile",
+    "platforms": "linux/amd64",
+    "prebuild": ""
+  },
+  {
+    "service": "checkin-api",
+    "repo": "onesyue/yueops",
+    "ref": "main",
+    "context": ".",
+    "dockerfile": "services/checkin-api/Dockerfile",
+    "platforms": "linux/amd64",
+    "prebuild": ""
+  },
+  {
+    "service": "yue-bot",
+    "repo": "onesyue/yueops",
+    "ref": "main",
+    "context": ".",
+    "dockerfile": "services/yue-bot/Dockerfile",
+    "platforms": "linux/amd64",
+    "prebuild": ""
+  },
+  {
+    "service": "yueboard",
+    "repo": "onesyue/yueboard",
+    "ref": "main",
+    "context": ".",
+    "dockerfile": "Dockerfile",
+    "platforms": "linux/amd64,linux/arm64",
+    "prebuild": ""
+  }
+]
