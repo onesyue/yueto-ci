@@ -18,6 +18,15 @@
     "prebuild": ""
   },
   {
+    "service": "yue-node",
+    "repo": "onesyue/Xboard-Node",
+    "ref": "master",
+    "context": ".",
+    "dockerfile": "Dockerfile",
+    "platforms": "linux/amd64,linux/arm64",
+    "prebuild": ""
+  },
+  {
     "service": "yueops-web",
     "repo": "onesyue/yueops",
     "ref": "main",
