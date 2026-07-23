@@ -9,17 +9,8 @@
     "prebuild": "VERSION=\"$(date -u '+%Y.%m.%d')-$(git rev-parse --short HEAD)\"; sed -i \"s/'version' => '.*'/'version' => '$VERSION'/g\" config/app.php"
   },
   {
-    "service": "xboard-node",
-    "repo": "onesyue/Xboard-Node",
-    "ref": "master",
-    "context": ".",
-    "dockerfile": "Dockerfile",
-    "platforms": "linux/amd64,linux/arm64",
-    "prebuild": ""
-  },
-  {
     "service": "yue-node",
-    "repo": "onesyue/Xboard-Node",
+    "repo": "onesyue/yue-node",
     "ref": "master",
     "context": ".",
     "dockerfile": "Dockerfile",
