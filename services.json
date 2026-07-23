@@ -1,14 +1,5 @@
 [
   {
-    "service": "xboard",
-    "repo": "onesyue/Xboard",
-    "ref": "master",
-    "context": ".",
-    "dockerfile": "Dockerfile",
-    "platforms": "linux/amd64,linux/arm64",
-    "prebuild": "VERSION=\"$(date -u '+%Y.%m.%d')-$(git rev-parse --short HEAD)\"; sed -i \"s/'version' => '.*'/'version' => '$VERSION'/g\" config/app.php"
-  },
-  {
     "service": "yue-node",
     "repo": "onesyue/yue-node",
     "ref": "master",

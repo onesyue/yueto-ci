@@ -6,13 +6,13 @@ Yue.to 服务端组件的**统一构建仓**。本仓库公开（公开仓 GitHu
 
 ## 覆盖的服务
 
-见 `services.json`：xboard、xboard-node、yueops-web、checkin-api、yue-bot、yueboard。增删服务改这一个文件即可。
+见 `services.json`：yue-node、yueops-web、checkin-api、yue-bot、yueboard。增删服务改这一个文件即可。
 
 ## 触发
 
 ```sh
 # 手动构建单个服务 / 全部
-gh workflow run build.yml -R onesyue/yueto-ci -f service=xboard-node
+gh workflow run build.yml -R onesyue/yueto-ci -f service=yueboard
 gh workflow run build.yml -R onesyue/yueto-ci -f service=all
 
 # 代码仓 push 后自动触发：在代码仓放 thin workflow（计费落在公开仓）
@@ -40,7 +40,7 @@ jobs:
 ## 必需的 secrets（仓库 Settings → Secrets → Actions）
 
 - `YUETO_CI_PAT` — classic PAT，勾 `repo` + `write:packages`：checkout 私有代码仓 + 推 GHCR。
-  （已有包如 ghcr.io/onesyue/xboard 归属各代码仓，本仓 GITHUB_TOKEN 推不动，必须用 PAT。）
+  （已有包如 ghcr.io/onesyue/yueboard 归属各代码仓，本仓 GITHUB_TOKEN 推不动，必须用 PAT。）
 - 各代码仓需要 `YUETO_CI_DISPATCH_PAT` — fine-grained PAT，只授 yueto-ci 的 contents:write（发 dispatch 用）。
 
 ## ⚠️ 迁移注意：cosign 签名身份变更
