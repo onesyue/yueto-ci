@@ -81,6 +81,9 @@ class BuildPolicyTest(unittest.TestCase):
             with self.subTest(gate=gate):
                 self.assertIn(gate, self.workflow)
 
+    def test_yueops_tests_do_not_override_the_isolated_database_fixture(self) -> None:
+        self.assertNotIn("DATABASE_URL: ''", self.workflow)
+
     def test_service_matrix_is_closed_and_complete(self) -> None:
         expected_keys = {
             "service",

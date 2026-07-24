@@ -223,8 +223,6 @@ jobs:
 
       - name: Validate yueops backend
         if: matrix.validation == 'yueops'
-        env:
-          DATABASE_URL: ''
         run: |
           uv lock --check
           python scripts/check-python-dependency-groups.py
