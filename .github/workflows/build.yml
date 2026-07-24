@@ -198,6 +198,13 @@ jobs:
         if: matrix.validation == 'yueboard'
         run: |
           corepack enable
+          web_pm=$(node -p "require('./web/package.json').packageManager")
+          admin_pm=$(node -p "require('./web-admin/package.json').packageManager")
+          [ "$web_pm" = "$admin_pm" ] || {
+            echo "YueBoard frontend package-manager versions diverged" >&2
+            exit 1
+          }
+          corepack install --global "$web_pm"
           pnpm --dir web install --frozen-lockfile
           pnpm --dir web build
           pnpm --dir web-admin install --frozen-lockfile

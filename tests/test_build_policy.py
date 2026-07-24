@@ -69,6 +69,8 @@ class BuildPolicyTest(unittest.TestCase):
             "working-directory: frontend",
             "working-directory: telegram-bot/yue/miniapp",
             "npm audit --registry=https://registry.npmjs.org",
+            'corepack install --global "$web_pm"',
+            '[ "$web_pm" = "$admin_pm" ]',
             "squawk-cli@2.60.0",
             "aquasecurity/trivy-action@",
             "sigstore/cosign-installer@",
