@@ -74,6 +74,7 @@ class BuildPolicyTest(unittest.TestCase):
             "squawk-cli@2.60.0",
             "aquasecurity/trivy-action@",
             "sigstore/cosign-installer@",
+            "cosign-release: v3.1.2",
             "actions/attest-build-provenance@",
         )
         for gate in required:
