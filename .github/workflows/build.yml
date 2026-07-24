@@ -459,8 +459,8 @@ jobs:
               "$sbom" >/dev/null
           done
 
-      # OIDC token 手动获取 + 抖动重试：matrix 并发下 GitHub OIDC 端点限流会让
-      # cosign ambient 自取炸掉（yueops 仓 2026-07-09 实测），sign/attest 共用一个 token。
+      # OIDC 与 Fulcio 都是外部控制面。每次 sign/attest 尝试获取新 token，并对
+      # 短暂限流、连接重置和 registry 可见性延迟做有界重试；门禁本身不降级。
       - name: Sign & attest image (Sigstore keyless)
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
@@ -474,30 +474,63 @@ jobs:
               "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sigstore" \
               | jq -er '.value'
           }
-          TOKEN=""
-          for i in 1 2 3 4 5 6; do
-            if TOKEN=$(fetch_token 2>/dev/null) && [ -n "$TOKEN" ]; then break; fi
-            TOKEN=""
-            echo "OIDC token fetch attempt $i failed, retrying with jitter..." >&2
-            sleep $(( i * 3 + (RANDOM % 7) ))
-          done
-          [ -n "$TOKEN" ] || { echo "FATAL: OIDC token fetch failed after retries" >&2; exit 1; }
-          cosign sign --yes --identity-token "$TOKEN" "${IMAGE}@${DIGEST}"
+          keyless_cosign() {
+            local command="$1"
+            local token=""
+            local attempt
+            shift
+            for attempt in 1 2 3 4 5 6; do
+              token=""
+              if token=$(fetch_token 2>/dev/null) && [ -n "$token" ] &&
+                cosign "$command" --yes --identity-token "$token" "$@"; then
+                return 0
+              fi
+              echo "cosign ${command} attempt ${attempt} failed; retrying with fresh OIDC token..." >&2
+              sleep $(( attempt * 3 + (RANDOM % 7) ))
+            done
+            echo "FATAL: cosign ${command} failed after bounded retries" >&2
+            return 1
+          }
+          verify_cosign() {
+            local attempt
+            for attempt in 1 2 3 4 5 6; do
+              if cosign "$@"; then
+                return 0
+              fi
+              echo "cosign verification attempt ${attempt} failed; retrying..." >&2
+              sleep $(( attempt * 2 + (RANDOM % 5) ))
+            done
+            echo "FATAL: cosign verification failed after bounded retries" >&2
+            return 1
+          }
+          keyless_cosign sign "${IMAGE}@${DIGEST}"
           for sbom in sbom-linux-*.cdx.json; do
-            cosign attest --yes --identity-token "$TOKEN" \
+            keyless_cosign attest \
               --predicate "$sbom" --type cyclonedx "${IMAGE}@${DIGEST}"
           done
           IDENTITY="https://github.com/${GITHUB_WORKFLOW_REF}"
           ISSUER="https://token.actions.githubusercontent.com"
-          cosign verify \
+          verify_cosign verify \
             --certificate-identity "$IDENTITY" \
             --certificate-oidc-issuer "$ISSUER" \
             "${IMAGE}@${DIGEST}" >/dev/null
-          cosign verify-attestation \
-            --certificate-identity "$IDENTITY" \
-            --certificate-oidc-issuer "$ISSUER" \
-            --type cyclonedx "${IMAGE}@${DIGEST}" \
-            | jq -s -e "length >= ${EXPECTED_SBOMS}" >/dev/null
+          ATTESTATIONS=""
+          for i in 1 2 3 4 5 6; do
+            if ATTESTATIONS=$(cosign verify-attestation \
+              --certificate-identity "$IDENTITY" \
+              --certificate-oidc-issuer "$ISSUER" \
+              --type cyclonedx "${IMAGE}@${DIGEST}"); then
+              break
+            fi
+            ATTESTATIONS=""
+            echo "cosign attestation verification attempt ${i} failed; retrying..." >&2
+            sleep $(( i * 2 + (RANDOM % 5) ))
+          done
+          [ -n "$ATTESTATIONS" ] || {
+            echo "FATAL: cosign attestation verification failed after bounded retries" >&2
+            exit 1
+          }
+          jq -s -e "length >= ${EXPECTED_SBOMS}" <<<"$ATTESTATIONS" >/dev/null
 
       - name: Generate signed GitHub build provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0

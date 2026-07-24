@@ -75,6 +75,11 @@ class BuildPolicyTest(unittest.TestCase):
             "aquasecurity/trivy-action@",
             "sigstore/cosign-installer@",
             "cosign-release: v3.1.2",
+            "retrying with fresh OIDC token",
+            'keyless_cosign sign "${IMAGE}@${DIGEST}"',
+            "keyless_cosign attest",
+            "FATAL: cosign ${command} failed after bounded retries",
+            "FATAL: cosign verification failed after bounded retries",
             "actions/attest-build-provenance@",
         )
         for gate in required:
