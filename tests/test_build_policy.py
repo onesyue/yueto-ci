@@ -95,7 +95,7 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow,
         )
         self.assertIn(
-            "ref: b98d390b68b0183f6cf5719758dc55440bf4773b",
+            "ref: 60eca1b13d15ec5444bd93a329eba822b37c2a77",
             self.workflow,
         )
         self.assertIn(
