@@ -148,7 +148,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: onesyue/yueboard
-          ref: b0388f4abc27753ef57d295ad9e4c598601134e9
+          ref: 0a806657ad8f6655d562b0e2a20a3b2c5a443cf6
           token: ${{ secrets.YUETO_CI_PAT }}
           path: .ci-yueboard
           fetch-depth: 1
