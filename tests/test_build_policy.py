@@ -84,6 +84,20 @@ class BuildPolicyTest(unittest.TestCase):
     def test_yueops_tests_do_not_override_the_isolated_database_fixture(self) -> None:
         self.assertNotIn("DATABASE_URL: ''", self.workflow)
 
+    def test_yueops_acl_validation_uses_a_pinned_yueboard_contract(self) -> None:
+        self.assertIn(
+            "Checkout YueBoard contract for YueOps ACL validation",
+            self.workflow,
+        )
+        self.assertIn(
+            "ref: b0388f4abc27753ef57d295ad9e4c598601134e9",
+            self.workflow,
+        )
+        self.assertIn(
+            "YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard",
+            self.workflow,
+        )
+
     def test_service_matrix_is_closed_and_complete(self) -> None:
         expected_keys = {
             "service",
