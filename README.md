@@ -11,11 +11,16 @@ Yue.to 服务端组件的**统一构建仓**。本仓库公开（公开仓 GitHu
 ## 触发
 
 ```sh
-# 手动构建单个服务 / 全部
+# 手动构建默认只生成经过测试、扫描和签名的 candidate，不改 latest
 gh workflow run build.yml -R onesyue/yueto-ci -f service=yueboard
 gh workflow run build.yml -R onesyue/yueto-ci -f service=all
 
-# 代码仓 push 后自动触发：在代码仓放 thin workflow（计费落在公开仓）
+# 只有显式 promote=true 且 ref 解析为源码仓当前默认分支 HEAD 才能提升
+gh workflow run build.yml -R onesyue/yueto-ci \
+  -f service=yueboard -f ref=<40-hex-main-head> -f promote=true
+
+# 代码仓默认分支 push 后自动触发并提升：在代码仓放 thin workflow
+# （计费落在公开仓；发送者、精确 SHA、默认分支 HEAD 均由中央门复核）
 ```
 
 代码仓 thin workflow 模板（`.github/workflows/trigger-build.yml`）：
@@ -29,19 +34,21 @@ jobs:
   dispatch:
     runs-on: ubuntu-latest
     steps:
-      - uses: peter-evans/repository-dispatch@v3
+      - uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ secrets.YUETO_CI_DISPATCH_PAT }}
           repository: onesyue/yueto-ci
           event-type: build
-          client-payload: '{"service": "<本服务名>", "ref": "${{ github.sha }}"}'
+          client-payload: '{"service": "<本服务名>", "ref": "${{ github.sha }}", "before": "${{ github.event.before }}", "promote": true}'
 ```
 
 ## 必需的 secrets（仓库 Settings → Secrets → Actions）
 
 - `YUETO_CI_PAT` — classic PAT，勾 `repo` + `write:packages`：checkout 私有代码仓 + 推 GHCR。
   （已有包如 ghcr.io/onesyue/yueboard 归属各代码仓，本仓 GITHUB_TOKEN 推不动，必须用 PAT。）
-- 各代码仓需要 `YUETO_CI_DISPATCH_PAT` — fine-grained PAT，只授 yueto-ci 的 contents:write（发 dispatch 用）。
+- 各代码仓需要 `YUETO_CI_DISPATCH_PAT` — 归属可信 `onesyue` actor 的
+  fine-grained PAT，只授 yueto-ci 发 repository dispatch 所需的最小权限。
+  中央 workflow 会拒绝其他 actor 发起的自动提升。
 
 ## ⚠️ 迁移注意：cosign 签名身份变更
 

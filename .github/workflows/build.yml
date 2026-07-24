@@ -3,8 +3,11 @@ name: Build & publish images
 # 统一构建仓（公开仓 = Actions 免费无上限）。
 # 私有代码仓由 YUETO_CI_PAT checkout；镜像推 ghcr.io/onesyue/<service>。
 # 触发方式：
-#   1) 手动: workflow_dispatch，service 填 services.json 里的名字或 "all"
-#   2) 代码仓 thin workflow: repository_dispatch (event_type: build, client_payload: {service, ref?})
+#   1) 手动: workflow_dispatch，默认只产出已验证/签名的 candidate；显式 promote
+#      才能更新 sha-* / latest，且候选必须仍是对应源码仓默认分支 HEAD。
+#   2) 代码仓 thin workflow: repository_dispatch
+#      (event_type: build, client_payload: {service, ref, promote})。自动提升要求
+#      onesyue 可信发送者 + 精确 40-hex 源码 SHA + 默认分支 HEAD 三重一致。
 # ⚠️ 公开仓纪律：日志保持简洁；凡敏感值走 secrets（自动打码）；不产出 artifacts，产物只进 GHCR。
 
 on:
@@ -17,13 +20,20 @@ on:
       ref:
         description: 'override git ref (default: per services.json)'
         required: false
+        type: string
+      promote:
+        description: 'promote verified default-branch HEAD to sha-* and latest'
+        required: true
+        type: boolean
+        default: false
   repository_dispatch:
     types: [build]
 
 permissions:
   contents: read
-  packages: write
-  id-token: write # cosign keyless OIDC
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
   group: build-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
@@ -34,88 +44,398 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
+      validation_matrix: ${{ steps.plan.outputs.validation_matrix }}
+      promote: ${{ steps.plan.outputs.promote }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - id: plan
         env:
           SERVICE: ${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
           REF_OVERRIDE: ${{ github.event.inputs.ref || github.event.client_payload.ref || '' }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTOR: ${{ github.actor }}
+          MANUAL_PROMOTE: ${{ github.event.inputs.promote || 'false' }}
+          DISPATCH_PROMOTE: ${{ github.event.client_payload.promote || 'false' }}
         run: |
+          set -euo pipefail
+          promote=false
+          case "$EVENT_NAME" in
+            workflow_dispatch)
+              case "$MANUAL_PROMOTE" in
+                true) promote=true ;;
+                false|'') ;;
+                *)
+                  echo "invalid manual promote value: $MANUAL_PROMOTE" >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            repository_dispatch)
+              case "$DISPATCH_PROMOTE" in
+                true)
+                  [ "$EVENT_ACTOR" = "onesyue" ] || {
+                    echo "repository_dispatch promotion is restricted to the trusted onesyue actor" >&2
+                    exit 1
+                  }
+                  [[ "$REF_OVERRIDE" =~ ^[0-9a-f]{40}$ ]] || {
+                    echo "repository_dispatch promotion requires an exact 40-hex source ref" >&2
+                    exit 1
+                  }
+                  [ "$SERVICE" != "all" ] || {
+                    echo "repository_dispatch promotion may not target all services" >&2
+                    exit 1
+                  }
+                  promote=true
+                  ;;
+                false|'') ;;
+                *)
+                  echo "invalid repository_dispatch promote value: $DISPATCH_PROMOTE" >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            *)
+              echo "unsupported event for image build: $EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
           matrix=$(jq -c --arg s "$SERVICE" --arg r "$REF_OVERRIDE" \
-            '[ .[] | select($s == "all" or .service == $s) | if $r != "" then .ref = $r else . end ]' services.json)
+            '[ .[] | select($s == "all" or .service == $s or .group == $s) | if $r != "" then .ref = $r else . end ]' services.json)
           [ "$(echo "$matrix" | jq 'length')" -gt 0 ] || { echo "unknown service: $SERVICE" >&2; exit 1; }
+          validation_matrix=$(echo "$matrix" | jq -c \
+            'unique_by(.repo + "|" + .ref) | map({repo, ref, validation})')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "validation_matrix=$validation_matrix" >> "$GITHUB_OUTPUT"
+          echo "promote=$promote" >> "$GITHUB_OUTPUT"
 
-  build:
+  validate:
     needs: plan
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        include: ${{ fromJSON(needs.plan.outputs.validation_matrix) }}
+    name: validate-${{ matrix.validation }}
+    services:
+      postgres:
+        image: postgres:18@sha256:3a82e1f56c8f0f5616a11103ac3d47e632c3938698946a7ad26da0df1334744a
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: yueboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+          token: ${{ secrets.YUETO_CI_PAT }}
+          # repository_dispatch carries the source push's `before` SHA so a
+          # multi-commit push cannot hide an earlier SQL migration from lint.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueboard'
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Python
+        if: matrix.validation == 'yueops'
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.13'
+
+      - name: Set up uv
+        if: matrix.validation == 'yueops'
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: '0.10.9'
+          enable-cache: true
+
+      - name: Set up Node
+        if: matrix.validation == 'yueops' || matrix.validation == 'yueboard'
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+
+      - name: Validate yue-node
+        if: matrix.validation == 'yue-node'
+        run: |
+          make test
+          go build ./...
+          bash scripts/check-vulnerabilities.sh
+
+      - name: Validate yueboard backend and integration
+        if: matrix.validation == 'yueboard'
+        env:
+          YUEBOARD_TEST_DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/yueboard_test
+          YUEBOARD_TEST_FIXTURES: ${{ github.workspace }}/test/fixtures
+          # The migration suite intentionally destroys public; this database is
+          # the disposable PostgreSQL 18 service declared above.
+          YUEBOARD_MIGRATION_TEST_DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/yueboard_test
+          YUEBOARD_MIGRATION_TEST_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE
+          YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE: '1'
+        run: |
+          go test ./...
+          go test -tags integration ./internal/platform/db \
+            -run '^TestNativeMigrations.*OnPostgres$'
+          go test -tags integration ./test/integration/...
+          go vet ./...
+          go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+
+      - name: Validate yueboard frontends
+        if: matrix.validation == 'yueboard'
+        run: |
+          corepack enable
+          pnpm --dir web install --frozen-lockfile
+          pnpm --dir web build
+          pnpm --dir web-admin install --frozen-lockfile
+          pnpm --dir web-admin build
+
+      - name: Install yueops dependencies
+        if: matrix.validation == 'yueops'
+        run: |
+          uv export --frozen --no-default-groups \
+            --group web-runtime --group checkin-runtime --group bot-runtime \
+            --group image-build --group test \
+            --no-emit-local --output-file /tmp/ci-requirements.txt
+          python -m pip install --require-hashes -r /tmp/ci-requirements.txt
+          python -m pip install --no-deps --no-build-isolation -e telegram-bot/yue \
+            --config-settings editable_mode=compat
+
+      - name: Validate yueops backend
+        if: matrix.validation == 'yueops'
+        env:
+          DATABASE_URL: ''
+        run: |
+          uv lock --check
+          python scripts/check-python-dependency-groups.py
+          bash scripts/security_scan.sh --json | tee /tmp/security-scan.json
+          jq -e '.fail == 0' /tmp/security-scan.json >/dev/null
+          uv export --frozen --all-groups --no-emit-local \
+            --no-annotate --no-header --output-file /tmp/python-lock-audit.txt
+          uv run --frozen --only-group audit pip-audit \
+            --requirement /tmp/python-lock-audit.txt \
+            --progress-spinner off --require-hashes --disable-pip
+          python -m compileall -q web checkin-api telegram-bot/yue
+          uv run --frozen --only-group lint ruff check .
+          python scripts/audit-route-consistency.py
+          pytest -q
+
+      - name: Validate yueops frontend
+        if: matrix.validation == 'yueops'
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          npm audit --registry=https://registry.npmjs.org --audit-level=moderate
+
+      - name: Validate Yue mini app
+        if: matrix.validation == 'yueops'
+        working-directory: telegram-bot/yue/miniapp
+        run: |
+          npm ci
+          npm run build
+          npm audit --registry=https://registry.npmjs.org --audit-level=moderate
+
+      - name: Lint changed YueOps SQL migrations
+        if: matrix.validation == 'yueops'
+        env:
+          DISPATCH_BEFORE: ${{ github.event.client_payload.before || '' }}
+          SQUAWK_FLAGS: >-
+            --pg-version=15.0 --assume-in-transaction
+            --exclude=prefer-robust-stmts,prefer-text-field,prefer-identity,require-timeout-settings
+        run: |
+          set -euo pipefail
+          migration_base=""
+          if [[ "$DISPATCH_BEFORE" =~ ^[0-9a-f]{40}$ ]] &&
+             git cat-file -e "${DISPATCH_BEFORE}^{commit}" 2>/dev/null; then
+            migration_base="$DISPATCH_BEFORE"
+          elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            migration_base="$(git rev-parse HEAD^)"
+          fi
+          mapfile -t migrations < <(
+            if [ -n "$migration_base" ]; then
+              git diff --name-only --diff-filter=AM \
+                "$migration_base" HEAD -- \
+                'telegram-bot/yue/migrations/*.sql'
+            else
+              git ls-tree -r --name-only HEAD telegram-bot/yue/migrations \
+                | grep -E '\.sql$' || true
+            fi
+          )
+          if [ "${#migrations[@]}" -eq 0 ]; then
+            echo "no changed YueOps SQL migrations"
+            exit 0
+          fi
+          npm install --global squawk-cli@2.60.0
+          squawk $SQUAWK_FLAGS "${migrations[@]}"
+
+  build:
+    needs: [plan, validate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
         include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    concurrency:
+      group: verified-image-${{ matrix.service }}
+      cancel-in-progress: false
     name: ${{ matrix.service }}
     steps:
       - name: Checkout source repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.ref }}
           token: ${{ secrets.YUETO_CI_PAT }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up QEMU
         if: contains(matrix.platforms, 'arm64')
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
         with:
           platforms: 'arm64,amd64'
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@06fb636fac595d6fb4b28a5dfcb21a6f5091859c # v4.5.0
         with:
           registry: ghcr.io
+          # Central builder publishes packages owned by several private source
+          # repositories. Keep the dedicated, scoped CI credential until each
+          # GHCR package explicitly grants this public builder repository write
+          # access; checkout never persists the PAT into .git credentials.
           username: onesyue
           password: ${{ secrets.YUETO_CI_PAT }}
-
-      - name: Prebuild hook
-        if: matrix.prebuild != ''
-        run: ${{ matrix.prebuild }}
 
       - name: Compute tags
         id: meta
         run: |
+          SOURCE_SHA=$(git rev-parse HEAD)
           SHA_SHORT=$(git rev-parse --short=7 HEAD)
+          BUILD_TIME=$(git show -s --format=%cI HEAD)
           IMG="ghcr.io/onesyue/${{ matrix.service }}"
           echo "image=${IMG}" >> "$GITHUB_OUTPUT"
-          echo "tags=${IMG}:latest,${IMG}:sha-${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+          echo "source_sha=${SOURCE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "sha_short=${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+          echo "build_time=${BUILD_TIME}" >> "$GITHUB_OUTPUT"
+          echo "candidate_tag=${IMG}:candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
       - name: Build & push
         id: build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: true
           platforms: ${{ matrix.platforms }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.candidate_tag }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ matrix.repo }}
-            org.opencontainers.image.revision=${{ github.event.client_payload.ref || '' }}
+            org.opencontainers.image.revision=${{ steps.meta.outputs.source_sha }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.source_sha }}
+            COMMIT=${{ steps.meta.outputs.source_sha }}
+            BUILD_TIME=${{ steps.meta.outputs.build_time }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
           provenance: mode=max
 
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v3
+      # Only actionable vulnerabilities block: unfixed distro findings remain
+      # visible in scheduled scans but cannot be remediated by rebuilding.
+      - name: Block fixed HIGH/CRITICAL vulnerabilities (linux/amd64)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PLATFORM: linux/amd64
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          timeout: 15m
 
-      - name: Generate SBOM (CycloneDX)
-        uses: anchore/sbom-action@v0
+      - name: Block fixed HIGH/CRITICAL vulnerabilities (linux/arm64)
+        if: contains(matrix.platforms, 'arm64')
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PLATFORM: linux/arm64
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          timeout: 15m
+          skip-setup-trivy: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # v3.9.2
+
+      - name: Generate SBOM (CycloneDX, linux/amd64)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        env:
+          SYFT_PLATFORM: linux/amd64
         with:
           image: ${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}
           format: cyclonedx-json
-          output-file: sbom.cdx.json
+          output-file: sbom-linux-amd64.cdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Generate SBOM (CycloneDX, linux/arm64)
+        if: contains(matrix.platforms, 'arm64')
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        env:
+          SYFT_PLATFORM: linux/arm64
+        with:
+          image: ${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}
+          format: cyclonedx-json
+          output-file: sbom-linux-arm64.cdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Validate complete platform SBOM set
+        env:
+          EXPECTED_SBOMS: ${{ contains(matrix.platforms, 'arm64') && '2' || '1' }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          sboms=(sbom-linux-*.cdx.json)
+          [ "${#sboms[@]}" -eq "$EXPECTED_SBOMS" ] || {
+            echo "expected $EXPECTED_SBOMS platform SBOMs, found ${#sboms[@]}" >&2
+            exit 1
+          }
+          for sbom in "${sboms[@]}"; do
+            test -s "$sbom"
+            jq -e \
+              '.bomFormat == "CycloneDX" and (.specVersion | type == "string")' \
+              "$sbom" >/dev/null
+          done
 
       # OIDC token 手动获取 + 抖动重试：matrix 并发下 GitHub OIDC 端点限流会让
       # cosign ambient 自取炸掉（yueops 仓 2026-07-09 实测），sign/attest 共用一个 token。
@@ -123,8 +443,9 @@ jobs:
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
           IMAGE: ${{ steps.meta.outputs.image }}
+          EXPECTED_SBOMS: ${{ contains(matrix.platforms, 'arm64') && '2' || '1' }}
         run: |
-          set -uo pipefail
+          set -euo pipefail
           fetch_token() {
             curl -sSf \
               -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
@@ -139,6 +460,110 @@ jobs:
             sleep $(( i * 3 + (RANDOM % 7) ))
           done
           [ -n "$TOKEN" ] || { echo "FATAL: OIDC token fetch failed after retries" >&2; exit 1; }
-          cosign sign   --yes --identity-token "$TOKEN" "${IMAGE}@${DIGEST}"
-          cosign attest --yes --identity-token "$TOKEN" \
-            --predicate sbom.cdx.json --type cyclonedx "${IMAGE}@${DIGEST}"
+          cosign sign --yes --identity-token "$TOKEN" "${IMAGE}@${DIGEST}"
+          for sbom in sbom-linux-*.cdx.json; do
+            cosign attest --yes --identity-token "$TOKEN" \
+              --predicate "$sbom" --type cyclonedx "${IMAGE}@${DIGEST}"
+          done
+          IDENTITY="https://github.com/${GITHUB_WORKFLOW_REF}"
+          ISSUER="https://token.actions.githubusercontent.com"
+          cosign verify \
+            --certificate-identity "$IDENTITY" \
+            --certificate-oidc-issuer "$ISSUER" \
+            "${IMAGE}@${DIGEST}" >/dev/null
+          cosign verify-attestation \
+            --certificate-identity "$IDENTITY" \
+            --certificate-oidc-issuer "$ISSUER" \
+            --type cyclonedx "${IMAGE}@${DIGEST}" \
+            | jq -s -e "length >= ${EXPECTED_SBOMS}" >/dev/null
+
+      - name: Generate signed GitHub build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ steps.meta.outputs.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+
+      # Authorization and tag mutation intentionally share one shell step:
+      # splitting them creates a wider check/use window in which source HEAD
+      # can move after approval but before :latest is changed.
+      - name: Authorize and promote verified default-branch digest
+        if: needs.plan.outputs.promote == 'true'
+        env:
+          GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}
+          SOURCE_REPO: ${{ matrix.repo }}
+          SOURCE_SHA: ${{ steps.meta.outputs.source_sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_REF: ${{ github.event.client_payload.ref || '' }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE: ${{ steps.meta.outputs.image }}
+          SHA_TAG: sha-${{ steps.meta.outputs.sha_short }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_REPO" =~ ^onesyue/[A-Za-z0-9._-]+$ ]] || {
+            echo "::error::invalid source repository in services.json"
+            exit 1
+          }
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::resolved source SHA is not a full commit id"
+            exit 1
+          }
+          if [ "$EVENT_NAME" = "repository_dispatch" ] &&
+             [ "$DISPATCH_REF" != "$SOURCE_SHA" ]; then
+            echo "::error::repository_dispatch ref did not resolve to its exact source SHA"
+            exit 1
+          fi
+          api_headers=(
+            -H "Authorization: Bearer ${GH_API_TOKEN}"
+            -H "Accept: application/vnd.github+json"
+            -H "X-GitHub-Api-Version: 2022-11-28"
+          )
+          default_branch="$(
+            curl --fail --silent --show-error --retry 3 \
+              "${api_headers[@]}" \
+              "https://api.github.com/repos/${SOURCE_REPO}" \
+              | jq -er '.default_branch'
+          )"
+          [[ "$default_branch" =~ ^[A-Za-z0-9._-]+$ ]] || {
+            echo "::error::unsupported source default-branch name"
+            exit 1
+          }
+          default_head="$(
+            curl --fail --silent --show-error --retry 3 \
+              "${api_headers[@]}" \
+              "https://api.github.com/repos/${SOURCE_REPO}/branches/${default_branch}" \
+              | jq -er '.commit.sha'
+          )"
+          if [ "$SOURCE_SHA" != "$default_head" ]; then
+            echo "::error::refusing promotion: source is not current ${SOURCE_REPO}/${default_branch} HEAD"
+            echo "candidate source: $SOURCE_SHA"
+            echo "default HEAD:    $default_head"
+            exit 1
+          fi
+          existing="$(
+            docker buildx imagetools inspect "${IMAGE}:${SHA_TAG}" \
+              --format '{{json .Manifest}}' 2>/dev/null \
+              | jq -r '.digest // .Digest // empty' || true
+          )"
+          if [ -n "$existing" ] && [ "$existing" != "$DIGEST" ]; then
+            echo "::error::immutable ${IMAGE}:${SHA_TAG} already points to ${existing}, not ${DIGEST}"
+            exit 1
+          fi
+          # Narrow the unavoidable network check/use interval once more. A
+          # source push racing this step fails closed instead of moving latest
+          # to a commit that is no longer default-branch HEAD.
+          current_head="$(
+            curl --fail --silent --show-error --retry 3 \
+              "${api_headers[@]}" \
+              "https://api.github.com/repos/${SOURCE_REPO}/branches/${default_branch}" \
+              | jq -er '.commit.sha'
+          )"
+          [ "$SOURCE_SHA" = "$current_head" ] || {
+            echo "::error::source default branch moved during promotion authorization"
+            exit 1
+          }
+          docker buildx imagetools create \
+            --tag "${IMAGE}:${SHA_TAG}" \
+            --tag "${IMAGE}:latest" \
+            "${IMAGE}@${DIGEST}"
