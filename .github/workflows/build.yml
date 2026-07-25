@@ -257,7 +257,11 @@ jobs:
         run: |
           npm ci
           npm run build
-          npm audit --registry=https://registry.npmjs.org --audit-level=moderate
+          # 精确 allowlist:GHSA-qwww-vcr4-c8h2(react-router RSC-mode CSRF)仅影响 React Router 的
+          # RSC 模式;yueops 前端与 miniapp 均为纯 SPA(Vite/BrowserRouter、HashRouter,无 RSC/SSR),
+          # 不触发该路径,已评估放行。其余 moderate+ 漏洞仍阻断。待官方发 >8.2.0 修复版升级后移除。
+          npm audit --registry=https://registry.npmjs.org --audit-level=moderate --json > /tmp/npm-audit.json || true
+          node -e 'const a=require("/tmp/npm-audit.json");const allow=new Set(["GHSA-qwww-vcr4-c8h2"]);const found=new Set();for(const v of Object.values(a.vulnerabilities||{})){if(!["moderate","high","critical"].includes(v.severity))continue;for(const x of (v.via||[]))if(typeof x==="object"&&x.url)found.add(x.url.split("/").pop());}const bad=[...found].filter(id=>!allow.has(id));if(bad.length){console.error("npm audit gate blocking:",bad.join(", "));process.exit(1);}console.log("npm audit gate ok; allowlisted:",[...found].join(",")||"(none)");'
 
       - name: Validate Yue mini app
         if: matrix.validation == 'yueops'
@@ -265,7 +269,11 @@ jobs:
         run: |
           npm ci
           npm run build
-          npm audit --registry=https://registry.npmjs.org --audit-level=moderate
+          # 精确 allowlist:GHSA-qwww-vcr4-c8h2(react-router RSC-mode CSRF)仅影响 React Router 的
+          # RSC 模式;yueops 前端与 miniapp 均为纯 SPA(Vite/BrowserRouter、HashRouter,无 RSC/SSR),
+          # 不触发该路径,已评估放行。其余 moderate+ 漏洞仍阻断。待官方发 >8.2.0 修复版升级后移除。
+          npm audit --registry=https://registry.npmjs.org --audit-level=moderate --json > /tmp/npm-audit.json || true
+          node -e 'const a=require("/tmp/npm-audit.json");const allow=new Set(["GHSA-qwww-vcr4-c8h2"]);const found=new Set();for(const v of Object.values(a.vulnerabilities||{})){if(!["moderate","high","critical"].includes(v.severity))continue;for(const x of (v.via||[]))if(typeof x==="object"&&x.url)found.add(x.url.split("/").pop());}const bad=[...found].filter(id=>!allow.has(id));if(bad.length){console.error("npm audit gate blocking:",bad.join(", "));process.exit(1);}console.log("npm audit gate ok; allowlisted:",[...found].join(",")||"(none)");'
 
       - name: Lint changed YueOps SQL migrations
         if: matrix.validation == 'yueops'
