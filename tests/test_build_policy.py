@@ -94,8 +94,32 @@ class BuildPolicyTest(unittest.TestCase):
             "Checkout YueBoard contract for YueOps ACL validation",
             self.workflow,
         )
+        pin = re.search(
+            r"(?m)^  YUEBOARD_CONTRACT_PIN: ([0-9a-f]+)$",
+            self.workflow,
+        )
+        self.assertIsNotNone(pin)
+        assert pin is not None
+        self.assertRegex(pin.group(1), r"^[0-9a-f]{40}$")
+        self.assertIn("yueboard_contract_ref:", self.workflow)
         self.assertIn(
-            "ref: a8d699f4a20131d95cc6276e04a4e19754a86b07",
+            "ref: ${{ needs.plan.outputs.yueboard_contract_ref }}",
+            self.workflow,
+        )
+        self.assertIn(
+            '[[ "$yueboard_contract_ref" =~ ^[0-9a-f]{40}$ ]]',
+            self.workflow,
+        )
+        self.assertIn(
+            "repository_dispatch may not override the pinned YueBoard contract",
+            self.workflow,
+        )
+        self.assertIn(
+            "promotion must use the reviewed pinned YueBoard contract",
+            self.workflow,
+        )
+        self.assertIn(
+            'echo "yueboard_contract_ref=$yueboard_contract_ref" >> "$GITHUB_OUTPUT"',
             self.workflow,
         )
         self.assertIn(

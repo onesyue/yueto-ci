@@ -26,6 +26,10 @@ on:
         required: true
         type: boolean
         default: false
+      yueboard_contract_ref:
+        description: 'optional exact YueBoard SHA for manual YueOps ACL validation'
+        required: false
+        type: string
   repository_dispatch:
     types: [build]
 
@@ -34,6 +38,10 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Cross-repository YueOps ACL validation must never follow a mutable branch.
+  # Advance this reviewed 40-hex pin with the matching YueBoard schema change;
+  # workflow_dispatch may explicitly test a candidate commit before promotion.
+  YUEBOARD_CONTRACT_PIN: 97057a97d599bc65c9155b959b0264cbacf9a002
 
 concurrency:
   group: build-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
@@ -46,6 +54,7 @@ jobs:
       matrix: ${{ steps.plan.outputs.matrix }}
       validation_matrix: ${{ steps.plan.outputs.validation_matrix }}
       promote: ${{ steps.plan.outputs.promote }}
+      yueboard_contract_ref: ${{ steps.plan.outputs.yueboard_contract_ref }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -58,11 +67,17 @@ jobs:
           EVENT_ACTOR: ${{ github.actor }}
           MANUAL_PROMOTE: ${{ github.event.inputs.promote || 'false' }}
           DISPATCH_PROMOTE: ${{ github.event.client_payload.promote || 'false' }}
+          MANUAL_YUEBOARD_CONTRACT_REF: ${{ github.event.inputs.yueboard_contract_ref || '' }}
+          DISPATCH_YUEBOARD_CONTRACT_REF: ${{ github.event.client_payload.yueboard_contract_ref || '' }}
         run: |
           set -euo pipefail
           promote=false
+          yueboard_contract_ref="$YUEBOARD_CONTRACT_PIN"
           case "$EVENT_NAME" in
             workflow_dispatch)
+              if [ -n "$MANUAL_YUEBOARD_CONTRACT_REF" ]; then
+                yueboard_contract_ref="$MANUAL_YUEBOARD_CONTRACT_REF"
+              fi
               case "$MANUAL_PROMOTE" in
                 true) promote=true ;;
                 false|'') ;;
@@ -73,6 +88,10 @@ jobs:
               esac
               ;;
             repository_dispatch)
+              [ -z "$DISPATCH_YUEBOARD_CONTRACT_REF" ] || {
+                echo "repository_dispatch may not override the pinned YueBoard contract" >&2
+                exit 1
+              }
               case "$DISPATCH_PROMOTE" in
                 true)
                   [ "$EVENT_ACTOR" = "onesyue" ] || {
@@ -101,6 +120,16 @@ jobs:
               exit 1
               ;;
           esac
+          [[ "$yueboard_contract_ref" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "YueBoard contract ref must be an exact 40-hex commit SHA" >&2
+            exit 1
+          }
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] &&
+             [ "$promote" = true ] &&
+             [ "$yueboard_contract_ref" != "$YUEBOARD_CONTRACT_PIN" ]; then
+            echo "promotion must use the reviewed pinned YueBoard contract" >&2
+            exit 1
+          fi
           matrix=$(jq -c --arg s "$SERVICE" --arg r "$REF_OVERRIDE" \
             '[ .[] | select($s == "all" or .service == $s or .group == $s) | if $r != "" then .ref = $r else . end ]' services.json)
           [ "$(echo "$matrix" | jq 'length')" -gt 0 ] || { echo "unknown service: $SERVICE" >&2; exit 1; }
@@ -109,6 +138,7 @@ jobs:
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "validation_matrix=$validation_matrix" >> "$GITHUB_OUTPUT"
           echo "promote=$promote" >> "$GITHUB_OUTPUT"
+          echo "yueboard_contract_ref=$yueboard_contract_ref" >> "$GITHUB_OUTPUT"
 
   validate:
     needs: plan
@@ -148,7 +178,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: onesyue/yueboard
-          ref: a8d699f4a20131d95cc6276e04a4e19754a86b07
+          ref: ${{ needs.plan.outputs.yueboard_contract_ref }}
           token: ${{ secrets.YUETO_CI_PAT }}
           path: .ci-yueboard
           fetch-depth: 1
