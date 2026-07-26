@@ -30,6 +30,14 @@ on:
         description: 'optional exact YueBoard SHA for manual YueOps ACL validation'
         required: false
         type: string
+      runner:
+        description: 'runner label; self-hosted fallback is manual-only'
+        required: true
+        type: choice
+        default: ubuntu-latest
+        options:
+          - ubuntu-latest
+          - yue-local-release
   repository_dispatch:
     types: [build]
 
@@ -49,7 +57,7 @@ concurrency:
 
 jobs:
   plan:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner || 'ubuntu-latest' }}
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       validation_matrix: ${{ steps.plan.outputs.validation_matrix }}
@@ -142,7 +150,7 @@ jobs:
 
   validate:
     needs: plan
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -340,7 +348,7 @@ jobs:
 
   build:
     needs: [plan, validate]
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: write

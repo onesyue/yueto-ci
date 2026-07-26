@@ -45,6 +45,22 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow,
         )
 
+    def test_self_hosted_fallback_is_manual_and_opt_in(self) -> None:
+        runner_input = re.search(
+            r"(?ms)^\s{6}runner:\n(?P<body>(?:^\s{8}.+\n)+)",
+            self.workflow,
+        )
+        self.assertIsNotNone(runner_input)
+        assert runner_input is not None
+        self.assertIn("type: choice", runner_input.group("body"))
+        self.assertIn("default: ubuntu-latest", runner_input.group("body"))
+        self.assertIn("- yue-local-release", runner_input.group("body"))
+        selector = (
+            "github.event_name == 'workflow_dispatch' && "
+            "github.event.inputs.runner || 'ubuntu-latest'"
+        )
+        self.assertEqual(self.workflow.count(selector), 3)
+
     def test_promotion_is_bound_to_trusted_exact_default_head(self) -> None:
         required = (
             'EVENT_ACTOR" = "onesyue"',
