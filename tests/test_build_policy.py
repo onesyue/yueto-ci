@@ -60,6 +60,8 @@ class BuildPolicyTest(unittest.TestCase):
             "github.event.inputs.runner || 'ubuntu-latest'"
         )
         self.assertEqual(self.workflow.count(selector), 3)
+        self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
+        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 3)
 
     def test_promotion_is_bound_to_trusted_exact_default_head(self) -> None:
         required = (

@@ -163,7 +163,9 @@ jobs:
           POSTGRES_PASSWORD: ci
           POSTGRES_DB: yueboard_test
         ports:
-          - 5432:5432
+          # Preserve the hosted-runner contract while avoiding unrelated local
+          # PostgreSQL instances on the manual self-hosted fallback.
+          - ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '127.0.0.1:55434:5432' || '5432:5432' }}
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
@@ -228,11 +230,11 @@ jobs:
       - name: Validate yueboard backend and integration
         if: matrix.validation == 'yueboard'
         env:
-          YUEBOARD_TEST_DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/yueboard_test
+          YUEBOARD_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
           YUEBOARD_TEST_FIXTURES: ${{ github.workspace }}/test/fixtures
           # The migration suite intentionally destroys public; this database is
           # the disposable PostgreSQL 18 service declared above.
-          YUEBOARD_MIGRATION_TEST_DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/yueboard_test
+          YUEBOARD_MIGRATION_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
           YUEBOARD_MIGRATION_TEST_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE
           YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE: '1'
         run: |
