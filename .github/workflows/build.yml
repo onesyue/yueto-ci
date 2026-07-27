@@ -49,7 +49,7 @@ env:
   # Cross-repository YueOps ACL validation must never follow a mutable branch.
   # Advance this reviewed 40-hex pin with the matching YueBoard schema change;
   # workflow_dispatch may explicitly test a candidate commit before promotion.
-  YUEBOARD_CONTRACT_PIN: e9c5307805213932886c9704d205bf6ce4608647
+  YUEBOARD_CONTRACT_PIN: c0905d6eaa5a6779fa4d1d2a8cddb2d38628e7cd
 
 concurrency:
   group: build-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
