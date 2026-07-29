@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "schema_floor": 38,
+  "layout": {
+    "node-1": {
+      "inventory_type": "hy2",
+      "kernel": "hysteria",
+      "artifact": "/usr/local/bin/yue-node-hy2"
+    },
+    "node-2": {
+      "inventory_type": "reality",
+      "kernel": "xray",
+      "artifact": "/usr/local/bin/yue-node-vless"
+    }
+  },
+  "control": {
+    "credential_file": "/run/secrets/yue-node-control-token",
+    "deployment_probe_rpc": "/yuenode.v1.NodeControlPlane/GetConfig",
+    "machine_status_rpc": "/yuenode.v1.NodeControlPlane/ReportMachineStatus",
+    "static_node_rpcs": [
+      "/yuenode.v1.NodeControlPlane/Handshake",
+      "/yuenode.v1.NodeControlPlane/GetConfig",
+      "/yuenode.v1.NodeControlPlane/GetUsers",
+      "/yuenode.v1.NodeControlPlane/ReportAccounting",
+      "/yuenode.v1.NodeControlPlane/ReportDevices",
+      "/yuenode.v1.NodeControlPlane/Sync"
+    ],
+    "retired_rpcs": [
+      "/yuenode.v1.NodeControlPlane/Report",
+      "/yuenode.v1.NodeControlPlane/ListMachineNodes"
+    ]
+  }
+}

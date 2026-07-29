@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 SERVICES = ROOT / "services.json"
 README = ROOT / "README.md"
+NATIVE_CONTRACT = ROOT / "native-node-contract.json"
+NATIVE_VALIDATOR = ROOT / "scripts" / "validate-native-node-contract.py"
 
 
 class BuildPolicyTest(unittest.TestCase):
@@ -18,6 +20,10 @@ class BuildPolicyTest(unittest.TestCase):
         cls.workflow = WORKFLOW.read_text(encoding="utf-8")
         cls.services = json.loads(SERVICES.read_text(encoding="utf-8"))
         cls.readme = README.read_text(encoding="utf-8")
+        cls.native_contract = json.loads(
+            NATIVE_CONTRACT.read_text(encoding="utf-8")
+        )
+        cls.native_validator = NATIVE_VALIDATOR.read_text(encoding="utf-8")
 
     def test_all_actions_are_pinned_to_full_commit_sha(self) -> None:
         uses = re.findall(
@@ -144,6 +150,49 @@ class BuildPolicyTest(unittest.TestCase):
             "YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard",
             self.workflow,
         )
+
+    def test_native_node_contract_is_central_and_blocks_all_three_repositories(self) -> None:
+        self.assertEqual(self.native_contract["version"], 2)
+        self.assertEqual(self.native_contract["schema_floor"], 38)
+        self.assertEqual(
+            self.native_contract["layout"],
+            {
+                "node-1": {
+                    "inventory_type": "hy2",
+                    "kernel": "hysteria",
+                    "artifact": "/usr/local/bin/yue-node-hy2",
+                },
+                "node-2": {
+                    "inventory_type": "reality",
+                    "kernel": "xray",
+                    "artifact": "/usr/local/bin/yue-node-vless",
+                },
+            },
+        )
+        self.assertIn(
+            "Checkout immutable central native-node policy",
+            self.workflow,
+        )
+        self.assertIn("ref: ${{ github.sha }}", self.workflow)
+        self.assertIn(
+            "Validate native-node cross-repository contract",
+            self.workflow,
+        )
+        self.assertIn("--kind '${{ matrix.validation }}'", self.workflow)
+        self.assertIn("BUILD_PROFILE=auto", self.workflow)
+        for kind in ("yue-node", "yueops", "yueboard"):
+            self.assertIn(f'"{kind}"', self.native_validator)
+        for rpc in (
+            "/yuenode.v1.NodeControlPlane/GetConfig",
+            "/yuenode.v1.NodeControlPlane/ReportMachineStatus",
+        ):
+            self.assertIn(rpc, json.dumps(self.native_contract))
+        for rpc in (
+            "/yuenode.v1.NodeControlPlane/Report",
+            "/yuenode.v1.NodeControlPlane/ListMachineNodes",
+        ):
+            self.assertIn(rpc, self.native_contract["control"]["retired_rpcs"])
+        self.assertIn("validate_yueboard", self.native_validator)
 
     def test_service_matrix_is_closed_and_complete(self) -> None:
         expected_keys = {

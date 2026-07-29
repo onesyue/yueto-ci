@@ -49,7 +49,7 @@ env:
   # Cross-repository YueOps ACL validation must never follow a mutable branch.
   # Advance this reviewed 40-hex pin with the matching YueBoard schema change;
   # workflow_dispatch may explicitly test a candidate commit before promotion.
-  YUEBOARD_CONTRACT_PIN: 7f666431fe68f6b1d76ae3fd2219c4af3337115f
+  YUEBOARD_CONTRACT_PIN: 9892ab547f9d55e836e435e9cf9fbb44a73b4f03
 
 concurrency:
   group: build-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
@@ -193,6 +193,22 @@ jobs:
           path: .ci-yueboard
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Checkout immutable central native-node policy
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard'
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: onesyue/yueto-ci
+          ref: ${{ github.sha }}
+          path: .ci-policy
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate native-node cross-repository contract
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard'
+        run: >-
+          python3 .ci-policy/scripts/validate-native-node-contract.py
+          --kind '${{ matrix.validation }}' --source .
 
       - name: Set up Go
         if: matrix.validation == 'yue-node' || matrix.validation == 'yueboard'
@@ -423,6 +439,7 @@ jobs:
             VERSION=${{ steps.meta.outputs.source_sha }}
             COMMIT=${{ steps.meta.outputs.source_sha }}
             BUILD_TIME=${{ steps.meta.outputs.build_time }}
+            ${{ matrix.validation == 'yue-node' && 'BUILD_PROFILE=auto' || '' }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
           provenance: mode=max
