@@ -586,6 +586,7 @@ jobs:
           scanners: vuln
           severity: HIGH,CRITICAL
           timeout: 15m
+          trivyignores: .trivyignore
 
       - name: Block fixed HIGH/CRITICAL vulnerabilities (linux/arm64)
         if: contains(matrix.platforms, 'arm64')
@@ -601,6 +602,7 @@ jobs:
           scanners: vuln
           severity: HIGH,CRITICAL
           timeout: 15m
+          trivyignores: .trivyignore
           skip-setup-trivy: true
 
       - name: Install cosign
