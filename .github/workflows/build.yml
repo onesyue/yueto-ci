@@ -345,7 +345,10 @@ jobs:
             exit 1
           }
           make test
-          go build ./...
+          # The native release has no unprofiled universal yue-node binary.
+          # Build the exact selector + dependency-pruned HY2/VLESS bundle that
+          # Docker publishes instead of accidentally reviving a tagless graph.
+          make build
           bash scripts/check-vulnerabilities.sh
 
       - name: Validate yueboard backend and integration

@@ -142,6 +142,8 @@ class BuildPolicyTest(unittest.TestCase):
             "short commit refs are not reproducible; pass the exact 40-hex source SHA",
             self.workflow,
         )
+        self.assertIn("make build", self.workflow)
+        self.assertNotIn("go build ./...", self.workflow)
 
     def test_promotion_is_bound_to_trusted_exact_default_head(self) -> None:
         required = (
