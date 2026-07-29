@@ -7,6 +7,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW_DIR = ROOT / ".github" / "workflows"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 SERVICES = ROOT / "services.json"
 README = ROOT / "README.md"
@@ -68,6 +69,79 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(self.workflow.count(selector), 3)
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
         self.assertEqual(self.workflow.count("127.0.0.1:55434"), 3)
+
+    def test_build_yml_is_the_single_real_promotion_workflow(self) -> None:
+        workflow_files = sorted(
+            path.name for path in WORKFLOW_DIR.glob("*.y*ml")
+        )
+        self.assertEqual(workflow_files, ["build.yml"])
+        self.assertIn(
+            "Authorize and promote verified default-branch digest",
+            self.workflow,
+        )
+        self.assertNotIn("promote.yml", self.readme)
+
+    def test_runner_dependencies_are_bootstrapped_and_preflighted(self) -> None:
+        required = (
+            "Preflight planning dependencies",
+            "Install native yue-node test toolchain",
+            '"${apt[@]}" install -y --no-install-recommends build-essential',
+            "Preflight validation dependencies",
+            'yue-node) tools+=(gcc go jq make)',
+            'yueboard) tools+=(go node corepack)',
+            'yueops) tools+=(jq node npm uv)',
+            "Preflight build and promotion dependencies",
+            'docker buildx version >/dev/null',
+            "CGO_ENABLED: '1'",
+            'Go race validation requires CGO_ENABLED=1',
+        )
+        for invariant in required:
+            with self.subTest(invariant=invariant):
+                self.assertIn(invariant, self.workflow)
+        self.assertIn("python-version: '3.13'", self.workflow)
+        self.assertIn(
+            "Set up Python on GitHub-hosted runner",
+            self.workflow,
+        )
+        self.assertIn(
+            "github.event_name != 'workflow_dispatch' || "
+            "github.event.inputs.runner != 'yue-local-release'",
+            self.workflow,
+        )
+        self.assertIn(
+            "Validate system Python on self-hosted runner",
+            self.workflow,
+        )
+        self.assertIn("system_python=/usr/bin/python3", self.workflow)
+        self.assertIn("sys.version_info[:2] != (3, 13)", self.workflow)
+        self.assertIn('UV_PYTHON_DOWNLOADS: never', self.workflow)
+        self.assertIn(
+            'uv venv --python "$YUE_CI_PYTHON" .venv',
+            self.workflow,
+        )
+        hosted_setup = self.workflow.index(
+            "Set up Python on GitHub-hosted runner"
+        )
+        system_check = self.workflow.index(
+            "Validate system Python on self-hosted runner"
+        )
+        hosted_selection = self.workflow.index(
+            "Select Python on GitHub-hosted runner"
+        )
+        policy_validation = self.workflow.index(
+            "Validate native-node cross-repository contract"
+        )
+        self.assertLess(hosted_setup, policy_validation)
+        self.assertLess(hosted_selection, policy_validation)
+        self.assertLess(system_check, policy_validation)
+        self.assertIn(
+            '"$YUE_CI_PYTHON" .ci-policy/scripts/validate-native-node-contract.py',
+            self.workflow,
+        )
+        self.assertIn(
+            "short commit refs are not reproducible; pass the exact 40-hex source SHA",
+            self.workflow,
+        )
 
     def test_promotion_is_bound_to_trusted_exact_default_head(self) -> None:
         required = (

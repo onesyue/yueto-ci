@@ -10,6 +10,9 @@ Yue.to 服务端组件的**统一构建仓**。本仓库公开（公开仓 GitHu
 
 ## 触发
 
+本仓只有一个发布工作流：`.github/workflows/build.yml`。Promotion 不是独立
+workflow，而是该工作流在完成校验、构建、签名和证明后的最后一个受控步骤。
+
 ```sh
 # 手动构建默认只生成经过测试、扫描和签名的 candidate，不改 latest
 gh workflow run build.yml -R onesyue/yueto-ci -f service=yueboard
@@ -22,6 +25,9 @@ gh workflow run build.yml -R onesyue/yueto-ci \
 # 代码仓默认分支 push 后自动触发并提升：在代码仓放 thin workflow
 # （计费落在公开仓；发送者、精确 SHA、默认分支 HEAD 均由中央门复核）
 ```
+
+`ref` 可以是完整分支或 tag；如果传 commit，必须传完整 40 位 SHA。GitHub
+checkout 不把 7‑39 位短 SHA 当作可复现的 commit ref，中央 plan 会提前拒绝。
 
 代码仓 thin workflow 模板（`.github/workflows/trigger-build.yml`）：
 
@@ -66,4 +72,10 @@ jobs:
 
 - 日志保持简洁，绝不回显配置/路径细节；敏感值一律走 secrets（Actions 自动打码）。
 - 不产出 artifacts（公开仓 artifacts 任何人可下载），产物只进 GHCR。
-- **绝不给本仓挂 self-hosted runner**（公开仓 fork PR 可在 runner 上执行任意代码）。
+- Self-hosted runner 仅能通过有写入权限的人员手动 `workflow_dispatch`
+  并显式选择 `yue-local-release`；代码仓 `repository_dispatch` 与默认手动运行
+  仍使用 GitHub-hosted runner。工作流会自举 GNU make，并在校验、构建和
+  promotion 前对实际工具链 fail closed。YueNode 的 race 门禁会自举
+  `build-essential`并显式启用 CGO。GitHub-hosted runner 使用 `setup-python`；
+  Debian 13 的 `yue-local-release` 使用系统 Python 3.13，且在执行任何 Python
+  policy 前验证精确主/次版本。不接受依赖 runner 手工状态的隐式通过。
