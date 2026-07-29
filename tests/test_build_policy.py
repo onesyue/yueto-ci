@@ -229,7 +229,7 @@ class BuildPolicyTest(unittest.TestCase):
 
     def test_native_node_contract_is_central_and_blocks_all_three_repositories(self) -> None:
         self.assertEqual(self.native_contract["version"], 2)
-        self.assertEqual(self.native_contract["schema_floor"], 38)
+        self.assertEqual(self.native_contract["schema_floor"], 40)
         self.assertEqual(
             self.native_contract["layout"],
             {
