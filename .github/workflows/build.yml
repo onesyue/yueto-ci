@@ -475,7 +475,7 @@ jobs:
           squawk_flags=(
             --pg-version=15.0
             --assume-in-transaction
-            --exclude=prefer-robust-stmts,prefer-text-field,prefer-identity,require-timeout-settings
+            "--exclude=prefer-robust-stmts,prefer-text-field,prefer-identity,require-timeout-settings"
           )
           migration_base=""
           if [[ "$DISPATCH_BEFORE" =~ ^[0-9a-f]{40}$ ]] &&

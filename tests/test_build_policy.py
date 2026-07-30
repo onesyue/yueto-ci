@@ -109,6 +109,11 @@ class BuildPolicyTest(unittest.TestCase):
             "push-to-registry",
             "client-payload",
             "event-type",
+            "actionlint_flags",
+            "-ignore",
+            "shellcheck_opts",
+            "sc2129",
+            "sc2086",
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, policy_lower)
