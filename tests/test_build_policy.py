@@ -342,7 +342,7 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow,
         )
         self.assertIn(
-            'echo "yueboard_contract_ref=$yueboard_contract_ref" >> "$GITHUB_OUTPUT"',
+            'echo "yueboard_contract_ref=$yueboard_contract_ref"',
             self.workflow,
         )
         self.assertIn(

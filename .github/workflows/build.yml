@@ -163,11 +163,13 @@ jobs:
             echo "validation-only targets cannot be promoted as container images" >&2
             exit 1
           fi
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-          echo "validation_matrix=$validation_matrix" >> "$GITHUB_OUTPUT"
-          echo "has_builds=$has_builds" >> "$GITHUB_OUTPUT"
-          echo "promote=$promote" >> "$GITHUB_OUTPUT"
-          echo "yueboard_contract_ref=$yueboard_contract_ref" >> "$GITHUB_OUTPUT"
+          {
+            echo "matrix=$matrix"
+            echo "validation_matrix=$validation_matrix"
+            echo "has_builds=$has_builds"
+            echo "promote=$promote"
+            echo "yueboard_contract_ref=$yueboard_contract_ref"
+          } >> "$GITHUB_OUTPUT"
 
   validate:
     needs: plan
@@ -468,11 +470,13 @@ jobs:
         if: matrix.validation == 'yueops'
         env:
           DISPATCH_BEFORE: ${{ github.event.client_payload.before || '' }}
-          SQUAWK_FLAGS: >-
-            --pg-version=15.0 --assume-in-transaction
-            --exclude=prefer-robust-stmts,prefer-text-field,prefer-identity,require-timeout-settings
         run: |
           set -euo pipefail
+          squawk_flags=(
+            --pg-version=15.0
+            --assume-in-transaction
+            --exclude=prefer-robust-stmts,prefer-text-field,prefer-identity,require-timeout-settings
+          )
           migration_base=""
           if [[ "$DISPATCH_BEFORE" =~ ^[0-9a-f]{40}$ ]] &&
              git cat-file -e "${DISPATCH_BEFORE}^{commit}" 2>/dev/null; then
@@ -495,7 +499,7 @@ jobs:
             exit 0
           fi
           npm install --global squawk-cli@2.60.0
-          squawk $SQUAWK_FLAGS "${migrations[@]}"
+          squawk "${squawk_flags[@]}" "${migrations[@]}"
 
   build:
     needs: [plan, validate]
@@ -573,15 +577,18 @@ jobs:
       - name: Compute tags
         id: meta
         run: |
+          set -euo pipefail
           SOURCE_SHA=$(git rev-parse HEAD)
           SHA_SHORT=$(git rev-parse --short=7 HEAD)
           BUILD_TIME=$(git show -s --format=%cI HEAD)
           IMG="ghcr.io/onesyue/${{ matrix.service }}"
-          echo "image=${IMG}" >> "$GITHUB_OUTPUT"
-          echo "source_sha=${SOURCE_SHA}" >> "$GITHUB_OUTPUT"
-          echo "sha_short=${SHA_SHORT}" >> "$GITHUB_OUTPUT"
-          echo "build_time=${BUILD_TIME}" >> "$GITHUB_OUTPUT"
-          echo "candidate_tag=${IMG}:candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          {
+            echo "image=${IMG}"
+            echo "source_sha=${SOURCE_SHA}"
+            echo "sha_short=${SHA_SHORT}"
+            echo "build_time=${BUILD_TIME}"
+            echo "candidate_tag=${IMG}:candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build & push
         id: build
