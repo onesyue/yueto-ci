@@ -168,7 +168,7 @@ class BuildPolicyTest(unittest.TestCase):
             "pip-audit",
             "working-directory: frontend",
             "working-directory: telegram-bot/yue/miniapp",
-            "npm audit --registry=https://registry.npmjs.org",
+            "scripts/npm-audit-gate.py",
             'corepack install --global "$web_pm"',
             '[ "$web_pm" = "$admin_pm" ]',
             "squawk-cli@2.60.0",
@@ -185,6 +185,69 @@ class BuildPolicyTest(unittest.TestCase):
         for gate in required:
             with self.subTest(gate=gate):
                 self.assertIn(gate, self.workflow)
+
+    def test_yueops_npm_audit_policy_is_owned_by_the_checked_out_source(self) -> None:
+        frontend_start = self.workflow.index("- name: Validate yueops frontend")
+        miniapp_start = self.workflow.index("- name: Validate Yue mini app")
+        migration_start = self.workflow.index(
+            "- name: Lint changed YueOps SQL migrations"
+        )
+        frontend_step = self.workflow[frontend_start:miniapp_start]
+        miniapp_step = self.workflow[miniapp_start:migration_start]
+
+        expected_gate = 'audit_gate="$GITHUB_WORKSPACE/scripts/npm-audit-gate.py"'
+        self.assertIn(expected_gate, frontend_step)
+        self.assertIn(expected_gate, miniapp_step)
+        self.assertEqual(self.workflow.count(expected_gate), 2)
+
+        # A source checkout that omitted its reviewed policy must stop the
+        # release.  The central builder must never grow an independent
+        # advisory-ID allowlist that can drift from the product topology.
+        missing_gate_guard = '[ -f "$audit_gate" ] || {'
+        self.assertIn(missing_gate_guard, frontend_step)
+        self.assertIn(missing_gate_guard, miniapp_step)
+        frontend_call = (
+            '"$YUE_CI_PYTHON" "$audit_gate" "$GITHUB_WORKSPACE/frontend"'
+        )
+        self.assertIn(frontend_call, frontend_step)
+        self.assertIn(
+            '"$GITHUB_WORKSPACE/telegram-bot/yue/miniapp"',
+            miniapp_step,
+        )
+        self.assertIn(
+            "exit 1",
+            frontend_step[
+                frontend_step.index(missing_gate_guard) : frontend_step.index(
+                    frontend_call
+                )
+            ],
+        )
+        self.assertIn(
+            "exit 1",
+            miniapp_step[
+                miniapp_step.index(missing_gate_guard) : miniapp_step.index(
+                    '"$YUE_CI_PYTHON" "$audit_gate"'
+                )
+            ],
+        )
+        self.assertNotIn("GHSA-", frontend_step + miniapp_step)
+        self.assertNotIn("npm audit --", frontend_step + miniapp_step)
+
+    def test_central_release_runs_the_miniapp_source_linter(self) -> None:
+        miniapp_start = self.workflow.index("- name: Validate Yue mini app")
+        migration_start = self.workflow.index(
+            "- name: Lint changed YueOps SQL migrations"
+        )
+        miniapp_step = self.workflow[miniapp_start:migration_start]
+
+        self.assertIn("working-directory: telegram-bot/yue/miniapp", miniapp_step)
+        self.assertIn("npm ci", miniapp_step)
+        self.assertIn("npm run lint", miniapp_step)
+        self.assertIn("npm run build", miniapp_step)
+        self.assertLess(miniapp_step.index("npm ci"), miniapp_step.index("npm run lint"))
+        self.assertLess(
+            miniapp_step.index("npm run lint"), miniapp_step.index("npm run build")
+        )
 
     def test_yueops_tests_do_not_override_the_isolated_database_fixture(self) -> None:
         self.assertNotIn("DATABASE_URL: ''", self.workflow)
