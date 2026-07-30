@@ -1,7 +1,7 @@
 {
-  "version": 2,
-  "schema_floor": 43,
-  "yueboard_contract_pin": "f8a449dff36d1cc8b60d0f96ef29858da3167a8f",
+  "version": 4,
+  "schema_floor": 46,
+  "yueboard_contract_pin": "c4efeb7e261e784171e7aa5727a60c379ffb846a",
   "layout": {
     "node-1": {
       "inventory_type": "hy2",
@@ -29,6 +29,44 @@
     "retired_rpcs": [
       "/yuenode.v1.NodeControlPlane/Report",
       "/yuenode.v1.NodeControlPlane/ListMachineNodes"
+    ]
+  },
+  "presence": {
+    "required_capabilities": [
+      "credential_limit_v1",
+      "presence_v2"
+    ],
+    "report_rpc": "/yuenode.v1.NodeControlPlane/ReportDevices",
+    "rollout_proof_endpoint": "/api/v1/internal/yueops/nodes/rollout",
+    "process_lease_seconds": 240,
+    "rollout_order": [
+      "yueboard_control_plane_locked",
+      "yue_node_fleet",
+      "credential_consumers"
+    ]
+  },
+  "device_identity": {
+    "count_basis": "authenticated_credential",
+    "count_equation": "online_device_rows_plus_shared_online_bit",
+    "legacy_shared_online_max": 1,
+    "synthetic_credential_id_floor": 1000000000,
+    "diagnostic_only": [
+      "ip",
+      "connection",
+      "protocol",
+      "node",
+      "user_agent"
+    ],
+    "devices_endpoint": "/api/v1/user/devices",
+    "overview_endpoint": "/api/v1/user/overview",
+    "reset_endpoint": "/api/v1/user/devices/reset-all",
+    "reset_identity_field": "applied_user_ids",
+    "device_subscription_prefix": "/d/",
+    "legacy_subscription_prefix": "/s/",
+    "third_party_enrollment": "target_device_local_stable_id",
+    "presence_sources": [
+      "memory",
+      "database_projection"
     ]
   }
 }

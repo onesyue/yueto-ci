@@ -1,0 +1,9 @@
+[
+  {
+    "service": "yuelink",
+    "group": "yuelink",
+    "repo": "onesyue/yuelink",
+    "ref": "main",
+    "validation": "yuelink"
+  }
+]

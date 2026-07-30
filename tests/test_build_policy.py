@@ -12,9 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 SERVICES = ROOT / "services.json"
+VALIDATION_TARGETS = ROOT / "validation-targets.json"
 README = ROOT / "README.md"
 NATIVE_CONTRACT = ROOT / "native-node-contract.json"
 NATIVE_VALIDATOR = ROOT / "scripts" / "validate-native-node-contract.py"
+TARGET_PLANNER = ROOT / "scripts" / "plan-build-targets.sh"
 
 
 class BuildPolicyTest(unittest.TestCase):
@@ -22,11 +24,13 @@ class BuildPolicyTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.workflow = WORKFLOW.read_text(encoding="utf-8")
         cls.services = json.loads(SERVICES.read_text(encoding="utf-8"))
-        cls.readme = README.read_text(encoding="utf-8")
-        cls.native_contract = json.loads(
-            NATIVE_CONTRACT.read_text(encoding="utf-8")
+        cls.validation_targets = json.loads(
+            VALIDATION_TARGETS.read_text(encoding="utf-8")
         )
+        cls.readme = README.read_text(encoding="utf-8")
+        cls.native_contract = json.loads(NATIVE_CONTRACT.read_text(encoding="utf-8"))
         cls.native_validator = NATIVE_VALIDATOR.read_text(encoding="utf-8")
+        cls.target_planner = TARGET_PLANNER.read_text(encoding="utf-8")
 
     def test_all_actions_are_pinned_to_full_commit_sha(self) -> None:
         uses = re.findall(
@@ -73,9 +77,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(self.workflow.count("127.0.0.1:55434"), 3)
 
     def test_build_yml_is_the_single_real_promotion_workflow(self) -> None:
-        workflow_files = sorted(
-            path.name for path in WORKFLOW_DIR.glob("*.y*ml")
-        )
+        workflow_files = sorted(path.name for path in WORKFLOW_DIR.glob("*.y*ml"))
         self.assertEqual(workflow_files, ["build.yml"])
         self.assertIn(
             "Authorize and promote verified default-branch digest",
@@ -89,13 +91,13 @@ class BuildPolicyTest(unittest.TestCase):
             "Install native yue-node test toolchain",
             '"${apt[@]}" install -y --no-install-recommends build-essential',
             "Preflight validation dependencies",
-            'yue-node) tools+=(gcc go jq make)',
-            'yueboard) tools+=(go node corepack)',
-            'yueops) tools+=(jq node npm uv)',
+            "yue-node) tools+=(docker gcc go jq make)",
+            "yueboard) tools+=(docker go node corepack)",
+            "yueops) tools+=(docker jq node npm uv)",
             "Preflight build and promotion dependencies",
-            'docker buildx version >/dev/null',
+            "docker buildx version >/dev/null",
             "CGO_ENABLED: '1'",
-            'Go race validation requires CGO_ENABLED=1',
+            "Go race validation requires CGO_ENABLED=1",
         )
         for invariant in required:
             with self.subTest(invariant=invariant):
@@ -116,20 +118,16 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertIn("system_python=/usr/bin/python3", self.workflow)
         self.assertIn("sys.version_info[:2] != (3, 13)", self.workflow)
-        self.assertIn('UV_PYTHON_DOWNLOADS: never', self.workflow)
+        self.assertIn("UV_PYTHON_DOWNLOADS: never", self.workflow)
         self.assertIn(
             'uv venv --python "$YUE_CI_PYTHON" .venv',
             self.workflow,
         )
-        hosted_setup = self.workflow.index(
-            "Set up Python on GitHub-hosted runner"
-        )
+        hosted_setup = self.workflow.index("Set up Python on GitHub-hosted runner")
         system_check = self.workflow.index(
             "Validate system Python on self-hosted runner"
         )
-        hosted_selection = self.workflow.index(
-            "Select Python on GitHub-hosted runner"
-        )
+        hosted_selection = self.workflow.index("Select Python on GitHub-hosted runner")
         policy_validation = self.workflow.index(
             "Validate native-node cross-repository contract"
         )
@@ -233,9 +231,28 @@ class BuildPolicyTest(unittest.TestCase):
             self.native_validator,
         )
 
-    def test_native_node_contract_is_central_and_blocks_all_three_repositories(self) -> None:
-        self.assertEqual(self.native_contract["version"], 2)
-        self.assertEqual(self.native_contract["schema_floor"], 43)
+    def test_native_node_contract_is_central_and_blocks_all_product_repositories(
+        self,
+    ) -> None:
+        self.assertEqual(self.native_contract["version"], 4)
+        self.assertEqual(self.native_contract["schema_floor"], 46)
+        self.assertEqual(
+            self.native_contract["presence"],
+            {
+                "required_capabilities": [
+                    "credential_limit_v1",
+                    "presence_v2",
+                ],
+                "report_rpc": "/yuenode.v1.NodeControlPlane/ReportDevices",
+                "rollout_proof_endpoint": "/api/v1/internal/yueops/nodes/rollout",
+                "process_lease_seconds": 240,
+                "rollout_order": [
+                    "yueboard_control_plane_locked",
+                    "yue_node_fleet",
+                    "credential_consumers",
+                ],
+            },
+        )
         self.assertEqual(
             self.native_contract["layout"],
             {
@@ -251,6 +268,30 @@ class BuildPolicyTest(unittest.TestCase):
                 },
             },
         )
+        self.assertEqual(
+            self.native_contract["device_identity"],
+            {
+                "count_basis": "authenticated_credential",
+                "count_equation": "online_device_rows_plus_shared_online_bit",
+                "legacy_shared_online_max": 1,
+                "synthetic_credential_id_floor": 1_000_000_000,
+                "diagnostic_only": [
+                    "ip",
+                    "connection",
+                    "protocol",
+                    "node",
+                    "user_agent",
+                ],
+                "devices_endpoint": "/api/v1/user/devices",
+                "overview_endpoint": "/api/v1/user/overview",
+                "reset_endpoint": "/api/v1/user/devices/reset-all",
+                "reset_identity_field": "applied_user_ids",
+                "device_subscription_prefix": "/d/",
+                "legacy_subscription_prefix": "/s/",
+                "third_party_enrollment": "target_device_local_stable_id",
+                "presence_sources": ["memory", "database_projection"],
+            },
+        )
         self.assertIn(
             "Checkout immutable central native-node policy",
             self.workflow,
@@ -262,7 +303,7 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertIn("--kind '${{ matrix.validation }}'", self.workflow)
         self.assertIn("BUILD_PROFILE=auto", self.workflow)
-        for kind in ("yue-node", "yueops", "yueboard"):
+        for kind in ("yue-node", "yueops", "yueboard", "yuelink"):
             self.assertIn(f'"{kind}"', self.native_validator)
         for rpc in (
             "/yuenode.v1.NodeControlPlane/GetConfig",
@@ -275,6 +316,105 @@ class BuildPolicyTest(unittest.TestCase):
         ):
             self.assertIn(rpc, self.native_contract["control"]["retired_rpcs"])
         self.assertIn("validate_yueboard", self.native_validator)
+
+    def test_yuelink_is_a_remote_validation_only_target(self) -> None:
+        self.assertEqual(
+            self.validation_targets,
+            [
+                {
+                    "service": "yuelink",
+                    "group": "yuelink",
+                    "repo": "onesyue/yuelink",
+                    "ref": "main",
+                    "validation": "yuelink",
+                }
+            ],
+        )
+        self.assertNotIn("yuelink", {service["service"] for service in self.services})
+        self.assertIn("scripts/plan-build-targets.sh", self.workflow)
+        self.assertIn("validation-targets.json", self.target_planner)
+        self.assertIn(
+            "validation-only targets cannot be promoted as container images",
+            self.workflow,
+        )
+        self.assertIn("has_builds: ${{ steps.plan.outputs.has_builds }}", self.workflow)
+        self.assertIn(
+            "if: needs.plan.outputs.has_builds == 'true'",
+            self.workflow,
+        )
+        self.assertIn("yuelink) ;;", self.workflow)
+        self.assertIn(
+            "matrix.validation == 'yueboard' || matrix.validation == 'yuelink'",
+            self.workflow,
+        )
+        self.assertIn(
+            "-f service=yuelink -f ref=<40-hex-yuelink-sha>",
+            self.readme,
+        )
+
+        exact_ref = "a" * 40
+        result = subprocess.run(
+            ["bash", str(TARGET_PLANNER), "yuelink", exact_ref],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        plan = json.loads(result.stdout)
+        self.assertEqual(plan["matrix"], [])
+        self.assertFalse(plan["has_builds"])
+        self.assertEqual(
+            plan["validation_matrix"],
+            [
+                {
+                    "repo": "onesyue/yuelink",
+                    "ref": exact_ref,
+                    "validation": "yuelink",
+                }
+            ],
+        )
+
+    def test_all_plan_validates_yuelink_without_building_it(self) -> None:
+        result = subprocess.run(
+            ["bash", str(TARGET_PLANNER), "all"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        plan = json.loads(result.stdout)
+        self.assertTrue(plan["has_builds"])
+        self.assertEqual(
+            {entry["service"] for entry in plan["matrix"]},
+            {"yue-node", "yueops-web", "checkin-api", "yue-bot", "yueboard"},
+        )
+        self.assertNotIn("yuelink", {entry["service"] for entry in plan["matrix"]})
+        self.assertEqual(
+            {entry["validation"] for entry in plan["validation_matrix"]},
+            {"yue-node", "yueops", "yueboard", "yuelink"},
+        )
+
+    def test_target_planner_fails_closed_for_unknown_target(self) -> None:
+        result = subprocess.run(
+            ["bash", str(TARGET_PLANNER), "not-a-product"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("unknown build service or validation target", result.stderr)
+
+    def test_validation_only_registry_is_closed(self) -> None:
+        expected_keys = {"service", "group", "repo", "ref", "validation"}
+        names = set()
+        for target in self.validation_targets:
+            self.assertEqual(set(target), expected_keys)
+            self.assertRegex(target["repo"], r"^onesyue/[A-Za-z0-9._-]+$")
+            self.assertIn(target["ref"], {"main", "master"})
+            self.assertNotIn(target["service"], names)
+            names.add(target["service"])
+        self.assertEqual(names, {"yuelink"})
 
     def test_native_validator_rejects_stale_pinned_yueboard_floor(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

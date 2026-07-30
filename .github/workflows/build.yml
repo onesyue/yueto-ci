@@ -14,11 +14,11 @@ on:
   workflow_dispatch:
     inputs:
       service:
-        description: 'service name (see services.json) or "all"'
+        description: 'build service, validation-only target, group, or "all"'
         required: true
         default: 'all'
       ref:
-        description: 'override git ref (default: per services.json)'
+        description: 'override source ref (default: per target registry)'
         required: false
         type: string
       promote:
@@ -57,6 +57,7 @@ jobs:
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       validation_matrix: ${{ steps.plan.outputs.validation_matrix }}
+      has_builds: ${{ steps.plan.outputs.has_builds }}
       promote: ${{ steps.plan.outputs.promote }}
       yueboard_contract_ref: ${{ steps.plan.outputs.yueboard_contract_ref }}
     steps:
@@ -151,13 +152,20 @@ jobs:
             echo "promotion must use the reviewed pinned YueBoard contract" >&2
             exit 1
           fi
-          matrix=$(jq -c --arg s "$SERVICE" --arg r "$REF_OVERRIDE" \
-            '[ .[] | select($s == "all" or .service == $s or .group == $s) | if $r != "" then .ref = $r else . end ]' services.json)
-          [ "$(echo "$matrix" | jq 'length')" -gt 0 ] || { echo "unknown service: $SERVICE" >&2; exit 1; }
-          validation_matrix=$(echo "$matrix" | jq -c \
-            'unique_by(.repo + "|" + .ref) | map({repo, ref, validation})')
+          # The tested planner keeps image builds and source-only product
+          # validators in separate registries. `all` covers YueLink without
+          # ever inventing a Docker target for it.
+          target_plan="$(bash scripts/plan-build-targets.sh "$SERVICE" "$REF_OVERRIDE")"
+          matrix="$(jq -c '.matrix' <<<"$target_plan")"
+          validation_matrix="$(jq -c '.validation_matrix' <<<"$target_plan")"
+          has_builds="$(jq -r '.has_builds' <<<"$target_plan")"
+          if [ "$promote" = true ] && [ "$has_builds" != true ]; then
+            echo "validation-only targets cannot be promoted as container images" >&2
+            exit 1
+          fi
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "validation_matrix=$validation_matrix" >> "$GITHUB_OUTPUT"
+          echo "has_builds=$has_builds" >> "$GITHUB_OUTPUT"
           echo "promote=$promote" >> "$GITHUB_OUTPUT"
           echo "yueboard_contract_ref=$yueboard_contract_ref" >> "$GITHUB_OUTPUT"
 
@@ -208,7 +216,7 @@ jobs:
           persist-credentials: false
 
       - name: Checkout immutable central native-node policy
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard'
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard' || matrix.validation == 'yuelink'
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: onesyue/yueto-ci
@@ -307,11 +315,12 @@ jobs:
           VALIDATION_KIND: ${{ matrix.validation }}
         run: |
           set -euo pipefail
-          tools=(bash docker git)
+          tools=(bash git)
           case "$VALIDATION_KIND" in
-            yue-node) tools+=(gcc go jq make) ;;
-            yueboard) tools+=(go node corepack) ;;
-            yueops) tools+=(jq node npm uv) ;;
+            yue-node) tools+=(docker gcc go jq make) ;;
+            yueboard) tools+=(docker go node corepack) ;;
+            yueops) tools+=(docker jq node npm uv) ;;
+            yuelink) ;;
             *)
               echo "::error::unsupported validation kind: $VALIDATION_KIND"
               exit 1
@@ -327,10 +336,12 @@ jobs:
             echo "::error::validated Python interpreter is unavailable"
             exit 1
           }
-          docker info >/dev/null
+          if [ "$VALIDATION_KIND" != yuelink ]; then
+            docker info >/dev/null
+          fi
 
       - name: Validate native-node cross-repository contract
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard'
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard' || matrix.validation == 'yuelink'
         run: >-
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-native-node-contract.py
           --kind '${{ matrix.validation }}' --source .
@@ -482,6 +493,10 @@ jobs:
 
   build:
     needs: [plan, validate]
+    # Job-level `if` is evaluated before strategy expansion.  A source-only
+    # target therefore skips this job without asking Actions to expand or run
+    # an empty Docker matrix.
+    if: needs.plan.outputs.has_builds == 'true'
     runs-on: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner || 'ubuntu-latest' }}
     permissions:
       contents: read

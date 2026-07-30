@@ -6,7 +6,10 @@ Yue.to 服务端组件的**统一构建仓**。本仓库公开（公开仓 GitHu
 
 ## 覆盖的服务
 
-见 `services.json`：yue-node、yueops-web、checkin-api、yue-bot、yueboard。增删服务改这一个文件即可。
+可构建镜像见 `services.json`：yue-node、yueops-web、checkin-api、yue-bot、
+yueboard。只做跨仓源码契约校验、不应构建镜像的产品见
+`validation-targets.json`；目前包含 YueLink。两份清单刻意分离，避免客户端被误送入
+Docker 构建矩阵。
 
 ## 触发
 
@@ -18,6 +21,10 @@ workflow，而是该工作流在完成校验、构建、签名和证明后的最
 gh workflow run build.yml -R onesyue/yueto-ci -f service=yueboard
 gh workflow run build.yml -R onesyue/yueto-ci -f service=all
 
+# 对远端 YueLink 精确源码提交只跑中央契约校验，不进入镜像构建
+gh workflow run build.yml -R onesyue/yueto-ci \
+  -f service=yuelink -f ref=<40-hex-yuelink-sha>
+
 # 只有显式 promote=true 且 ref 解析为源码仓当前默认分支 HEAD 才能提升
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yueboard -f ref=<40-hex-main-head> -f promote=true
@@ -28,6 +35,9 @@ gh workflow run build.yml -R onesyue/yueto-ci \
 
 `ref` 可以是完整分支或 tag；如果传 commit，必须传完整 40 位 SHA。GitHub
 checkout 不把 7‑39 位短 SHA 当作可复现的 commit ref，中央 plan 会提前拒绝。
+`service=all` 同时运行 `services.json` 的服务校验与
+`validation-targets.json` 的源码校验；后者不会产生 build matrix。仅校验目标不能
+使用 `promote=true`。
 
 代码仓 thin workflow 模板（`.github/workflows/trigger-build.yml`）：
 
