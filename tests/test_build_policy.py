@@ -325,7 +325,7 @@ class BuildPolicyTest(unittest.TestCase):
                     "service": "yuelink",
                     "group": "yuelink",
                     "repo": "onesyue/yuelink",
-                    "ref": "main",
+                    "ref": "master",
                     "validation": "yuelink",
                 }
             ],
