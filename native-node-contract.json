@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "schema_floor": 41,
+  "schema_floor": 42,
   "layout": {
     "node-1": {
       "inventory_type": "hy2",
