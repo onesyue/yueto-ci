@@ -303,17 +303,24 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("npm audit --", frontend_step + miniapp_step)
 
     def test_central_release_runs_the_miniapp_source_linter(self) -> None:
+        install_start = self.workflow.index("- name: Install yueops dependencies")
+        backend_start = self.workflow.index("- name: Validate yueops backend")
         miniapp_start = self.workflow.index("- name: Validate Yue mini app")
         migration_start = self.workflow.index(
             "- name: Lint changed YueOps SQL migrations"
         )
+        install_step = self.workflow[install_start:backend_start]
         miniapp_step = self.workflow[miniapp_start:migration_start]
 
+        locked_install = "npm --prefix telegram-bot/yue/miniapp ci"
+        self.assertIn(locked_install, install_step)
+        self.assertLess(
+            self.workflow.index(locked_install),
+            self.workflow.index(".venv/bin/python -m pytest -q"),
+        )
         self.assertIn("working-directory: telegram-bot/yue/miniapp", miniapp_step)
-        self.assertIn("npm ci", miniapp_step)
         self.assertIn("npm run lint", miniapp_step)
         self.assertIn("npm run build", miniapp_step)
-        self.assertLess(miniapp_step.index("npm ci"), miniapp_step.index("npm run lint"))
         self.assertLess(
             miniapp_step.index("npm run lint"), miniapp_step.index("npm run build")
         )

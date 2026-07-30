@@ -415,6 +415,10 @@ jobs:
           uv pip install --python .venv/bin/python \
             --no-deps --no-build-isolation -e telegram-bot/yue \
             --config-settings editable_mode=compat
+          # Backend pytest contains fail-closed AST contracts that import the
+          # real locked TypeScript compiler. Install once before pytest; the
+          # later Mini App lint/build/audit reuses this exact clean tree.
+          npm --prefix telegram-bot/yue/miniapp ci
 
       - name: Validate yueops backend
         if: matrix.validation == 'yueops'
@@ -455,7 +459,6 @@ jobs:
         working-directory: telegram-bot/yue/miniapp
         run: |
           set -euo pipefail
-          npm ci
           npm run lint
           npm run build
           audit_gate="$GITHUB_WORKSPACE/scripts/npm-audit-gate.py"
