@@ -11,6 +11,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
+POLICY_WORKFLOW = ROOT / ".github" / "workflows" / "policy-ci.yml"
 SERVICES = ROOT / "services.json"
 VALIDATION_TARGETS = ROOT / "validation-targets.json"
 README = ROOT / "README.md"
@@ -23,6 +24,7 @@ class BuildPolicyTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.workflow = WORKFLOW.read_text(encoding="utf-8")
+        cls.policy_workflow = POLICY_WORKFLOW.read_text(encoding="utf-8")
         cls.services = json.loads(SERVICES.read_text(encoding="utf-8"))
         cls.validation_targets = json.loads(
             VALIDATION_TARGETS.read_text(encoding="utf-8")
@@ -76,14 +78,76 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
         self.assertEqual(self.workflow.count("127.0.0.1:55434"), 3)
 
-    def test_build_yml_is_the_single_real_promotion_workflow(self) -> None:
+    def test_only_build_yml_can_build_or_promote_products(self) -> None:
         workflow_files = sorted(path.name for path in WORKFLOW_DIR.glob("*.y*ml"))
-        self.assertEqual(workflow_files, ["build.yml"])
+        self.assertEqual(workflow_files, ["build.yml", "policy-ci.yml"])
         self.assertIn(
             "Authorize and promote verified default-branch digest",
             self.workflow,
         )
         self.assertNotIn("promote.yml", self.readme)
+
+        self.assertIn("push:", self.policy_workflow)
+        self.assertIn("pull_request:", self.policy_workflow)
+        self.assertIn("permissions:\n  contents: read", self.policy_workflow)
+        policy_lower = self.policy_workflow.casefold()
+        for forbidden in (
+            "repository_dispatch",
+            "workflow_dispatch",
+            "packages: write",
+            "id-token: write",
+            "actions: write",
+            "docker",
+            "cosign",
+            "promote",
+            "repository-dispatch",
+            "secrets.",
+            "ghcr.io",
+            "buildx",
+            "trivy",
+            "attest",
+            "push-to-registry",
+            "client-payload",
+            "event-type",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, policy_lower)
+        self.assertNotRegex(
+            self.policy_workflow,
+            r"(?m)^\s+[A-Za-z-]+:\s*write\s*$",
+        )
+
+    def test_policy_ci_runs_pinned_fail_closed_policy_tooling(self) -> None:
+        required = (
+            "python3 tests/test_build_policy.py -v",
+            "python3 -m compileall -q scripts tests",
+            'bash -n "$script"',
+            "actionlint .github/workflows/*.yml",
+            "ACTIONLINT_VERSION: '1.7.12'",
+            "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+            "sha256sum --check --strict",
+            "https://github.com/rhysd/actionlint/releases/download/",
+            "--proto '=https' --tlsv1.2",
+            "persist-credentials: false",
+        )
+        for invariant in required:
+            with self.subTest(invariant=invariant):
+                self.assertIn(invariant, self.policy_workflow)
+        uses = re.findall(
+            r"^\s*(?:-\s*)?uses:\s*([^\s#]+)",
+            self.policy_workflow,
+            re.MULTILINE,
+        )
+        self.assertEqual(
+            uses,
+            [
+                "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+                "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
+            ],
+        )
+        for action in uses:
+            with self.subTest(action=action):
+                self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$")
 
     def test_runner_dependencies_are_bootstrapped_and_preflighted(self) -> None:
         required = (
