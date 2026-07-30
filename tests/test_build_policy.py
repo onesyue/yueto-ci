@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import re
+import subprocess
+import tempfile
 import unittest
 
 
@@ -194,13 +196,9 @@ class BuildPolicyTest(unittest.TestCase):
             "Checkout YueBoard contract for YueOps ACL validation",
             self.workflow,
         )
-        pin = re.search(
-            r"(?m)^  YUEBOARD_CONTRACT_PIN: ([0-9a-f]+)$",
-            self.workflow,
-        )
-        self.assertIsNotNone(pin)
-        assert pin is not None
-        self.assertRegex(pin.group(1), r"^[0-9a-f]{40}$")
+        pin = self.native_contract["yueboard_contract_pin"]
+        self.assertRegex(pin, r"^[0-9a-f]{40}$")
+        self.assertIn(".yueboard_contract_pin", self.workflow)
         self.assertIn("yueboard_contract_ref:", self.workflow)
         self.assertIn(
             "ref: ${{ needs.plan.outputs.yueboard_contract_ref }}",
@@ -215,7 +213,7 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow,
         )
         self.assertIn(
-            "promotion must use the reviewed pinned YueBoard contract",
+            'yueboard_contract_ref" != "$yueboard_contract_pin',
             self.workflow,
         )
         self.assertIn(
@@ -226,10 +224,18 @@ class BuildPolicyTest(unittest.TestCase):
             "YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard",
             self.workflow,
         )
+        self.assertIn(
+            "--yueboard-contract-source .ci-yueboard",
+            self.workflow,
+        )
+        self.assertIn(
+            "pinned YueBoard contract schema floor does not match central policy",
+            self.native_validator,
+        )
 
     def test_native_node_contract_is_central_and_blocks_all_three_repositories(self) -> None:
         self.assertEqual(self.native_contract["version"], 2)
-        self.assertEqual(self.native_contract["schema_floor"], 40)
+        self.assertEqual(self.native_contract["schema_floor"], 43)
         self.assertEqual(
             self.native_contract["layout"],
             {
@@ -269,6 +275,35 @@ class BuildPolicyTest(unittest.TestCase):
         ):
             self.assertIn(rpc, self.native_contract["control"]["retired_rpcs"])
         self.assertIn("validate_yueboard", self.native_validator)
+
+    def test_native_validator_rejects_stale_pinned_yueboard_floor(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            yueops = temp / "yueops"
+            yueboard = temp / "yueboard"
+            yueops.mkdir()
+            yueboard.mkdir()
+            (yueboard / "schema-floor.txt").write_text("42\n", encoding="utf-8")
+            result = subprocess.run(
+                [
+                    "python3",
+                    str(NATIVE_VALIDATOR),
+                    "--kind",
+                    "yueops",
+                    "--source",
+                    str(yueops),
+                    "--yueboard-contract-source",
+                    str(yueboard),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "pinned YueBoard contract schema floor does not match central policy",
+            result.stderr,
+        )
 
     def test_service_matrix_is_closed_and_complete(self) -> None:
         expected_keys = {

@@ -46,10 +46,6 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  # Cross-repository YueOps ACL validation must never follow a mutable branch.
-  # Advance this reviewed 40-hex pin with the matching YueBoard schema change;
-  # workflow_dispatch may explicitly test a candidate commit before promotion.
-  YUEBOARD_CONTRACT_PIN: 7dfb12d81dd8744594afc2b9be5e22204d5e706c
 
 concurrency:
   group: build-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
@@ -89,7 +85,11 @@ jobs:
         run: |
           set -euo pipefail
           promote=false
-          yueboard_contract_ref="$YUEBOARD_CONTRACT_PIN"
+          # The ACL checkout and schema floor are one contract. Reading both
+          # from the same reviewed file prevents a new floor from being
+          # validated against an older YueBoard tree.
+          yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
+          yueboard_contract_ref="$yueboard_contract_pin"
           case "$EVENT_NAME" in
             workflow_dispatch)
               if [ -n "$MANUAL_YUEBOARD_CONTRACT_REF" ]; then
@@ -147,7 +147,7 @@ jobs:
           fi
           if [ "$EVENT_NAME" = "workflow_dispatch" ] &&
              [ "$promote" = true ] &&
-             [ "$yueboard_contract_ref" != "$YUEBOARD_CONTRACT_PIN" ]; then
+             [ "$yueboard_contract_ref" != "$yueboard_contract_pin" ]; then
             echo "promotion must use the reviewed pinned YueBoard contract" >&2
             exit 1
           fi
@@ -334,6 +334,7 @@ jobs:
         run: >-
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-native-node-contract.py
           --kind '${{ matrix.validation }}' --source .
+          ${{ matrix.validation == 'yueops' && '--yueboard-contract-source .ci-yueboard' || '' }}
 
       - name: Validate yue-node
         if: matrix.validation == 'yue-node'

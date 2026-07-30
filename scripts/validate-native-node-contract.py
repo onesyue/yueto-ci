@@ -131,7 +131,18 @@ def validate_node(root: Path, contract: dict) -> None:
     )
 
 
-def validate_yueops(root: Path, contract: dict) -> None:
+def validate_yueops(
+    root: Path, contract: dict, yueboard_contract_root: Path | None
+) -> None:
+    if yueboard_contract_root is None:
+        raise RuntimeError(
+            "YueOps validation requires the pinned YueBoard contract checkout"
+        )
+    pinned_floor = read(yueboard_contract_root / "schema-floor.txt").strip()
+    if pinned_floor != str(contract["schema_floor"]):
+        raise RuntimeError(
+            "pinned YueBoard contract schema floor does not match central policy"
+        )
     deploy = read(root / "yueops/deploy.py")
     nodeauth = read(root / "yueops/nodeauth.py")
     agent = read(root / "scripts/agent.sh")
@@ -327,6 +338,7 @@ def main() -> int:
         "--kind", choices=("yue-node", "yueops", "yueboard"), required=True
     )
     parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--yueboard-contract-source", type=Path)
     args = parser.parse_args()
     contract = json.loads(read(POLICY_ROOT / "native-node-contract.json"))
     source = args.source.resolve()
@@ -334,7 +346,12 @@ def main() -> int:
         if args.kind == "yue-node":
             validate_node(source, contract)
         elif args.kind == "yueops":
-            validate_yueops(source, contract)
+            contract_source = (
+                args.yueboard_contract_source.resolve()
+                if args.yueboard_contract_source is not None
+                else None
+            )
+            validate_yueops(source, contract, contract_source)
         else:
             validate_yueboard(source, contract)
     except RuntimeError as exc:
