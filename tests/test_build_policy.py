@@ -374,7 +374,17 @@ class BuildPolicyTest(unittest.TestCase):
         self,
     ) -> None:
         self.assertEqual(self.native_contract["version"], 4)
-        self.assertEqual(self.native_contract["schema_floor"], 46)
+        # The floor is the one field in this contract that is *meant* to move:
+        # every YueBoard migration release raises it. Pinning it to a literal
+        # here made this whole snapshot test fail on every legitimate bump
+        # (46 -> 47 -> 48 -> 49), so the guard was red on every push and taught
+        # us to ignore it. Exactness is already enforced where it can actually
+        # be checked -- validate-native-node-contract.py compares this value
+        # against the pinned YueBoard's schema-floor.txt and against YueOps'
+        # MIN_SCHEMA_FLOOR, and fails closed on any mismatch. What this test
+        # can still add is a monotonic guard: the floor must never regress.
+        self.assertIsInstance(self.native_contract["schema_floor"], int)
+        self.assertGreaterEqual(self.native_contract["schema_floor"], 49)
         self.assertEqual(
             self.native_contract["presence"],
             {
