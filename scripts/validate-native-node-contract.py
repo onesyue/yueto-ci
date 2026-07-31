@@ -773,6 +773,21 @@ def validate_yuelink(root: Path, contract: dict) -> None:
         ],
         "YueLink reset account binding",
     )
+    # The panel registers this route as GET. v1.2.111 shipped it as POST, which
+    # fell through to the anti-GFW decoy (non-JSON) and broke every
+    # subscription sync with "数据格式化异常". Pin the verb, not just the path.
+    require(
+        panel_api,
+        [
+            "getRawData(\n      '/api/v1/user/getSubscribe'",
+        ],
+        "YueLink account subscription verb",
+    )
+    forbid(
+        panel_api,
+        ["postRawData(\n      '/api/v1/user/getSubscribe'"],
+        "YueLink retired account subscription verb",
+    )
     require(
         panel_api,
         [
