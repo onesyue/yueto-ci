@@ -580,14 +580,37 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         ],
         "YueBoard durable rollout proof",
     )
-    require(
+    # Device identity is observed from the subscription, never issued as a
+    # per-device credential. The previous fragments here pinned the enrolment
+    # gate; it was deleted in yueboard 9580485 after production showed it had
+    # issued zero credentials while blocking users from subscribing at all.
+    # What the guard pins now is the *absence* of that path, plus the delegate
+    # that replaced it -- so re-adding enrolment is what breaks the build.
+    forbid(
         device_enrollment + composition,
         [
             "m.EnrollmentReady(r.Context())",
             "m.devices.Enroll(r.Context()",
             "pluginAPIMod.EnrollmentReady = nodeMod.CredentialEnrollmentReady",
+            '"/user/devices/enroll"',
+            '"/user/devices/revoke"',
         ],
-        "YueBoard locked control-plane bootstrap",
+        "YueBoard retired device-credential enrolment",
+    )
+    require(
+        read(root / "internal/modules/subscribe/subscribe.go"),
+        ["m.serveSubscription(w, r, u, token, u.UUID)"],
+        "YueBoard account-scoped subscription delivery",
+    )
+    forbid(
+        read(root / "internal/modules/subscribe/subscribe.go"),
+        ['"/d/{authority}"', "func (m *Module) deviceSubscribe("],
+        "YueBoard retired per-device subscription route",
+    )
+    require(
+        read(root / "internal/modules/nodesync/internal.go"),
+        ['r.Post("/internal/yueops/users/subscription", m.yueOpsUserSubscription)'],
+        "YueBoard YueOps subscription delegate",
     )
     require(
         presence_migration,
@@ -613,6 +636,10 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         ],
         "YueBoard rollout proof integration test",
     )
+    # The device list is now the observed-identity projection. It never
+    # enumerated enrolled credential rows again after yueboard 9580485, so the
+    # count is max(identities, network lines) -- adding them would double-count
+    # the same machine, which is the inflation this whole surface removes.
     require(
         plugin_api,
         [
@@ -620,21 +647,21 @@ def validate_yueboard(root: Path, contract: dict) -> None:
             'r.Post("/user/devices/reset-all", m.paDevicesResetAll)',
             '"shared_online":   sharedOnline',
             '"presence_source": presenceSource',
-            "liveCount := activeLiveRows",
-            "if sharedOnline {",
+            '"identities":      identities,',
+            "if networkLines > liveCount {",
             'presenceSource = "database_projection"',
             '"applied_user_ids":    []int64{uid}',
-            "never expands IP observations into devices",
+            "added -- the same identity is usually visible to both",
         ],
         "YueBoard public device identity API",
     )
-    require(
-        plugin_api_test,
+    forbid(
+        plugin_api,
         [
-            "paApplyProjectedDevicePresence(nil, 5, now)",
-            "legacy projection inflated count",
+            '"devices":         devices,',
+            "func paApplyProjectedDevicePresence(",
         ],
-        "YueBoard restart projection regression test",
+        "YueBoard retired enrolled-device projection",
     )
     require(
         user_handler,
@@ -644,12 +671,15 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         ],
         "YueBoard credential-free account overview",
     )
+    # The portal hands out the account subscription. What still matters here is
+    # the client catalogue and the export boundary that validates a URL before
+    # handing it to another application through a URI scheme.
     require(
         device_subscription,
         [
-            'return { kind: "open-portal-on-target" }',
-            "Cross-device delivery therefore",
-            "^\\/d\\/",
+            "export function requireSubscriptionURL(",
+            'parsed.protocol !== "https:"',
+            'parsed.hash !== ""',
             '"clash"',
             '"stash"',
             '"hiddify"',
@@ -660,15 +690,20 @@ def validate_yueboard(root: Path, contract: dict) -> None:
             '"v2rayn"',
             '"quantumult-x"',
         ],
-        "YueBoard mainstream-client device enrollment",
+        "YueBoard mainstream-client subscription import",
+    )
+    forbid(
+        device_subscription,
+        ["open-portal-on-target", "getOrCreatePortalDeviceID"],
+        "YueBoard retired per-browser device enrolment",
     )
     require(
         device_subscription_test,
         [
-            "same physical device reuses one authority while cross-device delivery contains none",
-            "shared /s and all query/alias forms are rejected at the final export boundary",
+            "the export boundary rejects anything that could redirect the receiving app",
+            "third-party one-click URI goldens carry the subscription URL unchanged",
         ],
-        "YueBoard third-party enrollment regression tests",
+        "YueBoard third-party import regression tests",
     )
     require(
         migration,
@@ -697,10 +732,16 @@ def validate_yuelink(root: Path, contract: dict) -> None:
         root / "lib/modules/account/providers/account_center_providers.dart"
     )
 
+    # The panel takes the max of observed identities and network lines rather
+    # than their sum: the same device is usually visible to both, so adding
+    # them is the inflation this projection exists to prevent. The client must
+    # accept that shape, and must still refuse a count below what it already
+    # knows to be online.
     require(
         device_summary,
         [
-            "final expectedCount = onlineDevices + (sharedOnline ? 1 : 0);",
+            "final floor = onlineIdentities > (sharedOnline ? 1 : 0)",
+            "if (count < floor) {",
             "Never infer devices from IP cardinality",
             "shared_online",
             "presence_source",
@@ -708,11 +749,17 @@ def validate_yuelink(root: Path, contract: dict) -> None:
         ],
         "YueLink strict device identity projection",
     )
+    forbid(
+        device_summary,
+        ["onlineDevices + (sharedOnline ? 1 : 0)"],
+        "YueLink retired additive device count",
+    )
     require(
         device_summary_test,
         [
-            "five IP observations still represent only one shared identity",
-            "shared presence is explicit even when IP diagnostics are empty",
+            "five IP observations still represent only one identity",
+            "unattributed presence is explicit even when IPs are empty",
+            "an identity and a network line are one device, not two",
         ],
         "YueLink IP-inflation regression tests",
     )
