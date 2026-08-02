@@ -80,7 +80,28 @@ class BuildPolicyTest(unittest.TestCase):
 
     def test_only_build_yml_can_build_or_promote_products(self) -> None:
         workflow_files = sorted(path.name for path in WORKFLOW_DIR.glob("*.y*ml"))
-        self.assertEqual(workflow_files, ["build.yml", "policy-ci.yml"])
+        self.assertEqual(
+            workflow_files, ["build.yml", "policy-ci.yml", "poll-sources.yml"]
+        )
+
+        # poll-sources.yml 只允许**请求**构建，永远不许自己构建或 promote。
+        # 它是定时跑的、无人看着的，所以「它只能做安全的那半」必须由门禁钉住，
+        # 而不是靠写它的人当时的自觉。
+        poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
+        # 「不许做」的几条只能看**可执行内容**：注释里解释「为什么这里不签名」
+        # 本身是有价值的，不该被自己的门禁判违规。
+        poll_code = "\n".join(
+            line for line in poll.splitlines() if not line.lstrip().startswith("#")
+        )
+        self.assertIn("-f promote=false", poll_code)
+        self.assertNotIn("promote=true", poll_code)
+        self.assertNotIn("build-push-action", poll_code)
+        self.assertNotIn("imagetools create", poll_code)
+        self.assertNotIn("cosign", poll_code)
+        self.assertIn("permissions:\n  contents: read", poll)
+        # 漏跑一轮只是晚 20 分钟；两轮叠在一起会对同一个 commit 派两次构建。
+        self.assertIn("concurrency:", poll)
+
         self.assertIn(
             "Authorize and promote verified default-branch digest",
             self.workflow,

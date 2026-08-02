@@ -1,0 +1,144 @@
+name: Poll sources for unbuilt commits
+
+# 为什么是「拉」而不是「推」（2026-08-02）
+#
+# 原来的设计是三个私有仓各自在 push 后 `repository_dispatch` 过来。它从来
+# 没有工作过一次：那需要各仓自己持有 `YUETO_CI_DISPATCH_PAT`，而这个 secret
+# 在 yueboard / yue-node / yueops 里一个都没建过，于是每次都以
+# "Parameter token or opts.auth is required" 退出 —— 三个仓合计 **428 次运行、
+# 零成功**。镜像一直是人手 `gh workflow run` 出来的，只是那片常年红叉让没人
+# 意识到这条自动化根本不存在。
+#
+# 方向反过来就不需要任何新凭据：**yueto-ci 本来就持有能读三个私有仓的
+# `YUETO_CI_PAT`**（build.yml 用它 checkout 源码、推 GHCR）。所以由这边定时
+# 去问「默认分支 HEAD 是多少 / 有没有对应的镜像」，比让三个仓往外推少一个
+# 必须有人去签发、去轮换、去记得补的凭据。
+#
+# 🚨 只构建，绝不 promote。promote 有 pin 对齐门禁，发版必须是有意为之的动作。
+# 今天要解决的问题是「以为有镜像其实没有」，不是「镜像没有自动上线」。
+#
+# 「是否已构建」只从**真实产物**判断：build.yml 在过完 Trivy / cosign /
+# provenance 全部门禁之后，会给该 digest 打一个 `built-<short sha>` 标签。
+# 这里就查这个标签存不存在。刻意不在本仓存状态文件 —— 那份状态会和 registry
+# 漂移（镜像被删、被重打标签、被手工推），而漂移的方向恰好是「以为建过了」。
+
+on:
+  schedule:
+    # 每 20 分钟。GitHub 的 cron 会延迟甚至跳过，所以这条链路的任何一环都不能
+    # 假设「按时跑过」；漏一轮的后果只是镜像晚 20 分钟，下一轮自然补上。
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "只报告差异，不触发构建"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  # 一轮没跑完就不要再开一轮：否则两轮会对同一个 commit 各派一次构建。
+  group: poll-sources
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR
+        # 私有 package 的 manifest 查询需要凭据；用的是 build.yml 同一个 PAT，
+        # 不引入新 secret。
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: onesyue
+          password: ${{ secrets.YUETO_CI_PAT }}
+
+      - name: Find source commits that have no image yet
+        id: scan
+        env:
+          GH_TOKEN: ${{ secrets.YUETO_CI_PAT }}
+        run: |
+          set -euo pipefail
+
+          # 每个 group 派一次构建（services.json 里 yueops 一个仓对应三个镜像，
+          # plan-build-targets.sh 支持按 group 选择）。代表镜像用于查 built- 标签：
+          # 同一个 group 的三个镜像由同一次构建产出，任取其一即可代表该 commit。
+          #
+          # 这张表和 services.json 的对应关系由 policy-ci.yml 的
+          # tests/test_build_policy.py 钉住，漏一个 group 会被那边抓到。
+          groups='[
+            {"group":"yueboard","repo":"onesyue/yueboard","probe":"yueboard"},
+            {"group":"yue-node","repo":"onesyue/yue-node","probe":"yue-node"},
+            {"group":"yueops","repo":"onesyue/yueops","probe":"yueops-web"}
+          ]'
+
+          pending='[]'
+          while read -r row; do
+            grp=$(jq -r '.group' <<<"$row")
+            repo=$(jq -r '.repo' <<<"$row")
+            probe=$(jq -r '.probe' <<<"$row")
+
+            branch=$(gh api "repos/${repo}" --jq '.default_branch')
+            sha=$(gh api "repos/${repo}/commits/${branch}" --jq '.sha')
+            if [ -z "$sha" ] || [ "${#sha}" -ne 40 ]; then
+              echo "::error::could not read HEAD of ${repo}@${branch}"
+              exit 1
+            fi
+            short="${sha:0:7}"
+            image="ghcr.io/onesyue/${probe}"
+
+            # 存在 = 已构建过。查询失败（网络/权限）与「不存在」必须区分开，
+            # 否则一次 registry 抖动就会变成一轮多余的全量重建。
+            if out=$(docker buildx imagetools inspect "${image}:built-${short}" 2>&1); then
+              echo "✓ ${grp}: ${repo}@${short} already built"
+              continue
+            fi
+            if ! grep -qiE 'not found|manifest unknown|no such manifest|denied|404' <<<"$out"; then
+              echo "::error::registry query for ${image}:built-${short} failed for an unexpected reason:"
+              echo "$out"
+              exit 1
+            fi
+
+            echo "→ ${grp}: ${repo}@${short} has no image yet"
+            pending=$(jq -c --arg g "$grp" --arg s "$sha" --arg r "$repo" \
+              '. + [{group:$g, sha:$s, repo:$r}]' <<<"$pending")
+          done < <(jq -c '.[]' <<<"$groups")
+
+          echo "pending=$(jq -c . <<<"$pending")" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Source poll"
+            echo
+            if [ "$(jq 'length' <<<"$pending")" -eq 0 ]; then
+              echo 'Every source HEAD already has an image. Nothing to do.'
+            else
+              echo '| group | repo | commit |'
+              echo '|---|---|---|'
+              jq -r '.[] | "| \(.group) | \(.repo) | `\(.sha[0:7])` |"' <<<"$pending"
+              echo
+              echo '_Builds only — promotion stays a deliberate, manual step._'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Trigger builds
+        if: steps.scan.outputs.pending != '[]' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ secrets.YUETO_CI_PAT }}
+          PENDING: ${{ steps.scan.outputs.pending }}
+        run: |
+          set -euo pipefail
+          while read -r row; do
+            grp=$(jq -r '.group' <<<"$row")
+            sha=$(jq -r '.sha' <<<"$row")
+            echo "dispatching build: service=${grp} ref=${sha} promote=false"
+            # promote=false 是这条链路的硬约束，不接受输入覆盖。
+            gh workflow run build.yml -R "${GITHUB_REPOSITORY}" \
+              -f "service=${grp}" -f "ref=${sha}" -f promote=false
+          done < <(jq -c '.[]' <<<"$PENDING")

@@ -786,6 +786,31 @@ jobs:
           push-to-registry: true
           create-storage-record: false
 
+      # `built-<short sha>` — the answer to "does an image already exist for
+      # this commit?", stored where the truth is: on the artifact itself.
+      #
+      # poll-sources.yml needs that answer to avoid rebuilding the same commit
+      # every 20 minutes, and it deliberately does NOT promote — so `:latest`
+      # cannot serve as the marker (it only moves on promote, which would leave
+      # the poller rebuilding one commit forever). A state file in this repo
+      # was the other option and was rejected: it drifts from the registry the
+      # moment a build is deleted, retagged, or pushed by hand.
+      #
+      # Placed after Trivy, cosign signing/verification and provenance on
+      # purpose: a commit only counts as "built" once it has cleared every gate.
+      # Marking it at push time would let one failing scan permanently convince
+      # the poller there was nothing left to do.
+      - name: Mark this source revision as built
+        env:
+          IMAGE: ${{ steps.meta.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          SHA_SHORT: ${{ steps.meta.outputs.sha_short }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            --tag "${IMAGE}:built-${SHA_SHORT}" "${IMAGE}@${DIGEST}"
+          echo "marked ${IMAGE}:built-${SHA_SHORT} -> ${DIGEST}"
+
       # Authorization and tag mutation intentionally share one shell step:
       # splitting them creates a wider check/use window in which source HEAD
       # can move after approval but before :latest is changed.
