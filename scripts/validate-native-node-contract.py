@@ -314,9 +314,25 @@ def validate_yueops(
             f"EXPECTED_LEASE_SECONDS = {presence['process_lease_seconds']}",
             'process.get("process_instance_id")',
             'process.get("lease_state") == "active"',
-            'replacement.get("generations_applied") is not True',
-            'replacement.get("applied_user_generation") != desired_user',
-            'replacement.get("applied_device_generation") != desired_device',
+            # 2026-08-01：这里原本钉的是「replacement 的 applied_*_generation
+            # 必须等于 desired_*」。那条要求**结构上不可满足**，已按实测撤下：
+            # device generation 会因舰队里任何一个 assignment 的 fanout 变更而
+            # 前进，节点按定义追不上「查看那一刻的最新代际」——78~85 个活跃进程、
+            # 两分半内七次采样，generations_applied 每次都是 0 个 true。
+            # 钉着它等于让 post-proof 永远通不过、舰队镜像永远对不齐。
+            #
+            # 换上的证据更强且可满足（对齐 xDS 的 ACK 语义：ACK 携带客户端
+            # **成功处理过的**版本，而非服务端当前最新版本）：
+            #   · 每个 assignment 恰好一个活跃进程；
+            #   · 前任实例已越过 durable fence；
+            #   · 能力集逐项精确相等；
+            #   · last_seen / last_reported / last_applied **三者都晚于 rollout 栅栏**
+            #     —— 这才是「这次 rollout 之后确实完成了一次控制面往返」的证明，
+            #     也正是节点本地 HEALTH 检查证明不了的那一件事。
+            'for field in ("last_seen_unix", "last_reported_at_unix", "last_applied_at_unix")',
+            "is not newer than the rollout fence",
+            "post proof must identify exactly one serving process per assignment",
+            "post process lacks the exact credential capabilities",
             "pre-fence process remained active after rollout",
             "predecessor process has not crossed its durable fence",
         ],
