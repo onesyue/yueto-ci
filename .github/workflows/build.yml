@@ -848,7 +848,36 @@ jobs:
               | jq -r '.digest // .Digest // empty' || true
           )"
           if [ -n "$existing" ] && [ "$existing" != "$DIGEST" ]; then
-            echo "::error::immutable ${IMAGE}:${SHA_TAG} already points to ${existing}, not ${DIGEST}"
+            # 不可变 tag 的职责是「绝不指向**不同源码**的内容」，不是「同一份源码只准构建一次」。
+            #
+            # 2026-08-02 实录：yue-node 的 sha-64e47a3 已指向 179d853…，而重跑构建产出
+            # 5571774…，于是整个 job 红。但两个镜像的
+            # org.opencontainers.image.revision **都是 64e47a3be6cb** —— 同一份源码，
+            # 只是 Docker 构建本就不是逐字节可复现的（本仓 memory 早有记录：
+            # 「同一提交两次构建 digest 不同，先比 revision label」）。
+            # 那种情况下重建是 no-op，不该拦；真正要拦的是**同 tag 换了源码**。
+            #
+            # 故：拿 tag 上已有那个镜像的 revision label 与本次的源 SHA 比。
+            #   · 相同 → 跳过 promote，**保留已有 digest**（全队 scripts/yue-node.image
+            #     钉的就是它；覆盖会让那份 pin 当场失效）；
+            #   · 不同 / 读不出来 → 按原样 fail-closed。读不出来也算不同，
+            #     是刻意的：拿不到证据时不能假设它无害。
+            existing_rev="$(
+              docker buildx imagetools inspect "${IMAGE}@${existing}" \
+                --format '{{json .Image}}' 2>/dev/null \
+                | jq -r '
+                    [ .. | objects | .config? | objects | .Labels? | objects
+                      | ."org.opencontainers.image.revision"? // empty ] | first // empty
+                  ' 2>/dev/null || true
+            )"
+            if [ -n "$existing_rev" ] && [ "$existing_rev" = "$SOURCE_SHA" ]; then
+              echo "::notice::${IMAGE}:${SHA_TAG} 已指向同源镜像 ${existing}" \
+                   "(revision=${existing_rev})；本次构建产出 ${DIGEST}，" \
+                   "Docker 构建非逐字节可复现属预期。保留已有 digest，跳过 promote。"
+              exit 0
+            fi
+            echo "::error::immutable ${IMAGE}:${SHA_TAG} already points to ${existing}" \
+                 "(revision=${existing_rev:-<unreadable>}), not ${DIGEST} (source ${SOURCE_SHA})"
             exit 1
           fi
           # Narrow the unavoidable network check/use interval once more. A
