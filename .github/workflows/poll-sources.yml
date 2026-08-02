@@ -69,22 +69,30 @@ jobs:
           set -euo pipefail
 
           # 每个 group 派一次构建（services.json 里 yueops 一个仓对应三个镜像，
-          # plan-build-targets.sh 支持按 group 选择）。代表镜像用于查 built- 标签：
-          # 同一个 group 的三个镜像由同一次构建产出，任取其一即可代表该 commit。
+          # plan-build-targets.sh 支持按 group 选择）。
           #
-          # 这张表和 services.json 的对应关系由 policy-ci.yml 的
-          # tests/test_build_policy.py 钉住，漏一个 group 会被那边抓到。
-          groups='[
-            {"group":"yueboard","repo":"onesyue/yueboard","probe":"yueboard"},
-            {"group":"yue-node","repo":"onesyue/yue-node","probe":"yue-node"},
-            {"group":"yueops","repo":"onesyue/yueops","probe":"yueops-web"}
-          ]'
+          # 「已构建」的判据是 group 内**每一个**镜像都有 built-<short> 标签。
+          # 早先只探一个「代表镜像」：同组三个镜像虽由同一次构建产出，但那次
+          # 构建可以部分失败（代表镜像推上去了、另两个没有）——下一轮 poll 看到
+          # 代表标签就跳过，缺的镜像永远不会被补，也没有任何自动重试。最终会在
+          # 部署门的三镜像同 revision 检查上炸出来，但自动化闭环在这里就该闭上。
+          #
+          # 组表不再手写：直接从 services.json 派生，schema 变了这里自动跟上。
+          # （手写表时代的注释声称有测试钉住对应关系——那条测试从未存在过。）
+          groups=$(jq -c 'group_by(.group) | map({
+            group: .[0].group,
+            repos: (map(.repo) | unique),
+            probes: map(.service)
+          })' services.json)
 
           pending='[]'
           while read -r row; do
             grp=$(jq -r '.group' <<<"$row")
-            repo=$(jq -r '.repo' <<<"$row")
-            probe=$(jq -r '.probe' <<<"$row")
+            if [ "$(jq -r '.repos | length' <<<"$row")" -ne 1 ]; then
+              echo "::error::group ${grp} spans multiple source repos in services.json"
+              exit 1
+            fi
+            repo=$(jq -r '.repos[0]' <<<"$row")
 
             branch=$(gh api "repos/${repo}" --jq '.default_branch')
             sha=$(gh api "repos/${repo}/commits/${branch}" --jq '.sha')
@@ -93,21 +101,29 @@ jobs:
               exit 1
             fi
             short="${sha:0:7}"
-            image="ghcr.io/onesyue/${probe}"
 
-            # 存在 = 已构建过。查询失败（网络/权限）与「不存在」必须区分开，
-            # 否则一次 registry 抖动就会变成一轮多余的全量重建。
-            if out=$(docker buildx imagetools inspect "${image}:built-${short}" 2>&1); then
-              echo "✓ ${grp}: ${repo}@${short} already built"
+            missing=()
+            while read -r probe; do
+              image="ghcr.io/onesyue/${probe}"
+              # 存在 = 已构建过。查询失败（网络/权限）与「不存在」必须区分开，
+              # 否则一次 registry 抖动就会变成一轮多余的全量重建。
+              if out=$(docker buildx imagetools inspect "${image}:built-${short}" 2>&1); then
+                continue
+              fi
+              if ! grep -qiE 'not found|manifest unknown|no such manifest|denied|404' <<<"$out"; then
+                echo "::error::registry query for ${image}:built-${short} failed for an unexpected reason:"
+                echo "$out"
+                exit 1
+              fi
+              missing+=("$probe")
+            done < <(jq -r '.probes[]' <<<"$row")
+
+            if [ "${#missing[@]}" -eq 0 ]; then
+              echo "✓ ${grp}: ${repo}@${short} already built (all images present)"
               continue
             fi
-            if ! grep -qiE 'not found|manifest unknown|no such manifest|denied|404' <<<"$out"; then
-              echo "::error::registry query for ${image}:built-${short} failed for an unexpected reason:"
-              echo "$out"
-              exit 1
-            fi
 
-            echo "→ ${grp}: ${repo}@${short} has no image yet"
+            echo "→ ${grp}: ${repo}@${short} missing image(s): ${missing[*]}"
             pending=$(jq -c --arg g "$grp" --arg s "$sha" --arg r "$repo" \
               '. + [{group:$g, sha:$s, repo:$r}]' <<<"$pending")
           done < <(jq -c '.[]' <<<"$groups")

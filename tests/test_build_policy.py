@@ -99,6 +99,27 @@ class BuildPolicyTest(unittest.TestCase):
         # 拉取式的判据只能是 HEAD 与产物，不能是 push 事件本身。
         self.assertNotIn("on:\n  push:", poll)
 
+    def test_source_poller_probes_every_image_in_a_group(self) -> None:
+        """「已构建」必须以 group 内每个镜像都有 built- 标签为准。
+
+        只探「代表镜像」时，一次部分失败的构建（代表推上去了、其余没有）会让
+        缺的镜像永远不被补——下一轮 poll 看到代表标签即跳过，且无任何重试。
+        同时组表必须从 services.json 派生而不是手写：手写表时代的注释声称有
+        测试钉住对应关系，那条测试从未存在过，这条就是补上的那条。
+        """
+        poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
+        poll_code = "\n".join(
+            line for line in poll.splitlines() if not line.lstrip().startswith("#")
+        )
+        # 组表从 services.json 派生（group_by 才能把一仓多镜像折成一组）。
+        self.assertIn("services.json", poll_code)
+        self.assertIn("group_by(.group)", poll_code)
+        # 探测的是全部 probes，不是单个代表。
+        self.assertIn("probes: map(.service)", poll_code)
+        self.assertIn('jq -r \'.probes[]\'', poll_code)
+        # 手写代表镜像的形态不许回来。
+        self.assertNotIn('"probe":', poll_code)
+
     def test_only_build_yml_can_build_or_promote_products(self) -> None:
         workflow_files = sorted(path.name for path in WORKFLOW_DIR.glob("*.y*ml"))
         self.assertEqual(
