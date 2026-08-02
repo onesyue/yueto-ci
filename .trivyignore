@@ -1,12 +1,3 @@
 # Temporary, reviewed exceptions only. Every entry must carry:
 # scope, reason, and the condition that retires it.
 #
-# CVE-2026-56852 — golang.org/x/text v0.38.0 norm.Iter infinite loop (HIGH).
-# Scope: /usr/local/bin/cosign (3.1.2) and /usr/local/bin/gh (2.96.0) inside
-# yueops-web, both built from the latest upstream releases, which still pin
-# x/text v0.38.0 (verified 2026-07-29: no cosign/gh release carries 0.39.0).
-# Both binaries only process trusted, operator-supplied input (verifying our
-# own GHCR signatures / driving our own repos), so the DoS is not reachable
-# from untrusted data. Retire this entry as soon as a cosign or gh release
-# ships golang.org/x/text >= 0.39.0, then bump the Dockerfile pins instead.
-CVE-2026-56852
