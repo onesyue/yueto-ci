@@ -78,6 +78,27 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
         self.assertEqual(self.workflow.count("127.0.0.1:55434"), 3)
 
+    def test_source_poller_is_unconditional(self) -> None:
+        """poller 不许有路径过滤——「每个提交都被中央验证」靠的就是这一点。
+
+        它接替的是三个源仓里那个 `trigger-build.yml`，那个是**按路径过滤**的
+        （只有碰了 `scripts/**` / `services/**` 之类才派发）。而且它 428 次运行
+        零成功，从来没派发过。改成拉取式之后判据是「HEAD 变没变」，与改了哪些
+        文件无关，所以「policy-only 的改动继承了一份早先验过的镜像」这种形态
+        结构上不可能再发生——前提是这里永远不要给它加回路径过滤。
+
+        yueops 侧原本断言那份路径过滤的测试
+        （test_npm_audit_waiver_scope_20260730）已指向这一条。
+        """
+        poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
+        trigger = poll.split("jobs:", 1)[0]
+        self.assertIn("schedule:", trigger)
+        self.assertIn("workflow_dispatch:", trigger)
+        self.assertNotIn("paths:", trigger)
+        self.assertNotIn("paths-ignore:", trigger)
+        # 拉取式的判据只能是 HEAD 与产物，不能是 push 事件本身。
+        self.assertNotIn("on:\n  push:", poll)
+
     def test_only_build_yml_can_build_or_promote_products(self) -> None:
         workflow_files = sorted(path.name for path in WORKFLOW_DIR.glob("*.y*ml"))
         self.assertEqual(
