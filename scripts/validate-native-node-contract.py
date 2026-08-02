@@ -19,6 +19,31 @@ def read(path: Path) -> str:
         raise RuntimeError(f"required contract file is unavailable: {path}") from exc
 
 
+def read_package(directory: Path, pattern: str, *, min_files: int) -> str:
+    """Concatenate every source file of a package.
+
+    Contract fragments are asserted against a PACKAGE, not a file: Go lets a
+    package be laid out across as many files as it likes, and a purely
+    mechanical split must not read as a contract violation. (It did once —
+    splitting yue-node's 2853-line internal/service/service.go moved
+    `applyDeviceGeneration` into state.go and this guard reported the
+    credential-generation boundary as missing.)
+
+    `min_files` is the floor that keeps this from becoming the opposite
+    failure: a glob that matches nothing yields "", every `forbid` passes, and
+    only `require` would notice. Fail loudly instead of scanning air.
+    """
+    if not directory.is_dir():
+        raise RuntimeError(f"required contract package is unavailable: {directory}")
+    files = sorted(p for p in directory.glob(pattern) if p.is_file())
+    if len(files) < min_files:
+        raise RuntimeError(
+            f"contract package {directory} matched {len(files)} file(s) for "
+            f"{pattern!r} (floor {min_files}) — the scan did not run"
+        )
+    return "\n".join(p.read_text(encoding="utf-8") for p in files)
+
+
 def require(text: str, fragments: list[str], source: str) -> None:
     missing = [fragment for fragment in fragments if fragment not in text]
     if missing:
@@ -46,8 +71,11 @@ def validate_node(root: Path, contract: dict) -> None:
     config = read(root / "internal/config/config.go")
     controlplane = read(root / "internal/controlplane/connect.go")
     proto = read(root / "proto/yuenode/v1/yuenode.proto")
-    service = read(root / "internal/service/service.go")
-    service_test = read(root / "internal/service/service_test.go")
+    # The whole package, not one file — see read_package. yue-node's service
+    # package is deliberately split by responsibility (service/state/sync/
+    # transaction/users/kernel/reporting/observability/devices/validate).
+    service = read_package(root / "internal/service", "*.go", min_files=8)
+    service_test = read_package(root / "internal/service", "*_test.go", min_files=3)
     model_types = read(root / "internal/model/types.go")
     model_test = read(root / "internal/model/credential_priority_test.go")
     xray_dispatcher = read(root / "internal/kernel/xray/dispatcher.go")
