@@ -375,6 +375,15 @@ jobs:
           YUEBOARD_MIGRATION_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
           YUEBOARD_MIGRATION_TEST_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE
           YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE: '1'
+          # 整个集成套件共用一个测试账号、跨用例连续下单，会撞满生产默认的
+          # 10 次/分钟结账闸门 —— 2026-08-02 实录：那道闸门刚加上，5 个**支付回归**
+          # 测试就集体 429，等于它顺手废掉了「支付出问题能被测出来」这件事。
+          # 放宽的是**测试环境**；生产不设此变量仍是 10（yueboard 侧
+          # checkout_rate_limit_default_test.go 钉住了这条，坏值也 fail 回默认）。
+          #
+          # ⚠️ 这一份和 yueboard 自己的 .github/workflows/ci.yml 是**两份各自要改**的
+          # 副本：真正跑发版校验的是这里（yueto-ci），只改 yueboard 那份不会生效。
+          YUEBOARD_CHECKOUT_RATE_LIMIT_PER_MINUTE: '10000'
         run: |
           go test ./...
           go test -tags integration ./internal/platform/db \
