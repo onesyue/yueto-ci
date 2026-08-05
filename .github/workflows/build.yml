@@ -786,7 +786,7 @@ jobs:
           push-to-registry: true
           create-storage-record: false
 
-      # `built-<short sha>` — the answer to "does an image already exist for
+      # `built-<full sha>` — the answer to "does an image already exist for
       # this commit?", stored where the truth is: on the artifact itself.
       #
       # poll-sources.yml needs that answer to avoid rebuilding the same commit
@@ -804,12 +804,12 @@ jobs:
         env:
           IMAGE: ${{ steps.meta.outputs.image }}
           DIGEST: ${{ steps.build.outputs.digest }}
-          SHA_SHORT: ${{ steps.meta.outputs.sha_short }}
+          SOURCE_SHA: ${{ steps.meta.outputs.source_sha }}
         run: |
           set -euo pipefail
           docker buildx imagetools create \
-            --tag "${IMAGE}:built-${SHA_SHORT}" "${IMAGE}@${DIGEST}"
-          echo "marked ${IMAGE}:built-${SHA_SHORT} -> ${DIGEST}"
+            --tag "${IMAGE}:built-${SOURCE_SHA}" "${IMAGE}@${DIGEST}"
+          echo "marked ${IMAGE}:built-${SOURCE_SHA} -> ${DIGEST}"
 
       # Authorization and tag mutation intentionally share one shell step:
       # splitting them creates a wider check/use window in which source HEAD
@@ -824,7 +824,8 @@ jobs:
           DISPATCH_REF: ${{ github.event.client_payload.ref || '' }}
           DIGEST: ${{ steps.build.outputs.digest }}
           IMAGE: ${{ steps.meta.outputs.image }}
-          SHA_TAG: sha-${{ steps.meta.outputs.sha_short }}
+          SHA_TAG: sha-${{ steps.meta.outputs.source_sha }}
+          EXPECTED_SBOMS: ${{ contains(matrix.platforms, 'arm64') && '2' || '1' }}
         run: |
           set -euo pipefail
           [[ "$SOURCE_REPO" =~ ^onesyue/[A-Za-z0-9._-]+$ ]] || {
@@ -872,6 +873,7 @@ jobs:
               --format '{{json .Manifest}}' 2>/dev/null \
               | jq -r '.digest // .Digest // empty' || true
           )"
+          promotion_digest="$DIGEST"
           if [ -n "$existing" ] && [ "$existing" != "$DIGEST" ]; then
             # 不可变 tag 的职责是「绝不指向**不同源码**的内容」，不是「同一份源码只准构建一次」。
             #
@@ -883,8 +885,8 @@ jobs:
             # 那种情况下重建是 no-op，不该拦；真正要拦的是**同 tag 换了源码**。
             #
             # 故：拿 tag 上已有那个镜像的 revision label 与本次的源 SHA 比。
-            #   · 相同 → 跳过 promote，**保留已有 digest**（全队 scripts/yue-node.image
-            #     钉的就是它；覆盖会让那份 pin 当场失效）；
+            #   · 相同 → 验证已有 digest 的中央签名/SBOM，随后复用它并继续收敛
+            #     immutable tag + latest（全队 digest pin 不会因此失效）；
             #   · 不同 / 读不出来 → 按原样 fail-closed。读不出来也算不同，
             #     是刻意的：拿不到证据时不能假设它无害。
             existing_rev="$(
@@ -896,14 +898,27 @@ jobs:
                   ' 2>/dev/null || true
             )"
             if [ -n "$existing_rev" ] && [ "$existing_rev" = "$SOURCE_SHA" ]; then
+              identity="https://github.com/${GITHUB_WORKFLOW_REF}"
+              issuer="https://token.actions.githubusercontent.com"
+              cosign verify \
+                --certificate-identity "$identity" \
+                --certificate-oidc-issuer "$issuer" \
+                "${IMAGE}@${existing}" >/dev/null
+              existing_attestations="$(cosign verify-attestation \
+                --certificate-identity "$identity" \
+                --certificate-oidc-issuer "$issuer" \
+                --type cyclonedx "${IMAGE}@${existing}")"
+              jq -s -e "length >= ${EXPECTED_SBOMS}" \
+                <<<"$existing_attestations" >/dev/null
+              promotion_digest="$existing"
               echo "::notice::${IMAGE}:${SHA_TAG} 已指向同源镜像 ${existing}" \
                    "(revision=${existing_rev})；本次构建产出 ${DIGEST}，" \
-                   "Docker 构建非逐字节可复现属预期。保留已有 digest，跳过 promote。"
-              exit 0
+                   "Docker 构建非逐字节可复现属预期。复用已验签 digest 并继续收敛 latest。"
+            else
+              echo "::error::immutable ${IMAGE}:${SHA_TAG} already points to ${existing}" \
+                   "(revision=${existing_rev:-<unreadable>}), not ${DIGEST} (source ${SOURCE_SHA})"
+              exit 1
             fi
-            echo "::error::immutable ${IMAGE}:${SHA_TAG} already points to ${existing}" \
-                 "(revision=${existing_rev:-<unreadable>}), not ${DIGEST} (source ${SOURCE_SHA})"
-            exit 1
           fi
           # Narrow the unavoidable network check/use interval once more. A
           # source push racing this step fails closed instead of moving latest
@@ -921,4 +936,4 @@ jobs:
           docker buildx imagetools create \
             --tag "${IMAGE}:${SHA_TAG}" \
             --tag "${IMAGE}:latest" \
-            "${IMAGE}@${DIGEST}"
+            "${IMAGE}@${promotion_digest}"

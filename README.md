@@ -29,8 +29,8 @@ gh workflow run build.yml -R onesyue/yueto-ci \
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yueboard -f ref=<40-hex-main-head> -f promote=true
 
-# 代码仓默认分支 push 后自动触发并提升：在代码仓放 thin workflow
-# （计费落在公开仓；发送者、精确 SHA、默认分支 HEAD 均由中央门复核）
+# 私有源码仓默认分支由 poll-sources.yml 每 20 分钟拉取检查；缺少精确
+# built-<40-hex> 产物时只触发 candidate 构建，不自动提升 latest。
 ```
 
 `ref` 可以是完整分支或 tag；如果传 commit，必须传完整 40 位 SHA。GitHub
@@ -39,32 +39,19 @@ checkout 不把 7‑39 位短 SHA 当作可复现的 commit ref，中央 plan �
 `validation-targets.json` 的源码校验；后者不会产生 build matrix。仅校验目标不能
 使用 `promote=true`。
 
-代码仓 thin workflow 模板（`.github/workflows/trigger-build.yml`）：
-
-```yaml
-name: Trigger yueto-ci build
-on:
-  push:
-    branches: [main] # 按仓库主分支改
-jobs:
-  dispatch:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
-        with:
-          token: ${{ secrets.YUETO_CI_DISPATCH_PAT }}
-          repository: onesyue/yueto-ci
-          event-type: build
-          client-payload: '{"service": "<本服务名>", "ref": "${{ github.sha }}", "before": "${{ github.event.before }}", "promote": true}'
-```
+`poll-sources.yml` 从 `services.json` 派生仓库/镜像组，逐个验证组内所有镜像。
+新产物用完整 40 位源码 SHA 作 marker；迁移期仅在旧 7 位 marker 的 OCI
+`org.opencontainers.image.revision` 精确等于当前 HEAD 时才承认已构建。registry
+权限或网络错误会 fail closed，不会伪装成“镜像不存在”触发冗余重建。
 
 ## 必需的 secrets（仓库 Settings → Secrets → Actions）
 
 - `YUETO_CI_PAT` — classic PAT，勾 `repo` + `write:packages`：checkout 私有代码仓 + 推 GHCR。
   （已有包如 ghcr.io/onesyue/yueboard 归属各代码仓，本仓 GITHUB_TOKEN 推不动，必须用 PAT。）
-- 各代码仓需要 `YUETO_CI_DISPATCH_PAT` — 归属可信 `onesyue` actor 的
-  fine-grained PAT，只授 yueto-ci 发 repository dispatch 所需的最小权限。
-  中央 workflow 会拒绝其他 actor 发起的自动提升。
+
+私有源码仓不再需要 `YUETO_CI_DISPATCH_PAT`；拉取式 poll 使用中央仓已有的
+`YUETO_CI_PAT`。`repository_dispatch` 入口仅保留给受控兼容调用，仍由可信 actor、
+完整 SHA 和默认分支 HEAD 三重门禁约束。
 
 ## ⚠️ 迁移注意：cosign 签名身份变更
 

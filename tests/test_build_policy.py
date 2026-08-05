@@ -120,6 +120,48 @@ class BuildPolicyTest(unittest.TestCase):
         # 手写代表镜像的形态不许回来。
         self.assertNotIn('"probe":', poll_code)
 
+    def test_built_markers_use_exact_source_identity_and_registry_errors_fail_closed(
+        self,
+    ) -> None:
+        poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
+        poll_code = "\n".join(
+            line for line in poll.splitlines() if not line.lstrip().startswith("#")
+        )
+        self.assertIn('marker_ref="${image}:built-${sha}"', poll_code)
+        self.assertIn('legacy_ref="${image}:built-${short}"', poll_code)
+        self.assertIn('if [ "$legacy_rev" = "$sha" ]', poll_code)
+        self.assertIn('"org.opencontainers.image.revision"', poll_code)
+        self.assertNotIn("no such manifest|denied", poll_code)
+
+        marker_start = self.workflow.index("- name: Mark this source revision as built")
+        promotion_start = self.workflow.index(
+            "- name: Authorize and promote verified default-branch digest"
+        )
+        marker_step = self.workflow[marker_start:promotion_start]
+        self.assertIn("SOURCE_SHA: ${{ steps.meta.outputs.source_sha }}", marker_step)
+        self.assertIn('built-${SOURCE_SHA}', marker_step)
+        self.assertNotIn("SHA_SHORT", marker_step)
+
+    def test_promotion_reuses_only_verified_same_source_digest_and_converges_latest(
+        self,
+    ) -> None:
+        start = self.workflow.index(
+            "- name: Authorize and promote verified default-branch digest"
+        )
+        step = self.workflow[start:]
+        self.assertIn("SHA_TAG: sha-${{ steps.meta.outputs.source_sha }}", step)
+        self.assertIn('promotion_digest="$DIGEST"', step)
+        self.assertIn('promotion_digest="$existing"', step)
+        self.assertIn("cosign verify \\", step)
+        self.assertIn("cosign verify-attestation \\", step)
+        self.assertIn('"${IMAGE}@${promotion_digest}"', step)
+        same_source = step[
+            step.index('if [ -n "$existing_rev" ]') : step.index(
+                "# Narrow the unavoidable network check/use interval"
+            )
+        ]
+        self.assertNotIn("exit 0", same_source)
+
     def test_only_build_yml_can_build_or_promote_products(self) -> None:
         workflow_files = sorted(path.name for path in WORKFLOW_DIR.glob("*.y*ml"))
         self.assertEqual(
