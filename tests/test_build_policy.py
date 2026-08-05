@@ -532,6 +532,14 @@ class BuildPolicyTest(unittest.TestCase):
             "pinned YueBoard contract schema floor does not match central policy",
             self.native_validator,
         )
+        self.assertIn(
+            'for source_dir in (root / "cmd", root / "internal")',
+            self.native_validator,
+        )
+        self.assertNotIn(
+            'for path in root.rglob("*.go")',
+            self.native_validator,
+        )
 
     def test_native_node_contract_is_central_and_blocks_all_product_repositories(
         self,

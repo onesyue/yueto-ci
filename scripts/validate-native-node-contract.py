@@ -333,10 +333,14 @@ def validate_node(root: Path, contract: dict) -> None:
     forbid(config, ['case "xray", "hysteria", "hysteria2":'], "yue-node config")
     if any((root / "internal/machine").glob("*.go")):
         raise RuntimeError("retired dynamic machine orchestrator still exists")
+    # Scan only yue-node's executable/runtime packages.  The central workflow
+    # deliberately checks the YueBoard canonical tree out below ``root`` as
+    # .ci-yueboard; a repository-wide rglob would then mistake panel RPC
+    # handlers for node runtime code and fail on legitimate panel-only names.
     runtime_go = "\n".join(
         read(path)
-        for path in root.rglob("*.go")
-        if "vendor" not in path.parts and "gen" not in path.parts
+        for source_dir in (root / "cmd", root / "internal")
+        for path in source_dir.rglob("*.go")
     )
     forbid(
         runtime_go,
