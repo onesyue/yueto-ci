@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -507,18 +508,17 @@ class BuildPolicyTest(unittest.TestCase):
     def test_native_node_contract_is_central_and_blocks_all_product_repositories(
         self,
     ) -> None:
-        self.assertEqual(self.native_contract["version"], 5)
-        # The floor is the one field in this contract that is *meant* to move:
-        # every YueBoard migration release raises it. Pinning it to a literal
-        # here made this whole snapshot test fail on every legitimate bump
-        # (46 -> 47 -> 48 -> 49 -> 50), so the guard was red on every push and taught
-        # us to ignore it. Exactness is already enforced where it can actually
-        # be checked -- validate-native-node-contract.py compares this value
-        # against the pinned YueBoard's schema-floor.txt and against YueOps'
-        # MIN_SCHEMA_FLOOR, and fails closed on any mismatch. What this test
-        # can still add is a monotonic guard: the floor must never regress.
+        self.assertEqual(self.native_contract["version"], 6)
+        # Floor 57 is an irreversible authority-retirement boundary, not an
+        # ordinary additive migration bump. Keep the central policy, pinned
+        # YueBoard tree and YueOps MIN_SCHEMA_FLOOR on this exact reviewed
+        # value; the cross-repository validator checks the latter two as well.
         self.assertIsInstance(self.native_contract["schema_floor"], int)
-        self.assertGreaterEqual(self.native_contract["schema_floor"], 50)
+        self.assertEqual(self.native_contract["schema_floor"], 57)
+        self.assertEqual(
+            self.native_contract["yueboard_contract_pin"],
+            "296e2eabd28b5a82ba8ecaacef742448a1b83b3e",
+        )
         self.assertEqual(
             self.native_contract["presence"],
             {
@@ -558,7 +558,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(
             self.native_contract["device_identity"],
             {
-                "count_basis": "observed_install_identity",
+                "count_basis": "client_declared_hwid_or_network_projection",
                 "count_equation": "max_online_identities_and_network_lines",
                 "legacy_shared_online_max": 1,
                 "diagnostic_only": [
@@ -575,6 +575,8 @@ class BuildPolicyTest(unittest.TestCase):
                 "account_subscription_api": "/api/v1/user/getSubscribe",
                 "account_subscription_prefix": "/s/",
                 "third_party_import": "account_subscription",
+                "portal_installation_authority": "retired",
+                "synthetic_install_identity": "retired",
                 "presence_sources": ["memory", "database_projection"],
             },
         )
@@ -602,6 +604,63 @@ class BuildPolicyTest(unittest.TestCase):
         ):
             self.assertIn(rpc, self.native_contract["control"]["retired_rpcs"])
         self.assertIn("validate_yueboard", self.native_validator)
+
+    def test_floor57_portal_installation_retirement_is_pinned_fail_closed(self) -> None:
+        for required in (
+            "internal/modules/subscribe/install_beacon_inject.go",
+            "internal/modules/subscribe/presence_beacon.go",
+            "00056_drop_portal_handoff_enrollment_receipts.sql",
+            "00057_drop_retired_device_subscription_authorities.sql",
+            "current_setting('yueboard.retirement_nonce', true), 57, false",
+            "current_setting('yueboard.retirement_nonce', true), 57, true",
+            '"/d/{authority}"',
+            "RecordInstallBeacon",
+            "MintInstallToken",
+            "install_token",
+            "TestRuntimeHasNoSyntheticInstallOrPerDeviceAuthoritySurface",
+            "web/src/lib/subscription-client.ts",
+            "the portal does not recommend clients without a proven managed profile",
+            '"shadowrocket"',
+            '"小火箭"',
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, self.native_validator)
+
+        self.assertNotIn("web/src/lib/device-subscription.ts", self.native_validator)
+        self.assertIn("forbid_paths(", self.native_validator)
+        self.assertIn("forbid_casefold(", self.native_validator)
+        self.assertIn('root / "internal/modules"', self.native_validator)
+        self.assertIn('root / "web/src"', self.native_validator)
+
+    def test_retired_path_and_client_name_guards_reject_regressions(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "native_node_contract_validator", NATIVE_VALIDATOR
+        )
+        self.assertIsNotNone(spec)
+        assert spec is not None and spec.loader is not None
+        validator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(validator)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            retired = root / "internal/modules/subscribe/install_beacon_inject.go"
+            retired.parent.mkdir(parents=True)
+            retired.write_text("package subscribe\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "retired contract paths"):
+                validator.forbid_paths(
+                    root,
+                    ["internal/modules/subscribe/install_beacon_inject.go"],
+                    "test Portal runtime",
+                )
+
+        for spelling in ("Shadowrocket", "SHADOWROCKET", "小火箭"):
+            with self.subTest(spelling=spelling):
+                with self.assertRaisesRegex(RuntimeError, "retired contract fragments"):
+                    validator.forbid_casefold(
+                        f"recommend {spelling}",
+                        ["shadowrocket", "小火箭"],
+                        "test client catalogue",
+                    )
 
     def test_transition_advertisement_and_serving_proof_capabilities_are_distinct(
         self,

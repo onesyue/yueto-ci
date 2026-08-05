@@ -19,7 +19,13 @@ def read(path: Path) -> str:
         raise RuntimeError(f"required contract file is unavailable: {path}") from exc
 
 
-def read_package(directory: Path, pattern: str, *, min_files: int) -> str:
+def read_package(
+    directory: Path,
+    pattern: str,
+    *,
+    min_files: int,
+    exclude_suffixes: tuple[str, ...] = (),
+) -> str:
     """Concatenate every source file of a package.
 
     Contract fragments are asserted against a PACKAGE, not a file: Go lets a
@@ -35,13 +41,43 @@ def read_package(directory: Path, pattern: str, *, min_files: int) -> str:
     """
     if not directory.is_dir():
         raise RuntimeError(f"required contract package is unavailable: {directory}")
-    files = sorted(p for p in directory.glob(pattern) if p.is_file())
+    files = sorted(
+        p
+        for p in directory.glob(pattern)
+        if p.is_file() and not p.name.endswith(exclude_suffixes)
+    )
     if len(files) < min_files:
         raise RuntimeError(
             f"contract package {directory} matched {len(files)} file(s) for "
             f"{pattern!r} (floor {min_files}) — the scan did not run"
         )
     return "\n".join(p.read_text(encoding="utf-8") for p in files)
+
+
+def read_tree(
+    directory: Path,
+    patterns: tuple[str, ...],
+    *,
+    min_files: int,
+    exclude_suffixes: tuple[str, ...] = (),
+) -> str:
+    """Concatenate a runtime source tree without silently scanning zero files."""
+    if not directory.is_dir():
+        raise RuntimeError(f"required contract tree is unavailable: {directory}")
+    files = sorted(
+        {
+            path
+            for pattern in patterns
+            for path in directory.rglob(pattern)
+            if path.is_file() and not path.name.endswith(exclude_suffixes)
+        }
+    )
+    if len(files) < min_files:
+        raise RuntimeError(
+            f"contract tree {directory} matched {len(files)} file(s) "
+            f"(floor {min_files}) — the scan did not run"
+        )
+    return "\n".join(path.read_text(encoding="utf-8") for path in files)
 
 
 def require(text: str, fragments: list[str], source: str) -> None:
@@ -56,6 +92,26 @@ def forbid(text: str, fragments: list[str], source: str) -> None:
     present = [fragment for fragment in fragments if fragment in text]
     if present:
         raise RuntimeError(f"{source} contains retired contract fragments: {present!r}")
+
+
+def forbid_casefold(text: str, fragments: list[str], source: str) -> None:
+    folded = text.casefold()
+    present = [fragment for fragment in fragments if fragment.casefold() in folded]
+    if present:
+        raise RuntimeError(f"{source} contains retired contract fragments: {present!r}")
+
+
+def forbid_paths(root: Path, paths: list[str], source: str) -> None:
+    """Fail if a retired source path is restored.
+
+    Content guards alone do not distinguish a deliberately deleted authority
+    implementation from an empty or renamed compatibility shell.  These paths
+    were the Portal-installation token minting and beacon delivery surfaces;
+    restoring either file is therefore itself a contract violation.
+    """
+    present = [path for path in paths if (root / path).exists()]
+    if present:
+        raise RuntimeError(f"{source} contains retired contract paths: {present!r}")
 
 
 def rpc_name(path: str) -> str:
@@ -512,13 +568,49 @@ def validate_yueboard(root: Path, contract: dict) -> None:
     presence_migration = read(
         root / "internal/platform/db/migrations/00045_node_presence_streams.sql"
     )
-    device_enrollment = read(root / "internal/modules/pluginapi/pluginapi.go")
     composition = read(root / "cmd/yueboard/main.go")
     plugin_api = read(root / "internal/modules/pluginapi/pluginapi.go")
-    plugin_api_test = read(root / "internal/modules/pluginapi/pluginapi_test.go")
     user_handler = read(root / "internal/modules/user/handler.go")
-    device_subscription = read(root / "web/src/lib/device-subscription.ts")
-    device_subscription_test = read(root / "web/src/lib/device-subscription.test.ts")
+    subscribe_runtime = read_package(
+        root / "internal/modules/subscribe",
+        "*.go",
+        min_files=10,
+        exclude_suffixes=("_test.go",),
+    )
+    device_identity_runtime = read_package(
+        root / "internal/platform/deviceidentity",
+        "*.go",
+        min_files=2,
+        exclude_suffixes=("_test.go",),
+    )
+    module_runtime = read_tree(
+        root / "internal/modules",
+        ("*.go",),
+        min_files=100,
+        exclude_suffixes=("_test.go",),
+    )
+    web_runtime = read_tree(
+        root / "web/src",
+        ("*.ts", "*.tsx"),
+        min_files=50,
+        exclude_suffixes=(".test.ts", ".test.tsx"),
+    )
+    handoff = read(root / "internal/modules/handoff/handoff.go")
+    subscription_client = read(root / "web/src/lib/subscription-client.ts")
+    subscription_client_test = read(
+        root / "web/src/lib/subscription-client.test.ts"
+    )
+    retirement_migration_56 = read(
+        root
+        / "internal/platform/db/migrations/00056_drop_portal_handoff_enrollment_receipts.sql"
+    )
+    retirement_migration_57 = read(
+        root
+        / "internal/platform/db/migrations/00057_drop_retired_device_subscription_authorities.sql"
+    )
+    retirement_test = read(
+        root / "internal/platform/db/migrations_00056_57_test.go"
+    )
     migration = read(
         root
         / "internal/platform/db/migrations/00037_native_node_inventory_boundary.sql"
@@ -535,6 +627,11 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         raise RuntimeError(
             "YueBoard schema floor does not match the native-node contract"
         )
+    identity = contract["device_identity"]
+    if identity.get("portal_installation_authority") != "retired":
+        raise RuntimeError("Portal installation authority must remain retired")
+    if identity.get("synthetic_install_identity") != "retired":
+        raise RuntimeError("synthetic install identity must remain retired")
     require(
         proto,
         [f"rpc {rpc_name(path)}(" for path in contract["control"]["static_node_rpcs"]]
@@ -627,32 +724,68 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         ],
         "YueBoard durable rollout proof",
     )
-    # Device identity is observed from the subscription, never issued as a
-    # per-device credential. The previous fragments here pinned the enrolment
-    # gate; it was deleted in yueboard 9580485 after production showed it had
-    # issued zero credentials while blocking users from subscribing at all.
-    # What the guard pins now is the *absence* of that path, plus the delegate
-    # that replaced it -- so re-adding enrolment is what breaks the build.
+    # A subscription is account-scoped. Portal installation registration,
+    # per-device /d authority and the later synthetic install-beacon identity
+    # have all been retired; reintroducing any one of them must break the build.
     forbid(
-        device_enrollment + composition,
+        module_runtime + composition + device_identity_runtime,
         [
             "m.EnrollmentReady(r.Context())",
             "m.devices.Enroll(r.Context()",
             "pluginAPIMod.EnrollmentReady = nodeMod.CredentialEnrollmentReady",
             '"/user/devices/enroll"',
             '"/user/devices/revoke"',
+            '"/d/{authority}"',
+            'r.Get("/d/',
+            'r.Post("/d/',
+            'r.HandleFunc("/d/',
+            "func (m *Module) deviceSubscribe(",
+            "RecordInstallBeacon",
+            "MintInstallToken",
+            "TouchInstall",
+            "MintInstall",
+            "ReportedIdentitySQL",
+            "install_token",
+            '"/rp/{token}"',
         ],
-        "YueBoard retired device-credential enrolment",
+        "YueBoard retired Portal-installation authority runtime",
+    )
+    forbid_paths(
+        root,
+        [
+            "internal/modules/subscribe/install_beacon_inject.go",
+            "internal/modules/subscribe/presence_beacon.go",
+        ],
+        "YueBoard retired Portal-installation authority runtime",
     )
     require(
-        read(root / "internal/modules/subscribe/subscribe.go"),
-        ["m.serveSubscription(w, r, u, token, u.UUID)"],
+        subscribe_runtime,
+        [
+            "m.serveSubscription(w, r, u, token, u.UUID)",
+            "The subscription renders the account credential",
+            "RegisterClientHWID RegisterClientHWIDFunc",
+        ],
         "YueBoard account-scoped subscription delivery",
     )
-    forbid(
-        read(root / "internal/modules/subscribe/subscribe.go"),
-        ['"/d/{authority}"', "func (m *Module) deviceSubscribe("],
-        "YueBoard retired per-device subscription route",
+    require(
+        device_identity_runtime,
+        [
+            "Package deviceidentity owns client-declared hardware identities",
+            "func (s *Service) RegisterHWID(",
+            "func (s *Service) RegisterHWIDForUser(",
+            "These records grant no access",
+        ],
+        "YueBoard native HWID-only identity runtime",
+    )
+    require(
+        handoff,
+        [
+            "There is no",
+            "Portal installation or device enrollment payload",
+            "the result is the account subscription",
+            "func (m *Module) claimSubscribeCode(",
+        ],
+        "YueBoard account-scoped handoff",
     )
     require(
         read(root / "internal/modules/nodesync/internal.go"),
@@ -698,7 +831,8 @@ def validate_yueboard(root: Path, contract: dict) -> None:
             "if networkLines > liveCount {",
             'presenceSource = "database_projection"',
             '"applied_user_ids":    []int64{uid}',
-            "added -- the same identity is usually visible to both",
+            "Network presence is the floor for clients that do not report an",
+            "so the two are combined with max rather than added",
         ],
         "YueBoard public device identity API",
     )
@@ -718,11 +852,11 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         ],
         "YueBoard credential-free account overview",
     )
-    # The portal hands out the account subscription. What still matters here is
+    # The Portal hands out the account subscription. What still matters here is
     # the client catalogue and the export boundary that validates a URL before
     # handing it to another application through a URI scheme.
     require(
-        device_subscription,
+        subscription_client,
         [
             "export function requireSubscriptionURL(",
             'parsed.protocol !== "https:"',
@@ -739,22 +873,67 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         "YueBoard mainstream-client subscription import",
     )
     forbid(
-        device_subscription,
+        web_runtime,
         [
             "open-portal-on-target",
             "getOrCreatePortalDeviceID",
-            '"shadowrocket"',
-            "小火箭",
+            '"/user/devices/enroll"',
         ],
-        "YueBoard retired per-browser device enrolment",
+        "YueBoard retired Portal installation and unsupported client catalogue",
+    )
+    forbid_casefold(
+        web_runtime,
+        ["shadowrocket", "小火箭"],
+        "YueBoard unsupported client catalogue",
     )
     require(
-        device_subscription_test,
+        subscription_client_test,
         [
             "the export boundary rejects anything that could redirect the receiving app",
             "third-party one-click URI goldens carry the subscription URL unchanged",
+            "the portal does not recommend clients without a proven managed profile",
+            '"shadowrocket"',
+            '"小火箭"',
         ],
         "YueBoard third-party import regression tests",
+    )
+    require(
+        retirement_migration_56,
+        [
+            "yueops_lifecycle.assert_yueboard_retirement_gate",
+            "current_setting('yueboard.retirement_nonce', true), 57, false",
+            "DROP COLUMN IF EXISTS completed_device_id",
+            "DROP COLUMN IF EXISTS completed_authority_digest",
+            "irreversible: 00056 removed retired per-device handoff receipts",
+        ],
+        "YueBoard floor-56 Portal handoff retirement migration",
+    )
+    require(
+        retirement_migration_57,
+        [
+            "yueops_lifecycle.assert_yueboard_retirement_gate",
+            "current_setting('yueboard.retirement_nonce', true), 57, true",
+            "refusing to retire %: % row(s) still exist",
+            "DROP TABLE IF EXISTS public.device_subscription_targets",
+            "DROP TABLE IF EXISTS public.user_devices",
+            "DROP TABLE IF EXISTS public.node_billing_identities",
+            "DELETE FROM public.device_identities WHERE kind = 'install'",
+            "DROP COLUMN IF EXISTS install_token",
+            "DROP COLUMN IF EXISTS kind",
+            "ALTER COLUMN hwid SET NOT NULL",
+            "CREATE UNIQUE INDEX IF NOT EXISTS device_identities_user_hwid_key",
+            "irreversible: 00057 removed retired device subscription authorities",
+        ],
+        "YueBoard floor-57 Portal-installation authority retirement migration",
+    )
+    require(
+        retirement_test,
+        [
+            "TestPortalAuthorityRetirementIsLifecycleGatedAndIrreversible",
+            "TestFloor57DropsAuthoritiesButKeepsNativeHWIDIdentity",
+            "TestRuntimeHasNoSyntheticInstallOrPerDeviceAuthoritySurface",
+        ],
+        "YueBoard floor-57 Portal retirement regression tests",
     )
     require(
         migration,

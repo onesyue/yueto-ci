@@ -1,7 +1,7 @@
 {
-  "version": 5,
-  "schema_floor": 55,
-  "yueboard_contract_pin": "0525512e9717d52cde3f0c92b8440ef02c46786e",
+  "version": 6,
+  "schema_floor": 57,
+  "yueboard_contract_pin": "296e2eabd28b5a82ba8ecaacef742448a1b83b3e",
   "layout": {
     "node-1": {
       "inventory_type": "hy2",
@@ -49,7 +49,7 @@
     ]
   },
   "device_identity": {
-    "count_basis": "observed_install_identity",
+    "count_basis": "client_declared_hwid_or_network_projection",
     "count_equation": "max_online_identities_and_network_lines",
     "legacy_shared_online_max": 1,
     "diagnostic_only": [
@@ -66,6 +66,8 @@
     "account_subscription_api": "/api/v1/user/getSubscribe",
     "account_subscription_prefix": "/s/",
     "third_party_import": "account_subscription",
+    "portal_installation_authority": "retired",
+    "synthetic_install_identity": "retired",
     "presence_sources": [
       "memory",
       "database_projection"
