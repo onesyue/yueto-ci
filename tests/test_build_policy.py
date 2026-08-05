@@ -507,7 +507,7 @@ class BuildPolicyTest(unittest.TestCase):
     def test_native_node_contract_is_central_and_blocks_all_product_repositories(
         self,
     ) -> None:
-        self.assertEqual(self.native_contract["version"], 4)
+        self.assertEqual(self.native_contract["version"], 5)
         # The floor is the one field in this contract that is *meant* to move:
         # every YueBoard migration release raises it. Pinning it to a literal
         # here made this whole snapshot test fail on every legitimate bump
@@ -523,6 +523,9 @@ class BuildPolicyTest(unittest.TestCase):
             self.native_contract["presence"],
             {
                 "required_capabilities": [
+                    "presence_v2",
+                ],
+                "release_a_rollout_capabilities": [
                     "credential_limit_v1",
                     "presence_v2",
                 ],
@@ -554,10 +557,9 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(
             self.native_contract["device_identity"],
             {
-                "count_basis": "authenticated_credential",
-                "count_equation": "online_device_rows_plus_shared_online_bit",
+                "count_basis": "observed_install_identity",
+                "count_equation": "max_online_identities_and_network_lines",
                 "legacy_shared_online_max": 1,
-                "synthetic_credential_id_floor": 1_000_000_000,
                 "diagnostic_only": [
                     "ip",
                     "connection",
@@ -569,9 +571,9 @@ class BuildPolicyTest(unittest.TestCase):
                 "overview_endpoint": "/api/v1/user/overview",
                 "reset_endpoint": "/api/v1/user/devices/reset-all",
                 "reset_identity_field": "applied_user_ids",
-                "device_subscription_prefix": "/d/",
-                "legacy_subscription_prefix": "/s/",
-                "third_party_enrollment": "target_device_local_stable_id",
+                "account_subscription_api": "/api/v1/user/getSubscribe",
+                "account_subscription_prefix": "/s/",
+                "third_party_import": "account_subscription",
                 "presence_sources": ["memory", "database_projection"],
             },
         )

@@ -77,14 +77,12 @@ def validate_node(root: Path, contract: dict) -> None:
     service = read_package(root / "internal/service", "*.go", min_files=8)
     service_test = read_package(root / "internal/service", "*_test.go", min_files=3)
     model_types = read(root / "internal/model/types.go")
-    model_test = read(root / "internal/model/credential_priority_test.go")
     xray_dispatcher = read(root / "internal/kernel/xray/dispatcher.go")
     xray_test = read(root / "internal/kernel/xray/dispatcher_test.go")
     hysteria = read(root / "internal/kernel/hysteria/hysteria.go")
     hysteria_test = read(root / "internal/kernel/hysteria/user_device_guard_test.go")
     artifacts = [slot["artifact"] for slot in contract["layout"].values()]
     presence = contract["presence"]
-    identity = contract["device_identity"]
 
     require(
         dockerfile,
@@ -147,7 +145,7 @@ def validate_node(root: Path, contract: dict) -> None:
     )
     require(
         controlplane,
-        [f'"{capability}"' for capability in presence["required_capabilities"]]
+        [f'"{capability}"' for capability in presence["release_a_rollout_capabilities"]]
         + [
             '"crypto/rand"',
             "io.ReadFull(entropy, processRaw[:])",
@@ -161,45 +159,43 @@ def validate_node(root: Path, contract: dict) -> None:
     require(
         service,
         [
-            "if s.credentialLimitV1 {",
-            "s.kernel.UpdateGlobalDeviceCredentials(credentials)",
             "s.kernel.UpdateGlobalDevices(users)",
-            "must never see the legacy fleet IP set as",
+            "DeviceState is an account-ID/IP projection",
+            "runtime admission",
         ],
-        "yue-node credential generation boundary",
+        "yue-node account/IP generation boundary",
     )
     require(
         service_test,
         [
-            "TestCredentialGenerationDoesNotPublishLegacyIPAdmissionPolicy",
-            "credential mode published legacy IP admission state",
+            "TestDeviceGenerationPublishesAccountIPAdmissionPolicy",
+            "account/IP generation was rejected",
         ],
-        "yue-node credential generation regression test",
+        "yue-node account/IP generation regression test",
     )
-    require(
-        model_types + model_test,
+    forbid(
+        model_types + service,
         [
-            f"const SyntheticCredentialIDFloor = {identity['synthetic_credential_id_floor']:_}",
-            "func CredentialAdmissionLess(left, right int) bool",
-            "device credential must sort before legacy shared credential",
+            "SyntheticCredentialIDFloor",
+            "CredentialAdmissionLess",
+            "UpdateGlobalDeviceCredentials",
+            "BillingUserID",
         ],
-        "yue-node deterministic credential admission",
+        "yue-node retired synthetic credential authority",
     )
     require(
         xray_dispatcher + hysteria,
         [
-            "CredentialAdmissionLess",
-            "globalCredentials",
-            "credentialMode",
-            "IP changes no longer",
+            "local∪global union",
+            "canonicalDeviceIP",
         ],
-        "yue-node credential-first native kernels",
+        "yue-node canonical account/IP native kernels",
     )
     require(
         xray_test + hysteria_test,
         [
-            "TestDeviceCredentialWinsBeforeLegacySharedCredential",
-            "TestCredentialModeIgnoresLegacyGlobalIPConvergence",
+            "TestLimitDispatcherDeviceLimitUsesDeduplicatedLocalGlobalUnion",
+            "TestDeviceLimitDeduplicatesCanonicalLocalGlobalUnion",
         ],
         "yue-node credential/IP regression tests",
     )
@@ -338,7 +334,7 @@ def validate_yueops(
     require(
         rollout_verifier,
         [
-            *[f'"{capability}"' for capability in presence["required_capabilities"]],
+            *[f'"{capability}"' for capability in presence["release_a_rollout_capabilities"]],
             f"EXPECTED_LEASE_SECONDS = {presence['process_lease_seconds']}",
             'process.get("process_instance_id")',
             'process.get("lease_state") == "active"',
@@ -562,7 +558,8 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         connectrpc,
         [
             "func strictLegacyBasePresencePayload",
-            "int64(wireID) >= deviceIDOffset",
+            "account user IDs with canonical IPs",
+            "if wireID == 0",
             "func isLegacyPresenceRequest",
             "if isLegacyPresenceRequest(req.Msg)",
             "Any half-upgraded/malformed v2 shape is still rejected fail-closed",
@@ -728,7 +725,6 @@ def validate_yueboard(root: Path, contract: dict) -> None:
             '"stash"',
             '"hiddify"',
             '"sing-box"',
-            '"shadowrocket"',
             '"surge"',
             '"loon"',
             '"v2rayn"',
@@ -738,7 +734,12 @@ def validate_yueboard(root: Path, contract: dict) -> None:
     )
     forbid(
         device_subscription,
-        ["open-portal-on-target", "getOrCreatePortalDeviceID"],
+        [
+            "open-portal-on-target",
+            "getOrCreatePortalDeviceID",
+            '"shadowrocket"',
+            "小火箭",
+        ],
         "YueBoard retired per-browser device enrolment",
     )
     require(
