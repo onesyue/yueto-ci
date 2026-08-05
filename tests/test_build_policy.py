@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -463,10 +464,21 @@ class BuildPolicyTest(unittest.TestCase):
     def test_yueops_tests_do_not_override_the_isolated_database_fixture(self) -> None:
         self.assertNotIn("DATABASE_URL: ''", self.workflow)
 
-    def test_yueops_acl_validation_uses_a_pinned_yueboard_contract(self) -> None:
+    def test_yue_node_and_yueops_use_a_pinned_yueboard_contract(self) -> None:
         self.assertIn(
-            "Checkout YueBoard contract for YueOps ACL validation",
+            "Checkout pinned YueBoard canonical contract",
             self.workflow,
+        )
+        checkout_start = self.workflow.index(
+            "- name: Checkout pinned YueBoard canonical contract"
+        )
+        checkout_end = self.workflow.index(
+            "- name: Checkout immutable central native-node policy"
+        )
+        checkout_step = self.workflow[checkout_start:checkout_end]
+        self.assertIn(
+            "if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'",
+            checkout_step,
         )
         pin = self.native_contract["yueboard_contract_pin"]
         self.assertRegex(pin, r"^[0-9a-f]{40}$")
@@ -500,6 +512,22 @@ class BuildPolicyTest(unittest.TestCase):
             "--yueboard-contract-source .ci-yueboard",
             self.workflow,
         )
+        validation_start = self.workflow.index(
+            "- name: Validate native-node cross-repository contract"
+        )
+        self.assertLess(checkout_start, validation_start)
+        validation_step = self.workflow[
+            validation_start : self.workflow.index(
+                "- name: Validate yue-node", validation_start
+            )
+        ]
+        self.assertIn("matrix.validation == 'yue-node'", validation_step)
+        self.assertIn("matrix.validation == 'yueops'", validation_step)
+        self.assertIn("validate_canonical_proto_mirror", self.native_validator)
+        self.assertIn(
+            "yue-node validation requires the separately checked-out",
+            self.native_validator,
+        )
         self.assertIn(
             "pinned YueBoard contract schema floor does not match central policy",
             self.native_validator,
@@ -517,7 +545,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(self.native_contract["schema_floor"], 57)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
-            "9ca7081f0e2e25a06eb978af2f7655fc20bd6191",
+            "c6905b06cb99c7e0d187c7e62bca32e9bc287e61",
         )
         self.assertEqual(
             self.native_contract["presence"],
@@ -661,6 +689,79 @@ class BuildPolicyTest(unittest.TestCase):
                         ["shadowrocket", "小火箭"],
                         "test client catalogue",
                     )
+
+    def test_yue_node_proto_gate_compares_real_canonical_bytes_and_hashes(
+        self,
+    ) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "native_node_proto_validator", NATIVE_VALIDATOR
+        )
+        self.assertIsNotNone(spec)
+        assert spec is not None and spec.loader is not None
+        validator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(validator)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            node = temp / "yue-node"
+            yueboard = temp / "yueboard"
+            node_proto = node / "proto/yuenode/v1/yuenode.proto"
+            canonical_proto = yueboard / "proto/yuenode/v1/yuenode.proto"
+            digest = node / "proto/CANONICAL.sha256"
+            node_proto.parent.mkdir(parents=True)
+            canonical_proto.parent.mkdir(parents=True)
+
+            canonical = b'syntax = "proto3";\n// canonical bytes\n'
+            canonical_hash = hashlib.sha256(canonical).hexdigest()
+            node_proto.write_bytes(canonical)
+            canonical_proto.write_bytes(canonical)
+            digest.write_text(
+                f"{canonical_hash}  yuenode/v1/yuenode.proto\n",
+                encoding="utf-8",
+            )
+            validator.validate_canonical_proto_mirror(node, yueboard)
+
+            # This is the old blind spot: mirror + local digest drift together
+            # and remain repository-internally self-consistent. The separately
+            # checked-out canonical bytes must still make the central gate red.
+            drifted = canonical + b"// independently edited mirror\n"
+            node_proto.write_bytes(drifted)
+            digest.write_text(
+                f"{hashlib.sha256(drifted).hexdigest()}  yuenode/v1/yuenode.proto\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "differs byte-for-byte"):
+                validator.validate_canonical_proto_mirror(node, yueboard)
+
+            # Equal bytes with a stale/forged pin are independently rejected;
+            # a successful gate proves bytes plus all three SHA-256 values.
+            node_proto.write_bytes(canonical)
+            digest.write_text(
+                f"{'0' * 64}  yuenode/v1/yuenode.proto\n", encoding="utf-8"
+            )
+            with self.assertRaisesRegex(
+                RuntimeError, "does not pin the checked-out canonical bytes"
+            ):
+                validator.validate_canonical_proto_mirror(node, yueboard)
+
+            missing_canonical = subprocess.run(
+                [
+                    "python3",
+                    str(NATIVE_VALIDATOR),
+                    "--kind",
+                    "yue-node",
+                    "--source",
+                    str(node),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(missing_canonical.returncode, 1)
+            self.assertIn(
+                "requires the separately checked-out YueBoard canonical source",
+                missing_canonical.stderr,
+            )
 
     def test_transition_advertisement_and_serving_proof_capabilities_are_distinct(
         self,

@@ -206,8 +206,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Checkout YueBoard contract for YueOps ACL validation
-        if: matrix.validation == 'yueops'
+      # yue-node's local CANONICAL.sha256 proves only repository-internal
+      # consistency.  Check out the separately reviewed canonical tree so the
+      # validator can compare real bytes and all three hashes before build.
+      - name: Checkout pinned YueBoard canonical contract
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: onesyue/yueboard
@@ -347,7 +350,7 @@ jobs:
         run: >-
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-native-node-contract.py
           --kind '${{ matrix.validation }}' --source .
-          ${{ matrix.validation == 'yueops' && '--yueboard-contract-source .ci-yueboard' || '' }}
+          ${{ (matrix.validation == 'yue-node' || matrix.validation == 'yueops') && '--yueboard-contract-source .ci-yueboard' || '' }}
 
       - name: Validate yue-node
         if: matrix.validation == 'yue-node'
