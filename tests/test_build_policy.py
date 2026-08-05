@@ -71,10 +71,19 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("default: ubuntu-latest", runner_input.group("body"))
         self.assertIn("- yue-local-release", runner_input.group("body"))
         selector = (
-            "github.event_name == 'workflow_dispatch' && "
-            "github.event.inputs.runner || 'ubuntu-latest'"
+            "fromJSON(github.event_name == 'workflow_dispatch' && "
+            "github.event.inputs.runner == 'yue-local-release' && "
+            "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
+            "'[\"ubuntu-latest\"]')"
         )
         self.assertEqual(self.workflow.count(selector), 3)
+        self.assertIn(
+            "`self-hosted`、`Linux`、`X64` 标签并添加唯一自定义\n"
+            "  标签 `yue-local-release`",
+            self.readme,
+        )
+        self.assertIn("本仓保持 public 时不得注册常驻 self-hosted runner", self.readme)
+        self.assertIn("`--ephemeral --disableupdate` runner", self.readme)
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
         self.assertEqual(self.workflow.count("127.0.0.1:55434"), 3)
 
@@ -318,6 +327,26 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertIn("make build", self.workflow)
         self.assertNotIn("go build ./...", self.workflow)
+
+    def test_privileged_builder_images_are_immutable(self) -> None:
+        qemu_image = (
+            "docker.io/tonistiigi/binfmt:latest@sha256:"
+            "400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0"
+        )
+        buildkit_image = (
+            "moby/buildkit:buildx-stable-1@sha256:"
+            "2f5adac4ecd194d9f8c10b7b5d7bceb5186853db1b26e5abd3a657af0b7e26ec"
+        )
+        self.assertIn(f"image: {qemu_image}", self.workflow)
+        self.assertIn(f"driver-opts: image={buildkit_image}", self.workflow)
+        self.assertNotRegex(
+            self.workflow,
+            r"(?m)^\s+image:\s+(?:docker\.io/)?tonistiigi/binfmt:[^@\s]+\s*$",
+        )
+        self.assertNotRegex(
+            self.workflow,
+            r"(?m)^\s+driver-opts:\s+image=moby/buildkit:[^@\s]+\s*$",
+        )
 
     def test_promotion_is_bound_to_trusted_exact_default_head(self) -> None:
         required = (

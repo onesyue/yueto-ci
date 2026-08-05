@@ -76,3 +76,11 @@ checkout 不把 7‑39 位短 SHA 当作可复现的 commit ref，中央 plan �
   `build-essential`并显式启用 CGO。GitHub-hosted runner 使用 `setup-python`；
   Debian 13 的 `yue-local-release` 使用系统 Python 3.13，且在执行任何 Python
   policy 前验证精确主/次版本。不接受依赖 runner 手工状态的隐式通过。
+  注册时必须同时保留默认 `self-hosted`、`Linux`、`X64` 标签并添加唯一自定义
+  标签 `yue-local-release`；四个标签必须全部匹配，不能只靠可误贴的自定义标签
+  把非 Linux 或非 x86_64 主机送入发布任务。
+- 安全前置：本仓保持 public 时不得注册常驻 self-hosted runner，更不得把堡垒机、
+  面板、数据库或承载用户流量的业务节点接成 runner。只有先把控制仓改为 private、
+  完成受保护分支与 Actions 白名单门禁后，才能在无生产凭据和生产网络访问权的
+  专用 Debian 13 x86_64 一次性虚机上启用 `--ephemeral --disableupdate` runner；
+  每个 runner 只领取一个 job，并在外送诊断日志后销毁整台虚机和 Docker 状态。

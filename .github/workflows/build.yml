@@ -53,7 +53,7 @@ concurrency:
 
 jobs:
   plan:
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-latest"]') }}
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       validation_matrix: ${{ steps.plan.outputs.validation_matrix }}
@@ -173,7 +173,7 @@ jobs:
 
   validate:
     needs: plan
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-latest"]') }}
     strategy:
       fail-fast: false
       matrix:
@@ -519,7 +519,7 @@ jobs:
     # target therefore skips this job without asking Actions to expand or run
     # an empty Docker matrix.
     if: needs.plan.outputs.has_builds == 'true'
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-latest"]') }}
     permissions:
       contents: read
       packages: write
@@ -558,10 +558,19 @@ jobs:
         if: contains(matrix.platforms, 'arm64')
         uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
         with:
+          # setup-qemu otherwise pulls mutable tonistiigi/binfmt:latest and
+          # executes it privileged against the runner kernel. Pin the verified
+          # multi-arch OCI index so a tag move cannot change release code.
+          image: docker.io/tonistiigi/binfmt:latest@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
           platforms: 'arm64,amd64'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+        with:
+          # The docker-container driver defaults to the mutable
+          # moby/buildkit:buildx-stable-1 tag. The builder has the Docker
+          # socket's authority, so bind it to an immutable OCI index too.
+          driver-opts: image=moby/buildkit:buildx-stable-1@sha256:2f5adac4ecd194d9f8c10b7b5d7bceb5186853db1b26e5abd3a657af0b7e26ec
 
       - name: Login to GHCR
         uses: docker/login-action@06fb636fac595d6fb4b28a5dfcb21a6f5091859c # v4.5.0
