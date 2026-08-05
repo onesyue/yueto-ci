@@ -334,7 +334,13 @@ def validate_yueops(
     require(
         rollout_verifier,
         [
-            *[f'"{capability}"' for capability in presence["release_a_rollout_capabilities"]],
+            # The Node binary still advertises the retired credential flag to
+            # predecessor Boards during Release A.  The pinned Board filters
+            # that transition-only flag from its negotiated serving proof, so
+            # YueOps must verify the steady-state capabilities here.  Reusing
+            # release_a_rollout_capabilities for both sides made the central
+            # contract reject the exact proof shape emitted in production.
+            *[f'"{capability}"' for capability in presence["required_capabilities"]],
             f"EXPECTED_LEASE_SECONDS = {presence['process_lease_seconds']}",
             'process.get("process_instance_id")',
             'process.get("lease_state") == "active"',
@@ -356,7 +362,7 @@ def validate_yueops(
             'for field in ("last_seen_unix", "last_reported_at_unix", "last_applied_at_unix")',
             "is not newer than the rollout fence",
             "post proof must identify exactly one serving process per assignment",
-            "post process lacks the exact credential capabilities",
+            "post process lacks the exact serving capabilities",
             "pre-fence process remained active after rollout",
             "predecessor process has not crossed its durable fence",
         ],
@@ -443,8 +449,8 @@ def validate_yueops(
         widget,
         [
             "function scParseDevices(response)",
-            "var expectedCount = onlineRows + (data.shared_online ? 1 : 0);",
-            "IPs are diagnostics only",
+            "var countFloor = Math.max(onlineRows, data.shared_online ? 1 : 0);",
+            "IPs remain diagnostic and never become device rows",
             identity["devices_endpoint"],
             identity["reset_endpoint"],
             identity["reset_identity_field"],
@@ -457,8 +463,8 @@ def validate_yueops(
     require(
         widget_test,
         [
-            "test_five_legacy_ips_render_as_one_shared_identity_row",
-            "test_shared_online_is_authoritative_and_devices_contract_is_strict",
+            "test_identity_rows_and_network_projection_are_not_added_together",
+            "test_network_projection_is_authoritative_and_identities_contract_is_strict",
             "test_widget_loads_only_the_credential_free_account_projection",
         ],
         "YueOps account widget identity regression tests",
@@ -765,9 +771,11 @@ def validate_yuelink(root: Path, contract: dict) -> None:
     identity = contract["device_identity"]
     device_summary = read(root / "lib/domain/account/device_summary.dart")
     device_summary_test = read(root / "test/domain/account/device_summary_test.dart")
-    device_operation = read(root / "lib/domain/account/device_operation.dart")
-    device_operation_test = read(
-        root / "test/domain/account/device_operation_test.dart"
+    subscription_reset = read(
+        root / "lib/domain/account/subscription_reset_outcome.dart"
+    )
+    subscription_reset_test = read(
+        root / "test/domain/account/subscription_reset_outcome_test.dart"
     )
     panel_api = read(root / "lib/infrastructure/datasources/panel/api.dart")
     repository = read(
@@ -809,14 +817,16 @@ def validate_yuelink(root: Path, contract: dict) -> None:
         "YueLink IP-inflation regression tests",
     )
     require(
-        device_operation + device_operation_test,
+        subscription_reset + subscription_reset_test,
         [
             identity["reset_identity_field"],
             "rawUserIds.length != 1",
             "jsonToInt(rawUserIds.single) != expectedUserId",
             "device reset response disclosed a secret",
+            "no account or device authority is accepted on this boundary",
+            "the account-wide reset parser remains the sole public outcome",
         ],
-        "YueLink reset account binding",
+        "YueLink account subscription reset binding",
     )
     # The panel registers this route as GET. v1.2.111 shipped it as POST, which
     # fell through to the anti-GFW decoy (non-JSON) and broke every
@@ -837,7 +847,8 @@ def validate_yuelink(root: Path, contract: dict) -> None:
         panel_api,
         [
             identity["overview_endpoint"],
-            "It deliberately never returns account `token`, `uuid`, or `/s/` URL.",
+            "It deliberately never returns account `token`, `uuid`, or subscription",
+            "The account subscription is fetched only at the import boundary",
         ],
         "YueLink credential-free account overview",
     )

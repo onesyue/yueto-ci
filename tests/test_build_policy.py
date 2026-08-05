@@ -554,6 +554,7 @@ class BuildPolicyTest(unittest.TestCase):
                 },
             },
         )
+
         self.assertEqual(
             self.native_contract["device_identity"],
             {
@@ -601,6 +602,22 @@ class BuildPolicyTest(unittest.TestCase):
         ):
             self.assertIn(rpc, self.native_contract["control"]["retired_rpcs"])
         self.assertIn("validate_yueboard", self.native_validator)
+
+    def test_transition_advertisement_and_serving_proof_capabilities_are_distinct(
+        self,
+    ) -> None:
+        transition = 'presence["release_a_rollout_capabilities"]'
+        serving = 'presence["required_capabilities"]'
+        self.assertEqual(self.native_validator.count(transition), 1)
+        self.assertGreaterEqual(self.native_validator.count(serving), 1)
+        self.assertIn(
+            "post process lacks the exact serving capabilities",
+            self.native_validator,
+        )
+        self.assertNotIn(
+            "post process lacks the exact credential capabilities",
+            self.native_validator,
+        )
 
     def test_yuelink_is_a_remote_validation_only_target(self) -> None:
         self.assertEqual(
