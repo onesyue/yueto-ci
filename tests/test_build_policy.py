@@ -545,12 +545,17 @@ class BuildPolicyTest(unittest.TestCase):
         self,
     ) -> None:
         self.assertEqual(self.native_contract["version"], 6)
-        # Floor 57 is an irreversible authority-retirement boundary, not an
-        # ordinary additive migration bump. Keep the central policy, pinned
-        # YueBoard tree and YueOps MIN_SCHEMA_FLOOR on this exact reviewed
-        # value; the cross-repository validator checks the latter two as well.
+        # 55 is the binary-required floor: the highest non-floor-exempt
+        # irreversible migration. The floor-57 authority-retirement drops
+        # (00056/00057) are contract-phase drops marked floor-exempt in
+        # YueBoard, so they do NOT gate the panel binary and the central policy
+        # ships at 55 — the panel release is decoupled from the future
+        # DB-only retirement ceremony (which still reaches DB 57). Keep the
+        # central policy, pinned YueBoard tree and YueOps MIN_SCHEMA_FLOOR on
+        # this exact reviewed value; the cross-repository validator checks the
+        # latter two as well.
         self.assertIsInstance(self.native_contract["schema_floor"], int)
-        self.assertEqual(self.native_contract["schema_floor"], 57)
+        self.assertEqual(self.native_contract["schema_floor"], 55)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
             "5538092a08e7e32fda25ab99e12855b5a9750abc",
