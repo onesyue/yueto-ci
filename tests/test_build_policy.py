@@ -379,7 +379,13 @@ class BuildPolicyTest(unittest.TestCase):
             "squawk-cli@2.60.0",
             "aquasecurity/trivy-action@",
             "sigstore/cosign-installer@",
-            "cosign-release: v3.1.2",
+            # >= v3.1.3: GHSA-fx35-mq7g-6g98 (2026-08-06, High 7.4) — a legacy
+            # JSON bundle with a bare public key in `cert` made verify-blob*
+            # skip CheckCertificatePolicy and print "Verified OK" while
+            # ignoring --certificate-identity. Image verify/verify-attestation
+            # (what this pipeline uses) are unaffected; pinned forward anyway
+            # because the whole chain rests on cosign really checking identity.
+            "cosign-release: v3.1.3",
             "retrying with fresh OIDC token",
             'keyless_cosign sign "${IMAGE}@${DIGEST}"',
             "keyless_cosign attest",
