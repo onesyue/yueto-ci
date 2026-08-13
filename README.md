@@ -1,6 +1,6 @@
 # yueto-ci
 
-Yue.to 服务端组件的**统一构建仓**。本仓库公开（公开仓 GitHub Actions 免费、无分钟上限），只含构建脚本，不含业务代码；私有代码仓由 PAT checkout，产物只推 `ghcr.io/onesyue/*`，不留 artifacts。
+Yue.to 服务端组件的**统一构建与外部控制仓**。本仓库公开（公开仓 GitHub Actions 免费、无分钟上限），不含业务代码；私有代码仓由 PAT checkout，产物只推 `ghcr.io/onesyue/*`，不留 artifacts。它也承载必须脱离生产主机、且不能被私有 Actions 计费冻结拖死的告警链 dead-man 观察者。
 
 客户端（yuelink）构建在 [yuelink-ci](https://github.com/onesyue/yuelink-ci)，与本仓并列，即"两个构建仓"架构。
 
@@ -15,6 +15,9 @@ Docker 构建矩阵。
 
 本仓只有一个发布工作流：`.github/workflows/build.yml`。Promotion 不是独立
 workflow，而是该工作流在完成校验、构建、签名和证明后的最后一个受控步骤。
+`.github/workflows/alert-chain-deadman.yml` 是只读运维探针，不构建、不发布：每
+30 分钟读取 bastion 上的 heartbeat，并调用 YueOps 仓库中的规范判定器；异常只在
+私有 YueOps 仓开事故 issue，公开仓不记录生产凭据内容。
 
 ```sh
 # 手动构建默认只生成经过测试、扫描和签名的 candidate，不改 latest
@@ -48,6 +51,9 @@ checkout 不把 7‑39 位短 SHA 当作可复现的 commit ref，中央 plan �
 
 - `YUETO_CI_PAT` — classic PAT，勾 `repo` + `write:packages`：checkout 私有代码仓 + 推 GHCR。
   （已有包如 ghcr.io/onesyue/yueboard 归属各代码仓，本仓 GITHUB_TOKEN 推不动，必须用 PAT。）
+- `DEADMAN_SSH_KEY_B64` — 专用只读 SSH 私钥的 base64。堡垒机公钥必须以
+  `command="/bin/cat /var/lib/yue-alert-heartbeat/heartbeat.json",restrict` 强制命令；
+  禁止复用任何 root 部署/轮换私钥。
 
 私有源码仓不再需要 `YUETO_CI_DISPATCH_PAT`；拉取式 poll 使用中央仓已有的
 `YUETO_CI_PAT`。`repository_dispatch` 入口仅保留给受控兼容调用，仍由可信 actor、

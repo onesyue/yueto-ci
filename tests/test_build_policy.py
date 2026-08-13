@@ -176,7 +176,13 @@ class BuildPolicyTest(unittest.TestCase):
     def test_only_build_yml_can_build_or_promote_products(self) -> None:
         workflow_files = sorted(path.name for path in WORKFLOW_DIR.glob("*.y*ml"))
         self.assertEqual(
-            workflow_files, ["build.yml", "policy-ci.yml", "poll-sources.yml"]
+            workflow_files,
+            [
+                "alert-chain-deadman.yml",
+                "build.yml",
+                "policy-ci.yml",
+                "poll-sources.yml",
+            ],
         )
 
         # poll-sources.yml 只允许**请求**构建，永远不许自己构建或 promote。
@@ -196,6 +202,22 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("permissions:\n  contents: read", poll)
         # 漏跑一轮只是晚 20 分钟；两轮叠在一起会对同一个 commit 派两次构建。
         self.assertIn("concurrency:", poll)
+
+        # The public dead-man receiver is operational control, never another
+        # unattended product delivery path.
+        deadman = (WORKFLOW_DIR / "alert-chain-deadman.yml").read_text(
+            encoding="utf-8"
+        )
+        deadman_code = "\n".join(
+            line
+            for line in deadman.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        self.assertNotIn("build-push-action", deadman_code)
+        self.assertNotIn("imagetools create", deadman_code)
+        self.assertNotIn("cosign", deadman_code)
+        self.assertNotIn("promote=true", deadman_code)
+        self.assertIn("permissions:\n  contents: read", deadman)
 
         self.assertIn(
             "Authorize and promote verified default-branch digest",
@@ -551,10 +573,10 @@ class BuildPolicyTest(unittest.TestCase):
         self,
     ) -> None:
         self.assertEqual(self.native_contract["version"], 6)
-        # 57 is the binary-required floor: the highest non-floor-exempt
-        # irreversible migration. The floor-57 authority-retirement ceremony has
-        # since landed and the pinned YueBoard tree carries it, so the central
-        # policy floor is now 57 (not the old decoupled-at-55 value). Keep the
+        # 58 is the binary-required floor: the pinned YueBoard tree's irreversible
+        # hot-path-index and runtime-role migration. The floor-57 authority
+        # retirement ceremony has also landed, so neither the old decoupled-at-55
+        # value nor the superseded floor 57 is deployable. Keep the
         # central policy, pinned YueBoard tree and YueOps MIN_SCHEMA_FLOOR on
         # this exact reviewed value; the cross-repository validator checks the
         # latter two as well.

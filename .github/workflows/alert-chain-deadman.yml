@@ -1,0 +1,109 @@
+name: Production alert-chain deadman
+
+# The private YueOps repository cannot provision GitHub-hosted runners while
+# its Actions billing is frozen. This off-box receiver therefore lives in the
+# public control repository, where scheduled jobs actually run. The emitter
+# and canonical verdict code remain in YueOps; this job checks out that exact
+# source on every run instead of carrying a second copy of the policy.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-alert-chain-deadman
+  cancel-in-progress: false
+
+jobs:
+  deadman:
+    name: Heartbeat freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the canonical YueOps verdict code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: onesyue/yueops
+          ref: main
+          token: ${{ secrets.YUETO_CI_PAT }}
+          persist-credentials: false
+          path: .ci-yueops
+
+      - name: Fetch heartbeat receipt from the bastion
+        id: fetch
+        timeout-minutes: 3
+        env:
+          # A dedicated key whose bastion authorized_keys entry is forced to
+          # `/bin/cat /var/lib/yue-alert-heartbeat/heartbeat.json` with
+          # `restrict`. Never put a deployment/root key in this public repo.
+          SSH_KEY_B64: ${{ secrets.DEADMAN_SSH_KEY_B64 }}
+          BASTION_HOST: ${{ vars.BASTION_SSH_HOST || '23.80.91.14' }}
+          BASTION_USER: ${{ vars.BASTION_SSH_USER || 'root' }}
+        run: |
+          set -uo pipefail
+          if [ -z "${SSH_KEY_B64}" ]; then
+            echo "::error::DEADMAN_SSH_KEY_B64 is absent; a skipped observer is not healthy."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s' "${SSH_KEY_B64}" | base64 -d > ~/.ssh/id_deadman
+          chmod 600 ~/.ssh/id_deadman
+
+          # Pin the production bastion host key. TOFU/accept-new would let an
+          # intercepted first connection manufacture a healthy receipt.
+          printf '%s %s %s\n' '23.80.91.14' 'ssh-ed25519' \
+            'AAAAC3NzaC1lZDI1NTE5AAAAICo9blX1VNOv83FROQ7Bt8/meWocnC/JsUzbOZGrEZY2' \
+            > ~/.ssh/known_hosts_deadman
+
+          ssh -i ~/.ssh/id_deadman \
+              -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o PasswordAuthentication=no \
+              -o KbdInteractiveAuthentication=no \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile=~/.ssh/known_hosts_deadman \
+              -o GlobalKnownHostsFile=none \
+              -o LogLevel=ERROR \
+              -o ConnectTimeout=20 \
+              -o ServerAliveInterval=15 \
+              -o ServerAliveCountMax=2 \
+              "${BASTION_USER}@${BASTION_HOST}" \
+              'cat /var/lib/yue-alert-heartbeat/heartbeat.json' \
+              > receipt.json 2> ssh.err || {
+            echo "ssh/cat failed; the verdict step will classify the empty receipt as missing."
+            sed -e 's/^/  /' ssh.err || true
+            : > receipt.json
+          }
+          rm -f ~/.ssh/id_deadman
+
+      - name: Decide using the canonical YueOps policy
+        run: >-
+          python3 .ci-yueops/scripts/alert-chain-deadman-check.py
+          --receipt receipt.json
+
+      - name: Open or update the private YueOps incident
+        if: failure() || cancelled()
+        env:
+          GH_TOKEN: ${{ secrets.YUETO_CI_PAT }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          repo='onesyue/yueops'
+          title='🫀 告警链失联（public deadman）'
+          existing="$(gh issue list --repo "$repo" --state open \
+            --search 'in:title 告警链失联' --limit 1 --json number --jq '.[0].number' || true)"
+          body=$(printf '%s\n' \
+            '@onesyue bastion 心跳凭据过期、读不到，或自报无法告警。' \
+            '' \
+            '此判定由公共 yueto-ci runner 执行，不经过 bastion systemd 或 Telegram spool。' \
+            "运行记录：${RUN_URL}")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$repo" --body "$body"
+          else
+            gh issue create --repo "$repo" --title "$title" \
+              --assignee onesyue --body "$body"
+          fi
