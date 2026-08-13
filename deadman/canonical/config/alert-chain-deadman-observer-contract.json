@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "canonical": {
+    "repository": "onesyue/yueops",
+    "emitter_path": "scripts/alert-chain-heartbeat.sh",
+    "checker_path": "scripts/alert-chain-deadman-check.py",
+    "checker_sha256": "ed74433643f11e936aa2a73d69b19d5f9da05c69fcd03e113e3913a448f74914"
+  },
+  "receiver": {
+    "repository": "onesyue/yueto-ci",
+    "workflow_path": ".github/workflows/alert-chain-deadman.yml",
+    "schedule_cron": "17,47 * * * *",
+    "max_age_seconds": 2700,
+    "manual_missing_drill_input": "drill_missing",
+    "schedule_liveness_audit_days": 45,
+    "local_manual_fallback_workflow": ".github/workflows/alert-chain-deadman.yml"
+  },
+  "transport": {
+    "host": "23.80.91.14",
+    "port": 22,
+    "user": "deadman-reader",
+    "receipt_path": "/var/lib/yue-alert-heartbeat/heartbeat.json",
+    "secret_name": "DEADMAN_SSH_KEY_B64",
+    "authorized_keys_forced_command": "/usr/bin/cat -- /var/lib/yue-alert-heartbeat/heartbeat.json",
+    "host_key": {
+      "algorithm": "ssh-ed25519",
+      "public_key": "AAAAC3NzaC1lZDI1NTE5AAAAICo9blX1VNOv83FROQ7Bt8/meWocnC/JsUzbOZGrEZY2",
+      "sha256_fingerprint": "SHA256:gTypAg8+0v3ekPQO1Qpm9u8GbC0WUPuQhN9NvBJ/lJY"
+    }
+  }
+}

@@ -1,18 +1,27 @@
 name: Production alert-chain deadman
 
 # The private YueOps repository cannot provision GitHub-hosted runners while
-# its Actions billing is frozen. This off-box receiver therefore lives in the
-# public control repository, where scheduled jobs actually run. The emitter
-# and canonical verdict code remain in YueOps; this job checks out that exact
-# source on every run instead of carrying a second copy of the policy.
+# its Actions billing is frozen. This receiver therefore lives in the public
+# control repository. YueOps remains the canonical emitter / verdict source;
+# the mirror and source hashes are checked before any production receipt is
+# trusted.
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    # Avoid the top-of-hour scheduling surge. The canonical policy allows a
+    # 45-minute heartbeat age, so normal GitHub cron jitter remains harmless.
+    - cron: '17,47 * * * *'
   workflow_dispatch:
+    inputs:
+      drill_missing:
+        description: 'Deliberately feed an empty receipt and verify the incident path'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: production-alert-chain-deadman
@@ -24,7 +33,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out the canonical YueOps verdict code
+      - name: Check out the public receiver contract
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          path: .ci-receiver
+
+      - name: Check out the canonical YueOps verdict source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: onesyue/yueops
@@ -33,33 +48,69 @@ jobs:
           persist-credentials: false
           path: .ci-yueops
 
+      - name: Verify the mirrored contract and canonical checker
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          receiver = Path('.ci-receiver/deadman/canonical')
+          canonical = Path('.ci-yueops')
+          contract_rel = Path('config/alert-chain-deadman-observer-contract.json')
+          receiver_contract = (receiver / contract_rel).read_bytes()
+          canonical_contract = (canonical / contract_rel).read_bytes()
+          if receiver_contract != canonical_contract:
+              raise SystemExit('deadman receiver contract drifted from canonical YueOps bytes')
+          contract = json.loads(receiver_contract)
+          if contract['canonical']['repository'] != 'onesyue/yueops':
+              raise SystemExit('deadman canonical repository is not YueOps')
+          if contract['receiver']['repository'] != 'onesyue/yueto-ci':
+              raise SystemExit('deadman receiver repository is not yueto-ci')
+          checker_rel = Path(contract['canonical']['checker_path'])
+          expected = contract['canonical']['checker_sha256']
+          for label, root in (('receiver mirror', receiver), ('YueOps canonical', canonical)):
+              actual = hashlib.sha256((root / checker_rel).read_bytes()).hexdigest()
+              if actual != expected:
+                  raise SystemExit(f'{label} checker hash mismatch: {actual}')
+          print(f'deadman checker mirror: ok ({expected})')
+          PY
+
+      - name: Prepare deliberate missing-receipt drill
+        if: github.event_name == 'workflow_dispatch' && inputs.drill_missing == true
+        run: ': > receipt.json'
+
       - name: Fetch heartbeat receipt from the bastion
         id: fetch
+        if: github.event_name != 'workflow_dispatch' || inputs.drill_missing != true
         timeout-minutes: 3
         env:
-          # A dedicated key whose bastion authorized_keys entry is forced to
-          # `/bin/cat /var/lib/yue-alert-heartbeat/heartbeat.json` with
-          # `restrict`. Never put a deployment/root key in this public repo.
+          # Fresh, dedicated key. Its only authorized operation is the forced
+          # receipt read; this public repository never receives a deployment,
+          # fleet, root, or rotation key.
           SSH_KEY_B64: ${{ secrets.DEADMAN_SSH_KEY_B64 }}
-          BASTION_HOST: ${{ vars.BASTION_SSH_HOST || '23.80.91.14' }}
-          BASTION_USER: ${{ vars.BASTION_SSH_USER || 'root' }}
+          BASTION_HOST: '23.80.91.14'
+          BASTION_USER: 'deadman-reader'
         run: |
-          set -uo pipefail
+          set -Eeuo pipefail
+          trap 'rm -f ~/.ssh/id_deadman ssh.err' EXIT
           if [ -z "${SSH_KEY_B64}" ]; then
-            echo "::error::DEADMAN_SSH_KEY_B64 is absent; a skipped observer is not healthy."
+            echo '::error::DEADMAN_SSH_KEY_B64 is absent; a skipped observer is not healthy.'
             exit 1
           fi
           mkdir -p ~/.ssh
-          printf '%s' "${SSH_KEY_B64}" | base64 -d > ~/.ssh/id_deadman
+          printf '%s' "${SSH_KEY_B64}" | base64 --decode > ~/.ssh/id_deadman
           chmod 600 ~/.ssh/id_deadman
 
-          # Pin the production bastion host key. TOFU/accept-new would let an
+          # Pin the production bastion host key. TOFU / accept-new would let an
           # intercepted first connection manufacture a healthy receipt.
           printf '%s %s %s\n' '23.80.91.14' 'ssh-ed25519' \
             'AAAAC3NzaC1lZDI1NTE5AAAAICo9blX1VNOv83FROQ7Bt8/meWocnC/JsUzbOZGrEZY2' \
             > ~/.ssh/known_hosts_deadman
 
-          ssh -i ~/.ssh/id_deadman \
+          timeout --signal=TERM --kill-after=5s 75s \
+            ssh -i ~/.ssh/id_deadman \
               -o IdentitiesOnly=yes \
               -o BatchMode=yes \
               -o PasswordAuthentication=no \
@@ -72,26 +123,25 @@ jobs:
               -o ServerAliveInterval=15 \
               -o ServerAliveCountMax=2 \
               "${BASTION_USER}@${BASTION_HOST}" \
-              'cat /var/lib/yue-alert-heartbeat/heartbeat.json' \
+              '/usr/bin/cat -- /var/lib/yue-alert-heartbeat/heartbeat.json' \
               > receipt.json 2> ssh.err || {
-            echo "ssh/cat failed; the verdict step will classify the empty receipt as missing."
-            sed -e 's/^/  /' ssh.err || true
+            echo 'ssh/receipt read failed; the canonical verdict will classify this as missing.'
             : > receipt.json
           }
-          rm -f ~/.ssh/id_deadman
 
       - name: Decide using the canonical YueOps policy
         run: >-
-          python3 .ci-yueops/scripts/alert-chain-deadman-check.py
+          python3 .ci-receiver/deadman/canonical/scripts/alert-chain-deadman-check.py
           --receipt receipt.json
+          --max-age-seconds 2700
 
       - name: Open or update the private YueOps incident
-        if: failure() || cancelled()
+        if: ${{ always() && (failure() || cancelled()) }}
         env:
           GH_TOKEN: ${{ secrets.YUETO_CI_PAT }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          set -uo pipefail
+          set -euo pipefail
           repo='onesyue/yueops'
           title='🫀 告警链失联（public deadman）'
           existing="$(gh issue list --repo "$repo" --state open \
@@ -101,9 +151,11 @@ jobs:
             '' \
             '此判定由公共 yueto-ci runner 执行，不经过 bastion systemd 或 Telegram spool。' \
             "运行记录：${RUN_URL}")
+          gh label create alert-chain --repo "$repo" --color D73A4A \
+            --description 'Production alert-chain incident' --force >/dev/null
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --repo "$repo" --body "$body"
           else
-            gh issue create --repo "$repo" --title "$title" \
+            gh issue create --repo "$repo" --title "$title" --label alert-chain \
               --assignee onesyue --body "$body"
           fi
