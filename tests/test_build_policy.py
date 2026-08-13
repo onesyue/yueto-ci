@@ -47,6 +47,17 @@ class BuildPolicyTest(unittest.TestCase):
             with self.subTest(action=action):
                 self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$")
 
+    def test_release_go_toolchain_is_an_exact_security_patch(self) -> None:
+        setup = re.search(
+            r"(?ms)^      - name: Set up Go\n(?P<body>.*?)(?=^      - name:)",
+            self.workflow,
+        )
+        self.assertIsNotNone(setup)
+        assert setup is not None
+        body = setup.group("body")
+        self.assertIn("go-version: '1.26.6'", body)
+        self.assertNotIn("go-version-file:", body)
+
     def test_manual_build_is_candidate_only_by_default(self) -> None:
         promote_input = re.search(
             r"(?ms)^\s{6}promote:\n(?P<body>(?:^\s{8}.+\n)+)",
@@ -584,7 +595,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(self.native_contract["schema_floor"], 59)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
-            "4e545eba4702f65ab2f3e21dbdfbb8c2494ebed5",
+            "0c7a50a4318d6a113cb95b65d704ba04fc705f4c",
         )
         self.assertEqual(
             self.native_contract["presence"],
