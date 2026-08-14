@@ -129,6 +129,10 @@ def test_public_deadman_verdict_and_incident_are_not_best_effort() -> None:
     assert "GH_TOKEN: ${{ secrets.YUETO_CI_PAT }}" in incident
     assert "gh label create alert-chain" in incident
     assert "gh issue create" in incident and "--assignee onesyue" in incident
+    assert "DRILL_MISSING:" in incident
+    assert "告警链失联演练（public deadman）" in incident
+    assert "请人工确认收到后关闭本演练单" in incident
+    assert '--search "in:title $title"' in incident
     assert "receipt.json" not in incident
     assert "ssh.err" not in incident
     assert "continue-on-error" not in incident

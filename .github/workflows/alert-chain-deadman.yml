@@ -140,14 +140,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.YUETO_CI_PAT }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DRILL_MISSING: ${{ github.event_name == 'workflow_dispatch' && inputs.drill_missing == true }}
         run: |
           set -euo pipefail
           repo='onesyue/yueops'
-          title='🫀 告警链失联（public deadman）'
+          if [ "$DRILL_MISSING" = 'true' ]; then
+            title='🧪 告警链失联演练（public deadman）'
+            headline='@onesyue deliberate missing-receipt drill 按预期触发；请人工确认收到后关闭本演练单。'
+          else
+            title='🫀 告警链失联（public deadman）'
+            headline='@onesyue bastion 心跳凭据过期、读不到，或自报无法告警。'
+          fi
           existing="$(gh issue list --repo "$repo" --state open \
-            --search 'in:title 告警链失联' --limit 1 --json number --jq '.[0].number' || true)"
+            --search "in:title $title" --limit 1 --json number --jq '.[0].number' || true)"
           body=$(printf '%s\n' \
-            '@onesyue bastion 心跳凭据过期、读不到，或自报无法告警。' \
+            "$headline" \
             '' \
             '此判定由公共 yueto-ci runner 执行，不经过 bastion systemd 或 Telegram spool。' \
             "运行记录：${RUN_URL}")
