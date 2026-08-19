@@ -862,6 +862,10 @@ jobs:
             echo "::error::resolved source SHA is not a full commit id"
             exit 1
           }
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::build did not return a valid immutable digest"
+            exit 1
+          }
           if [ "$EVENT_NAME" = "repository_dispatch" ] &&
              [ "$DISPATCH_REF" != "$SOURCE_SHA" ]; then
             echo "::error::repository_dispatch ref did not resolve to its exact source SHA"
@@ -894,25 +898,49 @@ jobs:
             echo "default HEAD:    $default_head"
             exit 1
           fi
-          existing="$(
+          promotion_tag_args=(--tag "${IMAGE}:latest")
+          sha_tag_inspect=""
+          sha_tag_error="$(mktemp "${RUNNER_TEMP}/sha-tag-inspect.XXXXXX")"
+          trap 'rm -f -- "$sha_tag_error"' EXIT
+          if sha_tag_inspect="$(
             docker buildx imagetools inspect "${IMAGE}:${SHA_TAG}" \
-              --format '{{json .Manifest}}' 2>/dev/null \
-              | jq -r '.digest // .Digest // empty' || true
-          )"
-          promotion_digest="$DIGEST"
+              --format '{{json .Manifest}}' 2>"$sha_tag_error"
+          )"; then
+            existing="$(
+              jq -er '.digest // .Digest | select(test("^sha256:[0-9a-f]{64}$"))' \
+                <<<"$sha_tag_inspect"
+            )" || {
+              echo "::error::${IMAGE}:${SHA_TAG} returned an invalid manifest digest"
+              exit 1
+            }
+          elif grep -qiE 'not found|manifest unknown|no such manifest|404' \
+            "$sha_tag_error" &&
+            ! grep -qiE 'denied|unauthorized|forbidden|authentication' \
+              "$sha_tag_error"; then
+            existing=""
+            promotion_tag_args=(
+              --tag "${IMAGE}:${SHA_TAG}"
+              --tag "${IMAGE}:latest"
+            )
+          else
+            echo "::error::could not determine immutable tag state for ${IMAGE}:${SHA_TAG}"
+            cat "$sha_tag_error" >&2
+            exit 1
+          fi
           if [ -n "$existing" ] && [ "$existing" != "$DIGEST" ]; then
-            # 不可变 tag 的职责是「绝不指向**不同源码**的内容」，不是「同一份源码只准构建一次」。
+            # sha-* 记录该源码第一次通过中央门禁的构建；一旦存在就绝不移动。
             #
             # 2026-08-02 实录：yue-node 的 sha-64e47a3 已指向 179d853…，而重跑构建产出
             # 5571774…，于是整个 job 红。但两个镜像的
             # org.opencontainers.image.revision **都是 64e47a3be6cb** —— 同一份源码，
             # 只是 Docker 构建本就不是逐字节可复现的（本仓 memory 早有记录：
             # 「同一提交两次构建 digest 不同，先比 revision label」）。
-            # 那种情况下重建是 no-op，不该拦；真正要拦的是**同 tag 换了源码**。
+            # 那种情况下允许继续提升，但不能重写 sha-*；真正要拦的是已有 tag
+            # 指向不同源码，或已有 artifact 无法通过完整性验证。
             #
             # 故：拿 tag 上已有那个镜像的 revision label 与本次的源 SHA 比。
-            #   · 相同 → 验证已有 digest 的中央签名/SBOM，随后复用它并继续收敛
-            #     immutable tag + latest（全队 digest pin 不会因此失效）；
+            #   · 相同 → 验证已有 digest 的中央签名/SBOM，保留 immutable tag，
+            #     但 latest 只提升本次已通过 Trivy/签名/SBOM/provenance 的 DIGEST；
             #   · 不同 / 读不出来 → 按原样 fail-closed。读不出来也算不同，
             #     是刻意的：拿不到证据时不能假设它无害。
             existing_rev="$(
@@ -936,10 +964,9 @@ jobs:
                 --type cyclonedx "${IMAGE}@${existing}")"
               jq -s -e "length >= ${EXPECTED_SBOMS}" \
                 <<<"$existing_attestations" >/dev/null
-              promotion_digest="$existing"
               echo "::notice::${IMAGE}:${SHA_TAG} 已指向同源镜像 ${existing}" \
                    "(revision=${existing_rev})；本次构建产出 ${DIGEST}，" \
-                   "Docker 构建非逐字节可复现属预期。复用已验签 digest 并继续收敛 latest。"
+                   "保留 immutable tag；latest 将提升本次完整过门禁的 digest。"
             else
               echo "::error::immutable ${IMAGE}:${SHA_TAG} already points to ${existing}" \
                    "(revision=${existing_rev:-<unreadable>}), not ${DIGEST} (source ${SOURCE_SHA})"
@@ -960,6 +987,5 @@ jobs:
             exit 1
           }
           docker buildx imagetools create \
-            --tag "${IMAGE}:${SHA_TAG}" \
-            --tag "${IMAGE}:latest" \
-            "${IMAGE}@${promotion_digest}"
+            "${promotion_tag_args[@]}" \
+            "${IMAGE}@${DIGEST}"

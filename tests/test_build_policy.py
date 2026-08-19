@@ -37,9 +37,13 @@ class BuildPolicyTest(unittest.TestCase):
         cls.target_planner = TARGET_PLANNER.read_text(encoding="utf-8")
 
     def test_all_actions_are_pinned_to_full_commit_sha(self) -> None:
+        action_sources = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted(WORKFLOW_DIR.glob("*.y*ml"))
+        )
         uses = re.findall(
             r"^\s*(?:-\s*)?uses:\s*([^\s#]+)",
-            self.workflow + "\n" + self.readme,
+            action_sources + "\n" + self.readme,
             re.MULTILINE,
         )
         self.assertTrue(uses)
@@ -164,25 +168,86 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn('built-${SOURCE_SHA}', marker_step)
         self.assertNotIn("SHA_SHORT", marker_step)
 
-    def test_promotion_reuses_only_verified_same_source_digest_and_converges_latest(
-        self,
-    ) -> None:
+    def assert_promotion_uses_current_verified_digest(self, step: str) -> None:
+        final_create = step[step.rindex("docker buildx imagetools create") :]
+        self.assertNotIn("promotion_digest", step)
+        self.assertIn(
+            'promotion_tag_args=(--tag "${IMAGE}:latest")',
+            step,
+        )
+        self.assertIn(
+            'promotion_tag_args=(\n'
+            '              --tag "${IMAGE}:${SHA_TAG}"\n'
+            '              --tag "${IMAGE}:latest"',
+            step,
+        )
+        self.assertIn('"${promotion_tag_args[@]}"', final_create)
+        self.assertIn('"${IMAGE}@${DIGEST}"', final_create)
+        self.assertNotIn('"${IMAGE}@${existing}"', final_create)
+        self.assertNotIn('--tag "${IMAGE}:${SHA_TAG}"', final_create)
+
+    def test_promotion_preserves_sha_tag_and_uses_current_verified_digest(self) -> None:
         start = self.workflow.index(
             "- name: Authorize and promote verified default-branch digest"
         )
         step = self.workflow[start:]
         self.assertIn("SHA_TAG: sha-${{ steps.meta.outputs.source_sha }}", step)
-        self.assertIn('promotion_digest="$DIGEST"', step)
-        self.assertIn('promotion_digest="$existing"', step)
+        self.assertIn("build did not return a valid immutable digest", step)
+        self.assertIn("could not determine immutable tag state", step)
+        self.assertIn("invalid manifest digest", step)
+        self.assertIn('sha_tag_error="$(mktemp "${RUNNER_TEMP}/', step)
+        self.assertIn("denied|unauthorized|forbidden|authentication", step)
         self.assertIn("cosign verify \\", step)
         self.assertIn("cosign verify-attestation \\", step)
-        self.assertIn('"${IMAGE}@${promotion_digest}"', step)
+        self.assertIn("保留 immutable tag", step)
+        self.assert_promotion_uses_current_verified_digest(step)
+        for gate in (
+            "- name: Build & push",
+            "- name: Block fixed HIGH/CRITICAL vulnerabilities (linux/amd64)",
+            "- name: Validate complete platform SBOM set",
+            "- name: Sign & attest image (Sigstore keyless)",
+            "- name: Generate signed GitHub build provenance",
+        ):
+            with self.subTest(gate=gate):
+                self.assertLess(self.workflow.index(gate), start)
         same_source = step[
             step.index('if [ -n "$existing_rev" ]') : step.index(
                 "# Narrow the unavoidable network check/use interval"
             )
         ]
         self.assertNotIn("exit 0", same_source)
+
+    def test_policy_rejects_old_digest_promotion_mutation(self) -> None:
+        start = self.workflow.index(
+            "- name: Authorize and promote verified default-branch digest"
+        )
+        step = self.workflow[start:]
+        mutated = step.replace(
+            '"${IMAGE}@${DIGEST}"',
+            '"${IMAGE}@${existing}"',
+            1,
+        )
+        self.assertNotEqual(mutated, step)
+        with self.assertRaises(AssertionError):
+            self.assert_promotion_uses_current_verified_digest(mutated)
+
+    def test_build_job_permissions_are_minimal_and_explicit(self) -> None:
+        build_start = self.workflow.index("  build:\n")
+        strategy_start = self.workflow.index("    strategy:\n", build_start)
+        build_header = self.workflow[build_start:strategy_start]
+        permission_lines = re.findall(
+            r"(?m)^      ([a-z-]+): (read|write)$",
+            build_header,
+        )
+        self.assertEqual(
+            permission_lines,
+            [
+                ("contents", "read"),
+                ("packages", "write"),
+                ("id-token", "write"),
+                ("attestations", "write"),
+            ],
+        )
 
     def test_only_build_yml_can_build_or_promote_products(self) -> None:
         workflow_files = sorted(path.name for path in WORKFLOW_DIR.glob("*.y*ml"))
