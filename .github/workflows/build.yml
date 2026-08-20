@@ -620,6 +620,15 @@ jobs:
             echo "build_time=${BUILD_TIME}"
             echo "candidate_tag=${IMG}:candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           } >> "$GITHUB_OUTPUT"
+          # GHA cache export can hang indefinitely from the disposable local
+          # release runner after the image is already in GHCR.  Hosted builds
+          # retain the shared cache; local releases consume it but never spend
+          # the signing window exporting it again.
+          if [[ "${{ github.event_name }}" != "workflow_dispatch" ||
+                "${{ github.event.inputs.runner }}" != "yue-local-release" ]]; then
+            echo "cache_to=type=gha,mode=max,scope=${{ matrix.service }}" \
+              >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build & push
         id: build
@@ -639,7 +648,7 @@ jobs:
             BUILD_TIME=${{ steps.meta.outputs.build_time }}
             ${{ matrix.validation == 'yue-node' && 'BUILD_PROFILE=auto' || '' }}
           cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          cache-to: ${{ steps.meta.outputs.cache_to }}
           provenance: mode=max
 
       # Only actionable vulnerabilities block: unfixed distro findings remain

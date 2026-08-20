@@ -67,6 +67,32 @@ class BuildPolicyTest(unittest.TestCase):
             body,
         )
 
+    def test_local_release_never_exports_the_remote_build_cache(self) -> None:
+        compute = re.search(
+            r"(?ms)^      - name: Compute tags\n(?P<body>.*?)(?=^      - name:)",
+            self.workflow,
+        )
+        build = re.search(
+            r"(?ms)^      - name: Build & push\n(?P<body>.*?)(?=^      - )",
+            self.workflow,
+        )
+        self.assertIsNotNone(compute)
+        self.assertIsNotNone(build)
+        assert compute is not None and build is not None
+        self.assertIn(
+            '"${{ github.event.inputs.runner }}" != "yue-local-release"',
+            compute.group("body"),
+        )
+        self.assertIn(
+            'echo "cache_to=type=gha,mode=max,scope=${{ matrix.service }}"',
+            compute.group("body"),
+        )
+        self.assertIn(
+            "cache-to: ${{ steps.meta.outputs.cache_to }}",
+            build.group("body"),
+        )
+        self.assertNotIn("cache-to: type=gha", build.group("body"))
+
     def test_manual_build_is_candidate_only_by_default(self) -> None:
         promote_input = re.search(
             r"(?ms)^\s{6}promote:\n(?P<body>(?:^\s{8}.+\n)+)",
