@@ -409,6 +409,7 @@ class BuildPolicyTest(unittest.TestCase):
             "yueboard) tools+=(docker go node corepack)",
             "yueops) tools+=(docker jq node npm uv)",
             "Preflight build and promotion dependencies",
+            "for tool in bash curl docker envsubst git jq",
             "docker buildx version >/dev/null",
             "CGO_ENABLED: '1'",
             "Go race validation requires CGO_ENABLED=1",

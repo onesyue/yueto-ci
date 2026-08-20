@@ -596,7 +596,9 @@ jobs:
       - name: Preflight build and promotion dependencies
         run: |
           set -euo pipefail
-          for tool in bash curl docker git jq; do
+          # sigstore/cosign-installer expands its install path with envsubst;
+          # Debian provides it in gettext-base rather than the base image.
+          for tool in bash curl docker envsubst git jq; do
             command -v "$tool" >/dev/null 2>&1 || {
               echo "::error::runner is missing required build tool: $tool"
               exit 1

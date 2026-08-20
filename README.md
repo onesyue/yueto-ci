@@ -79,7 +79,8 @@ checkout 不把 7‑39 位短 SHA 当作可复现的 commit ref，中央 plan �
   并显式选择 `yue-local-release`；代码仓 `repository_dispatch` 与默认手动运行
   仍使用 GitHub-hosted runner。工作流会自举 GNU make，并在校验、构建和
   promotion 前对实际工具链 fail closed。YueNode 的 race 门禁会自举
-  `build-essential`并显式启用 CGO。GitHub-hosted runner 使用 `setup-python`；
+  `build-essential`并显式启用 CGO；镜像签名阶段还要求 Debian 的
+  `gettext-base`（提供 `envsubst`）。GitHub-hosted runner 使用 `setup-python`；
   Debian 13 的 `yue-local-release` 使用系统 Python 3.13，且在执行任何 Python
   policy 前验证精确主/次版本。不接受依赖 runner 手工状态的隐式通过。
   注册时必须同时保留默认 `self-hosted`、`Linux`、`X64` 标签并添加唯一自定义
