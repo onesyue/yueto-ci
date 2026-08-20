@@ -446,14 +446,20 @@ jobs:
           YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard
           UV_PYTHON_DOWNLOADS: never
         run: |
+          security_report=$(mktemp "${RUNNER_TEMP:?}/security-scan.XXXXXX.json")
+          python_lock_audit=$(mktemp "${RUNNER_TEMP:?}/python-lock-audit.XXXXXX.txt")
+          cleanup_reports() {
+            rm -f -- "$security_report" "$python_lock_audit"
+          }
+          trap cleanup_reports EXIT
           uv lock --check
           .venv/bin/python scripts/check-python-dependency-groups.py
-          bash scripts/security_scan.sh --json | tee /tmp/security-scan.json
-          jq -e '.fail == 0' /tmp/security-scan.json >/dev/null
+          bash scripts/security_scan.sh --json | tee "$security_report"
+          jq -e '.fail == 0' "$security_report" >/dev/null
           uv export --frozen --all-groups --no-emit-local \
-            --no-annotate --no-header --output-file /tmp/python-lock-audit.txt
+            --no-annotate --no-header --output-file "$python_lock_audit"
           uv run --frozen --only-group audit pip-audit \
-            --requirement /tmp/python-lock-audit.txt \
+            --requirement "$python_lock_audit" \
             --progress-spinner off --require-hashes --disable-pip
           .venv/bin/python -m compileall -q web checkin-api telegram-bot/yue
           uv run --frozen --only-group lint ruff check .

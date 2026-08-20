@@ -532,6 +532,23 @@ class BuildPolicyTest(unittest.TestCase):
             with self.subTest(gate=gate):
                 self.assertIn(gate, self.workflow)
 
+    def test_yueops_reports_are_unique_runner_temp_files(self) -> None:
+        backend_start = self.workflow.index("- name: Validate yueops backend")
+        frontend_start = self.workflow.index("- name: Validate yueops frontend")
+        backend_step = self.workflow[backend_start:frontend_start]
+
+        self.assertIn(
+            'security_report=$(mktemp "${RUNNER_TEMP:?}/security-scan.',
+            backend_step,
+        )
+        self.assertIn(
+            'python_lock_audit=$(mktemp "${RUNNER_TEMP:?}/python-lock-audit.',
+            backend_step,
+        )
+        self.assertIn("trap cleanup_reports EXIT", backend_step)
+        self.assertNotIn("/tmp/security-scan.json", backend_step)
+        self.assertNotIn("/tmp/python-lock-audit.txt", backend_step)
+
     def test_yueops_npm_audit_policy_is_owned_by_the_checked_out_source(self) -> None:
         frontend_start = self.workflow.index("- name: Validate yueops frontend")
         miniapp_start = self.workflow.index("- name: Validate Yue mini app")
