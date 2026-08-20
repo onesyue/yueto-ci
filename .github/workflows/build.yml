@@ -425,12 +425,13 @@ jobs:
         run: |
           uv venv --python "$YUE_CI_PYTHON" .venv
           echo "${GITHUB_WORKSPACE}/.venv/bin" >> "$GITHUB_PATH"
+          requirements_file="${RUNNER_TEMP}/ci-requirements.txt"
           uv export --frozen --no-default-groups \
             --group web-runtime --group checkin-runtime --group bot-runtime \
             --group image-build --group test \
-            --no-emit-local --output-file /tmp/ci-requirements.txt
+            --no-emit-local --output-file "$requirements_file"
           uv pip install --python .venv/bin/python \
-            --require-hashes -r /tmp/ci-requirements.txt
+            --require-hashes -r "$requirements_file"
           uv pip install --python .venv/bin/python \
             --no-deps --no-build-isolation -e telegram-bot/yue \
             --config-settings editable_mode=compat

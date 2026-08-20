@@ -438,6 +438,11 @@ class BuildPolicyTest(unittest.TestCase):
             'uv venv --python "$YUE_CI_PYTHON" .venv',
             self.workflow,
         )
+        self.assertIn(
+            'requirements_file="${RUNNER_TEMP}/ci-requirements.txt"',
+            self.workflow,
+        )
+        self.assertNotIn("/tmp/ci-requirements.txt", self.workflow)
         hosted_setup = self.workflow.index("Set up Python on GitHub-hosted runner")
         system_check = self.workflow.index(
             "Validate system Python on self-hosted runner"
