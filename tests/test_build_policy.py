@@ -61,6 +61,11 @@ class BuildPolicyTest(unittest.TestCase):
         body = setup.group("body")
         self.assertIn("go-version: '1.26.6'", body)
         self.assertNotIn("go-version-file:", body)
+        self.assertIn(
+            "cache: ${{ github.event_name != 'workflow_dispatch' || "
+            "github.event.inputs.runner != 'yue-local-release' }}",
+            body,
+        )
 
     def test_manual_build_is_candidate_only_by_default(self) -> None:
         promote_input = re.search(

@@ -238,7 +238,11 @@ jobs:
           # after 1.26.6 shipped, letting reachable stdlib CVEs reach the
           # vulnerability gate. The release compiler is an exact patch pin.
           go-version: '1.26.6'
-          cache: true
+          # GitHub cache upload can remain asleep indefinitely on the disposable
+          # self-hosted release runner after every validation step is green.
+          # That runner already keeps its Go module/build cache on local disk;
+          # disable only the remote post-job upload so releases can complete.
+          cache: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release' }}
 
       - name: Set up Python on GitHub-hosted runner
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release'
