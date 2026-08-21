@@ -59,6 +59,26 @@ checkout 不把 7‑39 位短 SHA 当作可复现的 commit ref，中央 plan �
 `YUETO_CI_PAT`。`repository_dispatch` 入口仅保留给受控兼容调用，仍由可信 actor、
 完整 SHA 和默认分支 HEAD 三重门禁约束。
 
+## Actions 白名单闭包
+
+仓库 Settings → Actions 的 selected-actions 必须覆盖工作流直接调用的动作，也必须覆盖
+复合动作内部的第三方调用。`aquasecurity/trivy-action` v0.36.0 会继续调用精确固定的
+`aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514`；只放行顶层
+`trivy-action` 会让镜像任务在 `Set up job` 阶段失败，扫描根本不会开始。当前闭包为：
+
+- `anchore/sbom-action@*`
+- `aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514`
+- `aquasecurity/trivy-action@*`
+- `astral-sh/setup-uv@*`
+- `docker/build-push-action@*`
+- `docker/login-action@*`
+- `docker/setup-buildx-action@*`
+- `docker/setup-qemu-action@*`
+- `sigstore/cosign-installer@*`
+
+同时保持 `github_owned_allowed=true`、`verified_allowed=false`；工作流本身仍必须把每个
+第三方动作固定到完整 40 位提交，白名单里的 `@*` 不等于允许可变 tag 进入源码。
+
 ## ⚠️ 迁移注意：cosign 签名身份变更
 
 构建搬到本仓后，Sigstore keyless 签名的 identity 从 `https://github.com/onesyue/<代码仓>/...`

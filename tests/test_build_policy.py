@@ -51,6 +51,30 @@ class BuildPolicyTest(unittest.TestCase):
             with self.subTest(action=action):
                 self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$")
 
+    def test_documented_selected_actions_include_transitive_trivy_setup(self) -> None:
+        """A composite action's third-party children are policy subjects too."""
+
+        required_patterns = (
+            "anchore/sbom-action@*",
+            "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
+            "aquasecurity/trivy-action@*",
+            "astral-sh/setup-uv@*",
+            "docker/build-push-action@*",
+            "docker/login-action@*",
+            "docker/setup-buildx-action@*",
+            "docker/setup-qemu-action@*",
+            "sigstore/cosign-installer@*",
+        )
+        section = self.readme.split("## Actions 白名单闭包", 1)[1].split(
+            "\n## ", 1
+        )[0]
+        documented_patterns = tuple(
+            re.findall(r"(?m)^- `([^`]+)`$", section)
+        )
+        self.assertEqual(documented_patterns, required_patterns)
+        self.assertIn("`github_owned_allowed=true`", self.readme)
+        self.assertIn("`verified_allowed=false`", self.readme)
+
     def test_release_go_toolchain_is_an_exact_security_patch(self) -> None:
         setup = re.search(
             r"(?ms)^      - name: Set up Go\n(?P<body>.*?)(?=^      - name:)",
