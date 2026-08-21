@@ -68,7 +68,10 @@ def test_public_deadman_trigger_permissions_and_missing_drill_are_fail_closed() 
     assert "workflow_dispatch:" in text
     assert "drill_missing:" in text
     assert "type: boolean" in text and "default: false" in text
-    assert "contents: read" in text and "issues: write" in text
+    assert "contents: read" in text
+    # Incidents are created in private YueOps with YUETO_CI_PAT. The public
+    # repository token never needs write permission to either repository.
+    assert "issues: write" not in text
     assert "pull_request:" not in text
     assert "push:" not in text
 

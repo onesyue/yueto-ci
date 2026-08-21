@@ -21,7 +21,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: production-alert-chain-deadman

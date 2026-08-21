@@ -234,10 +234,10 @@ jobs:
         if: matrix.validation == 'yue-node' || matrix.validation == 'yueboard'
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          # `go 1.26` in go.mod resolved to the runner cache's 1.26.5 even
-          # after 1.26.6 shipped, letting reachable stdlib CVEs reach the
-          # vulnerability gate. The release compiler is an exact patch pin.
-          go-version: '1.26.6'
+          # Keep the release compiler on an exact supported patch. Go 1.26.7
+          # fixes the 1.26.6 h2c handoff regression where ReadHeaderTimeout
+          # remained armed after an unencrypted HTTP/2 connection took over.
+          go-version: '1.26.7'
           # GitHub cache upload can remain asleep indefinitely on the disposable
           # self-hosted release runner after every validation step is green.
           # That runner already keeps its Go module/build cache on local disk;
@@ -527,8 +527,22 @@ jobs:
             echo "no changed YueOps SQL migrations"
             exit 0
           fi
-          npm install --global squawk-cli@2.60.0
-          squawk "${squawk_flags[@]}" "${migrations[@]}"
+          # Do not execute an npm registry package in the privileged release
+          # validation job. Fetch the upstream release binary at an immutable
+          # version and authenticate its exact bytes before use.
+          squawk_bin="${RUNNER_TEMP}/squawk-2.60.0"
+          curl --fail --location --silent --show-error \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            --connect-timeout 10 --max-time 180 \
+            --retry 4 --retry-all-errors \
+            'https://github.com/sbdchd/squawk/releases/download/v2.60.0/squawk-linux-x64' \
+            --output "$squawk_bin"
+          printf '%s  %s\n' \
+            '708d77899e2b43e0d21cb811023dbbcfb3b8220b0c0b7e71c6e73568be7716e5' \
+            "$squawk_bin" | sha256sum --check --strict
+          chmod 0755 "$squawk_bin"
+          test "$("$squawk_bin" --version)" = 'squawk 2.60.0'
+          "$squawk_bin" "${squawk_flags[@]}" "${migrations[@]}"
 
   build:
     needs: [plan, validate]
@@ -616,6 +630,9 @@ jobs:
 
       - name: Compute tags
         id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RUNNER_KIND: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
         run: |
           set -euo pipefail
           SOURCE_SHA=$(git rev-parse HEAD)
@@ -633,8 +650,8 @@ jobs:
           # release runner after the image is already in GHCR.  Hosted builds
           # retain the shared cache; local releases consume it but never spend
           # the signing window exporting it again.
-          if [[ "${{ github.event_name }}" != "workflow_dispatch" ||
-                "${{ github.event.inputs.runner }}" != "yue-local-release" ]]; then
+          if [[ "$EVENT_NAME" != "workflow_dispatch" ||
+                "$RUNNER_KIND" != "yue-local-release" ]]; then
             echo "cache_to=type=gha,mode=max,scope=${{ matrix.service }}" \
               >> "$GITHUB_OUTPUT"
           fi
@@ -737,19 +754,28 @@ jobs:
 
       - name: Validate complete platform SBOM set
         env:
-          EXPECTED_SBOMS: ${{ contains(matrix.platforms, 'arm64') && '2' || '1' }}
+          EXPECTED_ARCHITECTURES: ${{ contains(matrix.platforms, 'arm64') && 'amd64,arm64' || 'amd64' }}
         run: |
           set -euo pipefail
           shopt -s nullglob
           sboms=(sbom-linux-*.cdx.json)
-          [ "${#sboms[@]}" -eq "$EXPECTED_SBOMS" ] || {
-            echo "expected $EXPECTED_SBOMS platform SBOMs, found ${#sboms[@]}" >&2
+          IFS=, read -r -a architectures <<<"$EXPECTED_ARCHITECTURES"
+          [ "${#sboms[@]}" -eq "${#architectures[@]}" ] || {
+            echo "expected ${#architectures[@]} platform SBOMs, found ${#sboms[@]}" >&2
             exit 1
           }
-          for sbom in "${sboms[@]}"; do
+          for arch in "${architectures[@]}"; do
+            sbom="sbom-linux-${arch}.cdx.json"
             test -s "$sbom"
-            jq -e \
-              '.bomFormat == "CycloneDX" and (.specVersion | type == "string")' \
+            jq -e --arg arch "$arch" '
+              .bomFormat == "CycloneDX" and
+              (.specVersion | type == "string" and length > 0) and
+              ([.components[]?.properties[]?
+                | select(.name == "syft:metadata:architecture")
+                | .value
+                | select(. == "amd64" or . == "arm64")]
+                | unique) == [$arch]
+              ' \
               "$sbom" >/dev/null
           done
 
@@ -759,7 +785,7 @@ jobs:
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
           IMAGE: ${{ steps.meta.outputs.image }}
-          EXPECTED_SBOMS: ${{ contains(matrix.platforms, 'arm64') && '2' || '1' }}
+          EXPECTED_ARCHITECTURES: ${{ contains(matrix.platforms, 'arm64') && 'amd64,arm64' || 'amd64' }}
         run: |
           set -euo pipefail
           fetch_token() {
@@ -824,7 +850,11 @@ jobs:
             echo "FATAL: cosign attestation verification failed after bounded retries" >&2
             exit 1
           }
-          jq -s -e "length >= ${EXPECTED_SBOMS}" <<<"$ATTESTATIONS" >/dev/null
+          python3 .ci-policy/scripts/verify-sbom-attestations.py \
+            --image "$IMAGE" \
+            --digest "$DIGEST" \
+            --expected-architectures "$EXPECTED_ARCHITECTURES" \
+            <<<"$ATTESTATIONS"
 
       - name: Generate signed GitHub build provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
@@ -873,7 +903,7 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
           IMAGE: ${{ steps.meta.outputs.image }}
           SHA_TAG: sha-${{ steps.meta.outputs.source_sha }}
-          EXPECTED_SBOMS: ${{ contains(matrix.platforms, 'arm64') && '2' || '1' }}
+          EXPECTED_ARCHITECTURES: ${{ contains(matrix.platforms, 'arm64') && 'amd64,arm64' || 'amd64' }}
         run: |
           set -euo pipefail
           [[ "$SOURCE_REPO" =~ ^onesyue/[A-Za-z0-9._-]+$ ]] || {
@@ -984,8 +1014,11 @@ jobs:
                 --certificate-identity "$identity" \
                 --certificate-oidc-issuer "$issuer" \
                 --type cyclonedx "${IMAGE}@${existing}")"
-              jq -s -e "length >= ${EXPECTED_SBOMS}" \
-                <<<"$existing_attestations" >/dev/null
+              python3 .ci-policy/scripts/verify-sbom-attestations.py \
+                --image "$IMAGE" \
+                --digest "$existing" \
+                --expected-architectures "$EXPECTED_ARCHITECTURES" \
+                <<<"$existing_attestations"
               echo "::notice::${IMAGE}:${SHA_TAG} 已指向同源镜像 ${existing}" \
                    "(revision=${existing_rev})；本次构建产出 ${DIGEST}，" \
                    "保留 immutable tag；latest 将提升本次完整过门禁的 digest。"

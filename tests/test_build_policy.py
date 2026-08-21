@@ -59,7 +59,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIsNotNone(setup)
         assert setup is not None
         body = setup.group("body")
-        self.assertIn("go-version: '1.26.6'", body)
+        self.assertIn("go-version: '1.26.7'", body)
         self.assertNotIn("go-version-file:", body)
         self.assertIn(
             "cache: ${{ github.event_name != 'workflow_dispatch' || "
@@ -80,8 +80,14 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIsNotNone(build)
         assert compute is not None and build is not None
         self.assertIn(
-            '"${{ github.event.inputs.runner }}" != "yue-local-release"',
+            "RUNNER_KIND: ${{ github.event.inputs.runner || 'ubuntu-latest' }}",
             compute.group("body"),
+        )
+        self.assertIn(
+            '"$RUNNER_KIND" != "yue-local-release"', compute.group("body")
+        )
+        self.assertNotIn(
+            '"${{ github.event.inputs.runner }}"', compute.group("body")
         )
         self.assertIn(
             'echo "cache_to=type=gha,mode=max,scope=${{ matrix.service }}"',
@@ -280,6 +286,37 @@ class BuildPolicyTest(unittest.TestCase):
             ],
         )
 
+    def assert_sbom_gate_binds_distinct_architectures(self, workflow: str) -> None:
+        verifier = (ROOT / "scripts/verify-sbom-attestations.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(workflow.count("EXPECTED_ARCHITECTURES:"), 3)
+        self.assertEqual(
+            workflow.count(".ci-policy/scripts/verify-sbom-attestations.py"), 2
+        )
+        self.assertIn('== [$arch]', workflow)
+        self.assertIn(
+            'prop.get("name") == "syft:metadata:architecture"', verifier
+        )
+        self.assertIn('subject[0] != {"name": image', verifier)
+        self.assertIn("--digest \"$DIGEST\"", workflow)
+        self.assertIn("--digest \"$existing\"", workflow)
+        self.assertNotIn("EXPECTED_SBOMS", workflow)
+        self.assertNotIn('length >= ${EXPECTED_SBOMS}', workflow)
+
+    def test_sbom_gate_binds_distinct_platforms_and_subject_digest(self) -> None:
+        self.assert_sbom_gate_binds_distinct_architectures(self.workflow)
+
+    def test_sbom_count_only_regression_is_rejected(self) -> None:
+        mutated = self.workflow.replace(
+            "python3 .ci-policy/scripts/verify-sbom-attestations.py",
+            'jq -s -e "length >= 2"',
+            1,
+        )
+        self.assertNotEqual(mutated, self.workflow)
+        with self.assertRaises(AssertionError):
+            self.assert_sbom_gate_binds_distinct_architectures(mutated)
+
     def test_only_build_yml_can_build_or_promote_products(self) -> None:
         workflow_files = sorted(path.name for path in WORKFLOW_DIR.glob("*.y*ml"))
         self.assertEqual(
@@ -350,7 +387,6 @@ class BuildPolicyTest(unittest.TestCase):
             "ghcr.io",
             "buildx",
             "trivy",
-            "attest",
             "push-to-registry",
             "client-payload",
             "event-type",
@@ -511,7 +547,9 @@ class BuildPolicyTest(unittest.TestCase):
             "scripts/npm-audit-gate.py",
             'corepack install --global "$web_pm"',
             '[ "$web_pm" = "$admin_pm" ]',
-            "squawk-cli@2.60.0",
+            "squawk/releases/download/v2.60.0/squawk-linux-x64",
+            "708d77899e2b43e0d21cb811023dbbcfb3b8220b0c0b7e71c6e73568be7716e5",
+            'test "$("$squawk_bin" --version)" = \'squawk 2.60.0\'',
             "aquasecurity/trivy-action@",
             "sigstore/cosign-installer@",
             # >= v3.1.3: GHSA-fx35-mq7g-6g98 (2026-08-06, High 7.4) — a legacy
@@ -531,6 +569,7 @@ class BuildPolicyTest(unittest.TestCase):
         for gate in required:
             with self.subTest(gate=gate):
                 self.assertIn(gate, self.workflow)
+        self.assertNotIn("npm install --global squawk", self.workflow)
 
     def test_yueops_reports_are_unique_runner_temp_files(self) -> None:
         backend_start = self.workflow.index("- name: Validate yueops backend")
