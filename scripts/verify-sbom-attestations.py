@@ -72,30 +72,33 @@ def _statement_architectures(
     component = metadata.get("component") if isinstance(metadata, dict) else None
     if not isinstance(component, dict):
         return None
+    platform_digest = component.get("version")
     if (
         component.get("type") != "container"
         or component.get("name") != image
-        or component.get("version") != digest
+        or not isinstance(platform_digest, str)
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", platform_digest) is None
     ):
         return None
 
-    architectures: set[str] = set()
-    components = predicate.get("components")
-    if not isinstance(components, list):
+    properties = component.get("properties")
+    if not isinstance(properties, list):
         return frozenset()
-    for package in components:
-        if not isinstance(package, dict):
-            continue
-        properties = package.get("properties")
-        if not isinstance(properties, list):
-            continue
-        for prop in properties:
-            if (
-                isinstance(prop, dict)
-                and prop.get("name") == "syft:metadata:architecture"
-                and prop.get("value") in ALLOWED_ARCHITECTURES
-            ):
-                architectures.add(prop["value"])
+    subject_digests = {
+        prop.get("value")
+        for prop in properties
+        if isinstance(prop, dict)
+        and prop.get("name") == "onesyue:sbom:subject:digest"
+    }
+    if subject_digests != {digest}:
+        return frozenset()
+    architectures = {
+        prop.get("value")
+        for prop in properties
+        if isinstance(prop, dict)
+        and prop.get("name") == "onesyue:sbom:platform:architecture"
+        and prop.get("value") in ALLOWED_ARCHITECTURES
+    }
     return frozenset(architectures)
 
 

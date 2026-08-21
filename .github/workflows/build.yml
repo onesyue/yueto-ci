@@ -677,6 +677,33 @@ jobs:
           cache-to: ${{ steps.meta.outputs.cache_to }}
           provenance: mode=max
 
+      # Syft 1.42+ no longer serializes package-level architecture properties
+      # into CycloneDX. Resolve the index ourselves and scan the unique native
+      # manifest for each declared production platform instead of trusting a
+      # filename or a mutable tag to identify the SBOM's architecture.
+      - name: Resolve exact OCI platform manifests
+        id: platform_manifests
+        env:
+          IMAGE: ${{ steps.meta.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          EXPECTED_ARCHITECTURES: ${{ contains(matrix.platforms, 'arm64') && 'amd64,arm64' || 'amd64' }}
+        run: |
+          set -euo pipefail
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          manifest=$(docker buildx imagetools inspect --raw "${IMAGE}@${DIGEST}")
+          IFS=, read -r -a architectures <<<"$EXPECTED_ARCHITECTURES"
+          for arch in "${architectures[@]}"; do
+            platform_digest=$(jq -er --arg arch "$arch" '
+              [.manifests[]?
+                | select(.platform.os == "linux" and .platform.architecture == $arch)
+                | .digest
+                | select(test("^sha256:[0-9a-f]{64}$"))]
+              | if length == 1 then .[0]
+                else error("expected one exact linux/" + $arch + " manifest") end
+            ' <<<"$manifest")
+            printf '%s_digest=%s\n' "$arch" "$platform_digest" >>"$GITHUB_OUTPUT"
+          done
+
       # Only actionable vulnerabilities block: unfixed distro findings remain
       # visible in scheduled scans but cannot be remediated by rebuilding.
       - name: Block fixed HIGH/CRITICAL vulnerabilities (linux/amd64)
@@ -734,7 +761,7 @@ jobs:
         env:
           SYFT_PLATFORM: linux/amd64
         with:
-          image: ${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}
+          image: ${{ steps.meta.outputs.image }}@${{ steps.platform_manifests.outputs.amd64_digest }}
           format: cyclonedx-json
           output-file: sbom-linux-amd64.cdx.json
           upload-artifact: false
@@ -746,7 +773,7 @@ jobs:
         env:
           SYFT_PLATFORM: linux/arm64
         with:
-          image: ${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}
+          image: ${{ steps.meta.outputs.image }}@${{ steps.platform_manifests.outputs.arm64_digest }}
           format: cyclonedx-json
           output-file: sbom-linux-arm64.cdx.json
           upload-artifact: false
@@ -755,6 +782,10 @@ jobs:
       - name: Validate complete platform SBOM set
         env:
           EXPECTED_ARCHITECTURES: ${{ contains(matrix.platforms, 'arm64') && 'amd64,arm64' || 'amd64' }}
+          IMAGE: ${{ steps.meta.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          AMD64_DIGEST: ${{ steps.platform_manifests.outputs.amd64_digest }}
+          ARM64_DIGEST: ${{ steps.platform_manifests.outputs.arm64_digest }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -767,16 +798,39 @@ jobs:
           for arch in "${architectures[@]}"; do
             sbom="sbom-linux-${arch}.cdx.json"
             test -s "$sbom"
-            jq -e --arg arch "$arch" '
+            case "$arch" in
+              amd64) platform_digest=$AMD64_DIGEST ;;
+              arm64) platform_digest=$ARM64_DIGEST ;;
+              *) echo "unsupported architecture: $arch" >&2; exit 1 ;;
+            esac
+            # First bind the unmodified Syft output to the manifest selected
+            # from the just-built index. Only then add explicit CycloneDX
+            # metadata that survives cosign's predicate wrapping.
+            jq -e --arg image "$IMAGE" --arg platform_digest "$platform_digest" '
               .bomFormat == "CycloneDX" and
               (.specVersion | type == "string" and length > 0) and
-              ([.components[]?.properties[]?
-                | select(.name == "syft:metadata:architecture")
-                | .value
-                | select(. == "amd64" or . == "arm64")]
-                | unique) == [$arch]
-              ' \
-              "$sbom" >/dev/null
+              .metadata.component.type == "container" and
+              .metadata.component.name == $image and
+              .metadata.component.version == $platform_digest
+            ' "$sbom" >/dev/null
+            temporary=$(mktemp "${RUNNER_TEMP}/sbom-platform.XXXXXX")
+            jq --arg arch "$arch" --arg digest "$DIGEST" '
+              .metadata.component.properties =
+                ((.metadata.component.properties // [])
+                  | map(select(.name != "onesyue:sbom:platform:architecture" and
+                               .name != "onesyue:sbom:subject:digest"))) +
+                [{"name":"onesyue:sbom:platform:architecture","value":$arch},
+                 {"name":"onesyue:sbom:subject:digest","value":$digest}]
+            ' "$sbom" >"$temporary"
+            mv -- "$temporary" "$sbom"
+            jq -e --arg arch "$arch" --arg digest "$DIGEST" '
+              ([.metadata.component.properties[]?
+                | select(.name == "onesyue:sbom:platform:architecture")
+                | .value] | unique) == [$arch] and
+              ([.metadata.component.properties[]?
+                | select(.name == "onesyue:sbom:subject:digest")
+                | .value] | unique) == [$digest]
+            ' "$sbom" >/dev/null
           done
 
       # OIDC 与 Fulcio 都是外部控制面。每次 sign/attest 尝试获取新 token，并对

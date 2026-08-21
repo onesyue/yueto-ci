@@ -314,14 +314,18 @@ class BuildPolicyTest(unittest.TestCase):
         verifier = (ROOT / "scripts/verify-sbom-attestations.py").read_text(
             encoding="utf-8"
         )
-        self.assertEqual(workflow.count("EXPECTED_ARCHITECTURES:"), 3)
+        self.assertEqual(workflow.count("EXPECTED_ARCHITECTURES:"), 4)
         self.assertEqual(
             workflow.count(".ci-policy/scripts/verify-sbom-attestations.py"), 2
         )
-        self.assertIn('== [$arch]', workflow)
+        self.assertIn("- name: Resolve exact OCI platform manifests", workflow)
+        self.assertIn('.metadata.component.version == $platform_digest', workflow)
+        self.assertIn('"onesyue:sbom:platform:architecture"', workflow)
+        self.assertIn('"onesyue:sbom:subject:digest"', workflow)
         self.assertIn(
-            'prop.get("name") == "syft:metadata:architecture"', verifier
+            'prop.get("name") == "onesyue:sbom:platform:architecture"', verifier
         )
+        self.assertIn('prop.get("name") == "onesyue:sbom:subject:digest"', verifier)
         self.assertIn('subject[0] != {"name": image', verifier)
         self.assertIn("--digest \"$DIGEST\"", workflow)
         self.assertIn("--digest \"$existing\"", workflow)

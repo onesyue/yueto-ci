@@ -14,12 +14,20 @@ IMAGE = "ghcr.io/onesyue/yueboard"
 DIGEST = "sha256:" + "a" * 64
 
 
-def document(architecture: str | None, *, image: str = IMAGE) -> dict[str, str]:
+def document(
+    architecture: str | None,
+    *,
+    image: str = IMAGE,
+    subject_digest: str = DIGEST,
+) -> dict[str, str]:
     properties = []
     if architecture is not None:
         properties.append(
-            {"name": "syft:metadata:architecture", "value": architecture}
+            {"name": "onesyue:sbom:platform:architecture", "value": architecture}
         )
+    properties.append(
+        {"name": "onesyue:sbom:subject:digest", "value": subject_digest}
+    )
     statement = {
         "_type": "https://in-toto.io/Statement/v0.1",
         "predicateType": "https://cyclonedx.org/bom",
@@ -33,10 +41,11 @@ def document(architecture: str | None, *, image: str = IMAGE) -> dict[str, str]:
                 "component": {
                     "type": "container",
                     "name": image,
-                    "version": DIGEST,
+                    "version": "sha256:" + ("b" if architecture == "amd64" else "c") * 64,
+                    "properties": properties,
                 }
             },
-            "components": [{"name": "service", "properties": properties}],
+            "components": [{"name": "service"}],
         },
     }
     encoded = base64.b64encode(
@@ -90,6 +99,12 @@ class SbomAttestationPolicyTests(unittest.TestCase):
     def test_subject_and_digest_are_bound(self) -> None:
         result = run_verifier(
             [document("amd64", image="ghcr.io/onesyue/not-yueboard")], "amd64"
+        )
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_cyclonedx_subject_marker_is_bound(self) -> None:
+        result = run_verifier(
+            [document("amd64", subject_digest="sha256:" + "d" * 64)], "amd64"
         )
         self.assertNotEqual(result.returncode, 0)
 
