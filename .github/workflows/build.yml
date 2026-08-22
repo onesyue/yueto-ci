@@ -440,6 +440,42 @@ jobs:
           # later Mini App lint/build/audit reuses this exact clean tree.
           npm --prefix telegram-bot/yue/miniapp ci
 
+      - name: Install pinned gitleaks for credential-evidence contracts
+        if: matrix.validation == 'yueops'
+        run: |
+          set -euo pipefail
+          # yueops' credential-evidence contracts execute the real scanner at
+          # the fixed production path. Fetch the upstream release at an
+          # immutable version and authenticate its exact bytes before use.
+          if [ -x /usr/local/bin/gitleaks ] &&
+             [ "$(/usr/local/bin/gitleaks version 2>/dev/null)" = '8.30.1' ]; then
+            echo "gitleaks 8.30.1 already present"
+            exit 0
+          fi
+          archive="${RUNNER_TEMP}/gitleaks_8.30.1_linux_x64.tar.gz"
+          extract_dir="${RUNNER_TEMP}/gitleaks-8.30.1"
+          curl --fail --location --silent --show-error \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            --connect-timeout 10 --max-time 180 \
+            --retry 4 --retry-all-errors \
+            'https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz' \
+            --output "$archive"
+          printf '%s  %s\n' \
+            '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' \
+            "$archive" | sha256sum --check --strict
+          mkdir -p "$extract_dir"
+          tar --extract --gzip --file "$archive" --directory "$extract_dir" gitleaks
+          install_cmd=(install -o root -g root -m 0755)
+          if [ "$(id -u)" -ne 0 ]; then
+            command -v sudo >/dev/null 2>&1 || {
+              echo "::error::installing gitleaks requires root or passwordless sudo"
+              exit 1
+            }
+            install_cmd=(sudo -n "${install_cmd[@]}")
+          fi
+          "${install_cmd[@]}" "$extract_dir/gitleaks" /usr/local/bin/gitleaks
+          test "$(/usr/local/bin/gitleaks version)" = '8.30.1'
+
       - name: Validate yueops backend
         if: matrix.validation == 'yueops'
         env:
