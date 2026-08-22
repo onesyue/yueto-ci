@@ -465,16 +465,20 @@ jobs:
             "$archive" | sha256sum --check --strict
           mkdir -p "$extract_dir"
           tar --extract --gzip --file "$archive" --directory "$extract_dir" gitleaks
-          install_cmd=(install -o root -g root -m 0755)
-          if [ "$(id -u)" -ne 0 ]; then
+          # The evidence contract requires the scanner binary to be owned by
+          # the evidence owner (root in production, the invoking CI user in
+          # the test process), so install it owned by the current uid/gid.
+          install_cmd=(install -o "$(id -u)" -g "$(id -g)" -m 0755)
+          if [ ! -w /usr/local/bin ]; then
             command -v sudo >/dev/null 2>&1 || {
-              echo "::error::installing gitleaks requires root or passwordless sudo"
+              echo "::error::installing gitleaks requires a writable /usr/local/bin or passwordless sudo"
               exit 1
             }
             install_cmd=(sudo -n "${install_cmd[@]}")
           fi
           "${install_cmd[@]}" "$extract_dir/gitleaks" /usr/local/bin/gitleaks
           test "$(/usr/local/bin/gitleaks version)" = '8.30.1'
+          test "$(stat -c '%u' /usr/local/bin/gitleaks)" = "$(id -u)"
 
       - name: Validate yueops backend
         if: matrix.validation == 'yueops'
