@@ -83,7 +83,11 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIsNotNone(setup)
         assert setup is not None
         body = setup.group("body")
-        self.assertIn("go-version: '1.26.7'", body)
+        self.assertIn(
+            "go-version: ${{ matrix.validation == 'yue-node' && "
+            "'1.27.0' || '1.26.7' }}",
+            body,
+        )
         self.assertNotIn("go-version-file:", body)
         self.assertIn(
             "cache: ${{ github.event_name != 'workflow_dispatch' || "
