@@ -5,7 +5,7 @@ name: Build & publish images
 # 触发方式：
 #   1) 手动: workflow_dispatch，默认只产出已验证/签名的 candidate；显式 promote
 #      才能更新 sha-* / latest，且候选必须仍是对应源码仓默认分支 HEAD。YueBoard
-#      还必须精确等于中央 native-node contract pin；未 pin HEAD 只能验证/构建 candidate。
+#      还必须精确等于中央 native-node contract pin；未 pin HEAD 只验证且不触发 registry 写入。
 #   2) 代码仓 thin workflow: repository_dispatch
 #      (event_type: build, client_payload: {service, ref, promote})。自动提升要求
 #      onesyue 可信发送者 + 精确 40-hex 源码 SHA + 默认分支 HEAD 三重一致。
@@ -68,7 +68,7 @@ jobs:
       - name: Preflight planning dependencies
         run: |
           set -euo pipefail
-          for tool in bash git jq; do
+          for tool in bash curl git jq; do
             command -v "$tool" >/dev/null 2>&1 || {
               echo "::error::runner is missing required planning tool: $tool"
               exit 1
@@ -76,6 +76,7 @@ jobs:
           done
       - id: plan
         env:
+          GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}
           SERVICE: ${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
           REF_OVERRIDE: ${{ github.event.inputs.ref || github.event.client_payload.ref || '' }}
           EVENT_NAME: ${{ github.event_name }}
@@ -157,6 +158,53 @@ jobs:
           # validators in separate registries. `all` covers YueLink without
           # ever inventing a Docker target for it.
           target_plan="$(bash scripts/plan-build-targets.sh "$SERVICE" "$REF_OVERRIDE")"
+          board_selection_count="$(
+            jq '[.validation_matrix[] | select(.validation == "yueboard")] | length' \
+              <<<"$target_plan"
+          )"
+          case "$board_selection_count" in
+            0) ;;
+            1)
+              board_repo="$(
+                jq -er '.validation_matrix[] | select(.validation == "yueboard") | .repo' \
+                  <<<"$target_plan"
+              )"
+              board_ref="$(
+                jq -er '.validation_matrix[] | select(.validation == "yueboard") | .ref' \
+                  <<<"$target_plan"
+              )"
+              [[ "$board_repo" =~ ^onesyue/[A-Za-z0-9._-]+$ ]] || {
+                echo "::error::invalid YueBoard source repository in build plan" >&2
+                exit 1
+              }
+              [ -n "$board_ref" ] || {
+                echo "::error::YueBoard build plan returned an empty source ref" >&2
+                exit 1
+              }
+              if [[ "$board_ref" =~ ^[0-9a-f]{40}$ ]]; then
+                board_source_sha="$board_ref"
+              else
+                encoded_board_ref="$(jq -rn --arg ref "$board_ref" '$ref | @uri')"
+                board_source_sha="$(
+                  curl --fail --silent --show-error --retry 3 \
+                    -H "Authorization: Bearer ${GH_API_TOKEN}" \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    "https://api.github.com/repos/${board_repo}/commits/${encoded_board_ref}" \
+                    | jq -er '.sha | select(test("^[0-9a-f]{40}$"))'
+                )"
+              fi
+              target_plan="$(
+                bash scripts/authorize-yueboard-build-plan.sh \
+                  "$yueboard_contract_pin" "$board_source_sha" "$promote" \
+                  <<<"$target_plan"
+              )"
+              ;;
+            *)
+              echo "::error::build planner returned duplicate YueBoard validation entries" >&2
+              exit 1
+              ;;
+          esac
           matrix="$(jq -c '.matrix' <<<"$target_plan")"
           validation_matrix="$(jq -c '.validation_matrix' <<<"$target_plan")"
           has_builds="$(jq -r '.has_builds' <<<"$target_plan")"
@@ -354,10 +402,10 @@ jobs:
           fi
 
       # A new YueBoard HEAD may be reviewed before the cross-repository pin is
-      # advanced, but it is not authorized to move release tags. Keep that
-      # validation-only path green with an explicit non-promotable notice; a
-      # promotion request fails here before product tests and image builds. The
-      # final tag-mutation step independently repeats this exact pin check.
+      # advanced. Planning keeps it in this validation matrix but removes it
+      # from the build matrix, so it cannot log in to or mutate the registry.
+      # Repeat the non-promotable classification against the immutable policy
+      # checkout; the final tag-mutation step repeats the exact pin check too.
       - name: Classify YueBoard reviewed-pin authorization
         if: matrix.validation == 'yueboard'
         env:

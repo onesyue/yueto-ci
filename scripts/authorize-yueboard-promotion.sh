@@ -37,4 +37,4 @@ if [ "$promote" = true ]; then
   exit 1
 fi
 
-echo "::notice::YueBoard validation-only candidate is non-promotable: source=${source_sha} reviewed_pin=${contract_pin}; validation/build may continue, but sha-* and latest cannot move"
+echo "::notice::YueBoard validation-only source is non-promotable: source=${source_sha} reviewed_pin=${contract_pin}; validation may continue, but no registry write is authorized"

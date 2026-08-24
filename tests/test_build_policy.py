@@ -21,6 +21,7 @@ NATIVE_CONTRACT = ROOT / "native-node-contract.json"
 NATIVE_VALIDATOR = ROOT / "scripts" / "validate-native-node-contract.py"
 TARGET_PLANNER = ROOT / "scripts" / "plan-build-targets.sh"
 YUEBOARD_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-promotion.sh"
+YUEBOARD_PLAN_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-build-plan.sh"
 
 
 class BuildPolicyTest(unittest.TestCase):
@@ -586,6 +587,22 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("PROMOTE: ${{ needs.plan.outputs.promote }}", classifier)
         self.assertIn(".ci-policy/native-node-contract.json", classifier)
         self.assertIn("authorize-yueboard-promotion.sh", classifier)
+        self.assertIn("authorize-yueboard-build-plan.sh", self.workflow)
+        self.assertIn("board_source_sha", self.workflow)
+        self.assertIn("encoded_board_ref", self.workflow)
+        self.assertIn("$ref | @uri", self.workflow)
+        plan_authorization = self.workflow.index(
+            "bash scripts/authorize-yueboard-build-plan.sh"
+        )
+        published_matrix = self.workflow.index(
+            'matrix="$(jq -c \'.matrix\' <<<"$target_plan")"'
+        )
+        self.assertLess(plan_authorization, published_matrix)
+        build_job = self.workflow.index("\n  build:\n")
+        self.assertIn(
+            "if: needs.plan.outputs.has_builds == 'true'",
+            self.workflow[build_job:],
+        )
 
         promotion_start = self.workflow.index(
             "- name: Authorize and promote verified default-branch digest"
@@ -627,7 +644,8 @@ class BuildPolicyTest(unittest.TestCase):
             text=True,
         )
         self.assertEqual(validation_only.returncode, 0, validation_only.stderr)
-        self.assertIn("validation-only candidate is non-promotable", validation_only.stdout)
+        self.assertIn("validation-only source is non-promotable", validation_only.stdout)
+        self.assertIn("no registry write is authorized", validation_only.stdout)
 
         rejected = subprocess.run(
             ["bash", str(YUEBOARD_AUTHORIZER), unreviewed, reviewed, "true"],
@@ -652,6 +670,111 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertEqual(malformed.returncode, 2)
         self.assertIn("exact lowercase 40-hex", malformed.stderr)
+
+    def test_unpinned_yueboard_plan_is_validation_only_and_never_writes_registry(
+        self,
+    ) -> None:
+        reviewed = "a" * 40
+        unreviewed = "b" * 40
+        base_plan = {
+            "matrix": [
+                {
+                    "service": "yueboard",
+                    "group": "yueboard",
+                    "repo": "onesyue/yueboard",
+                    "ref": "main",
+                    "validation": "yueboard",
+                    "context": ".",
+                    "dockerfile": "Dockerfile",
+                    "platforms": "linux/amd64,linux/arm64",
+                }
+            ],
+            "validation_matrix": [
+                {
+                    "repo": "onesyue/yueboard",
+                    "ref": "main",
+                    "validation": "yueboard",
+                }
+            ],
+            "has_builds": True,
+        }
+
+        validation_only = subprocess.run(
+            [
+                "bash",
+                str(YUEBOARD_PLAN_AUTHORIZER),
+                reviewed,
+                unreviewed,
+                "false",
+            ],
+            cwd=ROOT,
+            input=json.dumps(base_plan),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(validation_only.returncode, 0, validation_only.stderr)
+        plan = json.loads(validation_only.stdout)
+        self.assertEqual(plan["matrix"], [])
+        self.assertFalse(plan["has_builds"])
+        self.assertEqual(plan["validation_matrix"][0]["ref"], unreviewed)
+        self.assertIn("no image build, candidate tag, built marker", validation_only.stderr)
+
+        pinned = subprocess.run(
+            [
+                "bash",
+                str(YUEBOARD_PLAN_AUTHORIZER),
+                reviewed,
+                reviewed,
+                "false",
+            ],
+            cwd=ROOT,
+            input=json.dumps(base_plan),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(pinned.returncode, 0, pinned.stderr)
+        pinned_plan = json.loads(pinned.stdout)
+        self.assertTrue(pinned_plan["has_builds"])
+        self.assertEqual(len(pinned_plan["matrix"]), 1)
+        self.assertEqual(pinned_plan["matrix"][0]["ref"], reviewed)
+        self.assertEqual(pinned_plan["validation_matrix"][0]["ref"], reviewed)
+
+        rejected = subprocess.run(
+            [
+                "bash",
+                str(YUEBOARD_PLAN_AUTHORIZER),
+                reviewed,
+                unreviewed,
+                "true",
+            ],
+            cwd=ROOT,
+            input=json.dumps(base_plan),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(rejected.returncode, 1)
+        self.assertEqual(rejected.stdout, "")
+        self.assertIn("refusing YueBoard promotion", rejected.stderr)
+
+        malformed = subprocess.run(
+            [
+                "bash",
+                str(YUEBOARD_PLAN_AUTHORIZER),
+                reviewed,
+                "main",
+                "false",
+            ],
+            cwd=ROOT,
+            input=json.dumps(base_plan),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(malformed.returncode, 2)
+        self.assertEqual(malformed.stdout, "")
 
     def test_source_and_image_security_gates_are_present(self) -> None:
         required = (

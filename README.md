@@ -20,8 +20,9 @@ workflow，而是该工作流在完成校验、构建、签名和证明后的最
 私有 YueOps 仓开事故 issue，公开仓不记录生产凭据内容。
 
 ```sh
-# 手动构建默认只生成经过测试、扫描和签名的 candidate，不改 latest
-gh workflow run build.yml -R onesyue/yueto-ci -f service=yueboard
+# YueBoard 未 pin HEAD 只做验证，零 registry 写；精确 pin 才构建 candidate
+gh workflow run build.yml -R onesyue/yueto-ci \
+  -f service=yueboard -f ref=<40-hex-reviewed-contract-pin>
 gh workflow run build.yml -R onesyue/yueto-ci -f service=all
 
 # 对远端 YueLink 精确源码提交只跑中央契约校验，不进入镜像构建
@@ -39,9 +40,10 @@ gh workflow run build.yml -R onesyue/yueto-ci \
 
 `ref` 可以是完整分支或 tag；如果传 commit，必须传完整 40 位 SHA。GitHub
 checkout 不把 7‑39 位短 SHA 当作可复现的 commit ref，中央 plan 会提前拒绝。
-YueBoard 的未 pin 默认分支 HEAD 仍可用 `promote=false` 做完整验证和 candidate
-构建，日志会明确标为 `non-promotable`；只有先通过签名的跨仓 pin 收敛把
-`yueboard_contract_pin` 精确推进到该 40 位 SHA，`sha-*` / `latest` 才能移动。
+YueBoard 的未 pin 默认分支 HEAD 仍可用 `promote=false` 做完整验证，日志会明确
+标为 `non-promotable`，并从 build matrix 剔除，因此不会登录 registry、构建镜像或
+写 candidate / `built-*` / `sha-*` / `latest`。只有先通过签名的跨仓 pin 收敛把
+`yueboard_contract_pin` 精确推进到该 40 位 SHA，candidate 构建和 promotion 才可运行。
 `service=all` 同时运行 `services.json` 的服务校验与
 `validation-targets.json` 的源码校验；后者不会产生 build matrix。仅校验目标不能
 使用 `promote=true`。
