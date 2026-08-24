@@ -378,7 +378,7 @@ jobs:
           set -euo pipefail
           tools=(bash git)
           case "$VALIDATION_KIND" in
-            yue-node) tools+=(docker gcc go gpg jq make) ;;
+            yue-node) tools+=(base64 docker gcc go gpg jq make) ;;
             yueboard) tools+=(docker go node corepack) ;;
             yueops) tools+=(docker jq node npm uv) ;;
             yuelink) ;;
@@ -428,12 +428,27 @@ jobs:
         if: matrix.validation == 'yue-node'
         env:
           CGO_ENABLED: '1'
+          YUETO_FORK_READ_TOKEN: ${{ secrets.YUETO_CI_PAT }}
         run: |
+          set -euo pipefail
           [ "$(go env CGO_ENABLED)" = "1" ] || {
             echo "::error::Go race validation requires CGO_ENABLED=1"
             exit 1
           }
+          [ -n "$YUETO_FORK_READ_TOKEN" ] || {
+            echo "::error::private fork tag verification requires the read-only CI identity"
+            exit 1
+          }
+          # checkout credentials are deliberately non-persistent. Supply the
+          # same repository-scoped identity only to this process tree, without
+          # writing a credential helper or authenticated URL to Git config.
+          fork_auth="$(printf 'x-access-token:%s' "$YUETO_FORK_READ_TOKEN" | base64 -w0)"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $fork_auth"
+          unset fork_auth YUETO_FORK_READ_TOKEN
           make test
+          unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0
           # The native release has no unprofiled universal yue-node binary.
           # Build the exact selector + dependency-pruned HY2/VLESS bundle that
           # Docker publishes instead of accidentally reviving a tagless graph.
