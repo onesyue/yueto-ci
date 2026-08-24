@@ -378,7 +378,7 @@ jobs:
           set -euo pipefail
           tools=(bash git)
           case "$VALIDATION_KIND" in
-            yue-node) tools+=(docker gcc go jq make) ;;
+            yue-node) tools+=(docker gcc go gpg jq make) ;;
             yueboard) tools+=(docker go node corepack) ;;
             yueops) tools+=(docker jq node npm uv) ;;
             yuelink) ;;

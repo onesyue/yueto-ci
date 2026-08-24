@@ -215,7 +215,10 @@ def validate_node(root: Path, contract: dict) -> None:
     )
     require(
         makefile,
-        ["VALID_BUILD_PROFILES := auto hy2 vless", "test: check-profile-deps"],
+        [
+            "VALID_BUILD_PROFILES := auto hy2 vless",
+            "test: verify-fork-tags check-profile-deps",
+        ],
         "yue-node Makefile",
     )
     require(

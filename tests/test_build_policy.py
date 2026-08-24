@@ -475,7 +475,7 @@ class BuildPolicyTest(unittest.TestCase):
             "Install native yue-node test toolchain",
             '"${apt[@]}" install -y --no-install-recommends build-essential',
             "Preflight validation dependencies",
-            "yue-node) tools+=(docker gcc go jq make)",
+            "yue-node) tools+=(docker gcc go gpg jq make)",
             "yueboard) tools+=(docker go node corepack)",
             "yueops) tools+=(docker jq node npm uv)",
             "Preflight build and promotion dependencies",
