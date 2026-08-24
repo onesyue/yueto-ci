@@ -28,9 +28,10 @@ gh workflow run build.yml -R onesyue/yueto-ci -f service=all
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yuelink -f ref=<40-hex-yuelink-sha>
 
-# 只有显式 promote=true 且 ref 解析为源码仓当前默认分支 HEAD 才能提升
+# 只有显式 promote=true、ref 是当前默认分支 HEAD，且 YueBoard ref 精确等于
+# native-node-contract.json 的已评审 yueboard_contract_pin，才能提升
 gh workflow run build.yml -R onesyue/yueto-ci \
-  -f service=yueboard -f ref=<40-hex-main-head> -f promote=true
+  -f service=yueboard -f ref=<40-hex-reviewed-contract-pin> -f promote=true
 
 # 私有源码仓默认分支由 poll-sources.yml 每 20 分钟拉取检查；缺少精确
 # built-<40-hex> 产物时只触发 candidate 构建，不自动提升 latest。
@@ -38,6 +39,9 @@ gh workflow run build.yml -R onesyue/yueto-ci \
 
 `ref` 可以是完整分支或 tag；如果传 commit，必须传完整 40 位 SHA。GitHub
 checkout 不把 7‑39 位短 SHA 当作可复现的 commit ref，中央 plan 会提前拒绝。
+YueBoard 的未 pin 默认分支 HEAD 仍可用 `promote=false` 做完整验证和 candidate
+构建，日志会明确标为 `non-promotable`；只有先通过签名的跨仓 pin 收敛把
+`yueboard_contract_pin` 精确推进到该 40 位 SHA，`sha-*` / `latest` 才能移动。
 `service=all` 同时运行 `services.json` 的服务校验与
 `validation-targets.json` 的源码校验；后者不会产生 build matrix。仅校验目标不能
 使用 `promote=true`。

@@ -4,7 +4,8 @@ name: Build & publish images
 # 私有代码仓由 YUETO_CI_PAT checkout；镜像推 ghcr.io/onesyue/<service>。
 # 触发方式：
 #   1) 手动: workflow_dispatch，默认只产出已验证/签名的 candidate；显式 promote
-#      才能更新 sha-* / latest，且候选必须仍是对应源码仓默认分支 HEAD。
+#      才能更新 sha-* / latest，且候选必须仍是对应源码仓默认分支 HEAD。YueBoard
+#      还必须精确等于中央 native-node contract pin；未 pin HEAD 只能验证/构建 candidate。
 #   2) 代码仓 thin workflow: repository_dispatch
 #      (event_type: build, client_payload: {service, ref, promote})。自动提升要求
 #      onesyue 可信发送者 + 精确 40-hex 源码 SHA + 默认分支 HEAD 三重一致。
@@ -351,6 +352,22 @@ jobs:
           if [ "$VALIDATION_KIND" != yuelink ]; then
             docker info >/dev/null
           fi
+
+      # A new YueBoard HEAD may be reviewed before the cross-repository pin is
+      # advanced, but it is not authorized to move release tags. Keep that
+      # validation-only path green with an explicit non-promotable notice; a
+      # promotion request fails here before product tests and image builds. The
+      # final tag-mutation step independently repeats this exact pin check.
+      - name: Classify YueBoard reviewed-pin authorization
+        if: matrix.validation == 'yueboard'
+        env:
+          PROMOTE: ${{ needs.plan.outputs.promote }}
+        run: |
+          set -euo pipefail
+          source_sha="$(git rev-parse HEAD)"
+          contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+          bash .ci-policy/scripts/authorize-yueboard-promotion.sh \
+            "$source_sha" "$contract_pin" "$PROMOTE"
 
       - name: Validate native-node cross-repository contract
         if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard' || matrix.validation == 'yuelink'
@@ -991,6 +1008,7 @@ jobs:
         env:
           GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}
           SOURCE_REPO: ${{ matrix.repo }}
+          VALIDATION_KIND: ${{ matrix.validation }}
           SOURCE_SHA: ${{ steps.meta.outputs.source_sha }}
           EVENT_NAME: ${{ github.event_name }}
           DISPATCH_REF: ${{ github.event.client_payload.ref || '' }}
@@ -1012,6 +1030,11 @@ jobs:
             echo "::error::build did not return a valid immutable digest"
             exit 1
           }
+          if [ "$VALIDATION_KIND" = yueboard ]; then
+            contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+            bash .ci-policy/scripts/authorize-yueboard-promotion.sh \
+              "$SOURCE_SHA" "$contract_pin" true
+          fi
           if [ "$EVENT_NAME" = "repository_dispatch" ] &&
              [ "$DISPATCH_REF" != "$SOURCE_SHA" ]; then
             echo "::error::repository_dispatch ref did not resolve to its exact source SHA"

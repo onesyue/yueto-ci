@@ -20,6 +20,7 @@ README = ROOT / "README.md"
 NATIVE_CONTRACT = ROOT / "native-node-contract.json"
 NATIVE_VALIDATOR = ROOT / "scripts" / "validate-native-node-contract.py"
 TARGET_PLANNER = ROOT / "scripts" / "plan-build-targets.sh"
+YUEBOARD_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-promotion.sh"
 
 
 class BuildPolicyTest(unittest.TestCase):
@@ -567,6 +568,90 @@ class BuildPolicyTest(unittest.TestCase):
         for invariant in required:
             with self.subTest(invariant=invariant):
                 self.assertIn(invariant, self.workflow)
+
+    def test_yueboard_promotion_is_bound_to_exact_reviewed_contract_pin(self) -> None:
+        classifier_start = self.workflow.index(
+            "- name: Classify YueBoard reviewed-pin authorization"
+        )
+        validation_start = self.workflow.index(
+            "- name: Validate native-node cross-repository contract"
+        )
+        preflight_start = self.workflow.index(
+            "- name: Preflight validation dependencies"
+        )
+        self.assertLess(preflight_start, classifier_start)
+        self.assertLess(classifier_start, validation_start)
+        classifier = self.workflow[classifier_start:validation_start]
+        self.assertIn("if: matrix.validation == 'yueboard'", classifier)
+        self.assertIn("PROMOTE: ${{ needs.plan.outputs.promote }}", classifier)
+        self.assertIn(".ci-policy/native-node-contract.json", classifier)
+        self.assertIn("authorize-yueboard-promotion.sh", classifier)
+
+        promotion_start = self.workflow.index(
+            "- name: Authorize and promote verified default-branch digest"
+        )
+        promotion = self.workflow[promotion_start:]
+        self.assertIn("VALIDATION_KIND: ${{ matrix.validation }}", promotion)
+        self.assertIn('if [ "$VALIDATION_KIND" = yueboard ]', promotion)
+        self.assertIn(".ci-policy/native-node-contract.json", promotion)
+        self.assertIn(
+            '"$SOURCE_SHA" "$contract_pin" true',
+            promotion,
+        )
+        self.assertEqual(
+            self.workflow.count(".ci-policy/scripts/authorize-yueboard-promotion.sh"),
+            2,
+        )
+        self.assertIn("non-promotable", self.readme)
+        self.assertIn("yueboard_contract_pin", self.readme)
+
+    def test_yueboard_pin_authorizer_positive_and_negative_cases(self) -> None:
+        reviewed = "a" * 40
+        unreviewed = "b" * 40
+
+        exact = subprocess.run(
+            ["bash", str(YUEBOARD_AUTHORIZER), reviewed, reviewed, "true"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(exact.returncode, 0, exact.stderr)
+        self.assertIn("promotable=true requested=true", exact.stdout)
+
+        validation_only = subprocess.run(
+            ["bash", str(YUEBOARD_AUTHORIZER), unreviewed, reviewed, "false"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(validation_only.returncode, 0, validation_only.stderr)
+        self.assertIn("validation-only candidate is non-promotable", validation_only.stdout)
+
+        rejected = subprocess.run(
+            ["bash", str(YUEBOARD_AUTHORIZER), unreviewed, reviewed, "true"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn(
+            "is not the exact reviewed native contract pin",
+            rejected.stderr,
+        )
+        self.assertIn("signed cross-repository pin convergence", rejected.stderr)
+
+        malformed = subprocess.run(
+            ["bash", str(YUEBOARD_AUTHORIZER), "main", reviewed, "true"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(malformed.returncode, 2)
+        self.assertIn("exact lowercase 40-hex", malformed.stderr)
 
     def test_source_and_image_security_gates_are_present(self) -> None:
         required = (
