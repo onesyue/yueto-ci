@@ -342,6 +342,33 @@ jobs:
         with:
           node-version: '24'
 
+      # Front-end dependency caches (2026-08-31). Both stores are
+      # self-verifying against the reviewed lockfiles — `npm ci` checks the
+      # sha512 integrity recorded in package-lock.json for every package it
+      # installs from ~/.npm, and pnpm's store is content-addressed with the
+      # hashes pinned in pnpm-lock.yaml — so a restored cache can only
+      # produce the exact bytes the lockfile reviewed, or fail the install.
+      # Same local-release gate as setup-go above: the disposable runner's
+      # GHA cache upload can sleep indefinitely, and it keeps caches on its
+      # own disk anyway.
+      - name: Restore npm cache (yueops frontends)
+        if: >-
+          matrix.validation == 'yueops' &&
+          (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ~/.npm
+          key: yue-npm-v1-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'telegram-bot/yue/miniapp/package-lock.json') }}
+
+      - name: Restore pnpm store (yueboard frontends)
+        if: >-
+          matrix.validation == 'yueboard' &&
+          (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ~/.local/share/pnpm/store
+          key: yue-pnpm-v1-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml', 'web-admin/pnpm-lock.yaml') }}
+
       # yue-node intentionally keeps its complete race/profile test contract
       # in Makefile. The Go race detector also requires CGO plus a native C
       # compiler. Self-hosted runners may not rely on hand-installed state.
