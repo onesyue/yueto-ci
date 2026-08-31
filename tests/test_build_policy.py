@@ -891,9 +891,11 @@ class BuildPolicyTest(unittest.TestCase):
 
         locked_install = "npm --prefix telegram-bot/yue/miniapp ci"
         self.assertIn(locked_install, install_step)
+        # 2026-08-31: the backend suite runs through the repo-owned parallel
+        # runner (shared with the local gauntlet) instead of a bare pytest.
         self.assertLess(
             self.workflow.index(locked_install),
-            self.workflow.index(".venv/bin/python -m pytest -q"),
+            self.workflow.index("bash scripts/run-pytest-parallel.sh"),
         )
         self.assertIn("working-directory: telegram-bot/yue/miniapp", miniapp_step)
         self.assertIn("npm run lint", miniapp_step)
