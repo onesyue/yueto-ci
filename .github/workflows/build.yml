@@ -614,7 +614,7 @@ jobs:
           # 2026-08-31: 与本地 gauntlet 同一入口的并行 pytest（xdist -n auto
           # --dist loadfile + 顺序敏感文件串行尾巴）。串行全量在此 runner 上
           # 实测 459s、占本路径 80%；xdist 由 pyproject test 组提供。
-          bash scripts/run-pytest-parallel.sh
+          YUEOPS_PYTEST_SERIAL=1 bash scripts/run-pytest-parallel.sh
 
       - name: Validate yueops frontend
         if: matrix.validation == 'yueops'
