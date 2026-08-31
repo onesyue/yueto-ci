@@ -1,7 +1,7 @@
 {
   "version": 6,
   "schema_floor": 75,
-  "yueboard_contract_pin": "4df160499c4e578a710215ffeb2b5b8d8c43162c",
+  "yueboard_contract_pin": "fd91bdc962c8d9f972da056d4eb52036bf396558",
   "layout": {
     "node-1": {
       "inventory_type": "hy2",
