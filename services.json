@@ -43,7 +43,7 @@
     "service": "yueboard",
     "group": "yueboard",
     "repo": "onesyue/yueboard",
-    "ref": "main",
+    "ref": "master",
     "validation": "yueboard",
     "context": ".",
     "dockerfile": "Dockerfile",
