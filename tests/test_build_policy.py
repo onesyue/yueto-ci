@@ -686,7 +686,7 @@ class BuildPolicyTest(unittest.TestCase):
                     "service": "yueboard",
                     "group": "yueboard",
                     "repo": "onesyue/yueboard",
-                    "ref": "main",
+                    "ref": "master",
                     "validation": "yueboard",
                     "context": ".",
                     "dockerfile": "Dockerfile",
@@ -696,7 +696,7 @@ class BuildPolicyTest(unittest.TestCase):
             "validation_matrix": [
                 {
                     "repo": "onesyue/yueboard",
-                    "ref": "main",
+                    "ref": "master",
                     "validation": "yueboard",
                 }
             ],

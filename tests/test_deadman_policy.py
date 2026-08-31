@@ -54,7 +54,7 @@ def test_public_deadman_checks_both_mirror_and_private_canonical_bytes() -> None
     assert "receiver mirror" in verify
     assert "YueOps canonical" in verify
     assert "repository: onesyue/yueops" in text
-    assert "ref: main" in text
+    assert "ref: master" in text
     assert "token: ${{ secrets.YUETO_CI_PAT }}" in text
     assert text.count("persist-credentials: false") == 2
     assert text.count(
