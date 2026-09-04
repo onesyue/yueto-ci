@@ -1031,6 +1031,29 @@ jobs:
           upload-artifact: false
           upload-release-assets: false
 
+      - name: Generate SBOM (SPDX, linux/amd64)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        env:
+          SYFT_PLATFORM: linux/amd64
+        with:
+          image: ${{ steps.meta.outputs.image }}@${{ steps.platform_manifests.outputs.amd64_digest }}
+          format: spdx-json
+          output-file: sbom-linux-amd64.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Generate SBOM (SPDX, linux/arm64)
+        if: contains(matrix.platforms, 'arm64')
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        env:
+          SYFT_PLATFORM: linux/arm64
+        with:
+          image: ${{ steps.meta.outputs.image }}@${{ steps.platform_manifests.outputs.arm64_digest }}
+          format: spdx-json
+          output-file: sbom-linux-arm64.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
       - name: Validate complete platform SBOM set
         env:
           EXPECTED_ARCHITECTURES: ${{ contains(matrix.platforms, 'arm64') && 'amd64,arm64' || 'amd64' }}
@@ -1041,15 +1064,22 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          sboms=(sbom-linux-*.cdx.json)
+          cdx_sboms=(sbom-linux-*.cdx.json)
+          spdx_sboms=(sbom-linux-*.spdx.json)
           IFS=, read -r -a architectures <<<"$EXPECTED_ARCHITECTURES"
-          [ "${#sboms[@]}" -eq "${#architectures[@]}" ] || {
-            echo "expected ${#architectures[@]} platform SBOMs, found ${#sboms[@]}" >&2
+          [ "${#cdx_sboms[@]}" -eq "${#architectures[@]}" ] || {
+            echo "expected ${#architectures[@]} CycloneDX platform SBOMs, found ${#cdx_sboms[@]}" >&2
+            exit 1
+          }
+          [ "${#spdx_sboms[@]}" -eq "${#architectures[@]}" ] || {
+            echo "expected ${#architectures[@]} SPDX platform SBOMs, found ${#spdx_sboms[@]}" >&2
             exit 1
           }
           for arch in "${architectures[@]}"; do
             sbom="sbom-linux-${arch}.cdx.json"
+            spdx="sbom-linux-${arch}.spdx.json"
             test -s "$sbom"
+            test -s "$spdx"
             case "$arch" in
               amd64) platform_digest=$AMD64_DIGEST ;;
               arm64) platform_digest=$ARM64_DIGEST ;;
@@ -1083,6 +1113,28 @@ jobs:
                 | select(.name == "onesyue:sbom:subject:digest")
                 | .value] | unique) == [$digest]
             ' "$sbom" >/dev/null
+
+            # Keep Syft's SPDX document intact while adding standard
+            # documentComment markers that bind this predicate to one exact
+            # platform manifest and to the multi-platform subject digest.
+            jq -e '
+              (.spdxVersion | type == "string" and startswith("SPDX-")) and
+              .dataLicense == "CC0-1.0" and
+              .SPDXID == "SPDXRef-DOCUMENT" and
+              (.name | type == "string" and length > 0) and
+              (.documentNamespace | type == "string" and length > 0) and
+              (.creationInfo.creators | type == "array" and length > 0) and
+              (.packages | type == "array")
+            ' "$spdx" >/dev/null
+            temporary=$(mktemp "${RUNNER_TEMP}/sbom-platform.XXXXXX")
+            jq --arg arch "$arch" --arg digest "$DIGEST" \
+              --arg platform_digest "$platform_digest" '
+              .documentComment =
+                ("onesyue:sbom:platform:architecture=" + $arch + "\n" +
+                 "onesyue:sbom:subject:digest=" + $digest + "\n" +
+                 "onesyue:sbom:platform:digest=" + $platform_digest)
+            ' "$spdx" >"$temporary"
+            mv -- "$temporary" "$spdx"
           done
 
       # OIDC 与 Fulcio 都是外部控制面。每次 sign/attest 尝试获取新 token，并对
@@ -1134,6 +1186,10 @@ jobs:
             keyless_cosign attest \
               --predicate "$sbom" --type cyclonedx "${IMAGE}@${DIGEST}"
           done
+          for sbom in sbom-linux-*.spdx.json; do
+            keyless_cosign attest \
+              --predicate "$sbom" --type spdxjson "${IMAGE}@${DIGEST}"
+          done
           IDENTITY="https://github.com/${GITHUB_WORKFLOW_REF}"
           ISSUER="https://token.actions.githubusercontent.com"
           verify_cosign verify \
@@ -1161,6 +1217,28 @@ jobs:
             --digest "$DIGEST" \
             --expected-architectures "$EXPECTED_ARCHITECTURES" \
             <<<"$ATTESTATIONS"
+          SPDX_ATTESTATIONS=""
+          for i in 1 2 3 4 5 6; do
+            if SPDX_ATTESTATIONS=$(cosign verify-attestation \
+              --certificate-identity "$IDENTITY" \
+              --certificate-oidc-issuer "$ISSUER" \
+              --type spdxjson "${IMAGE}@${DIGEST}"); then
+              break
+            fi
+            SPDX_ATTESTATIONS=""
+            echo "cosign SPDX attestation verification attempt ${i} failed; retrying..." >&2
+            sleep $(( i * 2 + (RANDOM % 5) ))
+          done
+          [ -n "$SPDX_ATTESTATIONS" ] || {
+            echo "FATAL: cosign SPDX attestation verification failed after bounded retries" >&2
+            exit 1
+          }
+          python3 .ci-policy/scripts/verify-sbom-attestations.py \
+            --image "$IMAGE" \
+            --digest "$DIGEST" \
+            --expected-architectures "$EXPECTED_ARCHITECTURES" \
+            --format spdxjson \
+            <<<"$SPDX_ATTESTATIONS"
 
       - name: Generate signed GitHub build provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0

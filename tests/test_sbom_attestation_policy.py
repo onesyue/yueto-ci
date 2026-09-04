@@ -54,7 +54,44 @@ def document(
     return {"payload": encoded}
 
 
-def run_verifier(documents: list[dict[str, str]], expected: str) -> subprocess.CompletedProcess[str]:
+def spdx_document(
+    architecture: str | None,
+    *,
+    image: str = IMAGE,
+    subject_digest: str = DIGEST,
+    platform_digest: str = "sha256:" + "b" * 64,
+) -> dict[str, str]:
+    markers = [
+        f"onesyue:sbom:subject:digest={subject_digest}",
+        f"onesyue:sbom:platform:digest={platform_digest}",
+    ]
+    if architecture is not None:
+        markers.append(f"onesyue:sbom:platform:architecture={architecture}")
+    statement = {
+        "_type": "https://in-toto.io/Statement/v0.1",
+        "predicateType": "https://spdx.dev/Document",
+        "subject": [
+            {"name": image, "digest": {"sha256": DIGEST.removeprefix("sha256:")}}
+        ],
+        "predicate": {
+            "spdxVersion": "SPDX-2.3",
+            "dataLicense": "CC0-1.0",
+            "SPDXID": "SPDXRef-DOCUMENT",
+            "name": image,
+            "documentNamespace": "https://example.invalid/spdx/yue-node",
+            "documentComment": "\n".join(markers),
+            "packages": [{"name": "service", "SPDXID": "SPDXRef-Package-service"}],
+        },
+    }
+    encoded = base64.b64encode(
+        json.dumps(statement, separators=(",", ":")).encode()
+    ).decode()
+    return {"payload": encoded}
+
+
+def run_verifier(
+    documents: list[dict[str, str]], expected: str, sbom_format: str = "cyclonedx"
+) -> subprocess.CompletedProcess[str]:
     raw = "\n".join(json.dumps(item) for item in documents)
     return subprocess.run(
         [
@@ -66,6 +103,8 @@ def run_verifier(documents: list[dict[str, str]], expected: str) -> subprocess.C
             DIGEST,
             "--expected-architectures",
             expected,
+            "--format",
+            sbom_format,
         ],
         input=raw,
         text=True,
@@ -111,6 +150,37 @@ class SbomAttestationPolicyTests(unittest.TestCase):
     def test_malformed_dsse_fails_closed(self) -> None:
         result = run_verifier([{"payload": "not-base64!"}], "amd64")
         self.assertNotEqual(result.returncode, 0)
+
+    def test_distinct_spdx_amd64_and_arm64_predicates_pass(self) -> None:
+        result = run_verifier(
+            [spdx_document("amd64"), spdx_document("arm64")],
+            "amd64,arm64",
+            "spdxjson",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_spdx_duplicate_architecture_cannot_hide_missing_platform(self) -> None:
+        result = run_verifier(
+            [spdx_document("amd64"), spdx_document("amd64")],
+            "amd64,arm64",
+            "spdxjson",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("arm64", result.stderr)
+
+    def test_spdx_subject_marker_and_platform_digest_are_bound(self) -> None:
+        wrong_subject = run_verifier(
+            [spdx_document("amd64", subject_digest="sha256:" + "d" * 64)],
+            "amd64",
+            "spdxjson",
+        )
+        self.assertNotEqual(wrong_subject.returncode, 0)
+        malformed_platform = run_verifier(
+            [spdx_document("amd64", platform_digest="latest")],
+            "amd64",
+            "spdxjson",
+        )
+        self.assertNotEqual(malformed_platform.returncode, 0)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the semantic platform set inside cosign-verified CycloneDX DSSE.
+"""Verify the semantic platform set inside cosign-verified SBOM DSSE.
 
 Cryptographic verification remains cosign's responsibility. This second gate
 parses cosign's JSON-lines output and proves that the requested image digest
@@ -20,7 +20,10 @@ from typing import Any
 
 ALLOWED_ARCHITECTURES = frozenset({"amd64", "arm64"})
 STATEMENT_TYPE = "https://in-toto.io/Statement/v0.1"
-PREDICATE_TYPE = "https://cyclonedx.org/bom"
+PREDICATE_TYPES = {
+    "cyclonedx": "https://cyclonedx.org/bom",
+    "spdxjson": "https://spdx.dev/Document",
+}
 
 
 def _json_documents(raw: str) -> list[Any]:
@@ -47,11 +50,11 @@ def _decode_statement(document: Any) -> dict[str, Any]:
 
 
 def _statement_architectures(
-    statement: dict[str, Any], image: str, digest: str
+    statement: dict[str, Any], image: str, digest: str, sbom_format: str
 ) -> frozenset[str] | None:
     if statement.get("_type") != STATEMENT_TYPE:
         return None
-    if statement.get("predicateType") != PREDICATE_TYPE:
+    if statement.get("predicateType") != PREDICATE_TYPES[sbom_format]:
         return None
 
     subject = statement.get("subject")
@@ -64,45 +67,82 @@ def _statement_architectures(
     predicate = statement.get("predicate")
     if not isinstance(predicate, dict):
         return None
-    if predicate.get("bomFormat") != "CycloneDX":
-        return None
-    if not isinstance(predicate.get("specVersion"), str) or not predicate["specVersion"]:
-        return None
-    metadata = predicate.get("metadata")
-    component = metadata.get("component") if isinstance(metadata, dict) else None
-    if not isinstance(component, dict):
-        return None
-    platform_digest = component.get("version")
+    if sbom_format == "cyclonedx":
+        if predicate.get("bomFormat") != "CycloneDX":
+            return None
+        if not isinstance(predicate.get("specVersion"), str) or not predicate["specVersion"]:
+            return None
+        metadata = predicate.get("metadata")
+        component = metadata.get("component") if isinstance(metadata, dict) else None
+        if not isinstance(component, dict):
+            return None
+        platform_digest = component.get("version")
+        if (
+            component.get("type") != "container"
+            or component.get("name") != image
+            or not isinstance(platform_digest, str)
+            or re.fullmatch(r"sha256:[0-9a-f]{64}", platform_digest) is None
+        ):
+            return None
+
+        properties = component.get("properties")
+        if not isinstance(properties, list):
+            return frozenset()
+        subject_digests = {
+            prop.get("value")
+            for prop in properties
+            if isinstance(prop, dict)
+            and prop.get("name") == "onesyue:sbom:subject:digest"
+        }
+        if subject_digests != {digest}:
+            return frozenset()
+        architectures = {
+            prop.get("value")
+            for prop in properties
+            if isinstance(prop, dict)
+            and prop.get("name") == "onesyue:sbom:platform:architecture"
+            and prop.get("value") in ALLOWED_ARCHITECTURES
+        }
+        return frozenset(architectures)
+
     if (
-        component.get("type") != "container"
-        or component.get("name") != image
-        or not isinstance(platform_digest, str)
-        or re.fullmatch(r"sha256:[0-9a-f]{64}", platform_digest) is None
+        not isinstance(predicate.get("spdxVersion"), str)
+        or not predicate["spdxVersion"].startswith("SPDX-")
+        or predicate.get("SPDXID") != "SPDXRef-DOCUMENT"
+        or predicate.get("dataLicense") != "CC0-1.0"
+        or not isinstance(predicate.get("documentNamespace"), str)
+        or not predicate["documentNamespace"]
     ):
         return None
-
-    properties = component.get("properties")
-    if not isinstance(properties, list):
+    comment = predicate.get("documentComment")
+    if not isinstance(comment, str):
         return frozenset()
-    subject_digests = {
-        prop.get("value")
-        for prop in properties
-        if isinstance(prop, dict)
-        and prop.get("name") == "onesyue:sbom:subject:digest"
-    }
-    if subject_digests != {digest}:
+    markers: dict[str, set[str]] = {}
+    for line in comment.splitlines():
+        if not line.startswith("onesyue:sbom:") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        markers.setdefault(key, set()).add(value)
+    if markers.get("onesyue:sbom:subject:digest") != {digest}:
         return frozenset()
-    architectures = {
-        prop.get("value")
-        for prop in properties
-        if isinstance(prop, dict)
-        and prop.get("name") == "onesyue:sbom:platform:architecture"
-        and prop.get("value") in ALLOWED_ARCHITECTURES
-    }
-    return frozenset(architectures)
+    platform_digests = markers.get("onesyue:sbom:platform:digest", set())
+    if len(platform_digests) != 1 or re.fullmatch(
+        r"sha256:[0-9a-f]{64}", next(iter(platform_digests))
+    ) is None:
+        return frozenset()
+    return frozenset(
+        markers.get("onesyue:sbom:platform:architecture", set())
+        & ALLOWED_ARCHITECTURES
+    )
 
 
-def verify(raw: str, image: str, digest: str, expected: frozenset[str]) -> None:
+def verify(
+    raw: str,
+    image: str,
+    digest: str,
+    expected: frozenset[str],
+    sbom_format: str = "cyclonedx",
+) -> None:
     if not re.fullmatch(r"ghcr\.io/onesyue/[a-z0-9][a-z0-9._-]*", image):
         raise ValueError("image must be an exact onesyue GHCR repository")
     if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
@@ -110,6 +150,8 @@ def verify(raw: str, image: str, digest: str, expected: frozenset[str]) -> None:
     if not expected or not expected <= ALLOWED_ARCHITECTURES:
         raise ValueError("expected architectures must be amd64 and/or arm64")
 
+    if sbom_format not in PREDICATE_TYPES:
+        raise ValueError("SBOM format must be cyclonedx or spdxjson")
     documents = _json_documents(raw)
     if not documents:
         raise ValueError("cosign returned no attestation documents")
@@ -117,7 +159,7 @@ def verify(raw: str, image: str, digest: str, expected: frozenset[str]) -> None:
     matched = 0
     for document in documents:
         architectures = _statement_architectures(
-            _decode_statement(document), image, digest
+            _decode_statement(document), image, digest, sbom_format
         )
         if architectures is None:
             continue
@@ -131,12 +173,12 @@ def verify(raw: str, image: str, digest: str, expected: frozenset[str]) -> None:
     unexpected = sorted(observed - expected)
     if missing or unexpected:
         raise ValueError(
-            "verified CycloneDX set does not equal the expected platforms"
+            f"verified {sbom_format} set does not equal the expected platforms"
             f" (missing={','.join(missing) or '-'};"
             f" unexpected={','.join(unexpected) or '-'})"
         )
     print(
-        "verified CycloneDX architectures: "
+        f"verified {sbom_format} architectures: "
         f"{','.join(sorted(expected))} ({matched}/{len(documents)} matching statements)"
     )
 
@@ -146,6 +188,11 @@ def main() -> int:
     parser.add_argument("--image", required=True)
     parser.add_argument("--digest", required=True)
     parser.add_argument("--expected-architectures", required=True)
+    parser.add_argument(
+        "--format",
+        choices=tuple(PREDICATE_TYPES),
+        default="cyclonedx",
+    )
     args = parser.parse_args()
     expected = frozenset(
         architecture.strip()
@@ -153,7 +200,7 @@ def main() -> int:
         if architecture.strip()
     )
     try:
-        verify(sys.stdin.read(), args.image, args.digest, expected)
+        verify(sys.stdin.read(), args.image, args.digest, expected, args.format)
     except (ValueError, json.JSONDecodeError) as exc:
         print(f"SBOM attestation policy rejected input: {exc}", file=sys.stderr)
         return 1

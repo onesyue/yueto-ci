@@ -326,7 +326,7 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertEqual(workflow.count("EXPECTED_ARCHITECTURES:"), 4)
         self.assertEqual(
-            workflow.count(".ci-policy/scripts/verify-sbom-attestations.py"), 2
+            workflow.count(".ci-policy/scripts/verify-sbom-attestations.py"), 3
         )
         self.assertIn("- name: Resolve exact OCI platform manifests", workflow)
         self.assertIn('.metadata.component.version == $platform_digest', workflow)
@@ -336,9 +336,12 @@ class BuildPolicyTest(unittest.TestCase):
             'prop.get("name") == "onesyue:sbom:platform:architecture"', verifier
         )
         self.assertIn('prop.get("name") == "onesyue:sbom:subject:digest"', verifier)
+        self.assertIn('"spdxjson": "https://spdx.dev/Document"', verifier)
+        self.assertIn('markers.get("onesyue:sbom:platform:digest"', verifier)
         self.assertIn('subject[0] != {"name": image', verifier)
         self.assertIn("--digest \"$DIGEST\"", workflow)
         self.assertIn("--digest \"$existing\"", workflow)
+        self.assertIn("--format spdxjson", workflow)
         self.assertNotIn("EXPECTED_SBOMS", workflow)
         self.assertNotIn('length >= ${EXPECTED_SBOMS}', workflow)
 
