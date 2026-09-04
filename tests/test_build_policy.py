@@ -87,7 +87,7 @@ class BuildPolicyTest(unittest.TestCase):
         body = setup.group("body")
         self.assertIn(
             "go-version: ${{ matrix.validation == 'yue-node' && "
-            "'1.27.0' || '1.26.7' }}",
+            "'1.27.1' || '1.26.8' }}",
             body,
         )
         self.assertNotIn("go-version-file:", body)
@@ -999,7 +999,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(self.native_contract["schema_floor"], 80)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
-            "bf1c8363af023fd94b41f6d95e3c26d14776d48d",
+            "477c20436f72f01ae07ac805a2a6f35e10d34c84",
         )
         self.assertEqual(
             self.native_contract["presence"],

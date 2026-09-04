@@ -285,8 +285,8 @@ jobs:
         with:
           # Keep each release compiler on its repository's exact reviewed
           # version. YueNode takes Go 1.27's allocator and stable leak profile;
-          # YueBoard remains on its independently reviewed 1.26.7 pin.
-          go-version: ${{ matrix.validation == 'yue-node' && '1.27.0' || '1.26.7' }}
+          # YueBoard remains on its independently reviewed 1.26.8 patch line.
+          go-version: ${{ matrix.validation == 'yue-node' && '1.27.1' || '1.26.8' }}
           # GitHub cache upload can remain asleep indefinitely on the disposable
           # self-hosted release runner after every validation step is green.
           # That runner already keeps its Go module/build cache on local disk;
