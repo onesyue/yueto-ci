@@ -1,0 +1,102 @@
+name: Rescan promoted images
+
+# Rebuilding does not catch vulnerabilities disclosed after an image was
+# promoted. Resolve every current latest tag to an immutable digest, then scan
+# every declared production platform without checking out private source.
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: promoted-image-rescan
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - id: matrix
+        run: |
+          set -euo pipefail
+          matrix="$(jq -c '{include: [
+            .[] as $service
+            | ($service.platforms | split(","))[]
+            | {service: $service.service, platform: .}
+          ]}' services.json)"
+          [ "$(jq -r '.include | length' <<<"$matrix")" -gt 0 ]
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  scan:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    name: ${{ matrix.service }} (${{ matrix.platform }})
+    steps:
+      - name: Checkout immutable scan policy
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Login to GHCR read-only scan path
+        uses: docker/login-action@06fb636fac595d6fb4b28a5dfcb21a6f5091859c # v4.5.0
+        with:
+          registry: ghcr.io
+          username: onesyue
+          password: ${{ secrets.YUETO_CI_PAT }}
+
+      - name: Resolve latest to an immutable digest
+        id: resolve
+        env:
+          IMAGE: ghcr.io/onesyue/${{ matrix.service }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          command -v docker >/dev/null 2>&1
+          command -v jq >/dev/null 2>&1
+          inspection="$(docker buildx imagetools inspect --format '{{json .}}' "${IMAGE}:latest")"
+          digest="$(jq -er '.manifest.digest | select(test("^sha256:[0-9a-f]{64}$"))' <<<"$inspection")"
+          platform_count="$(jq -er --arg platform "$PLATFORM" '
+            ($platform | split("/")) as $want
+            | [.manifest.manifests[]?
+                | select(.platform.os == $want[0] and
+                         .platform.architecture == $want[1])]
+            | length
+          ' <<<"$inspection")"
+          [ "$platform_count" -eq 1 ] || {
+            echo "::error::latest digest does not contain exactly one ${PLATFORM} manifest"
+            exit 1
+          }
+          echo "image_ref=${IMAGE}@${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Block fixed HIGH/CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PLATFORM: ${{ matrix.platform }}
+        with:
+          image-ref: ${{ steps.resolve.outputs.image_ref }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          timeout: 15m
+          trivyignores: .trivyignore
+          version: v0.74.0

@@ -18,6 +18,10 @@ workflow，而是该工作流在完成校验、构建、签名和证明后的最
 `.github/workflows/alert-chain-deadman.yml` 是只读运维探针，不构建、不发布：每
 30 分钟读取 bastion 上的 heartbeat，并调用 YueOps 仓库中的规范判定器；异常只在
 私有 YueOps 仓开事故 issue，公开仓不记录生产凭据内容。
+`.github/workflows/image-rescan.yml` 每天把 `services.json` 中每个服务的 `latest`
+解析成不可变 digest，并按声明的每个生产平台用 Trivy 0.74.0 重扫。它不 checkout
+私有源码、不写 registry、不上传公开 artifact，只负责发现镜像发布后新增的可修复
+HIGH/CRITICAL 漏洞。
 
 ```sh
 # YueBoard 未 pin HEAD 只做验证，零 registry 写；精确 pin 才构建 candidate
@@ -76,6 +80,7 @@ YueBoard 的未 pin 默认分支 HEAD 仍可用 `promote=false` 做完整验证�
 - `aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514`
 - `aquasecurity/trivy-action@*`
 - `astral-sh/setup-uv@*`
+- `bufbuild/buf-setup-action@*`
 - `docker/build-push-action@*`
 - `docker/login-action@*`
 - `docker/setup-buildx-action@*`

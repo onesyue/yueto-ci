@@ -342,6 +342,16 @@ jobs:
         with:
           node-version: '24'
 
+      # Keep the protocol owner as the policy owner: central CI installs the
+      # compiler, then executes YueBoard's checked-in lint + breaking script.
+      # The setup action is pinned, and the CLI is an exact current release.
+      - name: Set up Buf for YueBoard protocol compatibility
+        if: matrix.validation == 'yueboard'
+        uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
+        with:
+          version: '1.72.0'
+          github_token: ${{ github.token }}
+
       # Front-end dependency caches (2026-08-31). Both stores are
       # self-verifying against the reviewed lockfiles — `npm ci` checks the
       # sha512 integrity recorded in package-lock.json for every package it
@@ -398,6 +408,35 @@ jobs:
           make --version
           gcc --version
 
+      - name: Install native YueBoard test toolchain
+        if: matrix.validation == 'yueboard'
+        run: |
+          set -euo pipefail
+          missing=false
+          for tool in gcc psql; do
+            command -v "$tool" >/dev/null 2>&1 || missing=true
+          done
+          if [ "$missing" = true ]; then
+            command -v apt-get >/dev/null 2>&1 || {
+              echo "::error::YueBoard native test toolchain is absent and this runner has no apt-get"
+              exit 1
+            }
+            apt=(apt-get)
+            if [ "$(id -u)" -ne 0 ]; then
+              command -v sudo >/dev/null 2>&1 || {
+                echo "::error::toolchain bootstrap requires root or passwordless sudo"
+                exit 1
+              }
+              apt=(sudo -n apt-get)
+            fi
+            "${apt[@]}" update
+            "${apt[@]}" install -y --no-install-recommends build-essential postgresql-client
+          fi
+          command -v gcc >/dev/null 2>&1
+          command -v psql >/dev/null 2>&1
+          gcc --version
+          psql --version
+
       - name: Preflight validation dependencies
         env:
           VALIDATION_KIND: ${{ matrix.validation }}
@@ -406,7 +445,7 @@ jobs:
           tools=(bash git)
           case "$VALIDATION_KIND" in
             yue-node) tools+=(base64 docker gcc go gpg jq make) ;;
-            yueboard) tools+=(docker go node corepack) ;;
+            yueboard) tools+=(buf corepack docker gcc go node psql) ;;
             yueops) tools+=(docker jq node npm uv) ;;
             yuelink) ;;
             *)
@@ -482,7 +521,42 @@ jobs:
           make build
           bash scripts/check-vulnerabilities.sh
 
-      - name: Validate yueboard backend and integration
+      - name: Validate YueBoard backend quality gates
+        if: matrix.validation == 'yueboard'
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          set -euo pipefail
+          go build ./...
+          mapfile -t go_files < <(
+            git ls-files '*.go' | grep -v '/gen/' | grep -v 'noderpc/gen'
+          )
+          [ "${#go_files[@]}" -gt 0 ] || {
+            echo "::error::YueBoard source checkout contains no lintable Go files"
+            exit 1
+          }
+          unformatted="$(gofmt -l "${go_files[@]}")"
+          if [ -n "$unformatted" ]; then
+            echo "YueBoard Go files are not gofmt-clean:" >&2
+            printf '%s\n' "$unformatted" >&2
+            exit 1
+          fi
+          go vet ./...
+          scripts/ci/check-server-error-logging.sh
+          go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+          go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1 run --timeout=6m ./...
+          go test ./...
+          [ "$(go env CGO_ENABLED)" = "1" ] || {
+            echo "::error::YueBoard race validation requires CGO_ENABLED=1"
+            exit 1
+          }
+          go test -race ./...
+
+      - name: Validate YueBoard protocol compatibility
+        if: matrix.validation == 'yueboard'
+        run: scripts/ci/proto-gate.sh
+
+      - name: Validate YueBoard PostgreSQL integration
         if: matrix.validation == 'yueboard'
         env:
           YUEBOARD_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
@@ -502,12 +576,28 @@ jobs:
           # 副本：真正跑发版校验的是这里（yueto-ci），只改 yueboard 那份不会生效。
           YUEBOARD_CHECKOUT_RATE_LIMIT_PER_MINUTE: '10000'
         run: |
-          go test ./...
+          set -euo pipefail
           go test -tags integration ./internal/platform/db \
             -run '^TestNativeMigrations.*OnPostgres$'
           go test -tags integration ./test/integration/...
-          go vet ./...
-          go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+          # Preserve the source workflow's deliberately serial package order:
+          # deviceidentity and nodesync both replace public, so they run last.
+          go test -p 1 -tags integration -v \
+            ./internal/modules/emby \
+            ./internal/modules/handoff \
+            ./internal/platform/deviceidentity \
+            ./internal/modules/nodesync
+
+      - name: Validate YueBoard clean PostgreSQL lifecycle
+        if: matrix.validation == 'yueboard'
+        env:
+          YUEBOARD_ADMIN_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/postgres' || 'postgres://postgres:ci@127.0.0.1:5432/postgres' }}
+          CLEAN_PG_DSN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_clean_gate' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_clean_gate' }}
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 "$YUEBOARD_ADMIN_DATABASE_URL" \
+            -c 'CREATE DATABASE yueboard_clean_gate'
+          scripts/ci/clean-pg-gate.sh
 
       - name: Validate yueboard frontends
         if: matrix.validation == 'yueboard'
@@ -522,8 +612,18 @@ jobs:
           corepack install --global "$web_pm"
           pnpm --dir web install --frozen-lockfile
           pnpm --dir web build
+          (cd web && node scripts/verify-dist.mjs dist)
           pnpm --dir web-admin install --frozen-lockfile
           pnpm --dir web-admin build
+          (cd web-admin && node scripts/verify-dist.mjs dist)
+
+      - name: Validate YueBoard responsive and design contracts
+        if: matrix.validation == 'yueboard'
+        run: |
+          set -euo pipefail
+          node scripts/ci/verify-responsive.mjs
+          node scripts/ci/verify-design-tokens.mjs
+          node scripts/ci/verify-page-consistency.mjs
 
       - name: Install yueops dependencies
         if: matrix.validation == 'yueops'
@@ -870,6 +970,7 @@ jobs:
           severity: HIGH,CRITICAL
           timeout: 15m
           trivyignores: .ci-policy/.trivyignore
+          version: v0.74.0
 
       - name: Block fixed HIGH/CRITICAL vulnerabilities (linux/arm64)
         if: contains(matrix.platforms, 'arm64')
@@ -886,6 +987,7 @@ jobs:
           severity: HIGH,CRITICAL
           timeout: 15m
           trivyignores: .ci-policy/.trivyignore
+          version: v0.74.0
           skip-setup-trivy: true
 
       - name: Install cosign

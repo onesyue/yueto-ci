@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 POLICY_WORKFLOW = ROOT / ".github" / "workflows" / "policy-ci.yml"
+IMAGE_RESCAN_WORKFLOW = ROOT / ".github" / "workflows" / "image-rescan.yml"
 SERVICES = ROOT / "services.json"
 VALIDATION_TARGETS = ROOT / "validation-targets.json"
 README = ROOT / "README.md"
@@ -29,6 +30,7 @@ class BuildPolicyTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.workflow = WORKFLOW.read_text(encoding="utf-8")
         cls.policy_workflow = POLICY_WORKFLOW.read_text(encoding="utf-8")
+        cls.image_rescan_workflow = IMAGE_RESCAN_WORKFLOW.read_text(encoding="utf-8")
         cls.services = json.loads(SERVICES.read_text(encoding="utf-8"))
         cls.validation_targets = json.loads(
             VALIDATION_TARGETS.read_text(encoding="utf-8")
@@ -61,6 +63,7 @@ class BuildPolicyTest(unittest.TestCase):
             "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
             "aquasecurity/trivy-action@*",
             "astral-sh/setup-uv@*",
+            "bufbuild/buf-setup-action@*",
             "docker/build-push-action@*",
             "docker/login-action@*",
             "docker/setup-buildx-action@*",
@@ -169,7 +172,8 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("本仓保持 public 时不得注册常驻 self-hosted runner", self.readme)
         self.assertIn("`--ephemeral --disableupdate` runner", self.readme)
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
-        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 3)
+        # Service mapping + integration DSNs + isolated clean-PG DSNs.
+        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 5)
 
     def test_source_poller_is_unconditional(self) -> None:
         """poller 不许有路径过滤——「每个提交都被中央验证」靠的就是这一点。
@@ -358,6 +362,7 @@ class BuildPolicyTest(unittest.TestCase):
             [
                 "alert-chain-deadman.yml",
                 "build.yml",
+                "image-rescan.yml",
                 "policy-ci.yml",
                 "poll-sources.yml",
             ],
@@ -402,6 +407,26 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow,
         )
         self.assertNotIn("promote.yml", self.readme)
+
+        # The unattended scanner is a read-only consumer of promoted images,
+        # never a second delivery path.
+        rescan_code = "\n".join(
+            line
+            for line in self.image_rescan_workflow.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        self.assertIn("permissions:\n  contents: read\n  packages: read", rescan_code)
+        for forbidden in (
+            "build-push-action",
+            "imagetools create",
+            "cosign",
+            "promote=true",
+            "packages: write",
+            "id-token: write",
+            "upload-artifact",
+        ):
+            with self.subTest(rescan_forbidden=forbidden):
+                self.assertNotIn(forbidden, rescan_code)
 
         self.assertIn("push:", self.policy_workflow)
         self.assertIn("pull_request:", self.policy_workflow)
@@ -474,13 +499,15 @@ class BuildPolicyTest(unittest.TestCase):
             "Preflight planning dependencies",
             "Install native yue-node test toolchain",
             '"${apt[@]}" install -y --no-install-recommends build-essential',
+            "Install native YueBoard test toolchain",
+            "build-essential postgresql-client",
             "Preflight validation dependencies",
             "yue-node) tools+=(base64 docker gcc go gpg jq make)",
             "YUETO_FORK_READ_TOKEN: ${{ secrets.YUETO_CI_PAT }}",
             "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader",
             'unset fork_auth YUETO_FORK_READ_TOKEN',
             "unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0",
-            "yueboard) tools+=(docker go node corepack)",
+            "yueboard) tools+=(buf corepack docker gcc go node psql)",
             "yueops) tools+=(docker jq node npm uv)",
             "Preflight build and promotion dependencies",
             "for tool in bash curl docker envsubst git jq",
@@ -537,7 +564,11 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow,
         )
         self.assertIn("make build", self.workflow)
-        self.assertNotIn("go build ./...", self.workflow)
+        node_start = self.workflow.index("- name: Validate yue-node")
+        board_start = self.workflow.index(
+            "- name: Validate YueBoard backend quality gates"
+        )
+        self.assertNotIn("go build ./...", self.workflow[node_start:board_start])
 
     def test_privileged_builder_images_are_immutable(self) -> None:
         qemu_image = (
@@ -814,6 +845,98 @@ class BuildPolicyTest(unittest.TestCase):
             with self.subTest(gate=gate):
                 self.assertIn(gate, self.workflow)
         self.assertNotIn("npm install --global squawk", self.workflow)
+
+    def test_yueboard_central_release_matches_source_quality_contract(self) -> None:
+        """Private Actions being frozen must not weaken the release proof."""
+
+        backend_start = self.workflow.index(
+            "- name: Validate YueBoard backend quality gates"
+        )
+        proto_start = self.workflow.index(
+            "- name: Validate YueBoard protocol compatibility"
+        )
+        integration_start = self.workflow.index(
+            "- name: Validate YueBoard PostgreSQL integration"
+        )
+        clean_start = self.workflow.index(
+            "- name: Validate YueBoard clean PostgreSQL lifecycle"
+        )
+        frontend_start = self.workflow.index("- name: Validate yueboard frontends")
+        design_start = self.workflow.index(
+            "- name: Validate YueBoard responsive and design contracts"
+        )
+        yueops_start = self.workflow.index("- name: Install yueops dependencies")
+
+        backend = self.workflow[backend_start:proto_start]
+        for gate in (
+            "go build ./...",
+            "gofmt -l",
+            "go vet ./...",
+            "scripts/ci/check-server-error-logging.sh",
+            "golang.org/x/vuln/cmd/govulncheck@v1.6.0",
+            "golangci-lint@v2.13.1 run --timeout=6m ./...",
+            "go test ./...",
+            "go test -race ./...",
+        ):
+            with self.subTest(backend_gate=gate):
+                self.assertIn(gate, backend)
+        self.assertIn("CGO_ENABLED: '1'", backend)
+
+        proto = self.workflow[proto_start:integration_start]
+        self.assertIn("run: scripts/ci/proto-gate.sh", proto)
+        self.assertIn("bufbuild/buf-setup-action@", self.workflow)
+        self.assertIn("version: '1.72.0'", self.workflow)
+
+        integration = self.workflow[integration_start:clean_start]
+        for package in (
+            "./internal/modules/emby",
+            "./internal/modules/handoff",
+            "./internal/platform/deviceidentity",
+            "./internal/modules/nodesync",
+        ):
+            with self.subTest(integration_package=package):
+                self.assertIn(package, integration)
+        self.assertIn("go test -p 1 -tags integration -v", integration)
+        self.assertNotIn("go test ./...", integration)
+
+        clean = self.workflow[clean_start:frontend_start]
+        self.assertIn("yueboard_clean_gate", clean)
+        self.assertIn("scripts/ci/clean-pg-gate.sh", clean)
+        self.assertNotIn("/yueboard_test", clean)
+
+        frontend = self.workflow[frontend_start:design_start]
+        self.assertEqual(frontend.count("node scripts/verify-dist.mjs dist"), 2)
+        design = self.workflow[design_start:yueops_start]
+        for script in (
+            "scripts/ci/verify-responsive.mjs",
+            "scripts/ci/verify-design-tokens.mjs",
+            "scripts/ci/verify-page-consistency.mjs",
+        ):
+            with self.subTest(design_gate=script):
+                self.assertIn(script, design)
+
+    def test_trivy_is_current_and_promoted_images_are_rescanned_by_digest(self) -> None:
+        self.assertEqual(self.workflow.count("version: v0.74.0"), 2)
+        scan = self.image_rescan_workflow
+        self.assertIn("schedule:", scan)
+        self.assertIn("workflow_dispatch:", scan)
+        self.assertIn("services.json", scan)
+        self.assertIn('$service.platforms | split(\",\")', scan)
+        self.assertIn("docker buildx imagetools inspect", scan)
+        self.assertIn(".manifest.digest", scan)
+        self.assertIn('image_ref=${IMAGE}@${digest}', scan)
+        self.assertIn("TRIVY_PLATFORM: ${{ matrix.platform }}", scan)
+        self.assertIn("image-ref: ${{ steps.resolve.outputs.image_ref }}", scan)
+        self.assertIn("version: v0.74.0", scan)
+        self.assertIn("trivyignores: .trivyignore", scan)
+        self.assertNotIn("repository: onesyue/", scan)
+
+        expected_pairs = {
+            (service["service"], platform)
+            for service in self.services
+            for platform in service["platforms"].split(",")
+        }
+        self.assertEqual(len(expected_pairs), 7)
 
     def test_yueops_reports_are_unique_runner_temp_files(self) -> None:
         backend_start = self.workflow.index("- name: Validate yueops backend")
