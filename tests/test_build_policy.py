@@ -246,16 +246,49 @@ class BuildPolicyTest(unittest.TestCase):
             'promotion_tag_args=(--tag "${IMAGE}:latest")',
             step,
         )
-        self.assertIn(
-            'promotion_tag_args=(\n'
-            '              --tag "${IMAGE}:${SHA_TAG}"\n'
-            '              --tag "${IMAGE}:latest"',
-            step,
-        )
+        self.assertIn('promotion_tag_args+=(--tag "${IMAGE}:${SHA_TAG}")', step)
+        self.assertIn('promotion_tag_args+=(--tag "${IMAGE}:${promoted_tag}")', step)
         self.assertIn('"${promotion_tag_args[@]}"', final_create)
         self.assertIn('"${IMAGE}@${DIGEST}"', final_create)
         self.assertNotIn('"${IMAGE}@${existing}"', final_create)
         self.assertNotIn('--tag "${IMAGE}:${SHA_TAG}"', final_create)
+
+    def test_each_promoted_digest_gets_an_immutable_full_identity_tag(self) -> None:
+        start = self.workflow.index(
+            "- name: Authorize and promote verified default-branch digest"
+        )
+        step = self.workflow[start:]
+        self.assertIn('digest_hex=${DIGEST#sha256:}', step)
+        self.assertIn(
+            'promoted_tag="promoted-${SOURCE_SHA}-${digest_hex}"',
+            step,
+        )
+        self.assertIn(
+            '[[ "$promoted_tag" =~ ^promoted-[0-9a-f]{40}-[0-9a-f]{64}$ ]]',
+            step,
+        )
+        self.assertIn(
+            'docker buildx imagetools inspect "${IMAGE}:${promoted_tag}"',
+            step,
+        )
+        self.assertIn('[ "$promoted_existing" = "$DIGEST" ]', step)
+        self.assertIn(
+            "immutable per-digest promotion tag ${IMAGE}:${promoted_tag}",
+            step,
+        )
+        self.assertIn(
+            "could not determine immutable per-digest promotion tag state",
+            step,
+        )
+        self.assertIn(
+            'denied|unauthorized|forbidden|authentication',
+            step,
+        )
+        # A tag that embeds the full digest is 114 characters, under OCI's
+        # 128-character tag ceiling, and cannot collide by prefix.
+        tag = f"promoted-{'a' * 40}-{'b' * 64}"
+        self.assertEqual(len(tag), 114)
+        self.assertRegex(tag, r"^promoted-[0-9a-f]{40}-[0-9a-f]{64}$")
 
     def test_promotion_preserves_sha_tag_and_uses_current_verified_digest(self) -> None:
         start = self.workflow.index(
@@ -267,6 +300,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("could not determine immutable tag state", step)
         self.assertIn("invalid manifest digest", step)
         self.assertIn('sha_tag_error="$(mktemp "${RUNNER_TEMP}/', step)
+        self.assertIn('promoted_tag_error="$(mktemp "${RUNNER_TEMP}/', step)
         self.assertIn("denied|unauthorized|forbidden|authentication", step)
         self.assertIn("cosign verify \\", step)
         self.assertIn("cosign verify-attestation \\", step)

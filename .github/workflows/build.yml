@@ -1340,10 +1340,50 @@ jobs:
             echo "default HEAD:    $default_head"
             exit 1
           fi
+          # sha-* remains the immutable first promoted build for a source
+          # revision.  A source can be rebuilt into different bytes, so every
+          # promoted digest also gets its own immutable, collision-resistant
+          # source+digest binding.  The full values keep this registry record
+          # self-authenticating instead of relying on a mutable latest tag or
+          # a truncated digest.
+          digest_hex=${DIGEST#sha256:}
+          promoted_tag="promoted-${SOURCE_SHA}-${digest_hex}"
+          [[ "$promoted_tag" =~ ^promoted-[0-9a-f]{40}-[0-9a-f]{64}$ ]] || {
+            echo "::error::invalid per-digest promotion tag"
+            exit 1
+          }
           promotion_tag_args=(--tag "${IMAGE}:latest")
+          promoted_tag_inspect=""
+          promoted_tag_error="$(mktemp "${RUNNER_TEMP}/promoted-tag-inspect.XXXXXX")"
+          if promoted_tag_inspect="$(
+            docker buildx imagetools inspect "${IMAGE}:${promoted_tag}" \
+              --format '{{json .Manifest}}' 2>"$promoted_tag_error"
+          )"; then
+            promoted_existing="$(
+              jq -er '.digest // .Digest | select(test("^sha256:[0-9a-f]{64}$"))' \
+                <<<"$promoted_tag_inspect"
+            )" || {
+              echo "::error::${IMAGE}:${promoted_tag} returned an invalid manifest digest"
+              exit 1
+            }
+            [ "$promoted_existing" = "$DIGEST" ] || {
+              echo "::error::immutable per-digest promotion tag ${IMAGE}:${promoted_tag}" \
+                   "already points to ${promoted_existing}, not ${DIGEST}"
+              exit 1
+            }
+          elif grep -qiE 'not found|manifest unknown|no such manifest|404' \
+            "$promoted_tag_error" &&
+            ! grep -qiE 'denied|unauthorized|forbidden|authentication' \
+              "$promoted_tag_error"; then
+            promotion_tag_args+=(--tag "${IMAGE}:${promoted_tag}")
+          else
+            echo "::error::could not determine immutable per-digest promotion tag state for ${IMAGE}:${promoted_tag}"
+            cat "$promoted_tag_error" >&2
+            exit 1
+          fi
           sha_tag_inspect=""
           sha_tag_error="$(mktemp "${RUNNER_TEMP}/sha-tag-inspect.XXXXXX")"
-          trap 'rm -f -- "$sha_tag_error"' EXIT
+          trap 'rm -f -- "$promoted_tag_error" "$sha_tag_error"' EXIT
           if sha_tag_inspect="$(
             docker buildx imagetools inspect "${IMAGE}:${SHA_TAG}" \
               --format '{{json .Manifest}}' 2>"$sha_tag_error"
@@ -1360,10 +1400,7 @@ jobs:
             ! grep -qiE 'denied|unauthorized|forbidden|authentication' \
               "$sha_tag_error"; then
             existing=""
-            promotion_tag_args=(
-              --tag "${IMAGE}:${SHA_TAG}"
-              --tag "${IMAGE}:latest"
-            )
+            promotion_tag_args+=(--tag "${IMAGE}:${SHA_TAG}")
           else
             echo "::error::could not determine immutable tag state for ${IMAGE}:${SHA_TAG}"
             cat "$sha_tag_error" >&2
