@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 import sys
+import unittest
 from pathlib import Path
 
 
@@ -175,3 +176,23 @@ def test_mirrored_checker_distinguishes_every_failure_state() -> None:
         now=1_000_060,
         max_age_seconds=2700,
     ).state == "degraded"
+
+
+def load_tests(
+    loader: unittest.TestLoader, tests: unittest.TestSuite, pattern: str | None
+) -> unittest.TestSuite:
+    # These policies also run under the workspace's pytest gate. Expose the
+    # same functions to the dependency-free central unittest runner so merely
+    # compiling this file cannot be mistaken for executing its assertions.
+    checks = sorted(
+        (name, check)
+        for name, check in globals().items()
+        if name.startswith("test_") and callable(check)
+    )
+    if len(checks) < 6:
+        raise RuntimeError("deadman policy coverage fell below six checks")
+    return unittest.TestSuite(unittest.FunctionTestCase(check) for _, check in checks)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -502,6 +502,8 @@ class BuildPolicyTest(unittest.TestCase):
     def test_policy_ci_runs_pinned_fail_closed_policy_tooling(self) -> None:
         required = (
             "python3 tests/test_build_policy.py -v",
+            "python3 tests/test_sbom_attestation_policy.py -v",
+            "python3 tests/test_deadman_policy.py -v",
             "python3 -m compileall -q scripts tests",
             'bash -n "$script"',
             "actionlint .github/workflows/*.yml",
@@ -1159,7 +1161,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(self.native_contract["schema_floor"], 80)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
-            "253c801a6da50f2d2acb26d36b2f4ce9ed9f8891",
+            "fc9ccb00cbf0546511bd31201e3115e2466937ce",
         )
         self.assertEqual(
             self.native_contract["presence"],
