@@ -546,7 +546,7 @@ class BuildPolicyTest(unittest.TestCase):
             "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader",
             'unset fork_auth YUETO_FORK_READ_TOKEN',
             "unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0",
-            "yueboard) tools+=(buf corepack docker gcc go node psql)",
+            "yueboard) tools+=(buf corepack docker gcc go make node psql)",
             "yueops) tools+=(docker jq node npm uv)",
             "Preflight build and promotion dependencies",
             "for tool in bash curl docker envsubst git jq",
@@ -910,6 +910,7 @@ class BuildPolicyTest(unittest.TestCase):
         for gate in (
             "go build ./...",
             "gofmt -l",
+            "make check-generated",
             "go vet ./...",
             "scripts/ci/check-server-error-logging.sh",
             "golang.org/x/vuln/cmd/govulncheck@v1.6.0",
@@ -928,6 +929,7 @@ class BuildPolicyTest(unittest.TestCase):
 
         integration = self.workflow[integration_start:clean_start]
         for package in (
+            "./internal/modules/order",
             "./internal/modules/emby",
             "./internal/modules/handoff",
             "./internal/platform/deviceidentity",

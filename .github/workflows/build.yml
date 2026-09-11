@@ -445,7 +445,7 @@ jobs:
           tools=(bash git)
           case "$VALIDATION_KIND" in
             yue-node) tools+=(base64 docker gcc go gpg jq make) ;;
-            yueboard) tools+=(buf corepack docker gcc go node psql) ;;
+            yueboard) tools+=(buf corepack docker gcc go make node psql) ;;
             yueops) tools+=(docker jq node npm uv) ;;
             yuelink) ;;
             *)
@@ -541,6 +541,7 @@ jobs:
             printf '%s\n' "$unformatted" >&2
             exit 1
           fi
+          make check-generated
           go vet ./...
           scripts/ci/check-server-error-logging.sh
           go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
@@ -583,6 +584,7 @@ jobs:
           # Preserve the source workflow's deliberately serial package order:
           # deviceidentity and nodesync both replace public, so they run last.
           go test -p 1 -tags integration -v \
+            ./internal/modules/order \
             ./internal/modules/emby \
             ./internal/modules/handoff \
             ./internal/platform/deviceidentity \
