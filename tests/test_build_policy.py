@@ -1607,6 +1607,52 @@ class BuildPolicyTest(unittest.TestCase):
             {"yue-node", "yueops-web", "checkin-api", "yue-bot", "yueboard"},
         )
 
+    def test_promotion_records_nothing_in_the_workspace_root_repo(self) -> None:
+        """release.yaml 的写者是工作站 ship.sh，不是这里（2026-09-14 决定）。
+
+        根仓 onesyue/yueto 的 promote 记录（release.yaml）由 scripts/ship.sh 在拿到
+        promote digest 且三门验签后**签名**提交推送。这里刻意不写，理由：
+          * 根仓是私有免费档，ruleset/分支保护不可用，「签名提交」只能靠约定；
+            CI 机器人写不出业主签名的提交，把签名私钥塞进公开仓 secrets 更糟。
+          * YUETO_CI_PAT 是 classic `repo` scope——对每个私仓**已经可写**，但本仓
+            从未用它写过任何仓。第一条「用它推私仓」的步骤会把那份 scope 从持有变成
+            在用，本公开仓一旦被改坏，写权限爆炸半径是全部私仓。
+          * yueops 按 group 派发时三个矩阵 job 并行 promote，三处同时提交根仓 master
+            必然互撞，还得再加串行化 job；工作站那一侧三个 digest 本来就在一个进程里。
+        判据：workflow 顶层与 build job 的 permissions 里 contents 只读；全 workflow
+        没有任何 git commit/push、没有对 onesyue/yueto 的 contents API 写、没有提到
+        release.yaml；而 ship.sh 赖以扒 digest 的 promote 步骤 env 锚点（DIGEST /
+        SOURCE_SHA / IMAGE）必须仍在——那是工作站写者的输入。
+        """
+
+        self.assertRegex(self.workflow, r"(?m)^permissions:\n  contents: read\n")
+        promote_start = self.workflow.index(
+            "- name: Authorize and promote verified default-branch digest"
+        )
+        promote_step = self.workflow[promote_start:]
+        for anchor in (
+            "DIGEST: ${{ steps.build.outputs.digest }}",
+            "SOURCE_SHA: ${{ steps.meta.outputs.source_sha }}",
+            "IMAGE: ${{ steps.meta.outputs.image }}",
+        ):
+            with self.subTest(anchor=anchor):
+                self.assertIn(anchor, promote_step)
+        code = "\n".join(
+            line for line in self.workflow.splitlines() if not line.lstrip().startswith("#")
+        )
+        for forbidden in (
+            r"\bgit\s+push\b",
+            r"\bgit\s+commit\b",
+            r"repos/onesyue/yueto/(?:contents|git)",
+            r"release\.yaml",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotRegex(code, forbidden)
+        for permission in ("contents: write", "contents: 'write'", 'contents: "write"'):
+            self.assertNotIn(permission, code)
+        self.assertIn("release.yaml", self.readme)
+        self.assertIn("scripts/ship.sh", self.readme)
+
 
 if __name__ == "__main__":
     unittest.main()

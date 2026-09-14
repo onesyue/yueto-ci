@@ -69,6 +69,20 @@ YueBoard 的未 pin 默认分支 HEAD 仍可用 `promote=false` 做完整验证�
 `YUETO_CI_PAT`。`repository_dispatch` 入口仅保留给受控兼容调用，仍由可信 actor、
 完整 SHA 和默认分支 HEAD 三重门禁约束。
 
+## promote 的记录：根仓 `release.yaml` 不由本仓写
+
+2026-09-14 起，「哪个 revision / digest 已 promote」的唯一真源是工作区根仓
+`onesyue/yueto` 的 `release.yaml`。它由工作站 `scripts/ship.sh` 在拿到 promote 步骤的
+digest、并通过签名/SBOM/provenance 三门验签之后写入、**签名**提交、推送
+（`scripts/release-yaml.py verify` 再把记录与 GHCR `sha-<revision>` / `latest` 比对）。
+本仓的 promote 步骤刻意**不**写任何仓，理由：根仓是私有免费档、无 ruleset 可强制签名，
+CI 机器人写不出业主签名的提交；`YUETO_CI_PAT` 的 `repo` scope 对全部私仓可写，本仓
+迄今一次都没用它写过——第一条「用它推私仓」的步骤会把爆炸半径扩到全部私仓；
+yueops group 派发的三个矩阵 job 并行 promote，三处同时提交根仓必然互撞。
+`tests/test_build_policy.py::test_promotion_records_nothing_in_the_workspace_root_repo`
+钉住这一条：workflow 里不得出现 git commit/push、根仓 contents 写 API 或 `release.yaml`，
+而 promote 步骤的 `DIGEST` / `SOURCE_SHA` / `IMAGE` env 锚点必须保留（那是 ship.sh 的输入）。
+
 ## Actions 白名单闭包
 
 仓库 Settings → Actions 的 selected-actions 必须覆盖工作流直接调用的动作，也必须覆盖
