@@ -956,6 +956,65 @@ class BuildPolicyTest(unittest.TestCase):
             with self.subTest(design_gate=script):
                 self.assertIn(script, design)
 
+    def assert_release_jobs_are_bounded(self, workflow: str) -> None:
+        """Every release job carries an explicit timeout and a UTC clock.
+
+        The Actions default is 360 minutes: a wedged validate or build job
+        would hold its concurrency group, and with it the release, for six
+        hours while looking merely "in progress". Time-dependent tests must
+        also run under one clock everywhere (hosted runners are UTC, the
+        manual self-hosted release runner and +08 workstations are not) so
+        that a locally green gauntlet is evidence for the central gate.
+        """
+
+        for job in ("plan", "validate", "build"):
+            header = re.search(
+                rf"(?ms)^  {job}:\n(?P<body>.*?)^    steps:\n", workflow
+            )
+            self.assertIsNotNone(header, job)
+            assert header is not None
+            self.assertRegex(
+                header.group("body"), r"(?m)^    timeout-minutes: [1-9][0-9]*$", job
+            )
+        validate = re.search(r"(?ms)^  validate:\n(?P<body>.*?)^    steps:\n", workflow)
+        assert validate is not None
+        self.assertIn("\n    env:\n      TZ: UTC\n", validate.group("body"))
+        yueops = re.search(
+            r"(?ms)^      - name: Validate yueops backend\n(?P<body>.*?)(?=^      - name:)",
+            workflow,
+        )
+        self.assertIsNotNone(yueops)
+        assert yueops is not None
+        self.assertIn("PYTEST_ADDOPTS: --durations=25", yueops.group("body"))
+
+    def test_release_jobs_have_bounded_timeouts_and_utc_clock(self) -> None:
+        self.assert_release_jobs_are_bounded(self.workflow)
+        self.assertRegex(
+            self.image_rescan_workflow,
+            r"(?ms)^  plan:\n(?:(?!^    steps:).)*?^    timeout-minutes: [1-9][0-9]*\n",
+        )
+
+    def test_unbounded_release_job_is_rejected(self) -> None:
+        """Deletion mutation: removing any single bound must turn the guard red."""
+
+        for job in ("plan", "validate", "build"):
+            with self.subTest(job=job):
+                mutated = re.sub(
+                    rf"(?ms)(^  {job}:\n.*?)^    timeout-minutes: [0-9]+\n",
+                    r"\1",
+                    self.workflow,
+                    count=1,
+                )
+                self.assertNotEqual(mutated, self.workflow)
+                with self.assertRaises(AssertionError):
+                    self.assert_release_jobs_are_bounded(mutated)
+        for removed in ("\n    env:\n      TZ: UTC\n", "          PYTEST_ADDOPTS: --durations=25\n"):
+            with self.subTest(removed=removed.strip()):
+                mutated = self.workflow.replace(removed, "\n" if removed.startswith("\n") else "", 1)
+                self.assertNotEqual(mutated, self.workflow)
+                with self.assertRaises(AssertionError):
+                    self.assert_release_jobs_are_bounded(mutated)
+
     def test_trivy_is_current_and_promoted_images_are_rescanned_by_digest(self) -> None:
         self.assertEqual(self.workflow.count("version: v0.74.0"), 2)
         scan = self.image_rescan_workflow

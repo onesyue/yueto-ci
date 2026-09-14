@@ -55,6 +55,11 @@ concurrency:
 jobs:
   plan:
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-latest"]') }}
+    # Bounded on purpose: the Actions default is 360 minutes, and a wedged
+    # job would hold its concurrency group (and the release) for six hours.
+    # Floors come from the 2026-09 run history: plan <1 min, validate
+    # 8-14 min (yueboard / yueops), multi-arch build <= 13 min.
+    timeout-minutes: 10
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       validation_matrix: ${{ steps.plan.outputs.validation_matrix }}
@@ -223,6 +228,13 @@ jobs:
   validate:
     needs: plan
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-latest"]') }}
+    timeout-minutes: 60
+    # The central gate must judge time-dependent tests in the same clock
+    # everywhere: GitHub-hosted runners are UTC, the manual self-hosted
+    # release runner and developer workstations (+08) are not. A local
+    # gauntlet that is green under a different zone is not evidence.
+    env:
+      TZ: UTC
     strategy:
       fail-fast: false
       matrix:
@@ -694,6 +706,10 @@ jobs:
         env:
           YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard
           UV_PYTHON_DOWNLOADS: never
+          # Surface the slowest tests in the log so a 640-second run can be
+          # read without re-running it; pytest appends this to every
+          # invocation inside scripts/run-pytest-parallel.sh.
+          PYTEST_ADDOPTS: --durations=25
         run: |
           security_report=$(mktemp "${RUNNER_TEMP:?}/security-scan.XXXXXX.json")
           python_lock_audit=$(mktemp "${RUNNER_TEMP:?}/python-lock-audit.XXXXXX.txt")
@@ -803,6 +819,7 @@ jobs:
     # an empty Docker matrix.
     if: needs.plan.outputs.has_builds == 'true'
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-latest"]') }}
+    timeout-minutes: 120
     permissions:
       contents: read
       packages: write
