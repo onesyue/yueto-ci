@@ -59,7 +59,7 @@ def test_public_deadman_checks_both_mirror_and_private_canonical_bytes() -> None
     assert "token: ${{ secrets.YUETO_CI_PAT }}" in text
     assert text.count("persist-credentials: false") == 2
     assert text.count(
-        "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803"
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
     ) == 2
 
 
