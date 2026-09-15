@@ -83,6 +83,20 @@ yueops group 派发的三个矩阵 job 并行 promote，三处同时提交根仓
 钉住这一条：workflow 里不得出现 git commit/push、根仓 contents 写 API 或 `release.yaml`，
 而 promote 步骤的 `DIGEST` / `SOURCE_SHA` / `IMAGE` env 锚点必须保留（那是 ship.sh 的输入）。
 
+## Buildx 工具版本
+
+构建、source poll、镜像重扫三个真实 Buildx 消费者共用
+`scripts/install-verified-buildx.sh`：Linux x86_64 固定 v0.37.1，下载前限制
+HTTPS、执行前核对硬编码 SHA-256，再通过实际 `docker buildx version` 验证解析路径。
+摘要来自 [官方发布资产](https://github.com/docker/buildx/releases/tag/v0.37.1)
+与同版 `checksums.txt` 的独立对照。已有正确字节直接复用；旧版、下载失败或摘要不符
+不能继续构建。版本/摘要变更必须一起评审，环境变量不能覆盖它们。
+
+setup-buildx-action 默认复用 runner 已装版本是正常行为，不代表自动选择最新版。
+安装器先完成验证，原固定 action 才创建固定 OCI BuildKit builder；只做 imagetools
+的 poll/重扫仅安装 CLI，不创建多余 builder。这是构建/推送可靠性更新，不要求重发
+已验收应用镜像，也不改变生产节点 APT 包清单。
+
 ## Actions 白名单闭包
 
 仓库 Settings → Actions 的 selected-actions 必须覆盖工作流直接调用的动作，也必须覆盖

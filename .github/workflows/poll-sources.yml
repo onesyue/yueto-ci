@@ -52,6 +52,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install verified Docker Buildx
+        run: bash scripts/install-verified-buildx.sh
+
       - name: Log in to GHCR
         # 私有 package 的 manifest 查询需要凭据；用的是 build.yml 同一个 PAT，
         # 不引入新 secret。

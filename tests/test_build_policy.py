@@ -3,8 +3,10 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -23,6 +25,217 @@ NATIVE_VALIDATOR = ROOT / "scripts" / "validate-native-node-contract.py"
 TARGET_PLANNER = ROOT / "scripts" / "plan-build-targets.sh"
 YUEBOARD_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-promotion.sh"
 YUEBOARD_PLAN_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-build-plan.sh"
+BUILDX_INSTALLER = ROOT / "scripts" / "install-verified-buildx.sh"
+BUILDX_SHA256 = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"
+
+
+class VerifiedBuildxTest(unittest.TestCase):
+    """Exercise the shell installer and the preinstalled-runner reuse path."""
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.base = Path(self.temp.name)
+        self.bin = self.base / "bin"
+        self.bin.mkdir()
+        self.config = self.base / "docker"
+        (self.config / "cli-plugins").mkdir(parents=True)
+        self.plugin = self.config / "cli-plugins" / "docker-buildx"
+        self.plugin.write_text("#!/bin/sh\necho 'github.com/docker/buildx v0.37.0 old'\n")
+        self.plugin.chmod(0o755)
+        self.artifact = self.base / "artifact"
+        self.artifact.write_text(
+            "#!/bin/sh\n"
+            'echo executed >> "$TEST_EXECUTIONS"\n'
+            "echo 'github.com/docker/buildx v0.37.1 0b265a9'\n"
+        )
+        self.digest = hashlib.sha256(self.artifact.read_bytes()).hexdigest()
+        self.env = {
+            **os.environ,
+            "PATH": str(self.bin) + os.pathsep + os.environ["PATH"],
+            "DOCKER_CONFIG": str(self.config),
+            "RUNNER_TEMP": str(self.base),
+            "TEST_ARTIFACT": str(self.artifact),
+            "TEST_DOWNLOADS": str(self.base / "downloads"),
+            "TEST_EXECUTIONS": str(self.base / "executions"),
+        }
+        # Production runners are Linux/GNU; use Homebrew's real GNU verifier
+        # when running this same shell behavior suite on a macOS workstation.
+        if os.uname().sysname == "Darwin" and shutil.which("gsha256sum"):
+            (self.bin / "sha256sum").symlink_to(shutil.which("gsha256sum"))
+        self.shim("uname", 'case "$1" in -s) echo Linux;; -m) echo x86_64;; esac\n')
+        self.shim(
+            "curl",
+            'echo download >> "$TEST_DOWNLOADS"\n'
+            '[ "${TEST_DOWNLOAD_FAIL:-0}" = 0 ] || exit 22\n'
+            'while [ "$#" -gt 0 ]; do\n'
+            '  if [ "$1" = --output ]; then cp "$TEST_ARTIFACT" "$2"; exit; fi\n'
+            '  shift\n'
+            'done\nexit 64\n',
+        )
+        self.shim(
+            "docker",
+            '[ "$1" = buildx ] && [ "$2" = version ] || exit 64\n'
+            'if [ "${TEST_SHADOW_PLUGIN:-0}" = 1 ]; then\n'
+            "  echo 'github.com/docker/buildx v0.37.0 shadow'\n"
+            "else\n"
+            '  exec "$DOCKER_CONFIG/cli-plugins/docker-buildx" version\n'
+            "fi\n",
+        )
+
+    def shim(self, name: str, body: str) -> None:
+        path = self.bin / name
+        path.write_text("#!/bin/sh\nset -eu\n" + body)
+        path.chmod(0o755)
+
+    def run_installer(self, *, corrupt: bool = False) -> subprocess.CompletedProcess:
+        self.assertTrue(BUILDX_INSTALLER.is_file(), "missing verified installer")
+        source = BUILDX_INSTALLER.read_text()
+        self.assertEqual(source.count(BUILDX_SHA256), 1)
+        # Only replace the fixed public digest with our executable test fixture;
+        # production deliberately has no hash/version override environment hook.
+        candidate = self.base / "installer.sh"
+        candidate.write_text(source.replace(BUILDX_SHA256, self.digest))
+        if corrupt:
+            self.artifact.write_text("#!/bin/sh\nexit 99\n")
+        return subprocess.run(
+            ["bash", str(candidate)], env=self.env, text=True,
+            capture_output=True, timeout=15,
+        )
+
+    def test_preinstalled_old_runner_is_replaced_before_action_reuse(self) -> None:
+        workflow = WORKFLOW.read_text()
+        setup = workflow.index("- name: Set up Docker Buildx")
+        # Actual pinned setup action reuses an available plugin when version is
+        # unspecified. Exercise the install step before that normal action path.
+        if "- name: Install verified Docker Buildx" in workflow[:setup]:
+            result = self.run_installer()
+            self.assertEqual(result.returncode, 0, result.stderr)
+        actual = subprocess.check_output(
+            ["docker", "buildx", "version"], env=self.env, text=True
+        ).strip()
+        self.assertRegex(actual, r"^github\.com/docker/buildx v0\.37\.1 ")
+
+    def test_all_real_workflow_consumers_have_prior_verified_install(self) -> None:
+        consumers = []
+        for path in sorted(WORKFLOW_DIR.glob("*.yml")):
+            text = path.read_text().split("\njobs:\n", 1)[1]
+            for block in re.split(r"(?m)(?=^  [A-Za-z0-9_-]+:\s*$)", text):
+                use = re.search(
+                    r"docker\s+buildx\b|uses:\s*docker/setup-buildx-action@", block
+                )
+                if use is None:
+                    continue
+                consumers.append((path.name, block.splitlines()[0].strip()))
+                with self.subTest(consumer=consumers[-1]):
+                    before = block[:use.start()]
+                    self.assertIn("- name: Install verified Docker Buildx", before)
+                    self.assertRegex(
+                        before, r"run: bash (?:\.ci-policy/)?scripts/install-verified-buildx\.sh"
+                    )
+        self.assertEqual(set(consumers), {
+            ("build.yml", "build:"),
+            ("poll-sources.yml", "poll:"),
+            ("image-rescan.yml", "scan:"),
+        })
+
+    def test_fixed_official_artifact_and_https_only_download(self) -> None:
+        self.assertTrue(BUILDX_INSTALLER.is_file())
+        source = BUILDX_INSTALLER.read_text()
+        self.assertIn("readonly BUILDX_VERSION='v0.37.1'", source)
+        self.assertIn(BUILDX_SHA256, source)
+        self.assertIn("--proto '=https' --proto-redir '=https'", source)
+        self.assertIn("sha256sum --check --strict", source)
+        self.assertNotIn("${BUILDX_SHA256", source)
+        self.assertNotIn("${BUILDX_VERSION:-", source)
+
+    def test_good_artifact_replaces_old_plugin_without_daemon_commands(self) -> None:
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.plugin.read_bytes(), self.artifact.read_bytes())
+        self.assertEqual(self.plugin.stat().st_mode & 0o777, 0o755)
+        self.assertTrue((self.base / "executions").is_file())
+        self.assertEqual(list(self.base.glob("yueto-buildx.*")), [])
+
+    def test_wrong_digest_never_executes_or_overwrites_old_plugin(self) -> None:
+        old = self.plugin.read_bytes()
+        result = self.run_installer(corrupt=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.plugin.read_bytes(), old)
+        self.assertFalse((self.base / "executions").exists())
+
+    def test_download_failure_never_accepts_existing_old_version(self) -> None:
+        self.env["TEST_DOWNLOAD_FAIL"] = "1"
+        old = self.plugin.read_bytes()
+        result = self.run_installer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.plugin.read_bytes(), old)
+        self.assertFalse((self.base / "executions").exists())
+
+    def test_plugin_shadowing_is_detected_by_actual_docker_version(self) -> None:
+        self.env["TEST_SHADOW_PLUGIN"] = "1"
+        result = self.run_installer()
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_unreviewed_architecture_stops_before_download(self) -> None:
+        self.shim("uname", 'case "$1" in -s) echo Linux;; -m) echo aarch64;; esac\n')
+        result = self.run_installer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.base / "downloads").exists())
+
+    def test_symlink_plugin_is_not_followed(self) -> None:
+        external = self.base / "external"
+        external.write_text("do not overwrite")
+        self.plugin.unlink()
+        self.plugin.symlink_to(external)
+        result = self.run_installer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(external.read_text(), "do not overwrite")
+        self.assertFalse((self.base / "downloads").exists())
+
+    def test_verified_existing_binary_skips_network_but_checks_actual_lookup(self) -> None:
+        self.plugin.write_bytes(self.artifact.read_bytes())
+        self.plugin.chmod(0o755)
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.base / "downloads").exists())
+        self.assertTrue((self.base / "executions").is_file())
+
+    def test_environment_cannot_override_reviewed_version_or_digest(self) -> None:
+        self.env["BUILDX_VERSION"] = "v0.37.0"
+        self.env["BUILDX_SHA256"] = "0" * 64
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.37.1 ", result.stdout)
+
+    def test_close_version_prefix_is_rejected(self) -> None:
+        self.shim("docker", "echo 'github.com/docker/buildx v0.37.10 bad'\n")
+        result = self.run_installer()
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_higher_priority_plugin_paths_fail_before_any_execution(self) -> None:
+        (self.config / "config.json").write_text(json.dumps({
+            "cliPluginsExtraDirs": [str(self.base / "other-plugin")],
+        }))
+        result = self.run_installer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.base / "downloads").exists())
+        self.assertFalse((self.base / "executions").exists())
+
+    def test_normal_registry_config_is_preserved(self) -> None:
+        config = self.config / "config.json"
+        original = '{"auths": {}, "cliPluginsExtraDirs": []}\n'
+        config.write_text(original)
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(config.read_text(), original)
+
+    def test_nonexecutable_verified_cache_is_repaired(self) -> None:
+        self.plugin.write_bytes(self.artifact.read_bytes())
+        self.plugin.chmod(0o600)
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.plugin.stat().st_mode & 0o777, 0o755)
 
 
 class BuildPolicyTest(unittest.TestCase):

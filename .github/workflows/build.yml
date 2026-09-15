@@ -864,9 +864,14 @@ jobs:
           image: docker.io/tonistiigi/binfmt:latest@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
           platforms: 'arm64,amd64'
 
+      - name: Install verified Docker Buildx
+        run: bash .ci-policy/scripts/install-verified-buildx.sh
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
         with:
+          # Reuse the fixed-version, SHA-verified plugin installed above.
+          # An explicit action version would download/execute a second copy.
           # The docker-container driver defaults to the mutable
           # moby/buildkit:buildx-stable-1 tag. The builder has the Docker
           # socket's authority, so bind it to an immutable OCI index too.

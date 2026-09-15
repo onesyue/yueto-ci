@@ -55,6 +55,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install verified Docker Buildx
+        run: bash scripts/install-verified-buildx.sh
+
       - name: Login to GHCR read-only scan path
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
