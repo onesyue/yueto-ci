@@ -186,19 +186,40 @@ def validate_node(root: Path, contract: dict) -> None:
     launcher = read(root / "cmd/yue-node-launcher/main.go")
     dependency_gate = read(root / "scripts/check-profile-deps.sh")
     capability = read(root / "internal/capability/manifest.go")
-    config = read(root / "internal/config/config.go")
-    controlplane = read(root / "internal/controlplane/connect.go")
+    # 同 §上：主语是包不是文件。这两个包 2026-09-20 也各被拆成 5–8 个文件。
+    config = read_package(
+        root / "internal/config", "*.go", min_files=5, exclude_suffixes=("_test.go",)
+    )
+    controlplane = read_package(
+        root / "internal/controlplane", "*.go", min_files=5, exclude_suffixes=("_test.go",)
+    )
     proto = read(root / "proto/yuenode/v1/yuenode.proto")
     # The whole package, not one file — see read_package. yue-node's service
     # package is deliberately split by responsibility (service/state/sync/
     # transaction/users/kernel/reporting/observability/devices/validate).
     service = read_package(root / "internal/service", "*.go", min_files=8)
     service_test = read_package(root / "internal/service", "*_test.go", min_files=3)
-    model_types = read(root / "internal/model/types.go")
-    xray_dispatcher = read(root / "internal/kernel/xray/dispatcher.go")
-    xray_test = read(root / "internal/kernel/xray/dispatcher_test.go")
-    hysteria = read(root / "internal/kernel/hysteria/hysteria.go")
-    hysteria_test = read(root / "internal/kernel/hysteria/user_device_guard_test.go")
+    # 🚨 2026-09-20：下面四条此前是单文件 read()，而 read_package 的 docstring 里
+    # 早就记着同一件事（上一次拆 internal/service/service.go 时这条守卫把
+    # credential-generation 边界报成"缺失"）。那次的修法**只应用到了 service**，
+    # 这四条没跟上 —— 于是 yue-node 把 dispatcher.go 拆成 dispatcher_{session,devices,
+    # limits}.go、hysteria.go 拆成六个文件之后，`local∪global union` 与
+    # `canonicalDeviceIP` 又一次被报成缺失（它们现在住在 dispatcher_devices.go /
+    # dispatcher_session.go / device_limit.go / traffic_presence.go）。
+    # 契约片段的主语是**包**，不是文件；地板负责让"扫到空气"不被当成通过。
+    model_types = read_package(
+        root / "internal/model", "*.go", min_files=8, exclude_suffixes=("_test.go",)
+    )
+    xray_dispatcher = read_package(
+        root / "internal/kernel/xray", "*.go", min_files=20, exclude_suffixes=("_test.go",)
+    )
+    xray_test = read_package(root / "internal/kernel/xray", "*_test.go", min_files=10)
+    hysteria = read_package(
+        root / "internal/kernel/hysteria", "*.go", min_files=8, exclude_suffixes=("_test.go",)
+    )
+    hysteria_test = read_package(
+        root / "internal/kernel/hysteria", "*_test.go", min_files=10
+    )
     artifacts = [slot["artifact"] for slot in contract["layout"].values()]
     presence = contract["presence"]
 
@@ -364,7 +385,9 @@ def validate_yueops(
         raise RuntimeError(
             "pinned YueBoard contract schema floor does not match central policy"
         )
-    deploy = read(root / "yueops/deploy.py")
+    # 2026-09-20：deploy.py 3004 → 513 行 + 8 个 deploy_*.py。片段的主语是**部署生成器
+    # 这个模块族**，不是那一个文件。地板让"glob 写错扫到空气"不能被当成通过。
+    deploy = read_package(root / "yueops", "deploy*.py", min_files=5)
     nodeauth = read(root / "yueops/nodeauth.py")
     agent = read(root / "scripts/agent.sh")
     guard = read(root / "scripts/assert-node-recreate-safe.sh")
@@ -628,8 +651,15 @@ def validate_yueops(
 
 def validate_yueboard(root: Path, contract: dict) -> None:
     proto = read(root / "proto/yuenode/v1/yuenode.proto")
-    connectrpc = read(root / "internal/modules/nodesync/connectrpc.go")
-    builders = read(root / "internal/modules/nodesync/builders.go")
+    # 2026-09-20：connectrpc.go 与 builders.go 各被拆成 4–5 个同包文件。
+    # 两者都改读整个 nodesync 包（下面的 require/forbid 原本就是对
+    # connectrpc+builders 的并集做的，并集换成整包只会更严，不会更松）。
+    nodesync_pkg = read_package(
+        root / "internal/modules/nodesync", "*.go", min_files=30,
+        exclude_suffixes=("_test.go",),
+    )
+    connectrpc = nodesync_pkg
+    builders = nodesync_pkg
     routes = read(root / "internal/modules/nodesync/internal.go")
     capabilities = read(root / "internal/modules/nodesync/capabilities.go")
     rollout = read(root / "internal/modules/nodesync/yueops_internal_rollout.go")
