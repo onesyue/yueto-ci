@@ -295,10 +295,14 @@ jobs:
         if: matrix.validation == 'yue-node' || matrix.validation == 'yueboard'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          # Keep each release compiler on its repository's exact reviewed
-          # version. YueNode takes Go 1.27's allocator and stable leak profile;
-          # YueBoard remains on its independently reviewed 1.26.8 patch line.
-          go-version: ${{ matrix.validation == 'yue-node' && '1.27.1' || '1.26.8' }}
+          # Both Go release repos now sit on the same reviewed patch line
+          # (1.27.1). This is one literal on purpose: a per-repo conditional
+          # reads as if it tracked each go.mod, but nothing made it do so, so a
+          # divergence would silently build one repo with the other's compiler.
+          # The workspace guard `toolchain-pin-agreement` is what actually joins
+          # this literal to both repos' go.mod/ci.yml/Dockerfile pins; if they
+          # ever have to diverge, make that guard model it, not this expression.
+          go-version: '1.27.1'
           # GitHub cache upload can remain asleep indefinitely on the disposable
           # self-hosted release runner after every validation step is green.
           # That runner already keeps its Go module/build cache on local disk;

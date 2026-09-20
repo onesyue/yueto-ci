@@ -301,11 +301,11 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIsNotNone(setup)
         assert setup is not None
         body = setup.group("body")
-        self.assertIn(
-            "go-version: ${{ matrix.validation == 'yue-node' && "
-            "'1.27.1' || '1.26.8' }}",
-            body,
-        )
+        self.assertIn("go-version: '1.27.1'", body)
+        # A per-repo conditional used to live here. It looked like it tracked
+        # each repo's go.mod and did not; the workspace guard
+        # toolchain-pin-agreement is what joins them now.
+        self.assertNotIn("matrix.validation == 'yue-node' &&", body)
         self.assertNotIn("go-version-file:", body)
         self.assertIn(
             "cache: ${{ github.event_name != 'workflow_dispatch' || "
