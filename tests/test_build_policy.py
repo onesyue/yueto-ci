@@ -1432,10 +1432,10 @@ class BuildPolicyTest(unittest.TestCase):
         # this exact reviewed value; the cross-repository validator checks the
         # latter two as well.
         self.assertIsInstance(self.native_contract["schema_floor"], int)
-        self.assertEqual(self.native_contract["schema_floor"], 89)
+        self.assertEqual(self.native_contract["schema_floor"], 90)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
-            "0e7b8c76e0a33cc38ebdcfaafcd5403994eaf64c",
+            "7decd639461bbb1b575d38acd2eb46e73aa5ff32",
         )
         self.assertEqual(
             self.native_contract["presence"],
