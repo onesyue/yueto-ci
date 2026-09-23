@@ -665,17 +665,17 @@ jobs:
           pnpm --dir web-admin install --frozen-lockfile --ignore-scripts
           pnpm --dir web-admin build
           (cd web-admin && node scripts/verify-dist.mjs dist)
-          # Source-owned advisory gates (same model as YueOps'
+          # Source-owned advisory gate (same model as YueOps'
           # scripts/npm-audit-gate.py): the reviewed exception list lives in
-          # the YueBoard tree, never here. A checkout without them must stop.
-          for app in web web-admin; do
-            audit_gate="$app/scripts/npm-audit-gate.mjs"
-            [ -f "$audit_gate" ] || {
-              echo "::error::source-owned npm audit gate is missing: $audit_gate"
-              exit 1
-            }
-            (cd "$app" && node scripts/npm-audit-gate.mjs)
-          done
+          # the YueBoard tree, never here. A checkout without it must stop.
+          # Exit 0 = pass, 1 = blocking advisory, 2 = the gate itself failed;
+          # anything non-zero stops the release (2 is never a pass).
+          audit_gate="scripts/ci/pnpm-audit-gate.mjs"
+          [ -f "$audit_gate" ] || {
+            echo "::error::source-owned pnpm audit gate is missing: $audit_gate"
+            exit 1
+          }
+          node "$audit_gate" web web-admin
 
       - name: Validate YueBoard responsive and design contracts
         if: matrix.validation == 'yueboard'

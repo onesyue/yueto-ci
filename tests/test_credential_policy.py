@@ -168,10 +168,12 @@ class DependencyLifecycleScriptPolicyTest(unittest.TestCase):
         start = workflow.index("- name: Validate yueboard frontends")
         end = workflow.index("- name: Validate YueBoard responsive and design contracts")
         step = workflow[start:end]
-        self.assertIn("for app in web web-admin; do", step)
-        self.assertIn('audit_gate="$app/scripts/npm-audit-gate.mjs"', step)
+        self.assertIn('audit_gate="scripts/ci/pnpm-audit-gate.mjs"', step)
         guard = step.index('[ -f "$audit_gate" ] || {')
-        call = step.index('(cd "$app" && node scripts/npm-audit-gate.mjs)')
+        call = step.index('node "$audit_gate" web web-admin')
+        # `set -e`-free steps would let exit 2 (gate broken) through; the
+        # call must be a bare command so any non-zero code fails the step.
+        self.assertNotRegex(step[call:], r'node "\$audit_gate" web web-admin\s*(\|\||;\s*true)')
         self.assertIn("exit 1", step[guard:call])
         # The audit must judge the tree that was actually installed and built.
         self.assertLess(step.index("pnpm --dir web-admin build"), guard)
