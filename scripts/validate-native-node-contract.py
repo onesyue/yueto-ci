@@ -1084,7 +1084,7 @@ def validate_yuelink(root: Path, contract: dict) -> None:
         device_summary,
         [
             "final floor = onlineIdentities > (sharedOnline ? 1 : 0)",
-            "if (count < floor) {",
+            "if (!pending && count < floor) {",
             "Never infer devices from IP cardinality",
             "shared_online",
             "presence_source",
