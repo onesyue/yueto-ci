@@ -924,16 +924,28 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         [
             'r.Get("/user/devices", m.paDevicesList)',
             'r.Post("/user/devices/reset-all", m.paDevicesResetAll)',
-            '"shared_online":   sharedOnline',
+            '"shared_online":  sharedOnline',
             '"presence_source": presenceSource',
-            '"identities":      identities,',
-            "if networkLines > liveCount {",
+            '"identities":     identities,',
+            '"confidence":     result.Confidence,',
+            "result = m.DeviceCount(uid, fallback)",
             'presenceSource = "database_projection"',
             '"applied_user_ids":    []int64{uid}',
-            "Network presence is the floor for clients that do not report an",
-            "so the two are combined with max rather than added",
         ],
         "YueBoard public device identity API",
+    )
+    # 2026-09-23: the count is the single authoritative devicecount result
+    # shared by /user/devices, users.online_count and the yueops internal
+    # counts endpoint; the max-rather-than-add invariant now lives there.
+    require(
+        read(root / "internal/platform/devicecount/devicecount.go"),
+        [
+            "dual stack combined with max",
+            "(never added — one dual-stack device is observed on both families).",
+            "result.Count = max(explicit, network)",
+            "count := max(v4, v6)",
+        ],
+        "YueBoard authoritative device count",
     )
     forbid(
         plugin_api,
