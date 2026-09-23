@@ -1746,6 +1746,33 @@ class BuildPolicyTest(unittest.TestCase):
             {"yue-node", "yueops", "yueboard", "yuelink"},
         )
 
+    def test_node_profiles_both_gate_the_single_release_image(self) -> None:
+        result = subprocess.run(
+            ["bash", str(TARGET_PLANNER), "yue-node", "a" * 40],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        plan = json.loads(result.stdout)
+        self.assertEqual(len(plan["matrix"]), 1)
+        self.assertEqual(
+            {entry["node_profile"] for entry in plan["validation_matrix"]},
+            {"hy2", "vless"},
+        )
+        self.assertEqual(
+            {entry["ref"] for entry in plan["validation_matrix"]},
+            {"a" * 40},
+        )
+        node_step = self.workflow[
+            self.workflow.index("- name: Validate yue-node") :
+            self.workflow.index("- name: Validate YueBoard backend quality gates")
+        ]
+        self.assertIn("go test -race -count=1 -timeout 30m", node_step)
+        self.assertIn("./internal/kernel/hysteria/compatobfs/", node_step)
+        self.assertIn("-run 'Splice|VendoredVisionReality' ./internal/kernel/xray/", node_step)
+        self.assertIn("make build", node_step)
+
     def test_target_planner_fails_closed_for_unknown_target(self) -> None:
         result = subprocess.run(
             ["bash", str(TARGET_PLANNER), "not-a-product"],

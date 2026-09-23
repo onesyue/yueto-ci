@@ -54,7 +54,11 @@ jq -nc \
   --argjson validators "$validators" '
     ($builds + $validators
       | unique_by(.repo + "|" + .ref + "|" + .validation)
-      | map({repo, ref, validation})) as $validation_matrix
+      | map({repo, ref, validation})
+      | map(if .validation == "yue-node" then
+          [. + {node_profile: "hy2"}, . + {node_profile: "vless"}]
+        else [.] end)
+      | add) as $validation_matrix
     | {
         matrix: $builds,
         validation_matrix: $validation_matrix,

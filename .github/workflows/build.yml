@@ -254,7 +254,7 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.validation_matrix) }}
-    name: validate-${{ matrix.validation }}
+    name: ${{ matrix.node_profile && format('validate-yue-node-{0}', matrix.node_profile) || format('validate-{0}', matrix.validation) }}
     services:
       postgres:
         image: postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
@@ -539,9 +539,14 @@ jobs:
         if: matrix.validation == 'yue-node'
         env:
           CGO_ENABLED: '1'
+          NODE_PROFILE: ${{ matrix.node_profile }}
           YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
         run: |
           set -euo pipefail
+          case "$NODE_PROFILE" in
+            hy2|vless) ;;
+            *) echo "::error::invalid yue-node validation profile" >&2; exit 2 ;;
+          esac
           [ "$(go env CGO_ENABLED)" = "1" ] || {
             echo "::error::Go race validation requires CGO_ENABLED=1"
             exit 1
@@ -558,13 +563,33 @@ jobs:
           export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
           export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $fork_auth"
           unset fork_auth YUETO_FORK_READ_TOKEN
-          make test
+          # Two independent Linux jobs run the same race suite and Linux-only
+          # data-path subset that `make test` previously ran sequentially.
+          # Keep the signed fork and dependency-closure gates in both jobs.
+          make verify-fork-tags check-profile-deps
+          bash scripts/test-check-vulnerabilities.sh
+          common_tags='with_quic with_utls with_wireguard with_clash_api'
+          go test -race -count=1 -timeout 30m \
+            -tags "$common_tags yue_profile_$NODE_PROFILE" ./...
+          case "$NODE_PROFILE" in
+            hy2)
+              go test -race -count=1 -timeout 30m \
+                -tags "$common_tags yue_profile_hy2" \
+                ./internal/kernel/hysteria/compatobfs/
+              ;;
+            vless)
+              go test -race -count=1 -timeout 30m \
+                -tags "$common_tags yue_profile_vless" \
+                -run 'Splice|VendoredVisionReality' ./internal/kernel/xray/
+              ;;
+          esac
           unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0
-          # The native release has no unprofiled universal yue-node binary.
-          # Build the exact selector + dependency-pruned HY2/VLESS bundle that
-          # Docker publishes instead of accidentally reviving a tagless graph.
-          make build
-          bash scripts/check-vulnerabilities.sh
+          if [ "$NODE_PROFILE" = vless ]; then
+            # One job verifies the exact selector + dependency-pruned bundle
+            # and both vulnerability views after both source suites complete.
+            make build
+            bash scripts/check-vulnerabilities.sh
+          fi
 
       - name: Validate YueBoard backend quality gates
         if: matrix.validation == 'yueboard'
