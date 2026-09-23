@@ -38,12 +38,24 @@ jobs:
           persist-credentials: false
           path: .ci-receiver
 
+      # 凭据切换开关：仓库变量 YUETO_CI_APP_CLIENT_ID 为空时跳过、沿用 PAT。
+      - name: Mint read-only YueOps token (GitHub App)
+        id: yueops_read_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueops
+          permission-contents: read
+
       - name: Check out the canonical YueOps verdict source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueops
           ref: master
-          token: ${{ secrets.YUETO_CI_PAT }}
+          token: ${{ steps.yueops_read_token.outputs.token || secrets.YUETO_CI_PAT }}
           persist-credentials: false
           path: .ci-yueops
 
@@ -134,10 +146,23 @@ jobs:
           --receipt receipt.json
           --max-age-seconds 2700
 
+      # The incident writer gets its own token scoped to issues on yueops only;
+      # the public repository's GITHUB_TOKEN never gains write permission.
+      - name: Mint YueOps incident token (GitHub App)
+        id: yueops_issue_token
+        if: ${{ always() && (failure() || cancelled()) && vars.YUETO_CI_APP_CLIENT_ID != '' }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueops
+          permission-issues: write
+
       - name: Open or update the private YueOps incident
         if: ${{ always() && (failure() || cancelled()) }}
         env:
-          GH_TOKEN: ${{ secrets.YUETO_CI_PAT }}
+          GH_TOKEN: ${{ steps.yueops_issue_token.outputs.token || secrets.YUETO_CI_PAT }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           DRILL_MISSING: ${{ github.event_name == 'workflow_dispatch' && inputs.drill_missing == true }}
         run: |

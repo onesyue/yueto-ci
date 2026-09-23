@@ -62,8 +62,9 @@ jobs:
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
-          username: onesyue
-          password: ${{ secrets.YUETO_CI_PAT }}
+          # 迁移开关见 build.yml 的 GHCR 登录；本 workflow 只需 packages: read。
+          username: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
+          password: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
 
       - name: Resolve latest to an immutable digest
         id: resolve
