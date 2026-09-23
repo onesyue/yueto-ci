@@ -54,6 +54,7 @@ jobs:
           python3 tests/test_sbom_attestation_policy.py -v
           python3 tests/test_deadman_policy.py -v
           python3 tests/test_credential_policy.py -v
+          python3 tests/test_input_shadow_policy.py -v
           python3 -m compileall -q scripts tests
           for script in scripts/*.sh; do
             bash -n "$script"

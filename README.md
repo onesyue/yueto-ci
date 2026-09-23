@@ -115,6 +115,25 @@ yueops group 派发的三个矩阵 job 并行 promote，三处同时提交根仓
 钉住这一条：workflow 里不得出现 git commit/push、根仓 contents 写 API 或 `release.yaml`，
 而 promote 步骤的 `DIGEST` / `SOURCE_SHA` / `IMAGE` env 锚点必须保留（那是 ship.sh 的输入）。
 
+## 影子分析 `input-shadow`：只报告，不跳过（2026-09-24 起）
+
+`build.yml` 的 `input-shadow` job 与验证并行，**没有任何 job `needs` 它**，
+`continue-on-error: true`，权限全是 read。它做两件事，都只写 annotation 和 step summary：
+
+1. `scripts/input-fingerprint.py shadow-ci`：对每张镜像，按 Dockerfile 实际的
+   `COPY`/`ADD`/bind 源 + **生效的** ignore 文件（`<Dockerfile>.dockerignore`，否则
+   上下文根 `.dockerignore`；`services/*/.dockerignore` 这种同目录文件 BuildKit 不读）
+   算输入指纹，与 GHCR `:latest` 的 revision 比较；再从该 digest 的 GitHub build
+   provenance 取出构建它的本仓 commit，比较 build job 文本（recipe）。输出
+   `would-skip` / `would-build` / `would-build (unknown)`。**任何构建都照常执行。**
+   本地同一实现：`python3 scripts/input-fingerprint.py compare|history --repo ../yueops ...`。
+2. `scripts/verification-evidence.py probe`（仅 promote run）：检查是否存在同一本仓
+   commit、同一 service、同一 40 位源码 SHA、同一 hosted runner 镜像版本、24 小时内
+   的成功验证。**复用是关闭的，且本轮结论是不开**：validate 里的 pip-audit / npm audit /
+   pnpm audit 结论随时间变化，身份再一致也不能代表 promote 时刻的结果。
+
+回滚：删掉 `input-shadow` job（没有消费者，删除零影响）。
+
 ## Buildx 工具版本
 
 构建、source poll、镜像重扫三个真实 Buildx 消费者共用

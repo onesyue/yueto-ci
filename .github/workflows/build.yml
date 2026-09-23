@@ -240,6 +240,61 @@ jobs:
             echo "yueboard_contract_ref=$yueboard_contract_ref"
           } >> "$GITHUB_OUTPUT"
 
+  # P2/P3 shadow analysis (2026-09-24). Read-only and NON-GATING by
+  # construction: no job `needs` it, `continue-on-error` keeps a broken probe
+  # from failing the run, and nothing reads its output. It only annotates
+  # (a) whether each image's build inputs changed since the promoted image
+  # (scripts/input-fingerprint.py) and (b) for promote runs, whether an
+  # identity-equivalent earlier verification exists
+  # (scripts/verification-evidence.py). Turning either into a skipped build
+  # or skipped validation is a separate reviewed change. It deliberately sits
+  # before `build` so the build job text (part of the recipe fingerprint)
+  # keeps the same byte slice as older revisions of this file.
+  input-shadow:
+    needs: plan
+    if: needs.plan.outputs.has_builds == 'true'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: read
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Mint read-only source token (GitHub App)
+        id: source_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueboard,yue-node,yueops
+          permission-contents: read
+      - name: Input fingerprint shadow (no build is skipped)
+        env:
+          GH_API_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GHCR_USER: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
+          GHCR_PASSWORD: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+          BUILD_MATRIX: ${{ needs.plan.outputs.matrix }}
+        run: python3 scripts/input-fingerprint.py shadow-ci --matrix "$BUILD_MATRIX"
+      - name: Verification evidence reuse probe (measurement only)
+        if: needs.plan.outputs.promote == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SHADOW_SERVICE: ${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
+          SHADOW_REF: ${{ github.event.inputs.ref || github.event.client_payload.ref || '' }}
+          VALIDATION_MATRIX: ${{ needs.plan.outputs.validation_matrix }}
+        run: >-
+          python3 scripts/verification-evidence.py probe
+          --service "$SHADOW_SERVICE" --ref "$SHADOW_REF"
+          --validation-matrix "$VALIDATION_MATRIX"
+
   validate:
     needs: plan
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-latest"]') }}
