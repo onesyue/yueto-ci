@@ -65,6 +65,38 @@ YueBoard 的未 pin 默认分支 HEAD 仍可用 `promote=false` 做完整验证�
   `command="/bin/cat /var/lib/yue-alert-heartbeat/heartbeat.json",restrict` 强制命令；
   禁止复用任何 root 部署/轮换私钥。
 
+### CI 凭据迁移：classic PAT → GitHub App + GITHUB_TOKEN（2026-09-23 起，零停机开关）
+
+`YUETO_CI_PAT` 是 classic、`repo` 全权限：本公开仓任一 workflow 被改坏，它对**全部私仓可写**。
+工作流已改成「开关优先、PAT 兜底」，业主在控制台做完下面的事、设好变量即切换，不需要改代码：
+
+| 用途 | 位置 | 迁移后凭据 | 最小权限 |
+|---|---|---|---|
+| 读 yueboard 提交 SHA（plan） | build.yml `plan` | App token | yueboard `contents:read` |
+| checkout 源码 + YueBoard 契约 | build.yml `validate` / `build` | App token | yueboard / yue-node / yueops / yuelink `contents:read` |
+| yue-node 私有 fork tag 校验 | build.yml `Validate yue-node` | App token | quic-go `contents:read` |
+| promote 前复核默认分支 HEAD | build.yml promote（**现签**一枚，因为 build job 可跑两小时而 App token 一小时过期） | App token | 三个服务源码仓 `contents:read` |
+| GHCR 推送 / 签名 / provenance | build.yml `Login to GHCR` | 本仓 `GITHUB_TOKEN`（`packages: write`） | 每个 package 授予 yueto-ci **Write** |
+| GHCR 读 | poll-sources / image-rescan | 本仓 `GITHUB_TOKEN`（`packages: read`） | 每个 package 授予 yueto-ci **Read** 以上 |
+| 读三个源码仓 HEAD | poll-sources `scan` | App token | `contents:read` |
+| 派发本仓 build.yml | poll-sources `Trigger builds` | 本仓 `GITHUB_TOKEN`（`actions: write`；workflow_dispatch 是 GITHUB_TOKEN 允许触发新 run 的例外） | — |
+| deadman 读 YueOps 判定器 | alert-chain-deadman | App token | yueops `contents:read` |
+| deadman 开事故 issue | alert-chain-deadman | 单独签发的 App token | yueops `issues:write` |
+
+GitHub App 不能认证 GHCR，所以 registry 那一半走本仓 `GITHUB_TOKEN`，前提是每个 package 在
+**Package settings → Manage Actions access** 里把 `onesyue/yueto-ci` 加进来。
+
+两个开关（Settings → Secrets and variables → Actions → **Variables**）：
+
+- `YUETO_CI_APP_CLIENT_ID`（+ secret `YUETO_CI_APP_PRIVATE_KEY`）：非空即所有源码读取改用 App token；
+  签发失败让 job 失败，**不会**静默回退 PAT。
+- `YUETO_CI_GHCR_VIA_GITHUB_TOKEN=true`：GHCR 登录改用本仓 `GITHUB_TOKEN`。
+
+两个都开并跑绿一轮（poll / build 候选 / 一次 promote / rescan / deadman 演练）后，删除 secret
+`YUETO_CI_PAT` 并在 GitHub 撤销该 classic PAT。任何一处裸用 PAT 都会被
+`tests/test_credential_policy.py` 拦下。App 的创建步骤见根仓
+`docs/2026-09-23-ci-credential-migration.md`。
+
 私有源码仓不再需要 `YUETO_CI_DISPATCH_PAT`；拉取式 poll 使用中央仓已有的
 `YUETO_CI_PAT`。`repository_dispatch` 入口仅保留给受控兼容调用，仍由可信 actor、
 完整 SHA 和默认分支 HEAD 三重门禁约束。

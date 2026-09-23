@@ -1,7 +1,8 @@
 name: Build & publish images
 
 # 统一构建仓（公开仓 = Actions 免费无上限）。
-# 私有代码仓由 YUETO_CI_PAT checkout；镜像推 ghcr.io/onesyue/<service>。
+# 私有代码仓由只读源码凭据 checkout（GitHub App 签发的短期 token；开关未设置时回退
+# 旧 YUETO_CI_PAT，见 README「CI 凭据迁移」）；镜像推 ghcr.io/onesyue/<service>。
 # 触发方式：
 #   1) 手动: workflow_dispatch，默认只产出已验证/签名的 candidate；显式 promote
 #      才能更新 sha-* / latest，且候选必须仍是对应源码仓默认分支 HEAD。YueBoard
@@ -70,6 +71,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # 凭据切换开关（README「CI 凭据迁移」）：仓库变量 YUETO_CI_APP_CLIENT_ID 为空时
+      # 本步跳过、下面沿用旧 YUETO_CI_PAT；设置后改用 GitHub App 按需签发的一小时
+      # 只读 token（contents:read，仅限列出的源码仓）。签发失败即整个 job 失败，
+      # 不会静默回退到 PAT——回退只由「变量是否设置」这一处显式决定。
+      - name: Mint read-only source token (GitHub App)
+        id: source_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          permission-contents: read
       - name: Preflight planning dependencies
         run: |
           set -euo pipefail
@@ -81,7 +96,7 @@ jobs:
           done
       - id: plan
         env:
-          GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}
+          GH_API_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           SERVICE: ${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
           REF_OVERRIDE: ${{ github.event.inputs.ref || github.event.client_payload.ref || '' }}
           EVENT_NAME: ${{ github.event_name }}
@@ -256,12 +271,26 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
+      # 凭据切换开关（README「CI 凭据迁移」）：仓库变量 YUETO_CI_APP_CLIENT_ID 为空时
+      # 本步跳过、下面沿用旧 YUETO_CI_PAT；设置后改用 GitHub App 按需签发的一小时
+      # 只读 token（contents:read，仅限列出的源码仓）。签发失败即整个 job 失败，
+      # 不会静默回退到 PAT——回退只由「变量是否设置」这一处显式决定。
+      - name: Mint read-only source token (GitHub App)
+        id: source_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.ref }}
-          token: ${{ secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           # repository_dispatch carries the source push's `before` SHA so a
           # multi-commit push cannot hide an earlier SQL migration from lint.
           fetch-depth: 0
@@ -276,7 +305,7 @@ jobs:
         with:
           repository: onesyue/yueboard
           ref: ${{ needs.plan.outputs.yueboard_contract_ref }}
-          token: ${{ secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           path: .ci-yueboard
           fetch-depth: 1
           persist-credentials: false
@@ -510,7 +539,7 @@ jobs:
         if: matrix.validation == 'yue-node'
         env:
           CGO_ENABLED: '1'
-          YUETO_FORK_READ_TOKEN: ${{ secrets.YUETO_CI_PAT }}
+          YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
         run: |
           set -euo pipefail
           [ "$(go env CGO_ENABLED)" = "1" ] || {
@@ -560,7 +589,7 @@ jobs:
           make check-generated
           go vet ./...
           scripts/ci/check-server-error-logging.sh
-          go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+          go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
           go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1 run --timeout=6m ./...
           go test ./...
           [ "$(go env CGO_ENABLED)" = "1" ] || {
@@ -628,12 +657,25 @@ jobs:
             exit 1
           }
           corepack install --global "$web_pm"
-          pnpm --dir web install --frozen-lockfile
+          # --ignore-scripts also skips esbuild's allow-listed postinstall; its
+          # per-platform @esbuild/* optional package already ships the binary.
+          pnpm --dir web install --frozen-lockfile --ignore-scripts
           pnpm --dir web build
           (cd web && node scripts/verify-dist.mjs dist)
-          pnpm --dir web-admin install --frozen-lockfile
+          pnpm --dir web-admin install --frozen-lockfile --ignore-scripts
           pnpm --dir web-admin build
           (cd web-admin && node scripts/verify-dist.mjs dist)
+          # Source-owned advisory gates (same model as YueOps'
+          # scripts/npm-audit-gate.py): the reviewed exception list lives in
+          # the YueBoard tree, never here. A checkout without them must stop.
+          for app in web web-admin; do
+            audit_gate="$app/scripts/npm-audit-gate.mjs"
+            [ -f "$audit_gate" ] || {
+              echo "::error::source-owned npm audit gate is missing: $audit_gate"
+              exit 1
+            }
+            (cd "$app" && node scripts/npm-audit-gate.mjs)
+          done
 
       - name: Validate YueBoard responsive and design contracts
         if: matrix.validation == 'yueboard'
@@ -663,7 +705,11 @@ jobs:
           # Backend pytest contains fail-closed AST contracts that import the
           # real locked TypeScript compiler. Install once before pytest; the
           # later Mini App lint/build/audit reuses this exact clean tree.
-          npm --prefix telegram-bot/yue/miniapp ci
+          # --ignore-scripts: no dependency install hook may execute inside the
+          # job that holds the source credential (npm supply-chain worms ride
+          # postinstall). The lockfile carries no build-time native deps; the
+          # only install script in it is macOS-only fsevents.
+          npm --prefix telegram-bot/yue/miniapp ci --ignore-scripts
 
       - name: Install pinned gitleaks for credential-evidence contracts
         if: matrix.validation == 'yueops'
@@ -743,7 +789,7 @@ jobs:
         working-directory: frontend
         run: |
           set -euo pipefail
-          npm ci
+          npm ci --ignore-scripts
           npm run build
           audit_gate="$GITHUB_WORKSPACE/scripts/npm-audit-gate.py"
           [ -f "$audit_gate" ] || {
@@ -838,12 +884,26 @@ jobs:
       cancel-in-progress: false
     name: ${{ matrix.service }}
     steps:
+      # 凭据切换开关（README「CI 凭据迁移」）：仓库变量 YUETO_CI_APP_CLIENT_ID 为空时
+      # 本步跳过、下面沿用旧 YUETO_CI_PAT；设置后改用 GitHub App 按需签发的一小时
+      # 只读 token（contents:read，仅限列出的源码仓）。签发失败即整个 job 失败，
+      # 不会静默回退到 PAT——回退只由「变量是否设置」这一处显式决定。
+      - name: Mint read-only source token (GitHub App)
+        id: source_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.ref }}
-          token: ${{ secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -886,11 +946,15 @@ jobs:
         with:
           registry: ghcr.io
           # Central builder publishes packages owned by several private source
-          # repositories. Keep the dedicated, scoped CI credential until each
-          # GHCR package explicitly grants this public builder repository write
-          # access; checkout never persists the PAT into .git credentials.
-          username: onesyue
-          password: ${{ secrets.YUETO_CI_PAT }}
+          # repositories. GitHub Apps cannot authenticate to GHCR, so the
+          # replacement for the classic PAT here is this job's own GITHUB_TOKEN
+          # (packages: write above). It works only after every package listed
+          # in services.json grants onesyue/yueto-ci the Write role under
+          # "Manage Actions access"; the repository variable
+          # YUETO_CI_GHCR_VIA_GITHUB_TOKEN=true is the cut-over switch and
+          # leaving it unset keeps the legacy PAT path unchanged.
+          username: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
+          password: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
 
       - name: Preflight build and promotion dependencies
         run: |
@@ -1301,13 +1365,27 @@ jobs:
             --tag "${IMAGE}:built-${SOURCE_SHA}" "${IMAGE}@${DIGEST}"
           echo "marked ${IMAGE}:built-${SOURCE_SHA} -> ${DIGEST}"
 
+      # The App token minted at job start lives one hour and this job may run
+      # up to two (multi-arch build + Trivy + signing). Mint a fresh read-only
+      # one immediately before the default-branch HEAD re-check instead.
+      - name: Mint read-only promotion token (GitHub App)
+        id: promote_token
+        if: needs.plan.outputs.promote == 'true' && vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueboard,yue-node,yueops
+          permission-contents: read
+
       # Authorization and tag mutation intentionally share one shell step:
       # splitting them creates a wider check/use window in which source HEAD
       # can move after approval but before :latest is changed.
       - name: Authorize and promote verified default-branch digest
         if: needs.plan.outputs.promote == 'true'
         env:
-          GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}
+          GH_API_TOKEN: ${{ steps.promote_token.outputs.token || secrets.YUETO_CI_PAT }}
           SOURCE_REPO: ${{ matrix.repo }}
           VALIDATION_KIND: ${{ matrix.validation }}
           SOURCE_SHA: ${{ steps.meta.outputs.source_sha }}

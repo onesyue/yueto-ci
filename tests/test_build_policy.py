@@ -755,7 +755,7 @@ class BuildPolicyTest(unittest.TestCase):
             "build-essential postgresql-client",
             "Preflight validation dependencies",
             "yue-node) tools+=(base64 docker gcc go gpg jq make)",
-            "YUETO_FORK_READ_TOKEN: ${{ secrets.YUETO_CI_PAT }}",
+            "YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}",
             "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader",
             'unset fork_auth YUETO_FORK_READ_TOKEN',
             "unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0",
@@ -1066,7 +1066,7 @@ class BuildPolicyTest(unittest.TestCase):
     def test_source_and_image_security_gates_are_present(self) -> None:
         required = (
             "scripts/check-vulnerabilities.sh",
-            "golang.org/x/vuln/cmd/govulncheck@v1.6.0",
+            "golang.org/x/vuln/cmd/govulncheck@v1.8.0",
             "scripts/security_scan.sh --json",
             "pip-audit",
             "working-directory: frontend",
@@ -1126,7 +1126,7 @@ class BuildPolicyTest(unittest.TestCase):
             "make check-generated",
             "go vet ./...",
             "scripts/ci/check-server-error-logging.sh",
-            "golang.org/x/vuln/cmd/govulncheck@v1.6.0",
+            "golang.org/x/vuln/cmd/govulncheck@v1.8.0",
             "golangci-lint@v2.13.1 run --timeout=6m ./...",
             "go test ./...",
             "go test -race ./...",

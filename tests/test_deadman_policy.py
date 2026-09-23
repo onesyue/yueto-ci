@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -56,7 +57,10 @@ def test_public_deadman_checks_both_mirror_and_private_canonical_bytes() -> None
     assert "YueOps canonical" in verify
     assert "repository: onesyue/yueops" in text
     assert "ref: master" in text
-    assert "token: ${{ secrets.YUETO_CI_PAT }}" in text
+    assert (
+        "token: ${{ steps.yueops_read_token.outputs.token || secrets.YUETO_CI_PAT }}"
+        in text
+    )
     assert text.count("persist-credentials: false") == 2
     assert text.count(
         "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
@@ -70,9 +74,12 @@ def test_public_deadman_trigger_permissions_and_missing_drill_are_fail_closed() 
     assert "drill_missing:" in text
     assert "type: boolean" in text and "default: false" in text
     assert "contents: read" in text
-    # Incidents are created in private YueOps with YUETO_CI_PAT. The public
-    # repository token never needs write permission to either repository.
-    assert "issues: write" not in text
+    # Incidents are created in private YueOps with a separately minted App
+    # token (or the legacy YUETO_CI_PAT). The public repository's own
+    # GITHUB_TOKEN never needs write permission to either repository.
+    permissions = text.split("\npermissions:\n", 1)[1].split("\n\n", 1)[0]
+    assert "write" not in permissions
+    assert re.search(r"(?m)^\s+issues:\s*write", text) is None
     assert "pull_request:" not in text
     assert "push:" not in text
 
@@ -130,7 +137,10 @@ def test_public_deadman_verdict_and_incident_are_not_best_effort() -> None:
     incident = text.split("Open or update the private YueOps incident", 1)[1]
     assert "always() && (failure() || cancelled())" in incident
     assert "repo='onesyue/yueops'" in incident
-    assert "GH_TOKEN: ${{ secrets.YUETO_CI_PAT }}" in incident
+    assert (
+        "GH_TOKEN: ${{ steps.yueops_issue_token.outputs.token || secrets.YUETO_CI_PAT }}"
+        in incident
+    )
     assert "gh label create alert-chain" in incident
     assert "gh issue create" in incident and "--assignee onesyue" in incident
     assert "DRILL_MISSING:" in incident
