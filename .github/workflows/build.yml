@@ -724,6 +724,12 @@ jobs:
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 "$YUEBOARD_ADMIN_DATABASE_URL" \
             -c 'CREATE DATABASE yueboard_clean_gate'
+          # YueBoard >= 00096 refuses to start with a database but without the
+          # subscription-token vault keys. Throwaway per-run keys: the clean
+          # database holds no real tokens, and nothing here is persisted.
+          YUEBOARD_TOKEN_ENC_KEYS="1:$(openssl rand -base64 32)"
+          YUEBOARD_TOKEN_BIDX_KEY="$(openssl rand -base64 32)"
+          export YUEBOARD_TOKEN_ENC_KEYS YUEBOARD_TOKEN_BIDX_KEY
           scripts/ci/clean-pg-gate.sh
 
       - name: Validate yueboard frontends
