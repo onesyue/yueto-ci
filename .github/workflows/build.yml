@@ -5,7 +5,8 @@ name: Build & publish images
 # 旧 YUETO_CI_PAT，见 README「CI 凭据迁移」）；镜像推 ghcr.io/onesyue/<service>。
 # 触发方式：
 #   1) 手动: workflow_dispatch，默认只产出已验证/签名的 candidate；显式 promote
-#      才能更新 sha-* / latest，且候选必须仍是对应源码仓默认分支 HEAD。YueBoard
+#      才能更新 sha-* / latest，且候选必须在对应源码仓默认分支上、本镜像构建输入与
+#      HEAD 相同、且不比 :latest 旧（P2 #11，scripts/promote-source-gate.py）。YueBoard
 #      还必须精确等于中央 native-node contract pin；未 pin HEAD 只验证且不触发 registry 写入。
 #   2) 代码仓 thin workflow: repository_dispatch
 #      (event_type: build, client_payload: {service, ref, promote})。自动提升要求
@@ -1480,6 +1481,7 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
           IMAGE: ${{ steps.meta.outputs.image }}
           SHA_TAG: sha-${{ steps.meta.outputs.source_sha }}
+          SERVICE_NAME: ${{ matrix.service }}
           EXPECTED_ARCHITECTURES: ${{ contains(matrix.platforms, 'arm64') && 'amd64,arm64' || 'amd64' }}
         run: |
           set -euo pipefail
@@ -1520,18 +1522,48 @@ jobs:
             echo "::error::unsupported source default-branch name"
             exit 1
           }
-          default_head="$(
-            curl --fail --silent --show-error --retry 3 \
-              "${api_headers[@]}" \
-              "https://api.github.com/repos/${SOURCE_REPO}/branches/${default_branch}" \
-              | jq -er '.commit.sha'
-          )"
-          if [ "$SOURCE_SHA" != "$default_head" ]; then
-            echo "::error::refusing promotion: source is not current ${SOURCE_REPO}/${default_branch} HEAD"
-            echo "candidate source: $SOURCE_SHA"
-            echo "default HEAD:    $default_head"
+          # P2 #11（design §3 step 9, 2026-09-24）：the gate is no longer "source is still
+          # default-branch HEAD" but: source is on the default branch (ancestor of or equal to
+          # HEAD) + this image's build inputs are identical at source and HEAD + the image at
+          # :latest is not newer than the source (an older candidate may not overwrite a newer
+          # promotion).  scripts/promote-source-gate.py; unknown never authorizes.  It runs
+          # here and again immediately before the tags move.
+          promote_source_gate() {
+            local latest_revision latest_image latest_error
+            latest_error="$(mktemp "${RUNNER_TEMP}/latest-inspect.XXXXXX")"
+            if latest_image="$(
+              docker buildx imagetools inspect "${IMAGE}:latest" \
+                --format '{{json .Image}}' 2>"$latest_error"
+            )"; then
+              latest_revision="$(
+                jq -r '
+                  [ .. | objects | .config? | objects | .Labels? | objects
+                    | ."org.opencontainers.image.revision"? // empty ] | first // empty
+                ' <<<"$latest_image"
+              )"
+              [[ "$latest_revision" =~ ^[0-9a-f]{40}$ ]] || {
+                echo "::error::${IMAGE}:latest carries no readable revision label"
+                rm -f -- "$latest_error"
+                return 1
+              }
+            elif grep -qiE 'not found|manifest unknown|no such manifest|404' "$latest_error" &&
+              ! grep -qiE 'denied|unauthorized|forbidden|authentication' "$latest_error"; then
+              latest_revision=none
+            else
+              echo "::error::could not determine ${IMAGE}:latest state"
+              cat "$latest_error" >&2
+              rm -f -- "$latest_error"
+              return 1
+            fi
+            rm -f -- "$latest_error"
+            python3 .ci-policy/scripts/promote-source-gate.py \
+              --repo "$SOURCE_REPO" --branch "$default_branch" --service "$SERVICE_NAME" \
+              --source "$SOURCE_SHA" --latest-revision "$latest_revision"
+          }
+          promote_source_gate || {
+            echo "::error::refusing promotion of ${SOURCE_SHA} (see the gate above)"
             exit 1
-          fi
+          }
           # sha-* remains the immutable first promoted build for a source
           # revision.  A source can be rebuilt into different bytes, so every
           # promoted digest also gets its own immutable, collision-resistant
@@ -1648,16 +1680,11 @@ jobs:
             fi
           fi
           # Narrow the unavoidable network check/use interval once more. A
-          # source push racing this step fails closed instead of moving latest
-          # to a commit that is no longer default-branch HEAD.
-          current_head="$(
-            curl --fail --silent --show-error --retry 3 \
-              "${api_headers[@]}" \
-              "https://api.github.com/repos/${SOURCE_REPO}/branches/${default_branch}" \
-              | jq -er '.commit.sha'
-          )"
-          [ "$SOURCE_SHA" = "$current_head" ] || {
-            echo "::error::source default branch moved during promotion authorization"
+          # source push racing this step that changes this image's inputs (or a
+          # force-push that takes the source off the default branch) fails closed
+          # instead of moving latest; an unrelated push no longer voids the release.
+          promote_source_gate || {
+            echo "::error::source default branch moved during promotion authorization in a way that changes this image"
             exit 1
           }
           docker buildx imagetools create \

@@ -842,14 +842,19 @@ class BuildPolicyTest(unittest.TestCase):
             r"(?m)^\s+driver-opts:\s+image=moby/buildkit:[^@\s]+\s*$",
         )
 
-    def test_promotion_is_bound_to_trusted_exact_default_head(self) -> None:
+    def test_promotion_is_bound_to_trusted_default_branch_input_gate(self) -> None:
+        # P2 #11 (2026-09-24): "still exact default-branch HEAD" became "on the default
+        # branch + this image's inputs identical to HEAD + not older than :latest",
+        # re-checked immediately before the tags move (tests/test_skip_and_source_gates.py
+        # drives the gate itself).
         required = (
             'EVENT_ACTOR" = "onesyue"',
             r"^onesyue/[A-Za-z0-9._-]+$",
             r"^[0-9a-f]{40}$",
             "repository_dispatch ref did not resolve to its exact source SHA",
             "https://api.github.com/repos/${SOURCE_REPO}",
-            "branches/${default_branch}",
+            "python3 .ci-policy/scripts/promote-source-gate.py",
+            '--branch "$default_branch"',
             "source default branch moved during promotion authorization",
             "Authorize and promote verified default-branch digest",
         )

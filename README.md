@@ -33,7 +33,8 @@ gh workflow run build.yml -R onesyue/yueto-ci -f service=all
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yuelink -f ref=<40-hex-yuelink-sha>
 
-# 只有显式 promote=true、ref 是当前默认分支 HEAD，且 YueBoard ref 精确等于
+# 只有显式 promote=true、ref 在默认分支上且本镜像构建输入与 HEAD 相同、不比 :latest 旧
+# （P2 #11，scripts/promote-source-gate.py，改标签前再判一次），且 YueBoard ref 精确等于
 # native-node-contract.json 的已评审 yueboard_contract_pin，才能提升
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yueboard -f ref=<40-hex-reviewed-contract-pin> -f promote=true
@@ -56,6 +57,12 @@ YueBoard 的未 pin 默认分支 HEAD 仍可用 `promote=false` 做完整验证�
 新产物用完整 40 位源码 SHA 作 marker；迁移期仅在旧 7 位 marker 的 OCI
 `org.opencontainers.image.revision` 精确等于当前 HEAD 时才承认已构建。registry
 权限或网络错误会 fail closed，不会伪装成“镜像不存在”触发冗余重建。
+
+P3（2026-09-24）：缺 marker 的镜像若与已 promote 的 `:latest` **构建输入完全相同**——
+先用 `gh attestation verify` 验过它的 build provenance、recipe（services.json 条目 + build job
+文本）未变、promoted revision 是 HEAD 的祖先、Dockerfile 没有浮动 `# syntax=` frontend——
+就不派发它的构建（`scripts/poll-skip-decision.py`）。任何一项测不到都照常构建；跳过不打
+`built-*` 标签（旧产物保留原来的源码身份），下一轮 poll 会再问一次。
 
 ## 必需的 secrets（仓库 Settings → Secrets → Actions）
 
