@@ -478,7 +478,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.local/share/pnpm/store
-          key: yue-pnpm-v1-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml', 'web-admin/pnpm-lock.yaml') }}
+          key: yue-pnpm-v1-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'web/pnpm-lock.yaml', 'web-admin/pnpm-lock.yaml') }}
 
       # yue-node intentionally keeps its complete race/profile test contract
       # in Makefile. The Go race detector also requires CGO plus a native C
@@ -733,36 +733,152 @@ jobs:
           export YUEBOARD_TOKEN_ENC_KEYS YUEBOARD_TOKEN_BIDX_KEY
           scripts/ci/clean-pg-gate.sh
 
+      # 两种前端布局（W9.1，2026-09-24）：pnpm-workspace.yaml 在仓根 = 新布局，仓根唯一一份
+      # pnpm-lock.yaml、仓根 packageManager、一次 root install；否则 = 旧布局（web / web-admin
+      # 各自一份锁与 packageManager）。旧 commit 必须仍能按原路径复核，所以两条路径并存；
+      # 判定只看这一个标记，并以 step 输出交给后面三个只属于新布局的阶段。
       - name: Validate yueboard frontends
+        id: board_frontend
         if: matrix.validation == 'yueboard'
         run: |
+          set -euo pipefail
           corepack enable
-          web_pm=$(node -p "require('./web/package.json').packageManager")
-          admin_pm=$(node -p "require('./web-admin/package.json').packageManager")
-          [ "$web_pm" = "$admin_pm" ] || {
-            echo "YueBoard frontend package-manager versions diverged" >&2
-            exit 1
-          }
-          corepack install --global "$web_pm"
-          # --ignore-scripts also skips esbuild's allow-listed postinstall; its
-          # per-platform @esbuild/* optional package already ships the binary.
-          pnpm --dir web install --frozen-lockfile --ignore-scripts
-          pnpm --dir web build
-          (cd web && node scripts/verify-dist.mjs dist)
-          pnpm --dir web-admin install --frozen-lockfile --ignore-scripts
-          pnpm --dir web-admin build
-          (cd web-admin && node scripts/verify-dist.mjs dist)
+          if [ -f pnpm-workspace.yaml ]; then
+            layout=workspace
+            root_pm=$(node -p "require('./package.json').packageManager || ''")
+            [ -n "$root_pm" ] || {
+              echo "::error::YueBoard workspace layout without a root packageManager"
+              exit 1
+            }
+            corepack install --global "$root_pm"
+            # --ignore-scripts also skips esbuild's allow-listed postinstall; its
+            # per-platform @esbuild/* optional package already ships the binary.
+            pnpm install --frozen-lockfile --ignore-scripts
+            pnpm --filter yueboard-web --filter yueboard-web-admin run build
+            (cd web && node scripts/verify-dist.mjs dist)
+            (cd web-admin && node scripts/verify-dist.mjs dist)
+          else
+            layout=legacy
+            web_pm=$(node -p "require('./web/package.json').packageManager")
+            admin_pm=$(node -p "require('./web-admin/package.json').packageManager")
+            [ "$web_pm" = "$admin_pm" ] || {
+              echo "YueBoard frontend package-manager versions diverged" >&2
+              exit 1
+            }
+            corepack install --global "$web_pm"
+            pnpm --dir web install --frozen-lockfile --ignore-scripts
+            pnpm --dir web build
+            (cd web && node scripts/verify-dist.mjs dist)
+            pnpm --dir web-admin install --frozen-lockfile --ignore-scripts
+            pnpm --dir web-admin build
+            (cd web-admin && node scripts/verify-dist.mjs dist)
+          fi
+          echo "layout=$layout" >> "$GITHUB_OUTPUT"
+          echo "YueBoard frontend layout: $layout"
           # Source-owned advisory gate (same model as YueOps'
           # scripts/npm-audit-gate.py): the reviewed exception list lives in
           # the YueBoard tree, never here. A checkout without it must stop.
           # Exit 0 = pass, 1 = blocking advisory, 2 = the gate itself failed;
-          # anything non-zero stops the release (2 is never a pass).
+          # anything non-zero stops the release (2 is never a pass). The same
+          # project-name call works in both layouts (workspace mode audits the
+          # root lock once and requires each name to be a workspace member).
           audit_gate="scripts/ci/pnpm-audit-gate.mjs"
           [ -f "$audit_gate" ] || {
             echo "::error::source-owned pnpm audit gate is missing: $audit_gate"
             exit 1
           }
           node "$audit_gate" web web-admin
+
+      # 以下三个阶段只存在于新布局（W9.2–W9.6 与 W9.1 同批落地，没有「workspace 但缺它们」
+      # 的合法 commit）：新布局下缺任何一个入口都是 FATAL，不是跳过；旧布局整段不适用。
+      - name: Validate YueBoard frontend lint
+        if: matrix.validation == 'yueboard' && steps.board_frontend.outputs.layout == 'workspace'
+        run: |
+          set -euo pipefail
+          for script in lint fmt:check; do
+            node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" || {
+              echo "::error::YueBoard workspace layout is missing the root '$script' script"
+              exit 1
+            }
+          done
+          # Oxlint type-aware ratchet: exit 2 = the gate itself failed (tsgolint or
+          # the React Compiler rules did not run), never a pass.
+          pnpm run lint
+          pnpm run fmt:check
+
+      - name: Validate YueBoard component tests
+        if: matrix.validation == 'yueboard' && steps.board_frontend.outputs.layout == 'workspace'
+        run: |
+          set -euo pipefail
+          node -e "process.exit(require('./package.json').scripts?.['test:components'] ? 0 : 1)" || {
+            echo "::error::YueBoard workspace layout is missing the root 'test:components' script"
+            exit 1
+          }
+          # The locked Playwright's Chromium (version comes from the root lock).
+          # --with-deps needs apt as root; the self-hosted release runner keeps
+          # its system libraries provisioned and gets the browser only.
+          deps=()
+          if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then deps=(--with-deps); fi
+          pnpm --dir web exec playwright install "${deps[@]}" chromium
+          pnpm run test:components
+
+      # 正式 E2E（W9.5/9.6）：真 PG18（本 job 的 service，建一个抛弃库）+ embed_frontend 真面板
+      # 二进制 + 真 Chromium。视觉基线按平台分文件：-darwin 由工作站维护，-linux 只在这里生成。
+      # 源码里一张 -linux 基线都没有 = 自举：按 changed 模式写出全部 Linux 基线并作为产物上传，
+      # 本轮视觉**未比对**（醒目 warning + job summary）；有任何一张就正常比对，缺的那张照样红。
+      - name: Validate YueBoard end-to-end suite
+        id: board_e2e
+        if: matrix.validation == 'yueboard' && steps.board_frontend.outputs.layout == 'workspace'
+        env:
+          YUEBOARD_ADMIN_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/postgres' || 'postgres://postgres:ci@127.0.0.1:5432/postgres' }}
+          YUEBOARD_E2E_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_e2e?sslmode=disable' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_e2e?sslmode=disable' }}
+          YUEBOARD_E2E_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE
+        run: |
+          set -euo pipefail
+          [ -f test/e2e/playwright.config.ts ] || {
+            echo "::error::YueBoard workspace layout is missing the test/e2e suite"
+            exit 1
+          }
+          psql -v ON_ERROR_STOP=1 "$YUEBOARD_ADMIN_DATABASE_URL" \
+            -c 'DROP DATABASE IF EXISTS yueboard_e2e' -c 'CREATE DATABASE yueboard_e2e'
+          deps=()
+          if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then deps=(--with-deps); fi
+          pnpm --dir test/e2e exec playwright install "${deps[@]}" chromium
+          shots=test/e2e/specs/__screenshots__
+          if find "$shots" -name '*-linux.png' 2>/dev/null | grep -q .; then
+            echo "visual=compared" >> "$GITHUB_OUTPUT"
+            pnpm --dir test/e2e test
+          else
+            echo "visual=bootstrapped" >> "$GITHUB_OUTPUT"
+            echo "::warning::YueBoard has no committed -linux visual baselines: generating them (visual NOT compared this run); commit the yueboard-e2e-linux-baselines artifact"
+            {
+              echo "### YueBoard E2E visual baselines"
+              echo "No \`-linux\` baselines in the source tree: this run **generated** them and did **not** compare."
+              echo "Download the \`yueboard-e2e-linux-baselines\` artifact and commit it under \`$shots/\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            pnpm --dir test/e2e exec playwright test --update-snapshots=changed
+          fi
+
+      - name: Upload YueBoard E2E Linux baselines
+        if: always() && matrix.validation == 'yueboard' && steps.board_e2e.outputs.visual == 'bootstrapped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: yueboard-e2e-linux-baselines
+          path: test/e2e/specs/__screenshots__/**/*-linux.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload YueBoard E2E report
+        if: failure() && matrix.validation == 'yueboard' && steps.board_e2e.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: yueboard-e2e-report
+          path: |
+            test/e2e/playwright-report/
+            test/e2e/test-results/
+            test/e2e/.state/server.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Validate YueBoard responsive and design contracts
         if: matrix.validation == 'yueboard'

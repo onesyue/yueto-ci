@@ -385,8 +385,9 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("本仓保持 public 时不得注册常驻 self-hosted runner", self.readme)
         self.assertIn("`--ephemeral --disableupdate` runner", self.readme)
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
-        # Service mapping + integration DSNs + isolated clean-PG DSNs.
-        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 5)
+        # Service mapping + integration DSNs + isolated clean-PG DSNs +
+        # the disposable E2E admin/app DSNs.
+        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 7)
 
     def test_source_poller_is_unconditional(self) -> None:
         """poller 不许有路径过滤——「每个提交都被中央验证」靠的就是这一点。
@@ -1164,7 +1165,32 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("/yueboard_test", clean)
 
         frontend = self.workflow[frontend_start:design_start]
-        self.assertEqual(frontend.count("node scripts/verify-dist.mjs dist"), 2)
+        # Two layouts (W9.1): legacy per-app locks and the root pnpm
+        # workspace; each verifies both embedded dists.
+        self.assertEqual(frontend.count("node scripts/verify-dist.mjs dist"), 4)
+        self.assertIn("if [ -f pnpm-workspace.yaml ]; then", frontend)
+        self.assertIn("pnpm install --frozen-lockfile --ignore-scripts\n", frontend)
+        self.assertIn('echo "layout=$layout" >> "$GITHUB_OUTPUT"', frontend)
+        workspace_only = "steps.board_frontend.outputs.layout == 'workspace'"
+        for stage, gates in (
+            ("- name: Validate YueBoard frontend lint", ("pnpm run lint", "pnpm run fmt:check")),
+            ("- name: Validate YueBoard component tests", ("pnpm run test:components",)),
+            ("- name: Validate YueBoard end-to-end suite", ("pnpm --dir test/e2e test",)),
+        ):
+            start = frontend.index(stage)
+            body = frontend[start : frontend.index("\n      - name:", start + 1)]
+            with self.subTest(stage=stage):
+                self.assertIn(workspace_only, body)
+                # Missing entry points in the new layout are FATAL, not a skip.
+                self.assertIn("::error::YueBoard workspace layout is missing", body)
+                for gate in gates:
+                    self.assertIn(gate, body)
+        e2e = frontend[frontend.index("- name: Validate YueBoard end-to-end suite") :]
+        # Bootstrapping Linux baselines is loud and only happens when none exist.
+        self.assertIn("-name '*-linux.png'", e2e)
+        self.assertIn("::warning::YueBoard has no committed -linux visual baselines", e2e)
+        self.assertIn("steps.board_e2e.outputs.visual == 'bootstrapped'", e2e)
+        self.assertIn("YUEBOARD_E2E_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE", e2e)
         design = self.workflow[design_start:yueops_start]
         for script in (
             "scripts/ci/verify-responsive.mjs",
