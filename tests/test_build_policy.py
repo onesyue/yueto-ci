@@ -1466,7 +1466,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(self.native_contract["schema_floor"], 106)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
-            "9e9abc47bce9e1e85d7ba7b44cbede2015217c6b",
+            "651a5e7e95bc09444f3f95d8fc2583e6fb00da27",
         )
         self.assertEqual(
             self.native_contract["presence"],
@@ -1610,6 +1610,19 @@ class BuildPolicyTest(unittest.TestCase):
                         ["shadowrocket", "小火箭"],
                         "test client catalogue",
                     )
+
+        catalogue = 'export const SUBSCRIPTION_CLIENTS: readonly SubscriptionClient[] = [{id: "clash"}] as const;'
+        validator.validate_managed_subscription_catalogue(
+            catalogue + '\nexport function shadowrocketSubscriptionURL() {}'
+        )
+        for spelling in ("Shadowrocket", "SHADOWROCKET", "小火箭", "surfboard"):
+            with self.subTest(managed_client=spelling):
+                with self.assertRaisesRegex(RuntimeError, "unsupported managed client catalogue"):
+                    validator.validate_managed_subscription_catalogue(catalogue.replace('"clash"', repr(spelling)))
+        for missing in ("", 'export const SUBSCRIPTION_CLIENTS = [] as const;', catalogue + catalogue):
+            with self.subTest(missing_catalogue=missing):
+                with self.assertRaisesRegex(RuntimeError, "missing or ambiguous"):
+                    validator.validate_managed_subscription_catalogue(missing)
 
     def test_yue_node_proto_gate_compares_real_canonical_bytes_and_hashes(
         self,

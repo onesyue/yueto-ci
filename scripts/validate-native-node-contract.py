@@ -163,6 +163,20 @@ def forbid_casefold(text: str, fragments: list[str], source: str) -> None:
         raise RuntimeError(f"{source} contains retired contract fragments: {present!r}")
 
 
+def validate_managed_subscription_catalogue(text: str) -> None:
+    """Manual node-list exports do not promise a managed routing profile."""
+    catalogues = re.findall(
+        r"export const SUBSCRIPTION_CLIENTS\b[^=]*=\s*(\[.*?\])\s*as const;",
+        text, re.DOTALL,
+    )
+    if len(catalogues) != 1 or not re.search(r"\bid\s*:", catalogues[0]):
+        raise RuntimeError("YueBoard managed client catalogue is missing or ambiguous")
+    forbid_casefold(
+        catalogues[0], ["shadowrocket", "小火箭", "surfboard"],
+        "YueBoard unsupported managed client catalogue",
+    )
+
+
 def forbid_paths(root: Path, paths: list[str], source: str) -> None:
     """Fail if a retired source path is restored.
 
@@ -996,10 +1010,15 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         ],
         "YueBoard retired Portal installation and unsupported client catalogue",
     )
-    forbid_casefold(
-        web_runtime,
-        ["shadowrocket", "小火箭"],
-        "YueBoard unsupported client catalogue",
+    # 2026-09-24: the approved compatibility section exposes copy-only node
+    # subscriptions and explains HTTPS latency testing. It must not silently
+    # promote Shadowrocket into the managed-profile/one-click catalogue.
+    validate_managed_subscription_catalogue(subscription_client)
+    forbid_casefold(web_runtime, ["shadowrocket://"], "YueBoard unsupported one-click import")
+    require(
+        subscription_client,
+        ["export function shadowrocketSubscriptionURL(", "new URL(requireSubscriptionURL(rawURL))"],
+        "YueBoard validated manual node-list exports",
     )
     require(
         subscription_client_test,
