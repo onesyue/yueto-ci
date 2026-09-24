@@ -538,6 +538,47 @@ jobs:
           gcc --version
           psql --version
 
+      # Ops migration/row-lock fixtures create isolated clusters, so the
+      # service container and psql client alone do not satisfy this dependency.
+      # Pin the stable server major instead of Ubuntu's default meta-package.
+      - name: Install native YueOps PostgreSQL 18 test toolchain
+        if: matrix.validation == 'yueops'
+        run: |
+          set -euo pipefail
+          pg_bin=/usr/lib/postgresql/18/bin
+          if [ ! -x "$pg_bin/postgres" ]; then
+            elevate=()
+            if [ "$(id -u)" -ne 0 ]; then
+              elevate=(sudo -n)
+            fi
+            "${elevate[@]}" apt-get update
+            "${elevate[@]}" apt-get install -y --no-install-recommends ca-certificates curl gnupg
+            . /etc/os-release
+            [[ "$VERSION_CODENAME" =~ ^[a-z]+$ ]]
+            pg_key="${RUNNER_TEMP:?}/pgdg.asc"
+            curl --fail --silent --show-error --location \
+              --proto '=https' --proto-redir '=https' --tlsv1.2 \
+              https://www.postgresql.org/media/keys/ACCC4CF8.asc --output "$pg_key"
+            fingerprint=$(gpg --batch --show-keys --with-colons "$pg_key" | awk -F: '$1 == "fpr" {print $10; exit}')
+            [ "$fingerprint" = B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 ]
+            "${elevate[@]}" install -d -m0755 /usr/share/postgresql-common/pgdg
+            "${elevate[@]}" install -m0644 "$pg_key" /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+            printf '%s\n' \
+              'Types: deb' 'URIs: https://apt.postgresql.org/pub/repos/apt' \
+              "Suites: ${VERSION_CODENAME}-pgdg" 'Components: main' \
+              'Signed-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc' \
+              | "${elevate[@]}" tee /etc/apt/sources.list.d/pgdg.sources >/dev/null
+            "${elevate[@]}" apt-get update
+            "${elevate[@]}" apt-get install -y --no-install-recommends postgresql-18 postgresql-client-18
+          fi
+          for tool in postgres initdb pg_ctl psql; do
+            [ -x "$pg_bin/$tool" ]
+            "$pg_bin/$tool" --version | grep -E '\(PostgreSQL\) 18[.]'
+          done
+          # These fixtures use initdb as the runner user, never a production DB.
+          [ "$(id -u)" -ne 0 ] || { echo '::error::native PostgreSQL fixtures require a non-root runner'; exit 1; }
+          echo "$pg_bin" >> "$GITHUB_PATH"
+
       - name: Preflight validation dependencies
         env:
           VALIDATION_KIND: ${{ matrix.validation }}
@@ -547,7 +588,7 @@ jobs:
           case "$VALIDATION_KIND" in
             yue-node) tools+=(base64 docker gcc go gpg jq make) ;;
             yueboard) tools+=(buf corepack docker gcc go make node psql) ;;
-            yueops) tools+=(docker jq node npm uv) ;;
+            yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql uv) ;;
             yuelink) ;;
             *)
               echo "::error::unsupported validation kind: $VALIDATION_KIND"
