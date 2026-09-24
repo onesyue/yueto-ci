@@ -1433,9 +1433,9 @@ class BuildPolicyTest(unittest.TestCase):
         # hot-path-index and runtime-role migration. The floor-57 authority
         # retirement ceremony has also landed, so neither the old decoupled-at-55
         # value nor the superseded floor 57 is deployable. Keep the
-        # central policy, pinned YueBoard tree and YueOps MIN_SCHEMA_FLOOR on
-        # this exact reviewed value; the cross-repository validator checks the
-        # latter two as well.
+        # central policy and pinned YueBoard tree on this exact reviewed value (the
+        # YueOps three-stage deployer is retired/frozen since P2 §4 A3; the
+        # validator requires its RETIRED marker instead of a live floor).
         self.assertIsInstance(self.native_contract["schema_floor"], int)
         self.assertEqual(self.native_contract["schema_floor"], 97)
         self.assertEqual(

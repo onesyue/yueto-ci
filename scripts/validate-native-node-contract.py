@@ -641,12 +641,16 @@ def validate_yueops(
         ['add_parser("gates")', "CHANGE_NODE_AUTH_GATES", "WAIVE-NODE-LEGACY"],
         "YueOps credential hard cut",
     )
+    # P2 §4 A3 (2026-09-24): the three-stage deployer is retired and frozen at its
+    # last reviewed pin; panel-deploy.sh reads the signed release.yaml desired
+    # state instead.  Require the retirement marker so the frozen floor can never
+    # be mistaken for (or silently re-promoted to) the live schema contract.
     floor = read(root / "scripts/deploy-yueboard-panel.sh")
-    require(
-        floor,
-        [f"MIN_SCHEMA_FLOOR={contract['schema_floor']}"],
-        "YueOps YueBoard deployer",
-    )
+    require(floor, ["RETIRED (P2 §4 A3"], "YueOps retired YueBoard deployer")
+    if (root / "scripts/yueboard-schema-release.env").exists():
+        raise RuntimeError(
+            "YueOps scripts/yueboard-schema-release.env is retired (P2 §4 A3)"
+        )
 
 
 def validate_yueboard(root: Path, contract: dict) -> None:
