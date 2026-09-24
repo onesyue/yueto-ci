@@ -15,6 +15,10 @@ name: Poll sources for unbuilt commits
 # 必须有人去签发、去轮换、去记得补的凭据。
 #
 # 🚨 只构建，绝不 promote。promote 有 pin 对齐门禁，发版必须是有意为之的动作。
+#
+# P3（2026-09-24）：缺 built- 标签的镜像若构建输入与已 promote 镜像完全相同（provenance 先由
+# gh attestation verify 验过、recipe 未变、promoted 是 HEAD 的祖先），就不派发它的构建；
+# 判不了一律构建（scripts/poll-skip-decision.py）。
 # 今天要解决的问题是「以为有镜像其实没有」，不是「镜像没有自动上线」。
 #
 # 「是否已构建」只从**真实产物**判断：build.yml 在过完 Trivy / cosign /
@@ -42,6 +46,9 @@ permissions:
   # 开关未设置时这两项闲置，行为与旧 PAT 路径完全一致。
   packages: read
   actions: write
+  # P3（2026-09-24）：跳过「输入未变」的构建之前，先用 gh attestation verify 验已 promote
+  # 镜像的 build provenance（只读）。
+  attestations: read
 
 concurrency:
   # 一轮没跑完就不要再开一轮：否则两轮会对同一个 commit 各派一次构建。
@@ -87,6 +94,12 @@ jobs:
         id: scan
         env:
           GH_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          # P3 skip decision (scripts/poll-skip-decision.py): source trees via the source
+          # token, provenance / recipe via this repo's token, :latest via the GHCR login pair.
+          GH_API_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GHCR_USER: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
+          GHCR_PASSWORD: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
         run: |
           set -euo pipefail
 
@@ -174,7 +187,34 @@ jobs:
             fi
 
             echo "→ ${grp}: ${repo}@${short} missing image(s): ${missing[*]}"
-            pending=$(jq -c --arg g "$grp" --arg s "$sha" --arg r "$repo" \
+
+            # P3（设计 §3 第 8 步，2026-09-24）：缺标签的镜像里，构建输入与已 promote 镜像
+            # 完全相同（且 provenance 已验、recipe 未变、promoted 是 HEAD 的祖先、没有浮动
+            # frontend）的那几张不派发构建。判不了（unknown / 工具挂 / API 不通）= 全部构建。
+            # 跳过的镜像不打 built- 标签（旧产物保留原来的源码身份，计划 §6.2），下一轮照样再问。
+            build=("${missing[@]}")
+            services_csv=$(IFS=,; echo "${missing[*]}")
+            if decision=$(python3 scripts/poll-skip-decision.py \
+                  --repo "$repo" --head "$sha" --services "$services_csv") &&
+               jq -e '(.build | type == "array") and (.skip | type == "array")' <<<"$decision" >/dev/null; then
+              mapfile -t build < <(jq -r '.build[]' <<<"$decision")
+              while IFS=$'\t' read -r svc why; do
+                echo "  · ${svc}: ${why}"
+              done < <(jq -r '.reasons | to_entries[] | "\(.key)\t\(.value)"' <<<"$decision")
+            else
+              echo "::warning::${grp}: P3 skip decision unavailable — building every missing image (unknown is never a skip)"
+            fi
+            if [ "${#build[@]}" -eq 0 ]; then
+              echo "✓ ${grp}: ${repo}@${short} — every missing image has unchanged, provenance-verified inputs; no build dispatched"
+              continue
+            fi
+            # 只剩一张要建时只派发那一张（跳过另外两张的 validate+build 分钟）；两张及以上
+            # 仍按组派发一次（validate-yueops 只跑一遍，多建的那张比多跑一遍 validate 便宜）。
+            target="$grp"
+            if [ "${#build[@]}" -eq 1 ] && [ "${#missing[@]}" -gt 1 ]; then
+              target="${build[0]}"
+            fi
+            pending=$(jq -c --arg g "$target" --arg s "$sha" --arg r "$repo" \
               '. + [{group:$g, sha:$s, repo:$r}]' <<<"$pending")
           done < <(jq -c '.[]' <<<"$groups")
 
