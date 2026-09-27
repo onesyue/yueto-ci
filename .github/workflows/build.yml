@@ -37,9 +37,9 @@ on:
         description: 'runner label; self-hosted fallback is manual-only'
         required: true
         type: choice
-        default: ubuntu-latest
+        default: ubuntu-24.04
         options:
-          - ubuntu-latest
+          - ubuntu-24.04
           - yue-local-release
   repository_dispatch:
     types: [build]
@@ -56,7 +56,7 @@ concurrency:
 
 jobs:
   plan:
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-latest"]') }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     # Bounded on purpose: the Actions default is 360 minutes, and a wedged
     # job would hold its concurrency group (and the release) for six hours.
     # Floors come from the 2026-09 run history: plan <1 min, validate
@@ -102,6 +102,7 @@ jobs:
           REF_OVERRIDE: ${{ github.event.inputs.ref || github.event.client_payload.ref || '' }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_ACTOR: ${{ github.actor }}
+          WORKFLOW_GIT_REF: ${{ github.ref }}
           MANUAL_PROMOTE: ${{ github.event.inputs.promote || 'false' }}
           DISPATCH_PROMOTE: ${{ github.event.client_payload.promote || 'false' }}
           MANUAL_YUEBOARD_CONTRACT_REF: ${{ github.event.inputs.yueboard_contract_ref || '' }}
@@ -168,6 +169,25 @@ jobs:
           if [[ "$REF_OVERRIDE" =~ ^[0-9a-f]{7,39}$ ]]; then
             echo "short commit refs are not reproducible; pass the exact 40-hex source SHA" >&2
             exit 1
+          fi
+          if [ "$promote" = true ]; then
+            # C3 (2026-09-27): validate and build check out the source in two
+            # different jobs minutes apart. A branch/tag ref (or the empty
+            # default, i.e. the registry's `master`) can move in between, so
+            # the image could be built from a commit validate never judged.
+            # A promotion therefore names one immutable commit, for every
+            # event type (repository_dispatch already required this).
+            [[ "$REF_OVERRIDE" =~ ^[0-9a-f]{40}$ ]] || {
+              echo "promotion requires an exact 40-hex source ref so validate and build judge the same commit" >&2
+              exit 1
+            }
+            # C2 (2026-09-27): production verifiers accept exactly
+            # build.yml@refs/heads/master. A promote dispatched from any other
+            # yueto-ci ref would move tags to a digest no deployer can verify.
+            [ "$WORKFLOW_GIT_REF" = "refs/heads/master" ] || {
+              echo "promotion must run from yueto-ci refs/heads/master, the only signing identity production accepts" >&2
+              exit 1
+            }
           fi
           if [ "$EVENT_NAME" = "workflow_dispatch" ] &&
              [ "$promote" = true ] &&
@@ -255,7 +275,7 @@ jobs:
     needs: plan
     if: needs.plan.outputs.has_builds == 'true'
     continue-on-error: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -298,7 +318,7 @@ jobs:
 
   validate:
     needs: plan
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-latest"]') }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 60
     # The central gate must judge time-dependent tests in the same clock
     # everywhere: GitHub-hosted runners are UTC, the manual self-hosted
@@ -446,11 +466,19 @@ jobs:
       # Keep the protocol owner as the policy owner: central CI installs the
       # compiler, then executes YueBoard's checked-in lint + breaking script.
       # The setup action is pinned, and the CLI is an exact current release.
+      # 2026-09-27: bufbuild/buf-setup-action is archived and declares node20
+      # (removed from GitHub runners 2026-09-23). buf-action is its successor;
+      # `setup_only` keeps it an installer (no lint/format/breaking/push of its
+      # own), and `checksum` verifies the buf-Linux-x86_64 v1.72.0 binary
+      # (GitHub release asset digest == the release's sha256.txt, 2026-09-27)
+      # on every path, including a buf already on PATH.
       - name: Set up Buf for YueBoard protocol compatibility
         if: matrix.validation == 'yueboard'
-        uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
+        uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
         with:
           version: '1.72.0'
+          checksum: 8720830e26a733da55bb89bcd3cb44849c0965fc0c44fb5d691cccdc64dca5af
+          setup_only: true
           github_token: ${{ github.token }}
 
       # Front-end dependency caches (2026-08-31). Both stores are
@@ -632,12 +660,41 @@ jobs:
           --kind '${{ matrix.validation }}' --source .
           ${{ (matrix.validation == 'yue-node' || matrix.validation == 'yueops') && '--yueboard-contract-source .ci-yueboard' || '' }}
 
+      # C1 (2026-09-27): the private-fork read credential lives ONLY in this
+      # step. It verifies the signed fork tags and nothing else; the step's env
+      # (and the git extraheader built from it) vanishes when the step ends, so
+      # no later step -- in particular the one that executes third-party Go
+      # test code -- can read it. Never fold this back into the test step:
+      # `unset` cannot take back a variable a child process already inherited.
+      - name: Verify yue-node signed fork tags
+        if: matrix.validation == 'yue-node'
+        env:
+          YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+        run: |
+          set -euo pipefail
+          [ -n "$YUETO_FORK_READ_TOKEN" ] || {
+            echo "::error::private fork tag verification requires the read-only CI identity"
+            exit 1
+          }
+          # checkout credentials are deliberately non-persistent. Supply the
+          # same repository-scoped identity only to this one make invocation,
+          # without writing a credential helper or authenticated URL to Git
+          # config and without exporting it into this shell.
+          fork_auth="$(printf 'x-access-token:%s' "$YUETO_FORK_READ_TOKEN" | base64 -w0)"
+          GIT_CONFIG_COUNT=1 \
+          GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \
+          GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $fork_auth" \
+            make verify-fork-tags
+
+      # Credential-free by construction: no secret, token or git auth config
+      # reaches this step. The dependency tree is vendored (vendor/modules.txt),
+      # so -mod=vendor needs no module download and no private-fork access.
       - name: Validate yue-node
         if: matrix.validation == 'yue-node'
         env:
           CGO_ENABLED: '1'
+          GOFLAGS: -mod=vendor
           NODE_PROFILE: ${{ matrix.node_profile }}
-          YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
         run: |
           set -euo pipefail
           case "$NODE_PROFILE" in
@@ -648,22 +705,15 @@ jobs:
             echo "::error::Go race validation requires CGO_ENABLED=1"
             exit 1
           }
-          [ -n "$YUETO_FORK_READ_TOKEN" ] || {
-            echo "::error::private fork tag verification requires the read-only CI identity"
+          [ -f vendor/modules.txt ] || {
+            echo "::error::yue-node must stay vendored: the credential-free test step cannot fetch private forks"
             exit 1
           }
-          # checkout credentials are deliberately non-persistent. Supply the
-          # same repository-scoped identity only to this process tree, without
-          # writing a credential helper or authenticated URL to Git config.
-          fork_auth="$(printf 'x-access-token:%s' "$YUETO_FORK_READ_TOKEN" | base64 -w0)"
-          export GIT_CONFIG_COUNT=1
-          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
-          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $fork_auth"
-          unset fork_auth YUETO_FORK_READ_TOKEN
           # Two independent Linux jobs run the same race suite and Linux-only
           # data-path subset that `make test` previously ran sequentially.
-          # Keep the signed fork and dependency-closure gates in both jobs.
-          make verify-fork-tags check-profile-deps
+          # The signed fork gate ran in the step above; keep the
+          # dependency-closure gate in both jobs.
+          make check-profile-deps
           bash scripts/test-check-vulnerabilities.sh
           common_tags='with_quic with_utls with_wireguard with_clash_api'
           go test -race -count=1 -timeout 30m \
@@ -680,7 +730,6 @@ jobs:
                 -run 'Splice|VendoredVisionReality' ./internal/kernel/xray/
               ;;
           esac
-          unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0
           if [ "$NODE_PROFILE" = vless ]; then
             # One job verifies the exact selector + dependency-pruned bundle
             # and both vulnerability views after both source suites complete.
@@ -1112,7 +1161,7 @@ jobs:
     # target therefore skips this job without asking Actions to expand or run
     # an empty Docker matrix.
     if: needs.plan.outputs.has_builds == 'true'
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-latest"]') }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 120
     permissions:
       contents: read
@@ -1218,7 +1267,7 @@ jobs:
         id: meta
         env:
           EVENT_NAME: ${{ github.event_name }}
-          RUNNER_KIND: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
+          RUNNER_KIND: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}
         run: |
           set -euo pipefail
           SOURCE_SHA=$(git rev-parse HEAD)
@@ -1290,6 +1339,13 @@ jobs:
             printf '%s_digest=%s\n' "$arch" "$platform_digest" >>"$GITHUB_OUTPUT"
           done
 
+      # C6 (2026-09-27): this job holds id-token: write and packages: write.
+      # The scanner must not be a binary fetched at run time and checked only
+      # against its own release's checksum file; install one reviewed sha256
+      # (same pattern as Buildx / actionlint) and make trivy-action reuse it.
+      - name: Install verified Trivy
+        run: bash .ci-policy/scripts/install-verified-trivy.sh
+
       # Only actionable vulnerabilities block: unfixed distro findings remain
       # visible in scheduled scans but cannot be remediated by rebuilding.
       - name: Block fixed HIGH/CRITICAL vulnerabilities (linux/amd64)
@@ -1306,7 +1362,7 @@ jobs:
           severity: HIGH,CRITICAL
           timeout: 15m
           trivyignores: .ci-policy/.trivyignore
-          version: v0.74.0
+          skip-setup-trivy: true
 
       - name: Block fixed HIGH/CRITICAL vulnerabilities (linux/arm64)
         if: contains(matrix.platforms, 'arm64')
@@ -1323,7 +1379,6 @@ jobs:
           severity: HIGH,CRITICAL
           timeout: 15m
           trivyignores: .ci-policy/.trivyignore
-          version: v0.74.0
           skip-setup-trivy: true
 
       - name: Install cosign

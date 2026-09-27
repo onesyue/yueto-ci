@@ -110,7 +110,11 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
                     permissions[0], {("contents", "read"), ("issues", "write")}
                 )
                 if permissions[0] == ("issues", "write"):
-                    self.assertEqual(name, "alert-chain-deadman.yml")
+                    # The two incident writers (deadman; image-rescan since
+                    # 2026-09-27 C5), each only on the private YueOps repo.
+                    self.assertIn(
+                        name, {"alert-chain-deadman.yml", "image-rescan.yml"}
+                    )
                     self.assertEqual(repos.group(1), "yueops")
 
     def test_promotion_mints_a_fresh_token_right_before_the_head_recheck(self) -> None:

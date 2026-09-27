@@ -8,8 +8,16 @@ name: Production alert-chain deadman
 
 on:
   schedule:
-    # Avoid the top-of-hour scheduling surge. The canonical policy allows a
-    # 45-minute heartbeat age, so normal GitHub cron jitter remains harmless.
+    # Avoid the top-of-hour scheduling surge. GitHub does NOT honour this
+    # cadence: measured 2026-09-11..26 over 100 natural runs, the interval was
+    # min 1.72 h / p50 3.53 h / p90 5.36 h / max 6.93 h. This observer is
+    # supplementary off-box evidence with a detection latency of that interval
+    # plus 45 min; the alerting SLA belongs to the panel host's 10-minute
+    # panel-alert-chain-deadman.timer (YueOps, direct Telegram). The 2700 s
+    # below is the heartbeat receipt's freshness bound (the emitter writes
+    # every 5 min), shared with that panel deadman -- not this schedule's
+    # period, so it must not be widened to "match" the throttling.
+    # README "告警链 deadman 的真实 SLO".
     - cron: '17,47 * * * *'
   workflow_dispatch:
     inputs:
@@ -29,7 +37,7 @@ concurrency:
 jobs:
   deadman:
     name: Heartbeat freshness
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out the public receiver contract

@@ -357,7 +357,7 @@ class ShadowWiringTest(unittest.TestCase):
 
 
 def _job(name: str, conclusion: str = "success", labels=None, group="GitHub Actions") -> dict:
-    return {"name": name, "conclusion": conclusion, "labels": labels or ["ubuntu-latest"],
+    return {"name": name, "conclusion": conclusion, "labels": labels or ["ubuntu-24.04"],
             "runner_group_name": group, "started_at": "2026-09-24T01:00:00Z",
             "completed_at": "2026-09-24T01:20:00Z", "id": 1}
 

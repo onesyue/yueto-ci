@@ -29,7 +29,7 @@ Identity checks (every one must hold; the first failure is the reason):
    block is written by the runner before any user code runs; a duplicated key
    line is rejected, the same binding ``scripts/match-build-run.py`` uses;
 4. every validate job the current plan needs is present, ``success``, on the
-   GitHub-hosted ``ubuntu-latest`` label in the ``GitHub Actions`` runner group
+   GitHub-hosted ``ubuntu-24.04`` label in the ``GitHub Actions`` runner group
    (never the manual self-hosted fallback);
 5. each of those jobs ran on the **same runner image version** as this run
    (``Runner Image / Version:`` from the job log header, vs ``$ImageVersion``).
@@ -122,8 +122,8 @@ def assess_candidate(current: dict, cand: dict, now: dt.datetime, max_age: dt.ti
             return f"{name} missing"
         if job.get("conclusion") != "success":
             return f"{name} {job.get('conclusion')}"
-        if job.get("labels") != ["ubuntu-latest"] or job.get("runner_group_name") != "GitHub Actions":
-            return f"{name} not on the hosted ubuntu-latest class"
+        if job.get("labels") != ["ubuntu-24.04"] or job.get("runner_group_name") != "GitHub Actions":
+            return f"{name} not on the hosted ubuntu-24.04 class"
         seen = cand.get("image_versions", {}).get(name, "")
         if not seen or seen != current["image_version"]:
             return f"{name} runner image {seen or 'unreadable'} != {current['image_version'] or 'unknown'}"

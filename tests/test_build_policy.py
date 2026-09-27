@@ -276,7 +276,7 @@ class BuildPolicyTest(unittest.TestCase):
             "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
             "aquasecurity/trivy-action@*",
             "astral-sh/setup-uv@*",
-            "bufbuild/buf-setup-action@*",
+            "bufbuild/buf-action@*",
             "docker/build-push-action@*",
             "docker/login-action@*",
             "docker/setup-buildx-action@*",
@@ -326,7 +326,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIsNotNone(build)
         assert compute is not None and build is not None
         self.assertIn(
-            "RUNNER_KIND: ${{ github.event.inputs.runner || 'ubuntu-latest' }}",
+            "RUNNER_KIND: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}",
             compute.group("body"),
         )
         self.assertIn(
@@ -368,13 +368,13 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIsNotNone(runner_input)
         assert runner_input is not None
         self.assertIn("type: choice", runner_input.group("body"))
-        self.assertIn("default: ubuntu-latest", runner_input.group("body"))
+        self.assertIn("default: ubuntu-24.04", runner_input.group("body"))
         self.assertIn("- yue-local-release", runner_input.group("body"))
         selector = (
             "fromJSON(github.event_name == 'workflow_dispatch' && "
             "github.event.inputs.runner == 'yue-local-release' && "
             "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
-            "'[\"ubuntu-latest\"]')"
+            "'[\"ubuntu-24.04\"]')"
         )
         self.assertEqual(self.workflow.count(selector), 3)
         self.assertIn(
@@ -757,9 +757,8 @@ class BuildPolicyTest(unittest.TestCase):
             "Preflight validation dependencies",
             "yue-node) tools+=(base64 docker gcc go gpg jq make)",
             "YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}",
-            "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader",
-            'unset fork_auth YUETO_FORK_READ_TOKEN',
-            "unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0",
+            "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \\\n",
+            "            make verify-fork-tags\n",
             "yueboard) tools+=(buf corepack docker gcc go make node psql)",
             "Install native YueOps PostgreSQL 18 test toolchain",
             "postgresql-18 postgresql-client-18",
@@ -1148,7 +1147,8 @@ class BuildPolicyTest(unittest.TestCase):
 
         proto = self.workflow[proto_start:integration_start]
         self.assertIn("run: scripts/ci/proto-gate.sh", proto)
-        self.assertIn("bufbuild/buf-setup-action@", self.workflow)
+        self.assertIn("bufbuild/buf-action@", self.workflow)
+        self.assertNotIn("bufbuild/buf-setup-action@", self.workflow)
         self.assertIn("version: '1.72.0'", self.workflow)
 
         integration = self.workflow[integration_start:clean_start]
@@ -1265,18 +1265,28 @@ class BuildPolicyTest(unittest.TestCase):
                     self.assert_release_jobs_are_bounded(mutated)
 
     def test_trivy_is_current_and_promoted_images_are_rescanned_by_digest(self) -> None:
-        self.assertEqual(self.workflow.count("version: v0.74.0"), 2)
+        # C6: the Trivy version lives in the sha256-pinned installer, and no
+        # trivy-action call may run its own setup (tests/test_hardening_20260927.py).
+        self.assertNotIn("version: v0.74.0", self.workflow)
+        self.assertIn(
+            "readonly TRIVY_VERSION='0.74.0'",
+            (ROOT / "scripts" / "install-verified-trivy.sh").read_text(),
+        )
         scan = self.image_rescan_workflow
         self.assertIn("schedule:", scan)
         self.assertIn("workflow_dispatch:", scan)
-        self.assertIn("services.json", scan)
-        self.assertIn('$service.platforms | split(\",\")', scan)
+        # C5: the scan set is planned from services.json + promotion markers.
+        self.assertIn("python3 scripts/plan-rescan-targets.py", scan)
+        self.assertIn(
+            'platforms = service["platforms"].split(",")',
+            (ROOT / "scripts" / "plan-rescan-targets.py").read_text(),
+        )
         self.assertIn("docker buildx imagetools inspect", scan)
         self.assertIn(".manifest.digest", scan)
         self.assertIn('image_ref=${IMAGE}@${digest}', scan)
         self.assertIn("TRIVY_PLATFORM: ${{ matrix.platform }}", scan)
         self.assertIn("image-ref: ${{ steps.resolve.outputs.image_ref }}", scan)
-        self.assertIn("version: v0.74.0", scan)
+        self.assertIn("skip-setup-trivy: true", scan)
         self.assertIn("trivyignores: .trivyignore", scan)
         self.assertNotIn("repository: onesyue/", scan)
 
@@ -1839,7 +1849,7 @@ class BuildPolicyTest(unittest.TestCase):
         for target in self.validation_targets:
             self.assertEqual(set(target), expected_keys)
             self.assertRegex(target["repo"], r"^onesyue/[A-Za-z0-9._-]+$")
-            self.assertIn(target["ref"], {"main", "master"})
+            self.assertEqual(target["ref"], "master")
             self.assertNotIn(target["service"], names)
             names.add(target["service"])
         self.assertEqual(names, {"yuelink"})
@@ -1888,7 +1898,7 @@ class BuildPolicyTest(unittest.TestCase):
         for service in self.services:
             self.assertEqual(set(service), expected_keys)
             self.assertRegex(service["repo"], r"^onesyue/[A-Za-z0-9._-]+$")
-            self.assertIn(service["ref"], {"main", "master"})
+            self.assertEqual(service["ref"], "master")
             self.assertNotIn(service["service"], names)
             names.add(service["service"])
         self.assertEqual(
