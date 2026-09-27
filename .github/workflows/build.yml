@@ -587,7 +587,7 @@ jobs:
             curl --fail --silent --show-error --location \
               --proto '=https' --proto-redir '=https' --tlsv1.2 \
               https://www.postgresql.org/media/keys/ACCC4CF8.asc --output "$pg_key"
-            fingerprint=$(gpg --batch --show-keys --with-colons "$pg_key" | awk -F: '$1 == "fpr" {print $10; exit}')
+            fingerprint=$(gpg --batch --show-keys --with-colons "$pg_key" | awk -F: '$1 == "fpr" && !seen {print $10; seen=1}')
             [ "$fingerprint" = B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 ]
             "${elevate[@]}" install -d -m0755 /usr/share/postgresql-common/pgdg
             "${elevate[@]}" install -m0644 "$pg_key" /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc

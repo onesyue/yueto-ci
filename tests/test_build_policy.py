@@ -29,6 +29,40 @@ BUILDX_INSTALLER = ROOT / "scripts" / "install-verified-buildx.sh"
 BUILDX_SHA256 = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"
 
 
+class PostgresKeyFingerprintTest(unittest.TestCase):
+    """Run the real key reader with output larger than an OS pipe buffer."""
+
+    def assignment(self) -> str:
+        lines = [line.strip() for line in WORKFLOW.read_text().splitlines()
+                 if line.strip().startswith("fingerprint=$(gpg ")]
+        self.assertEqual(len(lines), 1)
+        return lines[0]
+
+    def run_reader(self, assignment: str) -> subprocess.CompletedProcess:
+        script = """set -euo pipefail
+pg_key=fixture.asc
+gpg() {
+  awk 'BEGIN {
+    print "fpr:::::::::B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8:"
+    print "fpr:::::::::SUBKEY:"
+    for (i=0; i<65536; i++) print "uid:::::::::fixture padding larger than pipe buffer:"
+  }'
+}
+""" + assignment + '\nprintf "%s\\n" "$fingerprint"\n'
+        return subprocess.run(["bash", "-c", script], capture_output=True,
+                              text=True, timeout=10)
+
+    def test_first_fingerprint_without_truncating_producer(self) -> None:
+        result = self.run_reader(self.assignment())
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8\n")
+
+    def test_old_early_exit_reader_fails_under_pipefail(self) -> None:
+        assignment = self.assignment().split(" | awk ", 1)[0]
+        old_reader = assignment + " | awk -F: '$1 == \"fpr\" {print $10; exit}')"
+        self.assertNotEqual(self.run_reader(old_reader).returncode, 0)
+
+
 class VerifiedBuildxTest(unittest.TestCase):
     """Exercise the shell installer and the preinstalled-runner reuse path."""
 
