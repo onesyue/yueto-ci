@@ -15,13 +15,18 @@ Docker 构建矩阵。
 
 本仓只有一个发布工作流：`.github/workflows/build.yml`。Promotion 不是独立
 workflow，而是该工作流在完成校验、构建、签名和证明后的最后一个受控步骤。
-`.github/workflows/alert-chain-deadman.yml` 是只读运维探针，不构建、不发布：每
-30 分钟读取 bastion 上的 heartbeat，并调用 YueOps 仓库中的规范判定器；异常只在
-私有 YueOps 仓开事故 issue，公开仓不记录生产凭据内容。
-`.github/workflows/image-rescan.yml` 每天把 `services.json` 中每个服务的 `latest`
-解析成不可变 digest，并按声明的每个生产平台用 Trivy 0.74.0 重扫。它不 checkout
-私有源码、不写 registry、不上传公开 artifact，只负责发现镜像发布后新增的可修复
-HIGH/CRITICAL 漏洞。
+`.github/workflows/alert-chain-deadman.yml` 是只读运维探针，不构建、不发布：读取
+bastion 上的 heartbeat，并调用 YueOps 仓库中的规范判定器；异常只在私有 YueOps 仓开
+事故 issue，公开仓不记录生产凭据内容。它是**补充的异域证据，不承担告警 SLA**——
+真实调度节奏与 SLO 见下文「告警链 deadman 的真实 SLO」。
+`.github/workflows/image-rescan.yml` 每天重扫生产可能在跑的镜像：每个服务的 `:latest`
+加上最近 3 个 `promoted-<rev>-<digest>` 标记的 digest（当前、回滚前任、再前一个，
+覆盖部署落后于 `:latest` 的窗口；`scripts/plan-rescan-targets.py`），按声明的每个生产
+平台用校验过 sha256 的 Trivy 0.74.0 扫。生产的权威期望是根仓 `release.yaml` 的
+`desired`，但根仓私有、本仓刻意不持有它的凭据，所以用 registry 侧的 promote 标记代替；
+枚举失败一律 fail closed。任一 plan/scan 失败或取消都在私有 YueOps 仓开（或追评）同一个
+去重 issue「🛡️ 已发布镜像复扫失败（image-rescan）」，走与 deadman 相同的 App token /
+PAT 兜底路径。它不 checkout 私有源码、不写 registry、不上传公开 artifact。
 
 ```sh
 # YueBoard 未 pin HEAD 只做验证，零 registry 写；精确 pin 才构建 candidate
@@ -45,6 +50,11 @@ gh workflow run build.yml -R onesyue/yueto-ci \
 
 `ref` 可以是完整分支或 tag；如果传 commit，必须传完整 40 位 SHA。GitHub
 checkout 不把 7‑39 位短 SHA 当作可复现的 commit ref，中央 plan 会提前拒绝。
+**`promote=true` 时 `ref` 必须是完整 40 位 SHA**（2026-09-27 C3，任何事件类型）：
+validate 与 build 是两个相隔数分钟的 job，各自 checkout；分支/tag/空 ref（即注册表里的
+`master`）可能在两者之间移动，镜像就会建自 validate 从没判过的提交。`ship.sh` 一直传
+`git rev-parse HEAD`，不受影响。promote 还必须从本仓 `refs/heads/master` 运行——那是
+生产验签唯一接受的签名身份（见下文）。
 YueBoard 的未 pin 默认分支 HEAD 仍可用 `promote=false` 做完整验证，日志会明确
 标为 `non-promotable`，并从 build matrix 剔除，因此不会登录 registry、构建镜像或
 写 candidate / `built-*` / `sha-*` / `latest`。只有先通过签名的跨仓 pin 收敛把
@@ -81,7 +91,7 @@ P3（2026-09-24）：缺 marker 的镜像若与已 promote 的 `:latest` **构�
 |---|---|---|---|
 | 读 yueboard 提交 SHA（plan） | build.yml `plan` | App token | yueboard `contents:read` |
 | checkout 源码 + YueBoard 契约 | build.yml `validate` / `build` | App token | yueboard / yue-node / yueops / yuelink `contents:read` |
-| yue-node 私有 fork tag 校验 | build.yml `Validate yue-node` | App token | quic-go `contents:read` |
+| yue-node 私有 fork tag 校验 | build.yml `Verify yue-node signed fork tags`（**只有这一步**持有；跑 `go test` 的 `Validate yue-node` 不带任何凭据，依赖 vendored，`GOFLAGS=-mod=vendor`） | App token | quic-go `contents:read` |
 | promote 前复核默认分支 HEAD | build.yml promote（**现签**一枚，因为 build job 可跑两小时而 App token 一小时过期） | App token | 三个服务源码仓 `contents:read` |
 | GHCR 推送 / 签名 / provenance | build.yml `Login to GHCR` | 本仓 `GITHUB_TOKEN`（`packages: write`） | 每个 package 授予 yueto-ci **Write** |
 | GHCR 读 | poll-sources / image-rescan | 本仓 `GITHUB_TOKEN`（`packages: read`） | 每个 package 授予 yueto-ci **Read** 以上 |
@@ -166,15 +176,61 @@ setup-buildx-action 默认复用 runner 已装版本是正常行为，不代表�
 - `aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514`
 - `aquasecurity/trivy-action@*`
 - `astral-sh/setup-uv@*`
-- `bufbuild/buf-setup-action@*`
+- `bufbuild/buf-action@*`
 - `docker/build-push-action@*`
 - `docker/login-action@*`
 - `docker/setup-buildx-action@*`
 - `docker/setup-qemu-action@*`
 - `sigstore/cosign-installer@*`
 
+2026-09-27：`bufbuild/buf-setup-action`（已归档、声明 node20）换成继任者
+`bufbuild/buf-action` v1.6.0（`setup_only` + 固定 `checksum`）。**合入前**必须先把
+`bufbuild/buf-action@*` 加进仓库 selected-actions（不加则 validate-yueboard 停在
+`Set up job`），合入并跑绿后再删掉旧的 `bufbuild/buf-setup-action@*`：
+
+```sh
+gh api -X PUT repos/onesyue/yueto-ci/actions/permissions/selected-actions --input - <<'JSON'
+{"github_owned_allowed":true,"verified_allowed":false,"patterns_allowed":[
+ "anchore/sbom-action@*","aquasecurity/trivy-action@*","astral-sh/setup-uv@*",
+ "docker/build-push-action@*","docker/login-action@*","docker/setup-buildx-action@*",
+ "docker/setup-qemu-action@*","sigstore/cosign-installer@*",
+ "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
+ "bufbuild/buf-setup-action@*","bufbuild/buf-action@*"]}
+JSON
+```
+
 同时保持 `github_owned_allowed=true`、`verified_allowed=false`；工作流本身仍必须把每个
 第三方动作固定到完整 40 位提交，白名单里的 `@*` 不等于允许可变 tag 进入源码。
+
+## Runner 镜像：钉 ubuntu-24.04（2026-09-27）
+
+GitHub 自 2026-10-19 起把 `ubuntu-latest` 迁到 Ubuntu 26（actions/runner-images#14748）。
+本仓所有 GitHub-hosted job（含镜像构建与签名 job）都钉 `ubuntu-24.04`，
+`tests/test_hardening_20260927.py` 拒绝任何 `ubuntu-latest`。升级 runner 大版本是一次
+评审过的改动（构建环境、系统 Python/工具链、`verification-evidence.py` 的 runner 类判据
+要一起动），不许由 GitHub 的标签漂移替我们做。
+
+## Trivy 工具版本（2026-09-27 C6）
+
+build job 持有 `id-token: write`（Sigstore keyless 签名）与 `packages: write`。trivy-action
+自带的 setup-trivy 在运行时下载 Trivy，只拿同一个 release 里的 checksums 文件核对——同源
+校验，等于没有独立锚点。现在与 Buildx / actionlint 同一做法：
+`scripts/install-verified-trivy.sh` 固定 v0.74.0、硬编码 `Linux-64bit.tar.gz` 的 SHA-256
+（GitHub release 资产 digest 与同版 `trivy_0.74.0_checksums.txt` 独立对照一致），HTTPS-only
+下载、执行前核对、经 `$GITHUB_PATH` 前置并验证实际解析到的就是它；所有 trivy-action 调用
+（build 两个平台 + image-rescan）都 `skip-setup-trivy: true`。SBOM 仍由 anchore/sbom-action
+自带的 syft 生成（未改：它的安装路径另议）。
+
+## 签名身份：只认 master（2026-09-27 C2）
+
+生产验签（yueops `scripts/verify-image-signature.sh`）的 cosign 身份与 SLSA provenance
+`--source-ref` 已收紧为单一
+`^https://github.com/onesyue/yueto-ci/\.github/workflows/build\.yml@refs/heads/master$`。
+此前为 2026-08-31 默认分支改名保留的 main/master 二选一，在本仓**没有 main 分支、也没有
+分支保护**的现状下是一个真实入口：谁能在本仓建一个叫 main 的分支，谁就能用未评审的
+workflow 字节签出生产接受的身份。收紧前对根仓 `release.yaml` 全部历史里出现过的每一个
+digest（含所有可回滚前任）用 master-only 版本逐个真跑了签名 + 2×SBOM + provenance。
+`services.json` / `validation-targets.json` 的源码 ref 同样只允许 `master`。
 
 ## ⚠️ 迁移注意：cosign 签名身份变更
 
@@ -185,6 +241,8 @@ setup-buildx-action 默认复用 runner 已装版本是正常行为，不代表�
 ```
 ^https://github.com/onesyue/yueto-ci/
 ```
+
+（历史记录。今天的精确锚点见上文「签名身份：只认 master」。）
 
 迁移顺序（每个服务）：本仓构建成功 → 验签脚本 regexp 更新并部署 → 切换部署 pin 到本仓产出的 tag → 删除代码仓里的旧 docker-publish workflow。
 
@@ -208,3 +266,20 @@ setup-buildx-action 默认复用 runner 已装版本是正常行为，不代表�
   完成受保护分支与 Actions 白名单门禁后，才能在无生产凭据和生产网络访问权的
   专用 Debian 13 x86_64 一次性虚机上启用 `--ephemeral --disableupdate` runner；
   每个 runner 只领取一个 job，并在外送诊断日志后销毁整台虚机和 Docker 状态。
+
+## 告警链 deadman 的真实 SLO（2026-09-27 C4 实测）
+
+`alert-chain-deadman.yml` 的 cron 写的是 `17,47 * * * *`（每 30 分钟），**GitHub 实际不按它
+跑**。2026-09-11 → 09-26 连续 100 次自然 schedule run 的间隔：最短 1.72 h、中位 3.53 h、
+P90 5.36 h、最长 6.93 h。所以：
+
+- 本观察者的检测延迟 = 调度间隔（实测 ~2–7 h，中位 ~3.5 h）+ 心跳阈值 45 min。它是
+  **补充的异域证据**（面板机与 bastion 同时失联时仍能从 GitHub 侧看见），不承担告警 SLA。
+- **告警 SLA 的权威是面板机上的 `panel-alert-chain-deadman.timer`**（yueops，每 10 分钟，
+  直连 Telegram，VERSION 3 按问题码集合去重）：检测延迟 ≤ 45 min + 10 min。见 yueops
+  `docs/runbook/panel-alert-chain-deadman.md`。
+- `--max-age-seconds 2700` **不是**调度间隔，而是 bastion 心跳 receipt 的新鲜度阈值
+  （emitter 每 5 分钟写一次），与面板机 deadman 共用同一个 canonical 判定器与契约；它不应
+  随 GitHub 节流放宽——放宽只会让每次抽样更迟钝，而不会让抽样更频繁。
+- cron 仍保留 30 分钟：GitHub 只会少跑、不会多跑，写得稀疏只会让间隔更长。
+

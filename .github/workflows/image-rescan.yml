@@ -1,8 +1,18 @@
 name: Rescan promoted images
 
 # Rebuilding does not catch vulnerabilities disclosed after an image was
-# promoted. Resolve every current latest tag to an immutable digest, then scan
-# every declared production platform without checking out private source.
+# promoted. Scan every declared production platform of what production can
+# actually be running, without checking out private source.
+#
+# C5 (2026-09-27): the scan set used to be `:latest` only. Production runs the
+# signed `desired` of the root release.yaml, which lives in a private
+# repository this public one holds no credential for. The registry-side proxy
+# is the `promoted-<rev>-<digest>` marker every promotion writes, so
+# scripts/plan-rescan-targets.py scans `:latest` plus the newest promoted
+# digests of each service (current, rollback predecessor, one more for a
+# lagging deploy). A failed or cancelled run opens / updates one deduplicated
+# YueOps incident through the same path the alert-chain deadman uses: a red
+# scheduled run nobody reads is not an alert.
 on:
   schedule:
     - cron: '17 2 * * *'
@@ -21,7 +31,7 @@ concurrency:
 
 jobs:
   plan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -30,25 +40,21 @@ jobs:
         with:
           persist-credentials: false
       - id: matrix
-        run: |
-          set -euo pipefail
-          matrix="$(jq -c '{include: [
-            .[] as $service
-            | ($service.platforms | split(","))[]
-            | {service: $service.service, platform: .}
-          ]}' services.json)"
-          [ "$(jq -r '.include | length' <<<"$matrix")" -gt 0 ]
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+        env:
+          # Same credential switch as the GHCR login below: package versions
+          # (and their promotion markers) are read with the registry identity.
+          GH_API_TOKEN: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+        run: python3 scripts/plan-rescan-targets.py
 
   scan:
     needs: plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 3
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
-    name: ${{ matrix.service }} (${{ matrix.platform }})
+    name: ${{ matrix.service }} ${{ matrix.role }} (${{ matrix.platform }})
     steps:
       - name: Checkout immutable scan policy
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,6 +64,9 @@ jobs:
       - name: Install verified Docker Buildx
         run: bash scripts/install-verified-buildx.sh
 
+      - name: Install verified Trivy
+        run: bash scripts/install-verified-trivy.sh
+
       - name: Login to GHCR read-only scan path
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -66,17 +75,26 @@ jobs:
           username: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
           password: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
 
-      - name: Resolve latest to an immutable digest
+      - name: Confirm the planned digest carries this platform
         id: resolve
         env:
           IMAGE: ghcr.io/onesyue/${{ matrix.service }}
+          DIGEST: ${{ matrix.digest }}
           PLATFORM: ${{ matrix.platform }}
         run: |
           set -euo pipefail
           command -v docker >/dev/null 2>&1
           command -v jq >/dev/null 2>&1
-          inspection="$(docker buildx imagetools inspect --format '{{json .}}' "${IMAGE}:latest")"
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::planned digest is not an immutable sha256 reference"
+            exit 1
+          }
+          inspection="$(docker buildx imagetools inspect --format '{{json .}}' "${IMAGE}@${DIGEST}")"
           digest="$(jq -er '.manifest.digest | select(test("^sha256:[0-9a-f]{64}$"))' <<<"$inspection")"
+          [ "$digest" = "$DIGEST" ] || {
+            echo "::error::registry returned ${digest} for planned ${DIGEST}"
+            exit 1
+          }
           platform_count="$(jq -er --arg platform "$PLATFORM" '
             ($platform | split("/")) as $want
             | [.manifest.manifests[]?
@@ -85,7 +103,7 @@ jobs:
             | length
           ' <<<"$inspection")"
           [ "$platform_count" -eq 1 ] || {
-            echo "::error::latest digest does not contain exactly one ${PLATFORM} manifest"
+            echo "::error::promoted digest does not contain exactly one ${PLATFORM} manifest"
             exit 1
           }
           echo "image_ref=${IMAGE}@${digest}" >> "$GITHUB_OUTPUT"
@@ -104,4 +122,52 @@ jobs:
           severity: HIGH,CRITICAL
           timeout: 15m
           trivyignores: .trivyignore
-          version: v0.74.0
+          skip-setup-trivy: true
+
+  # The incident writer gets its own token scoped to issues on yueops only;
+  # this public repository's GITHUB_TOKEN never gains write permission.
+  # Same dedupe contract as alert-chain-deadman.yml: one open issue per title,
+  # later failures comment on it instead of opening another.
+  incident:
+    needs: [plan, scan]
+    if: ${{ always() && (needs.plan.result != 'success' || needs.scan.result != 'success') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Mint YueOps incident token (GitHub App)
+        id: yueops_issue_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueops
+          permission-issues: write
+
+      - name: Open or update the private YueOps incident
+        env:
+          GH_TOKEN: ${{ steps.yueops_issue_token.outputs.token || secrets.YUETO_CI_PAT }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PLAN_RESULT: ${{ needs.plan.result }}
+          SCAN_RESULT: ${{ needs.scan.result }}
+        run: |
+          set -euo pipefail
+          repo='onesyue/yueops'
+          title='🛡️ 已发布镜像复扫失败（image-rescan）'
+          existing="$(gh issue list --repo "$repo" --state open \
+            --search "in:title $title" --limit 1 --json number --jq '.[0].number' || true)"
+          body=$(printf '%s\n' \
+            '@onesyue 已发布镜像（:latest 与最近的 promoted digest）每日复扫未通过：' \
+            "plan=${PLAN_RESULT} scan=${SCAN_RESULT}。" \
+            '可能是新披露的可修复 HIGH/CRITICAL 漏洞（需重建并发版），也可能是扫描链自身故障；' \
+            '两者都意味着今天的生产镜像没有被证明干净。逐个 job 看 Trivy 表格。' \
+            "运行记录：${RUN_URL}")
+          gh label create image-rescan --repo "$repo" --color B60205 \
+            --description 'Promoted image rescan incident' --force >/dev/null
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$repo" --body "$body"
+          else
+            gh issue create --repo "$repo" --title "$title" --label image-rescan \
+              --assignee onesyue --body "$body"
+          fi
