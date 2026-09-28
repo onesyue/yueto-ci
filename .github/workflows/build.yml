@@ -8,9 +8,7 @@ name: Build & publish images
 #      才能更新 sha-* / latest，且候选必须在对应源码仓默认分支上、本镜像构建输入与
 #      HEAD 相同、且不比 :latest 旧（P2 #11，scripts/promote-source-gate.py）。YueBoard
 #      还必须精确等于中央 native-node contract pin；未 pin HEAD 只验证且不触发 registry 写入。
-#   2) 代码仓 thin workflow: repository_dispatch
-#      (event_type: build, client_payload: {service, ref, promote})。自动提升要求
-#      onesyue 可信发送者 + 精确 40-hex 源码 SHA + 默认分支 HEAD 三重一致。
+#   2) （已删除 2026-09-28）代码仓 repository_dispatch 入口——从未有发送方，全部构建走 1)。
 # ⚠️ 公开仓纪律：日志保持简洁；凡敏感值走 secrets（自动打码）；不产出 artifacts，产物只进 GHCR。
 
 on:
@@ -41,8 +39,9 @@ on:
         options:
           - ubuntu-24.04
           - yue-local-release
-  repository_dispatch:
-    types: [build]
+  # repository_dispatch 入口已于 2026-09-28 删除：最近 300 次构建全部是 workflow_dispatch，
+  # 工作区没有任何发送方，而它仍能以 onesyue 身份触发 promote——死入口只增加攻击面。
+  # 下方 plan 里对 repository_dispatch 的守卫分支保留为无害的死代码，避免改动 promote 判定逻辑。
 
 permissions:
   contents: read
