@@ -749,9 +749,8 @@ class BuildPolicyTest(unittest.TestCase):
 
     def test_policy_ci_runs_pinned_fail_closed_policy_tooling(self) -> None:
         required = (
-            "python3 tests/test_build_policy.py -v",
-            "python3 tests/test_sbom_attestation_policy.py -v",
-            "python3 tests/test_deadman_policy.py -v",
+            "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+            "shellcheck --severity=warning scripts/*.sh",
             "python3 -m compileall -q scripts tests",
             'bash -n "$script"',
             "actionlint .github/workflows/*.yml",

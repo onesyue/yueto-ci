@@ -28,8 +28,11 @@ name: Poll sources for unbuilt commits
 
 on:
   schedule:
-    # 每 20 分钟。GitHub 的 cron 会延迟甚至跳过，所以这条链路的任何一环都不能
-    # 假设「按时跑过」；漏一轮的后果只是镜像晚 20 分钟，下一轮自然补上。
+    # 写的是每 20 分钟，但 GitHub 自 2026-08-26 起把 schedule 大面积推迟/丢弃：
+    # 本仓实测从 08-25 的 34 轮/天掉到 2–6 轮/天、间隔 2.5–6 小时（同仓错开整点的
+    # deadman 与 image-rescan 同样被推迟，故不是整点拥堵）。所以这条链路的任何一环
+    # 都不能假设「按时跑过」；漏一轮的后果是镜像与中央验证晚到数小时。两个补救：
+    # 人手推完后跑根仓 scripts/kick-builds.sh；或启用下方 rearm 自续链。
     - cron: '*/20 * * * *'
   workflow_dispatch:
     inputs:
@@ -45,21 +48,28 @@ permissions:
   # 认证 GHCR；GITHUB_TOKEN 触发 workflow_dispatch 是 GitHub 明文允许的例外）。
   # 开关未设置时这两项闲置，行为与旧 PAT 路径完全一致。
   packages: read
-  actions: write
+  actions: write # zizmor: ignore[excessive-permissions] only the poll job inherits this block; rearm declares its own
   # P3（2026-09-24）：跳过「输入未变」的构建之前，先用 gh attestation verify 验已 promote
   # 镜像的 build provenance（只读）。
   attestations: read
-
-concurrency:
-  # 一轮没跑完就不要再开一轮：否则两轮会对同一个 commit 各派一次构建。
-  group: poll-sources
-  cancel-in-progress: false
 
 jobs:
   poll:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # 一轮没跑完就不要再开一轮：否则两轮会对同一个 commit 各派一次构建。
+    # 并发组放在 job 上而不是整个 workflow：rearm job 在环境计时器里等 20 分钟，
+    # 若占着整个 run 的并发组，kick-builds.sh 的即时轮询就会被拖到计时器结束。
+    concurrency:
+      group: poll-sources
+      cancel-in-progress: false
+    outputs:
+      started_epoch: ${{ steps.started.outputs.epoch }}
     steps:
+      - name: Record poll start
+        id: started
+        run: echo "epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -250,3 +260,35 @@ jobs:
             gh workflow run build.yml -R "${GITHUB_REPOSITORY}" \
               -f "service=${grp}" -f "ref=${sha}" -f promote=false
           done < <(jq -c '.[]' <<<"$PENDING")
+
+  # 自续链（2026-09-28，默认关闭）：GitHub 的 schedule 已不可靠（见上方 on.schedule）。
+  # 启用需要仓库管理员做两件事：建 `poll-rearm` 环境（wait timer 20 分钟、部署分支仅
+  # master），再设仓库变量 YUETO_CI_POLL_REARM=true。等待发生在环境保护里，不占 runner；
+  # 计时器缺失、链分叉、读不到 run 列表一律 fail closed（scripts/poll-rearm.sh）。
+  # 它只派发 poll-sources 本身（promote 恒为 false），与 build.yml 的签名身份无关。
+  rearm:
+    needs: poll
+    if: >-
+      !cancelled() &&
+      vars.YUETO_CI_POLL_REARM == 'true' &&
+      github.ref == 'refs/heads/master' &&
+      needs.poll.result != 'cancelled' &&
+      needs.poll.result != 'skipped' &&
+      needs.poll.outputs.started_epoch != '' &&
+      inputs.dry_run != true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: poll-rearm
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Re-dispatch the next poll after the environment wait timer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          POLL_STARTED_EPOCH: ${{ needs.poll.outputs.started_epoch }}
+        run: bash scripts/poll-rearm.sh

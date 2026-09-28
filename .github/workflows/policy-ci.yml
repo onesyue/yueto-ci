@@ -50,15 +50,16 @@ jobs:
       - name: Validate central policy
         run: |
           set -euo pipefail
-          python3 tests/test_build_policy.py -v
-          python3 tests/test_sbom_attestation_policy.py -v
-          python3 tests/test_deadman_policy.py -v
-          python3 tests/test_credential_policy.py -v
-          python3 tests/test_input_shadow_policy.py -v
-          python3 tests/test_skip_and_source_gates.py -v
-          python3 tests/test_hardening_20260927.py -v
+          # Discovery, not a hand-kept list: a new tests/test_*.py runs the
+          # moment it lands. tests/test_policy_discovery_contract.py keeps
+          # every case reachable by this runner (TestCase or load_tests), and
+          # a module that fails to import is a failing test, never a skip.
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
           python3 -m compileall -q scripts tests
           for script in scripts/*.sh; do
             bash -n "$script"
           done
+          # The hosted image ships ShellCheck; absence is a failure, not a pass.
+          command -v shellcheck
+          shellcheck --severity=warning scripts/*.sh
           actionlint .github/workflows/*.yml

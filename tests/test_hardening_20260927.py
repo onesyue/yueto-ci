@@ -539,13 +539,15 @@ class RunnerAndActionRuntimeTest(unittest.TestCase):
 
 
 class PolicyCiRunsEveryTestFileTest(unittest.TestCase):
+    # 2026-09-28: policy-ci switched from a per-file list to unittest discovery;
+    # tests/test_policy_discovery_contract.py owns the reachability contract.
+    # This keeps the original intent (this file itself must run) as a direct check.
     def test_every_policy_test_file_is_executed_by_policy_ci(self) -> None:
         policy = POLICY_CI.read_text()
         files = sorted(p.name for p in (ROOT / "tests").glob("test_*.py"))
         self.assertIn("test_hardening_20260927.py", files)
-        for name in files:
-            with self.subTest(file=name):
-                self.assertIn(f"python3 tests/{name} -v", policy)
+        self.assertIn("test_policy_discovery_contract.py", files)
+        self.assertIn("python3 -m unittest discover -s tests -p 'test_*.py'", policy)
 
 
 if __name__ == "__main__":
