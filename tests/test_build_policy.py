@@ -465,6 +465,25 @@ class BuildPolicyTest(unittest.TestCase):
         # 手写代表镜像的形态不许回来。
         self.assertNotIn('"probe":', poll_code)
 
+    def test_poll_defers_dispatch_while_any_build_is_queued(self) -> None:
+        """2026-09-28: build.yml keeps one queued run per service group, so a new
+        dispatch cancels the queued one. With the 20-minute re-arm chain, poll kept
+        re-dispatching a not-yet-built image and cancelled ship.sh's queued
+        build+promote (run 36396848037). Poll must yield while anything is queued,
+        and must yield (not dispatch) when it cannot read the run list."""
+        poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
+        trigger = poll[poll.index("- name: Trigger builds"):]
+        trigger = trigger[: trigger.index("\n  rearm:")] if "\n  rearm:" in trigger else trigger
+        list_at = trigger.index("gh run list")
+        dispatch_at = trigger.index("gh workflow run build.yml")
+        self.assertLess(list_at, dispatch_at, "the queued check must run before any dispatch")
+        for status in ("queued", "pending", "waiting", "requested"):
+            self.assertIn(f'.status == "{status}"', trigger)
+        guard_at = trigger.index("if ! queued=")
+        self.assertLess(guard_at, list_at, "an unreadable run list must defer, not dispatch")
+        guard = trigger[guard_at:dispatch_at]
+        self.assertGreaterEqual(guard.count("exit 0"), 2, "both the unreadable and the queued branch must yield")
+
     def test_built_markers_use_exact_source_identity_and_registry_errors_fail_closed(
         self,
     ) -> None:
