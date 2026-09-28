@@ -44,8 +44,9 @@ gh workflow run build.yml -R onesyue/yueto-ci \
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yueboard -f ref=<40-hex-reviewed-contract-pin> -f promote=true
 
-# 私有源码仓默认分支由 poll-sources.yml 每 20 分钟拉取检查；缺少精确
-# built-<40-hex> 产物时只触发 candidate 构建，不自动提升 latest。
+# 私有源码仓默认分支由 poll-sources.yml 拉取检查（cron 写 20 分钟，实际见下文
+# 「poll 的真实节奏」）；缺少精确 built-<40-hex> 产物时只触发 candidate 构建，
+# 不自动提升 latest。
 ```
 
 `ref` 可以是完整分支或 tag；如果传 commit，必须传完整 40 位 SHA。GitHub
@@ -62,6 +63,25 @@ YueBoard 的未 pin 默认分支 HEAD 仍可用 `promote=false` 做完整验证�
 `service=all` 同时运行 `services.json` 的服务校验与
 `validation-targets.json` 的源码校验；后者不会产生 build matrix。仅校验目标不能
 使用 `promote=true`。
+
+### poll 的真实节奏与自续链（2026-09-28）
+
+GitHub 自 2026-08-26 起大面积推迟/丢弃 schedule 事件（社区讨论 orgs/community#206019、
+#207346，无官方修复）。本仓实测 `poll-sources` 自然 schedule run：08-24 28 轮、08-25 34 轮，
+08-27 起每天 2–6 轮，09-18→09-28 间隔 2.5–6 h；同仓错开整点的 deadman（`17,47`）与
+image-rescan（`17 2`，每天晚约 5.5 h）同样被推迟，所以不是「整点拥堵」，改分钟无效。
+
+两条补救，互不排斥：
+
+- 人手推完私仓后跑根仓 `scripts/kick-builds.sh`（立即派发一轮，走本机 `gh` 身份）。
+- **自续链（默认关闭）**：`poll-sources.yml` 的 `rearm` job 在 `poll-rearm` 环境的
+  wait timer 里等待（不占 runner），然后由 `scripts/poll-rearm.sh` 用本仓 `GITHUB_TOKEN`
+  再派发一轮 poll（只派发 poll-sources，`promote` 恒为 false，与签名身份无关）。启用需要
+  仓库管理员：① 建环境 `poll-rearm`，Wait timer = 20 分钟，Deployment branches 仅
+  `master`；② 设仓库变量 `YUETO_CI_POLL_REARM=true`。停用：删变量即可。
+  fail closed 的两道闸：距 poll 开始不足 900 s（计时器缺失时 GitHub 会自动建一个空环境
+  立即放行）拒绝派发；只有最新的非取消 poll run 可以续链，旧链自行终止，kick 与 schedule
+  不会让链越来越多。行为测试：`tests/test_poll_rearm_policy.py`（假 `gh` 真跑脚本）。
 
 `poll-sources.yml` 从 `services.json` 派生仓库/镜像组，逐个验证组内所有镜像。
 新产物用完整 40 位源码 SHA 作 marker；迁移期仅在旧 7 位 marker 的 OCI
