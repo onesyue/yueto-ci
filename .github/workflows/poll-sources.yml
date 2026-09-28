@@ -256,14 +256,15 @@ jobs:
           # run——新派发会取消组内更早的排队 run。自续链让本 job 每 20 分钟跑一次，镜像还没
           # 建完（built-<sha> 不存在）时会重复派发，把 ship.sh 排队中的 build+promote 顶掉
           # （09-28 实测 run 36396848037 被取消）。run 列表读不到 inputs，按组精确判断不可能，
-          # 所以只要 build.yml 有任何排队中的 run 就整轮让路，下一轮再派；读不到列表也让路。
-          if ! queued=$(gh run list -R "${GITHUB_REPOSITORY}" --workflow build.yml --limit 50 \
-                --json status --jq '[.[] | select(.status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")] | length'); then
+          # 所以只要 build.yml 有任何活跃 run 就整轮让路，下一轮再派；读不到列表也让路。
+          # 运行中的 run 也必须让路：built 标签尚未发布时重复派发会占住后续 promote 的队列。
+          if ! active=$(gh run list -R "${GITHUB_REPOSITORY}" --workflow build.yml --limit 50 \
+                --json status --jq '[.[] | select(.status == "in_progress" or .status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")] | length'); then
             echo "::warning::cannot list build.yml runs; deferring this poll's dispatches (never risk cancelling a queued promote)"
             exit 0
           fi
-          if [ "${queued}" -gt 0 ]; then
-            echo "build.yml has ${queued} queued run(s); deferring dispatch to the next poll so a queued build+promote is never cancelled"
+          if [ "${active}" -gt 0 ]; then
+            echo "build.yml has ${active} active run(s); deferring dispatch to avoid duplicate builds and preserve queued build+promote runs"
             exit 0
           fi
           while read -r row; do
