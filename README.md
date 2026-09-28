@@ -32,7 +32,8 @@ PAT 兜底路径。它不 checkout 私有源码、不写 registry、不上传公
 # YueBoard 未 pin HEAD 只做验证，零 registry 写；精确 pin 才构建 candidate
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yueboard -f ref=<40-hex-reviewed-contract-pin>
-gh workflow run build.yml -R onesyue/yueto-ci -f service=all
+gh workflow run build.yml -R onesyue/yueto-ci -f service=all \
+  -f migration_base=<40-hex-trusted-yueops-previous-revision>
 
 # 对远端 YueLink 精确源码提交只跑中央契约校验，不进入镜像构建
 gh workflow run build.yml -R onesyue/yueto-ci \
@@ -64,6 +65,14 @@ YueBoard 的未 pin 默认分支 HEAD 仍可用 `promote=false` 做完整验证�
 `validation-targets.json` 的源码校验；后者不会产生 build matrix。仅校验目标不能
 使用 `promote=true`。
 
+YueOps（含单镜像和 `all`）必须显式传 `migration_base=<完整40位SHA>`：SQL lint
+检查该基线到候选的整批变更，基线必须存在且为候选祖先；删除/重命名 SQL 也会拒绝。
+没有 `HEAD^` 或全历史扫描兜底。工作区 `scripts/ship.sh yueops` 自动从当前验签成功的
+`release.yaml` desired 读取上一版本并传入。手动验证须使用同一可信基线，不要为了
+消除报错把候选自身当作上一版本。poll 从已有镜像的已验证 master provenance 和
+OCI revision 取得已发布祖先，组内版本不同时取最早者；取不到则明确失败，下一轮重试。
+Squawk 2.60.0 固定 SHA-256、PG15 与原规则豁免保持不变。
+
 ### poll 的真实节奏与自续链（2026-09-28）
 
 GitHub 自 2026-08-26 起大面积推迟/丢弃 schedule 事件（社区讨论 orgs/community#206019、
@@ -91,7 +100,8 @@ image-rescan（`17 2`，每天晚约 5.5 h）同样被推迟，所以不是「�
 P3（2026-09-24）：缺 marker 的镜像若与已 promote 的 `:latest` **构建输入完全相同**——
 先用 `gh attestation verify` 验过它的 build provenance、recipe（services.json 条目 + build job
 文本）未变、promoted revision 是 HEAD 的祖先、Dockerfile 没有浮动 `# syntax=` frontend——
-就不派发它的构建（`scripts/poll-skip-decision.py`）。任何一项测不到都照常构建；跳过不打
+就不派发它的构建（`scripts/poll-skip-decision.py`）。任何一项测不到都照常构建
+（YueOps 仍须先证明上述 SQL 基线）；跳过不打
 `built-*` 标签（旧产物保留原来的源码身份），下一轮 poll 会再问一次。
 
 ## 必需的 secrets（仓库 Settings → Secrets → Actions）
@@ -302,4 +312,3 @@ P90 5.36 h、最长 6.93 h。所以：
   （emitter 每 5 分钟写一次），与面板机 deadman 共用同一个 canonical 判定器与契约；它不应
   随 GitHub 节流放宽——放宽只会让每次抽样更迟钝，而不会让抽样更频繁。
 - cron 仍保留 30 分钟：GitHub 只会少跑、不会多跑，写得稀疏只会让间隔更长。
-

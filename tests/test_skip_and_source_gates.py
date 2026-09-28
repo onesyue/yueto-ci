@@ -175,11 +175,28 @@ class PollSkipDecisionTest(unittest.TestCase):
                            + "print(" + repr(json.dumps(payload)) + ")\n" + ("" if ok else "sys.exit(1)\n"))
         self.gh.chmod(0o755)
 
-    def decide(self, *, head=R_MID, api=None, fp=None, workflow=BUILD_TEXT):
+    def decide(self, *, head=R_MID, api=None, fp=None, workflow=BUILD_TEXT, bases=None):
         fp = fp or FakeFP(self.real)
         api = api or FakeAPI(self.real)
         return SKIP.decide("svc", head, dict(ENTRY), fp=fp, api=api, ci_token="t", ghcr_user="u",
-                           ghcr_password="p", gh=str(self.gh), current_workflow=workflow)
+                           ghcr_password="p", gh=str(self.gh), current_workflow=workflow, migration_bases=bases)
+
+    def test_sql_baseline_survives_recipe_change_but_requires_verified_ancestry(self):
+        bases = {}
+        self.assertEqual(self.decide(workflow=BUILD_TEXT.replace("steps: []", "steps: [x]"), bases=bases)[0], "build")
+        self.assertEqual(bases, {"svc": R_OLD})
+        for valid, latest in ((False, R_OLD), (True, R_SIDE)):
+            self.set_gh(ok=valid)
+            bases = {}
+            self.decide(bases=bases, fp=FakeFP(self.real, latest=("sha256:" + "d" * 64, latest)))
+            self.assertEqual(bases, {})
+
+    def test_sql_baseline_selects_oldest_and_refuses_missing_or_divergent(self):
+        args = dict(api=FakeAPI(self.real), repo="onesyue/x", fp=self.real)
+        self.assertEqual(SKIP.migration_base(["a", "b"], {"a": R_MID, "b": R_OLD}, **args), R_OLD)
+        for bases in ({"a": R_MID}, {"a": R_MID, "b": R_SIDE}, {"a": "HEAD^", "b": R_OLD}):
+            with self.assertRaises(self.real.Unknown):
+                SKIP.migration_base(["a", "b"], bases, **args)
 
     def test_unchanged_inputs_with_verified_provenance_are_skipped(self) -> None:
         verdict, reason = self.decide(head=R_MID)

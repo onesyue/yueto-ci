@@ -24,7 +24,9 @@ the next poll asks again (cheap: a few API calls).
 
 Output: one JSON object ``{"build": [...], "skip": [...], "reasons": {svc: why}}`` on
 stdout.  Exit 0 whenever a decision was made (including "build everything"); exit 2
-only on usage errors.  The workflow treats a crash of this tool as "build all".
+only on usage errors. YueOps builds also need ``migration_base`` from verified
+promoted ancestors; ``migration_base_error`` makes the caller refuse dispatch.
+Other products still treat a crash of this tool as "build all".
 """
 
 from __future__ import annotations
@@ -86,7 +88,7 @@ def verified_builder(image_ref: str, gh: str, fp) -> str:
             subjects = statement["subject"]
         except (KeyError, TypeError):
             continue
-        if not builder.startswith(BUILDER_PREFIX):
+        if builder != BUILDER_PREFIX + "refs/heads/master":
             continue
         if not any((s.get("digest") or {}).get("sha256") == digest for s in subjects):
             continue
@@ -109,12 +111,19 @@ def on_default_branch(api, repo: str, older: str, newer: str, fp) -> bool:
 
 
 def decide(service: str, head: str, target: dict, *, fp, api, ci_token: str, ghcr_user: str,
-           ghcr_password: str, gh: str, current_workflow: str) -> tuple[str, str]:
+           ghcr_password: str, gh: str, current_workflow: str,
+           migration_bases: dict[str, str] | None = None) -> tuple[str, str]:
     """('skip' | 'build', reason)."""
     try:
         digest, promoted = fp.ghcr_latest(service, ghcr_user, ghcr_password)
         image_ref = f"ghcr.io/onesyue/{service}@{digest}"
         builder = verified_builder(image_ref, gh, fp)
+        if not on_default_branch(api, target["repo"], promoted, head, fp):
+            return "build", f"promoted {promoted[:12]} is not an ancestor of HEAD {head[:12]}"
+        # Coverage survives recipe/input changes, but never an unverified image
+        # or a non-ancestor. Reuse the provenance query already made for P3.
+        if migration_bases is not None:
+            migration_bases[service] = promoted
         old_text, old_services = fp.workflow_at(builder, ci_token)
         if service not in old_services:
             return "build", f"{service} not built by yueto-ci@{builder[:12]}"
@@ -123,8 +132,6 @@ def decide(service: str, head: str, target: dict, *, fp, api, ci_token: str, ghc
         recipe_state = fp.compare(old_recipe, new_recipe)
         if recipe_state != "unchanged":
             return "build", f"recipe {recipe_state} since builder {builder[:12]}"
-        if not on_default_branch(api, target["repo"], promoted, head, fp):
-            return "build", f"promoted {promoted[:12]} is not an ancestor of HEAD {head[:12]}"
         base_fp, head_fp = fp.compute(api, promoted, target), fp.compute(api, head, target)
         inputs = fp.compare(base_fp, head_fp)
         if inputs != "unchanged":
@@ -137,6 +144,23 @@ def decide(service: str, head: str, target: dict, *, fp, api, ci_token: str, ghc
                         f"provenance verified (builder {builder[:12]})")
     except fp.Unknown as exc:
         return "build", f"unknown: {exc}"[:300]
+
+
+def migration_base(wanted: list[str], bases: dict[str, str], *, api, repo: str, fp) -> str:
+    """Oldest verified promoted ancestor among images considered by this poll.
+
+Every YueOps image runs the same repository-wide SQL validation. Choosing the
+oldest proven image also covers a group whose latest tags span several commits.
+"""
+    if not wanted or any(not SHA40.fullmatch(bases.get(s, "")) for s in wanted):
+        raise fp.Unknown("YueOps migration baseline unavailable: every considered image needs verified provenance")
+    oldest = bases[wanted[0]]
+    for revision in sorted(set(bases[s] for s in wanted)):
+        if on_default_branch(api, repo, revision, oldest, fp):
+            oldest = revision
+        elif not on_default_branch(api, repo, oldest, revision, fp):
+            raise fp.Unknown("YueOps promoted migration baselines diverge")
+    return oldest
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -159,13 +183,19 @@ def main(argv: list[str] | None = None) -> int:
     api = fp.GitHubTree(args.repo, os.environ.get("GH_API_TOKEN", ""))
     current_workflow = (ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
     out: dict = {"build": [], "skip": [], "reasons": {}}
+    bases: dict[str, str] = {}
     for service in wanted:
         verdict, reason = decide(
             service, args.head, entries[service], fp=fp, api=api, ci_token=os.environ.get("GITHUB_TOKEN", ""),
             ghcr_user=os.environ.get("GHCR_USER", "onesyue"), ghcr_password=os.environ.get("GHCR_PASSWORD", ""),
-            gh=args.gh, current_workflow=current_workflow)
+            gh=args.gh, current_workflow=current_workflow, migration_bases=bases)
         out[verdict].append(service)
         out["reasons"][service] = reason
+    if args.repo == "onesyue/yueops" and out["build"]:
+        try:
+            out["migration_base"] = migration_base(wanted, bases, api=api, repo=args.repo, fp=fp)
+        except fp.Unknown as exc:
+            out["migration_base_error"] = str(exc)
     print(json.dumps(out, sort_keys=True))
     return 0
 

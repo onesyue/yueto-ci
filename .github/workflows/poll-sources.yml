@@ -203,6 +203,7 @@ jobs:
             # frontend）的那几张不派发构建。判不了（unknown / 工具挂 / API 不通）= 全部构建。
             # 跳过的镜像不打 built- 标签（旧产物保留原来的源码身份，计划 §6.2），下一轮照样再问。
             build=("${missing[@]}")
+            decision='{}'
             services_csv=$(IFS=,; echo "${missing[*]}")
             if decision=$(python3 scripts/poll-skip-decision.py \
                   --repo "$repo" --head "$sha" --services "$services_csv") &&
@@ -213,10 +214,19 @@ jobs:
               done < <(jq -r '.reasons | to_entries[] | "\(.key)\t\(.value)"' <<<"$decision")
             else
               echo "::warning::${grp}: P3 skip decision unavailable — building every missing image (unknown is never a skip)"
+              decision='{}'
             fi
             if [ "${#build[@]}" -eq 0 ]; then
               echo "✓ ${grp}: ${repo}@${short} — every missing image has unchanged, provenance-verified inputs; no build dispatched"
               continue
+            fi
+            migration_base=""
+            if [ "$repo" = onesyue/yueops ]; then
+              migration_base=$(jq -r '.migration_base // empty' <<<"$decision")
+              if ! [[ "$migration_base" =~ ^[0-9a-f]{40}$ ]]; then
+                echo "::error::YueOps SQL coverage has no provenance-verified promoted ancestor; refusing dispatch (retry next poll or use ship.sh with signed desired)"
+                exit 1
+              fi
             fi
             # 只剩一张要建时只派发那一张（跳过另外两张的 validate+build 分钟）；两张及以上
             # 仍按组派发一次（validate-yueops 只跑一遍，多建的那张比多跑一遍 validate 便宜）。
@@ -224,8 +234,8 @@ jobs:
             if [ "${#build[@]}" -eq 1 ] && [ "${#missing[@]}" -gt 1 ]; then
               target="${build[0]}"
             fi
-            pending=$(jq -c --arg g "$target" --arg s "$sha" --arg r "$repo" \
-              '. + [{group:$g, sha:$s, repo:$r}]' <<<"$pending")
+            pending=$(jq -c --arg g "$target" --arg s "$sha" --arg r "$repo" --arg b "$migration_base" \
+              '. + [{group:$g, sha:$s, repo:$r, migration_base:$b}]' <<<"$pending")
           done < <(jq -c '.[]' <<<"$groups")
 
           echo "pending=$(jq -c . <<<"$pending")" >> "$GITHUB_OUTPUT"
@@ -270,10 +280,19 @@ jobs:
           while read -r row; do
             grp=$(jq -r '.group' <<<"$row")
             sha=$(jq -r '.sha' <<<"$row")
+            migration_args=()
+            if [ "$(jq -r '.repo // empty' <<<"$row")" = onesyue/yueops ]; then
+              migration_base=$(jq -r '.migration_base // empty' <<<"$row")
+              [[ "$migration_base" =~ ^[0-9a-f]{40}$ ]] || {
+                echo "::error::refusing YueOps dispatch without migration_base"
+                exit 1
+              }
+              migration_args=(-f "migration_base=${migration_base}")
+            fi
             echo "dispatching build: service=${grp} ref=${sha} promote=false"
             # promote=false 是这条链路的硬约束，不接受输入覆盖。
             gh workflow run build.yml -R "${GITHUB_REPOSITORY}" \
-              -f "service=${grp}" -f "ref=${sha}" -f promote=false
+              -f "service=${grp}" -f "ref=${sha}" -f promote=false "${migration_args[@]}"
           done < <(jq -c '.[]' <<<"$PENDING")
 
   # 自续链（2026-09-28，默认关闭）：GitHub 的 schedule 已不可靠（见上方 on.schedule）。

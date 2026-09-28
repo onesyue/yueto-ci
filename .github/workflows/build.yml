@@ -22,6 +22,10 @@ on:
         description: 'override source ref (default: per target registry)'
         required: false
         type: string
+      migration_base:
+        description: 'YueOps: full SHA of trusted previous release/validation baseline (required for SQL coverage)'
+        required: false
+        type: string
       promote:
         description: 'promote verified default-branch HEAD to sha-* and latest'
         required: true
@@ -99,6 +103,7 @@ jobs:
           GH_API_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           SERVICE: ${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
           REF_OVERRIDE: ${{ github.event.inputs.ref || github.event.client_payload.ref || '' }}
+          MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_ACTOR: ${{ github.actor }}
           WORKFLOW_GIT_REF: ${{ github.ref }}
@@ -198,6 +203,11 @@ jobs:
           # validators in separate registries. `all` covers YueLink without
           # ever inventing a Docker target for it.
           target_plan="$(bash scripts/plan-build-targets.sh "$SERVICE" "$REF_OVERRIDE")"
+          if jq -e 'any(.validation_matrix[]; .validation == "yueops")' <<<"$target_plan" >/dev/null &&
+             ! [[ "$MIGRATION_BASE" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::YueOps validation requires an explicit 40-hex migration_base from a trusted previous release"
+            exit 1
+          fi
           board_selection_count="$(
             jq '[.validation_matrix[] | select(.validation == "yueboard")] | length' \
               <<<"$target_plan"
@@ -1108,7 +1118,7 @@ jobs:
       - name: Lint changed YueOps SQL migrations
         if: matrix.validation == 'yueops'
         env:
-          DISPATCH_BEFORE: ${{ github.event.client_payload.before || '' }}
+          MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}
         run: |
           set -euo pipefail
           squawk_flags=(
@@ -1116,23 +1126,11 @@ jobs:
             --assume-in-transaction
             "--exclude=prefer-robust-stmts,prefer-text-field,prefer-identity,require-timeout-settings"
           )
-          migration_base=""
-          if [[ "$DISPATCH_BEFORE" =~ ^[0-9a-f]{40}$ ]] &&
-             git cat-file -e "${DISPATCH_BEFORE}^{commit}" 2>/dev/null; then
-            migration_base="$DISPATCH_BEFORE"
-          elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-            migration_base="$(git rev-parse HEAD^)"
-          fi
-          mapfile -t migrations < <(
-            if [ -n "$migration_base" ]; then
-              git diff --name-only --diff-filter=AM \
-                "$migration_base" HEAD -- \
-                'telegram-bot/yue/migrations/*.sql'
-            else
-              git ls-tree -r --name-only HEAD telegram-bot/yue/migrations \
-                | grep -E '\.sql$' || true
-            fi
-          )
+          # Write first, then read: process substitution would hide a failed
+          # range selector and turn an invalid base into a green empty scan.
+          migration_list="${RUNNER_TEMP}/yueops-changed-migrations.nul"
+          python3 .ci-policy/scripts/changed-migrations.py --base "$MIGRATION_BASE" > "$migration_list"
+          mapfile -d '' -t migrations < "$migration_list"
           if [ "${#migrations[@]}" -eq 0 ]; then
             echo "no changed YueOps SQL migrations"
             exit 0

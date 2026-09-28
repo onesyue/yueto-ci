@@ -147,6 +147,7 @@ class PlanPromotionGateTest(unittest.TestCase):
                 "GH_API_TOKEN": "",
                 "SERVICE": "yue-node",
                 "REF_OVERRIDE": "",
+                "MIGRATION_BASE": "a" * 40,
                 "EVENT_NAME": "workflow_dispatch",
                 "EVENT_ACTOR": "onesyue",
                 "WORKFLOW_GIT_REF": "refs/heads/master",
@@ -169,6 +170,18 @@ class PlanPromotionGateTest(unittest.TestCase):
             result = self.run_plan(REF_OVERRIDE=ref)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("promote=false", result.outputs)
+
+    def test_ops_and_all_require_explicit_sql_baseline_even_without_promotion(self) -> None:
+        for service in ("yueops", "yue-bot", "checkin-api", "yueops-web", "all"):
+            for base in ("", "HEAD^", "a" * 12):
+                with self.subTest(service=service, base=base):
+                    result = self.run_plan(SERVICE=service, MIGRATION_BASE=base)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("migration_base", result.stdout)
+                    self.assertEqual(result.outputs, "")
+        result = self.run_plan(SERVICE="yueops", MIGRATION_BASE="a" * 40)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("validation_matrix=", result.outputs)
 
     def test_exact_sha_promotion_from_master_is_planned(self) -> None:
         sha = "a" * 40
