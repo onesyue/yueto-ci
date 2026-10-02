@@ -31,12 +31,15 @@ import re
 import sys
 import urllib.request
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 OWNER = "onesyue"
 # Current promotion + its predecessor (the rollback target) + one more for a
 # deploy that lags :latest by two promotions.
 PROMOTED_DEPTH = 3
+PAGE_SIZE = 100
+MAX_VERSION_PAGES = 100
 PROMOTED_TAG = re.compile(r"^promoted-([0-9a-f]{40})-([0-9a-f]{64})$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 
@@ -45,23 +48,78 @@ class PlanError(Exception):
     pass
 
 
+def has_next_page(service: str, header: str, page: int) -> bool:
+    """Validate GitHub pagination hints without following credential-bearing URLs."""
+    if not isinstance(header, str):
+        raise PlanError(f"{service}: malformed pagination header")
+    if not header:
+        return False
+    relations = {}
+    package_path = rf"/(?:users/{OWNER}|user/[1-9][0-9]*)/packages/container/{re.escape(service)}/versions"
+    for entry in header.split(","):
+        match = re.fullmatch(r'\s*<([^>]+)>;\s*rel="(next|prev|first|last)"\s*', entry)
+        if not match or match[2] in relations:
+            raise PlanError(f"{service}: malformed or duplicate pagination relation")
+        try:
+            url = urlsplit(match[1])
+            query = parse_qs(url.query, strict_parsing=True)
+        except ValueError as exc:
+            raise PlanError(f"{service}: malformed pagination URL") from exc
+        if (url.scheme != "https" or url.netloc != "api.github.com" or url.fragment
+                or re.fullmatch(package_path, url.path) is None
+                or set(query) != {"per_page", "page"} or query["per_page"] != [str(PAGE_SIZE)]
+                or len(query["page"]) != 1 or re.fullmatch(r"[1-9][0-9]*", query["page"][0]) is None):
+            raise PlanError(f"{service}: untrusted or nonsequential pagination URL")
+        target = int(query["page"][0])
+        if ((match[2] == "next" and target != page + 1)
+                or (match[2] == "prev" and (page == 1 or target != page - 1))
+                or (match[2] == "first" and target != 1)
+                or (match[2] == "last" and target < page)):
+            raise PlanError(f"{service}: untrusted or nonsequential pagination URL")
+        relations[match[2]] = target
+    if "last" in relations and (relations["last"] > page) != ("next" in relations):
+        raise PlanError(f"{service}: contradictory pagination continuation")
+    return "next" in relations
+
+
 def fetch_versions(service: str) -> list[dict]:
     token = os.environ.get("GH_API_TOKEN", "")
     if not token:
         raise PlanError("GH_API_TOKEN is required to enumerate promoted digests")
-    request = urllib.request.Request(
-        f"https://api.github.com/users/{OWNER}/packages/container/{service}/versions?per_page=100",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-    )
-    with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310 - fixed https URL
-        payload = json.load(response)
-    if not isinstance(payload, list):
-        raise PlanError(f"{service}: package versions response is not a list")
-    return payload
+    versions = []
+    seen_ids, seen_digests = set(), set()
+    for page in range(1, MAX_VERSION_PAGES + 1):
+        # GitHub also advertises canonical /user/<id> links. Extract only the
+        # continuation hint; every request retains this reviewed owner/package.
+        request = urllib.request.Request(
+            f"https://api.github.com/users/{OWNER}/packages/container/{service}/versions?per_page={PAGE_SIZE}&page={page}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310 - fixed https URL
+            payload = json.load(response)
+            continuation = has_next_page(service, response.headers.get("Link", ""), page)
+        if not isinstance(payload, list) or len(payload) > PAGE_SIZE:
+            raise PlanError(f"{service}: malformed package versions page")
+        if not payload and continuation:
+            raise PlanError(f"{service}: empty page advertises pagination continuation")
+        for version in payload:
+            if (not isinstance(version, dict) or type(version.get("id")) is not int
+                    or version["id"] <= 0 or not isinstance(version.get("name"), str)
+                    or DIGEST.fullmatch(version["name"]) is None):
+                raise PlanError(f"{service}: malformed package version entry")
+            if version["id"] in seen_ids or version["name"] in seen_digests:
+                raise PlanError(f"{service}: duplicate package version during pagination")
+            seen_ids.add(version["id"])
+            seen_digests.add(version["name"])
+        versions.extend(payload)
+        # A full page is not a completeness proof, even if Link is omitted.
+        if len(payload) < PAGE_SIZE and not continuation:
+            return versions
+    raise PlanError(f"{service}: package versions page limit reached before complete enumeration")
 
 
 def select_digests(service: str, versions: list[dict]) -> list[tuple[str, str]]:

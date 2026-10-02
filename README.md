@@ -27,6 +27,11 @@ bastion 上的 heartbeat，并调用 YueOps 仓库中的规范判定器；异常
 枚举失败一律 fail closed。任一 plan/scan 失败或取消都在私有 YueOps 仓开（或追评）同一个
 去重 issue「🛡️ 已发布镜像复扫失败（image-rescan）」，走与 deadman 相同的 App token /
 PAT 兜底路径。它不 checkout 私有源码、不写 registry、不上传公开 artifact。
+枚举按 [GitHub REST 分页](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api)
+每页 100 条逐页读取完整版本集合，再选择最近的 promote 标记；请求始终固定在已评审的
+owner/package，不直接跟随携带凭据的 Link URL。最多 100 页；满页即使没有 Link 也继续
+探测终页。重复版本、异常分页、HTTP 失败或达到上界仍无法证明枚举完整时明确失败，
+不会把前 100 条当作全部版本而漏扫回滚镜像。
 
 ```sh
 # YueBoard 未 pin HEAD 只做验证，零 registry 写；精确 pin 才构建 candidate
