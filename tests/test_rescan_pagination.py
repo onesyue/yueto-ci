@@ -94,6 +94,27 @@ class RescanPaginationTest(unittest.TestCase):
         self.assertEqual(len(versions), 100)
         self.assertEqual(len(calls), 2)
 
+    def test_exact_full_inventory_accepts_github_empty_overrun_page(self) -> None:
+        # GHCR's empty page after a full terminal page points last/prev to
+        # the preceding page (observed 2026-10-05). Keep probing full pages:
+        # missing Link alone still cannot prove enumeration is complete.
+        terminal = ", ".join(next_link(1).replace('rel="next"', f'rel="{rel}"')
+                             for rel in ("prev", "first", "last"))
+        versions, calls = self.fetch([(filler(1), ""), ([], terminal)])
+        self.assertEqual(len(versions), 100)
+        self.assertEqual(len(calls), 2)
+
+    def test_overrun_hint_cannot_hide_nonempty_or_skipped_pages(self) -> None:
+        terminal = ", ".join(next_link(1).replace('rel="next"', f'rel="{rel}"')
+                             for rel in ("prev", "first", "last"))
+        for payload, header in (([promotion(0)], terminal),
+                                ([], terminal + ", " + next_link(3))):
+            with self.subTest(payload=payload), self.assertRaises(PLANNER.PlanError):
+                self.fetch([(filler(1), ""), (payload, header)])
+        with self.assertRaises(PLANNER.PlanError):
+            self.fetch([(filler(1), next_link(2)), (filler(101), ""),
+                        ([], terminal.replace('page=1>; rel="prev"', 'page=2>; rel="prev"'))])
+
     def test_short_page_with_next_link_is_not_truncated(self) -> None:
         versions, calls = self.fetch([([promotion(0)], next_link(2)), ([promotion(1)], "")])
         self.assertEqual(len(versions), 2)

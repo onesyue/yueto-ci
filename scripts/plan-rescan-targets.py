@@ -48,7 +48,7 @@ class PlanError(Exception):
     pass
 
 
-def has_next_page(service: str, header: str, page: int) -> bool:
+def has_next_page(service: str, header: str, page: int, *, empty_page: bool = False) -> bool:
     """Validate GitHub pagination hints without following credential-bearing URLs."""
     if not isinstance(header, str):
         raise PlanError(f"{service}: malformed pagination header")
@@ -74,7 +74,8 @@ def has_next_page(service: str, header: str, page: int) -> bool:
         if ((match[2] == "next" and target != page + 1)
                 or (match[2] == "prev" and (page == 1 or target != page - 1))
                 or (match[2] == "first" and target != 1)
-                or (match[2] == "last" and target < page)):
+                or (match[2] == "last" and target < page
+                    and not (empty_page and page > 1 and target == page - 1))):
             raise PlanError(f"{service}: untrusted or nonsequential pagination URL")
         relations[match[2]] = target
     if "last" in relations and (relations["last"] > page) != ("next" in relations):
@@ -101,9 +102,16 @@ def fetch_versions(service: str) -> list[dict]:
         )
         with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310 - fixed https URL
             payload = json.load(response)
-            continuation = has_next_page(service, response.headers.get("Link", ""), page)
-        if not isinstance(payload, list) or len(payload) > PAGE_SIZE:
-            raise PlanError(f"{service}: malformed package versions page")
+            if not isinstance(payload, list) or len(payload) > PAGE_SIZE:
+                raise PlanError(f"{service}: malformed package versions page {page}")
+            # An exact multiple of PAGE_SIZE requires one extra request.
+            # GitHub's empty overrun response legitimately points last at the
+            # immediately preceding page. Never accept that hint with data.
+            try:
+                continuation = has_next_page(service, response.headers.get("Link", ""), page,
+                                             empty_page=not payload)
+            except PlanError as exc:
+                raise PlanError(f"{exc} (page {page}, entries {len(payload)})") from exc
         if not payload and continuation:
             raise PlanError(f"{service}: empty page advertises pagination continuation")
         for version in payload:

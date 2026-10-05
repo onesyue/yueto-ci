@@ -32,6 +32,8 @@ PAT 兜底路径。它不 checkout 私有源码、不写 registry、不上传公
 owner/package，不直接跟随携带凭据的 Link URL。最多 100 页；满页即使没有 Link 也继续
 探测终页。重复版本、异常分页、HTTP 失败或达到上界仍无法证明枚举完整时明确失败，
 不会把前 100 条当作全部版本而漏扫回滚镜像。
+总数恰好为整页时，额外空页的 `last` 可指向紧邻前页，这是 GitHub 的正常响应；
+只在该页确实为空且没有 `next` 时接受，带数据或跨过多页的回退仍拒绝。
 
 ```sh
 # YueBoard 未 pin HEAD 只做验证，零 registry 写；精确 pin 才构建 candidate
