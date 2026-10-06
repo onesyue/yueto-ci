@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import textwrap
 import unittest
 
 
@@ -27,6 +28,60 @@ YUEBOARD_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-promotion.sh"
 YUEBOARD_PLAN_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-build-plan.sh"
 BUILDX_INSTALLER = ROOT / "scripts" / "install-verified-buildx.sh"
 BUILDX_SHA256 = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"
+
+
+class LockedPythonDualAuditTest(unittest.TestCase):
+    def test_both_provider_results_are_required_without_skips(self) -> None:
+        source = WORKFLOW.read_text()
+        loop = re.search(r"^          for vulnerability_service in pypi osv; do\n.*?^          done\n",
+                         source, re.MULTILINE | re.DOTALL)
+        self.assertIsNotNone(loop, "both fresh advisory providers must be audited")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "cache").mkdir()
+            (root / "reports").mkdir()
+            (root / "requirements.txt").write_text("fixture==1.0\n")
+            uv = root / "uv"
+            uv.write_text('''#!/usr/bin/env python3
+import json, os, pathlib, sys
+args = sys.argv[1:]
+for required in ('--frozen', '--only-group', '--require-hashes', '--disable-pip', '--strict', '--cache-dir'):
+    assert required in args, required
+provider = args[args.index('--vulnerability-service') + 1]
+assert provider in ('pypi', 'osv')
+with open(os.environ['AUDIT_CALLS'], 'a') as f:
+    f.write(provider + '\\n')
+behavior = os.environ['AUDIT_BEHAVIOR'] if provider == os.environ['AUDIT_FAILURE_PROVIDER'] else 'clean'
+if behavior == 'error':
+    raise SystemExit(7)
+rows = [{'name': 'fixture-' + str(i), 'version': '1.0', 'vulns': []} for i in range(139)]
+if behavior == 'vulnerability':
+    rows[0]['vulns'] = [{'id': 'GHSA-fixture'}]
+if behavior == 'skip':
+    rows[0]['skip_reason'] = 'fixture dependency could not be audited'
+if behavior == 'incomplete':
+    rows = rows[:1]
+pathlib.Path(args[args.index('--output') + 1]).write_text(json.dumps({'dependencies': rows}))
+''')
+            uv.chmod(0o755)
+            for provider, behavior in (("pypi", "clean"), ("pypi", "error"), ("osv", "error"),
+                                       ("pypi", "vulnerability"), ("osv", "vulnerability"),
+                                       ("pypi", "skip"), ("osv", "skip"), ("osv", "incomplete")):
+                with self.subTest(provider=provider, behavior=behavior):
+                    calls = root / "calls"
+                    calls.write_text("")
+                    env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"],
+                               python_lock_audit=str(root / "requirements.txt"),
+                               python_audit_cache=str(root / "cache"),
+                               python_audit_reports=str(root / "reports"), AUDIT_CALLS=str(calls),
+                               AUDIT_FAILURE_PROVIDER=provider, AUDIT_BEHAVIOR=behavior)
+                    result = subprocess.run(["bash", "-euo", "pipefail", "-c", textwrap.dedent(loop.group())],
+                                            env=env, capture_output=True, text=True, timeout=15)
+                    if behavior == "clean":
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        self.assertEqual(calls.read_text().splitlines(), ["pypi", "osv"])
+                    else:
+                        self.assertNotEqual(result.returncode, 0, "an incomplete audit must never pass")
 
 
 class PostgresKeyFingerprintTest(unittest.TestCase):
