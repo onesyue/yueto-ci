@@ -84,6 +84,52 @@ pathlib.Path(args[args.index('--output') + 1]).write_text(json.dumps({'dependenc
                         self.assertNotEqual(result.returncode, 0, "an incomplete audit must never pass")
 
 
+class VisualBaselineDiscoveryTest(unittest.TestCase):
+    """Run the real CI branch; SIGPIPE must not turn comparison into bootstrap."""
+
+    def branch(self) -> str:
+        found = re.findall(r"(?ms)^          if find \"\$shots\" .*?^          fi\n", WORKFLOW.read_text())
+        self.assertEqual(len(found), 1, "exactly one native baseline branch must be exercised")
+        return textwrap.dedent(found[0])
+
+    def run_branch(self, scenario: str) -> tuple[str, str]:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shots = root / "test/e2e/specs/__screenshots__"
+            if scenario != "missing":
+                shots.mkdir(parents=True)
+            if scenario == "large":
+                for index in range(6000):
+                    (shots / f"journey-{index:05d}-purchase-commission-usage-policy-light-chromium-linux.png").touch()
+            output = root / "output"
+            summary = root / "summary"
+            output.touch()
+            summary.touch()
+            env = dict(os.environ, GITHUB_OUTPUT=str(output), GITHUB_STEP_SUMMARY=str(summary))
+            script = 'shots=test/e2e/specs/__screenshots__\npnpm() { printf "INVOKED:%s\\n" "$*"; }\n' + self.branch()
+            result = subprocess.run(["bash", "-euo", "pipefail", "-c", script], cwd=root,
+                                    env=env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.count("INVOKED:"), 1)
+            return output.read_text(), result.stdout
+
+    def test_large_existing_baselines_compare_without_rewriting(self) -> None:
+        output, calls = self.run_branch("large")
+        self.assertEqual(output, "visual=compared\n")
+        self.assertIn("INVOKED:--dir test/e2e test\n", calls)
+        self.assertNotIn("--update-snapshots", calls)
+
+    def test_empty_baselines_still_report_bootstrap(self) -> None:
+        output, calls = self.run_branch("empty")
+        self.assertEqual(output, "visual=bootstrapped\n")
+        self.assertIn("INVOKED:--dir test/e2e exec playwright test --update-snapshots=changed\n", calls)
+
+    def test_missing_baselines_still_report_bootstrap(self) -> None:
+        output, calls = self.run_branch("missing")
+        self.assertEqual(output, "visual=bootstrapped\n")
+        self.assertIn("INVOKED:--dir test/e2e exec playwright test --update-snapshots=changed\n", calls)
+
+
 class PostgresKeyFingerprintTest(unittest.TestCase):
     """Run the real key reader with output larger than an OS pipe buffer."""
 
