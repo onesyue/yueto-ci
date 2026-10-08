@@ -319,3 +319,23 @@ P90 5.36 h、最长 6.93 h。所以：
   （emitter 每 5 分钟写一次），与面板机 deadman 共用同一个 canonical 判定器与契约；它不应
   随 GitHub 节流放宽——放宽只会让每次抽样更迟钝，而不会让抽样更频繁。
 - cron 仍保留 30 分钟：GitHub 只会少跑、不会多跑，写得稀疏只会让间隔更长。
+
+## YueBoard PostgreSQL 集成覆盖
+
+中央门先在新 PostgreSQL 服务上运行 domain 夹具，再在**同一 cluster 的独立新库**运行
+`clean-pg-gate.sh`，随后串行运行 module 套件，最后运行完整 db/nativeproto 迁移套件与
+production-scale 用例。先跑迁移会提前建立 cluster 角色，掩盖夹具自己的角色初始化缺陷；
+提前跑 deviceidentity/nodesync 会清空其它套件依赖的 `public`。
+
+`validate-yueboard-postgres.py` 通过 Go 的 build selection 和 AST 发现 integration 文件与测试，
+对账源码包集合、实际执行的测试 run/pass 事件及 package 完成事件。所有 `go test` 使用
+`-count=1 -p 1 -tags integration -json -v`，完整测试输出保留在 job 日志；任何顶层或子测试
+SKIP、未实际执行、非零退出、新增未编排包均失败。domain 与后半程之间用本次 run/attempt
+专属收据绑定同一份源码测试清单。四类 DSN 必须相同，且仅允许 loopback 的 `yueboard_test`；
+迁移 reset 确认与 production-scale 开关仍是必需条件。
+
+schema floor 130 起要求目前全部 10 包。历史 floor <130 的候选只允许显式缺少当时可能尚未
+加入的 user/referencelock/nativeproto 三包；实际发现的套件仍全部执行，SKIP 没有豁免。
+新增包必须先评审其是否会重建 `public`，再加入执行顺序，不能自动并发或静默漏掉。
+政策回归运行真实 Go 测试进程，覆盖缺 DSN、真实子测试 SKIP、TestMain 提前退出、空选择器、
+仅单元测试通过、遗漏包、变更源码复用旧收据及失败日志保留；不依赖伪造 Go 输出。

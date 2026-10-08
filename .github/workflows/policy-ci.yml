@@ -26,6 +26,13 @@ jobs:
         with:
           python-version: '3.13'
 
+      # The PostgreSQL execution guard's negative controls run real Go tests;
+      # a fake go executable cannot prove skips/non-execution are rejected.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6.5.0
+        with:
+          go-version: '1.27.1'
+          cache: false # Public policy has no go.mod/go.sum dependency cache.
+
       - name: Install pinned actionlint
         env:
           ACTIONLINT_VERSION: '1.7.12'

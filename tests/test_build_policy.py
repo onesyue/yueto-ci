@@ -522,7 +522,8 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
         # Service mapping + integration DSNs + isolated clean-PG DSNs +
         # the disposable E2E admin/app DSNs.
-        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 7)
+        # Both integration phases independently receive all four DSNs.
+        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 13)
 
     def test_source_poller_is_unconditional(self) -> None:
         """poller 不许有路径过滤——「每个提交都被中央验证」靠的就是这一点。
@@ -894,6 +895,7 @@ class BuildPolicyTest(unittest.TestCase):
             [
                 "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
                 "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+                "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e",
             ],
         )
         for action in uses:
@@ -1304,7 +1306,8 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("bufbuild/buf-setup-action@", self.workflow)
         self.assertIn("version: '1.72.0'", self.workflow)
 
-        integration = self.workflow[integration_start:clean_start]
+        integration = self.workflow[integration_start:frontend_start]
+        runner = (ROOT / "scripts" / "validate-yueboard-postgres.py").read_text()
         for package in (
             "./internal/modules/order",
             "./internal/modules/emby",
@@ -1313,11 +1316,14 @@ class BuildPolicyTest(unittest.TestCase):
             "./internal/modules/nodesync",
         ):
             with self.subTest(integration_package=package):
-                self.assertIn(package, integration)
-        self.assertIn("go test -p 1 -tags integration -v", integration)
+                self.assertIn(package, runner)
+        self.assertIn("validate-yueboard-postgres.py", integration)
+        self.assertIn("--phase domain", integration)
+        self.assertIn("--phase remaining", integration)
         self.assertNotIn("go test ./...", integration)
 
-        clean = self.workflow[clean_start:frontend_start]
+        module_start = self.workflow.index("- name: Validate YueBoard PostgreSQL module and migration integration")
+        clean = self.workflow[clean_start:module_start]
         self.assertIn("yueboard_clean_gate", clean)
         self.assertIn("scripts/ci/clean-pg-gate.sh", clean)
         self.assertNotIn("/yueboard_test", clean)

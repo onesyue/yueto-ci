@@ -62,7 +62,8 @@ CREDENTIAL_MARKERS = (
     "extraheader",
 )
 # Anything that executes third-party (dependency) code.
-DEPENDENCY_CODE_MARKERS = ("go test", "make test", "make build", "go run ", "check-vulnerabilities.sh")
+DEPENDENCY_CODE_MARKERS = ("go test", "make test", "make build", "go run ", "check-vulnerabilities.sh",
+                           "validate-yueboard-postgres.py")
 
 
 def credential_leaks(job_text: str) -> list[str]:
@@ -84,8 +85,20 @@ class ForkTokenIsolationTest(unittest.TestCase):
     def test_no_step_runs_dependency_code_with_a_credential(self) -> None:
         self.assertEqual(credential_leaks(self.validate), [])
         # Scan floor: the checker really looked at the Go test steps.
-        runners = [s for s in steps(self.validate) if "go test" in s]
-        self.assertGreaterEqual(len(runners), 3)
+        runners = [s for s in steps(self.validate)
+                   if "go test" in s or "validate-yueboard-postgres.py" in s]
+        self.assertGreaterEqual(len(runners), 4)
+
+    def test_wrapped_postgres_test_steps_still_reject_credentials(self) -> None:
+        for name in ("Validate YueBoard PostgreSQL integration",
+                     "Validate YueBoard PostgreSQL module and migration integration"):
+            with self.subTest(name=name):
+                original = step_named(self.validate, name)
+                changed = original.replace("        env:\n", "        env:\n"
+                    "          GITHUB_TOKEN: ${{ github.token }}\n", 1)
+                self.assertNotEqual(original, changed)
+                self.assertEqual(credential_leaks(self.validate.replace(original, changed, 1)),
+                                 ["- name: " + name])
 
     def test_mutation_restoring_the_old_shape_is_caught(self) -> None:
         test_step = step_named(self.validate, "Validate yue-node")
