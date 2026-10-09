@@ -1292,7 +1292,7 @@ class BuildPolicyTest(unittest.TestCase):
             "go vet ./...",
             "scripts/ci/check-server-error-logging.sh",
             "golang.org/x/vuln/cmd/govulncheck@v1.8.0",
-            "golangci-lint@v2.13.1 run --timeout=6m ./...",
+            "golangci-lint@v2.14.0 run --timeout=6m ./...",
             "go test ./...",
             "go test -race ./...",
         ):
