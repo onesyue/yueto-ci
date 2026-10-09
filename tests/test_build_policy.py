@@ -436,7 +436,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIsNotNone(setup)
         assert setup is not None
         body = setup.group("body")
-        self.assertIn("go-version: '1.27.1'", body)
+        self.assertIn("go-version: '1.27.2'", body)
         # A per-repo conditional used to live here. It looked like it tracked
         # each repo's go.mod and did not; the workspace guard
         # toolchain-pin-agreement is what joins them now.
