@@ -955,12 +955,16 @@ def validate_yueboard(root: Path, contract: dict) -> None:
     # 2026-09-23: the count is the single authoritative devicecount result
     # shared by /user/devices, users.online_count and the yueops internal
     # counts endpoint; the max-rather-than-add invariant now lives there.
+    # 2026-10-10: tagged devices are now ADDED to the untagged identities
+    # (a tag and an address are different devices; max dropped real devices).
+    # The dual-stack invariant is unchanged: v4/v6 and HWID-vs-network stay max.
     require(
         read(root / "internal/platform/devicecount/devicecount.go"),
         [
             "dual stack combined with max",
             "(never added — one dual-stack device is observed on both families).",
-            "result.Count = max(explicit, network)",
+            "untagged := max(int64(len(online)), network)",
+            "result.Count = int64(len(tags)) + untagged",
             "count := max(v4, v6)",
         ],
         "YueBoard authoritative device count",
