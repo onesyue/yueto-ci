@@ -6,19 +6,22 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
 from urllib.parse import urlsplit
 
 DOMAIN = ['./test/integration']
+COMMANDS = ['./cmd/yueboard']
 MODULES = [
     './internal/modules/user', './internal/platform/referencelock',
     './internal/modules/order', './internal/modules/emby', './internal/modules/handoff',
     './internal/platform/deviceidentity', './internal/modules/nodesync',
 ]
 MIGRATIONS = ['./internal/platform/db', './internal/platform/nativeproto']
-ORDER = DOMAIN + MODULES + MIGRATIONS
+ORDER = DOMAIN + COMMANDS + MODULES + MIGRATIONS
+COMMAND_GATE = Path('scripts/ci/net-operator-pg18-gate.sh')
 # These three suites were absent from older candidates. Floor 130 and later
 # must contain all ten packages; earlier sources still execute every discovered
 # integration suite, and may omit only these explicitly identified additions.
@@ -56,7 +59,11 @@ def discover() -> list[dict]:
     entries = json.loads(result.stdout)
     found = {row['path'] for row in entries}
     floor = int(Path('schema-floor.txt').read_text().strip())
-    required = set(ORDER) - (HISTORICAL_ADDITIONS if floor < 130 else set())
+    # Floor 134 predates the root-only operator CLI. Its owned Linux gate is
+    # the capability marker; older sources may omit only this command package.
+    required = set(ORDER) - set(COMMANDS) - (HISTORICAL_ADDITIONS if floor < 130 else set())
+    if COMMAND_GATE.is_file():
+        required.update(COMMANDS)
     if not required <= found or found - set(ORDER) or len(found) != len(entries):
         fail(f'integration package plan mismatch: missing={sorted(required-found)} unplanned={sorted(found-set(ORDER))}')
     for row in entries:
@@ -122,6 +129,29 @@ def run_group(paths: list[str], entries: list[dict]) -> dict:
     return {'packages': selected, **counts}
 
 
+def run_commands(entries: list[dict]) -> dict:
+    selected = [row for row in entries if row['path'] in COMMANDS]
+    if not selected:
+        return {'packages': [], 'top_level_passed': 0, 'subtests_passed': 0, 'skipped': 0}
+    if len(selected) != 1 or not COMMAND_GATE.is_file():
+        fail('command integration requires its native root/UID1001 execution gate')
+    # The hosted runner is non-root: go test here would silently skip the
+    # issuer. Execute the source's owned Linux PG18/UID0+1001 gate instead.
+    command = ['bash', str(COMMAND_GATE)]
+    print('+ ' + ' '.join(command), flush=True)
+    process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    print(process.stdout, end='', flush=True)
+    runs = set(re.findall(r'^\s*=== RUN\s+(\S+)\s*$', process.stdout, re.M))
+    passed = set(re.findall(r'^\s*--- PASS: (\S+) ', process.stdout, re.M))
+    missing = set(selected[0]['tests']) - (runs & passed)
+    if process.returncode or missing or re.search(r'--- (SKIP|FAIL):', process.stdout):
+        fail(f'native command gate exited {process.returncode}; integration tests not run and passed: {sorted(missing)}')
+    counts = {'top_level_passed': sum('/' not in test for test in passed),
+              'subtests_passed': sum('/' in test for test in passed), 'skipped': 0}
+    print('Native command execution: ' + json.dumps({'packages': COMMANDS, **counts}), flush=True)
+    return {'packages': COMMANDS, **counts}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--phase', choices=['domain', 'remaining'], required=True)
@@ -140,11 +170,12 @@ def main() -> None:
         receipt = json.loads(args.receipt.read_text())
         if receipt.get('manifest_sha256') != manifest or receipt.get('domain', {}).get('packages') != DOMAIN:
             fail('missing or changed successful domain proof before module/migration tests')
+        receipt['commands'] = run_commands(entries)
         receipt['modules'] = run_group(MODULES, entries)
         # Full db/nativeproto suites, including compatibility, production-scale
         # and runtime-role cases. They destroy public and must run last.
         receipt['migrations'] = run_group(MIGRATIONS, entries)
-        executed = [path for group in ('domain', 'modules', 'migrations') for path in receipt[group]['packages']]
+        executed = [path for group in ('domain', 'commands', 'modules', 'migrations') for path in receipt[group]['packages']]
         if set(executed) != {row['path'] for row in entries} or len(executed) != len(entries):
             fail('discovered and executed integration packages differ')
         args.receipt.write_text(json.dumps(receipt, indent=2) + '\n')

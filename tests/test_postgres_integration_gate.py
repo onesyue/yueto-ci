@@ -72,9 +72,15 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         return subprocess.run([sys.executable, str(SCRIPT), '--phase', phase, '--receipt', str(receipt)],
             cwd=self.root, env=environment or self.environment, capture_output=True, text=True, timeout=90)
 
-    def test_real_domain_then_remaining_reaches_all_ten_packages(self):
+    def command_gate(self, body='go test -count=1 -tags integration -v ./cmd/yueboard'):
+        script = self.root / GATE.COMMAND_GATE
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text('#!/usr/bin/env bash\nset -euo pipefail\n' + body + '\n')
+
+    def test_real_domain_then_remaining_reaches_every_package_and_native_commands(self):
         for path in GATE.ORDER:
             self.package(path)
+        self.command_gate()
         receipt = self.root / 'receipt.json'
         domain = self.command('domain', receipt)
         self.assertEqual(domain.returncode, 0, domain.stdout + domain.stderr)
@@ -82,8 +88,8 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         remaining = self.command('remaining', receipt)
         self.assertEqual(remaining.returncode, 0, remaining.stdout + remaining.stderr)
         data = json.loads(receipt.read_text())
-        self.assertEqual(data['domain']['packages'] + data['modules']['packages'] + data['migrations']['packages'], GATE.ORDER)
-        self.assertEqual(sum(data[k]['top_level_passed'] for k in ('domain', 'modules', 'migrations')), 10)
+        self.assertEqual(sum((data[group]['packages'] for group in ('domain','commands','modules','migrations')), []), GATE.ORDER)
+        self.assertEqual(sum(data[k]['top_level_passed'] for k in ('domain','commands','modules','migrations')), 11)
         self.assertNotIn('(cached)', domain.stdout + remaining.stdout)
 
     def test_missing_each_dsn_is_a_hard_execution_failure(self):
@@ -158,7 +164,7 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
     def test_explicit_older_floor_runs_only_its_actual_known_suites(self):
         (self.root / 'schema-floor.txt').write_text('129\n')
         for path in GATE.ORDER:
-            if path not in GATE.HISTORICAL_ADDITIONS:
+            if path not in GATE.HISTORICAL_ADDITIONS | set(GATE.COMMANDS):
                 self.package(path)
         receipt = self.root / 'receipt.json'
         domain = self.command('domain', receipt)
@@ -166,6 +172,40 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         remaining = self.command('remaining', receipt)
         self.assertEqual(remaining.returncode, 0, remaining.stdout + remaining.stderr)
         self.assertIn('7 packages, no skipped tests', remaining.stdout)
+
+    def test_current_floor_before_operator_cli_keeps_its_ten_packages(self):
+        (self.root / 'schema-floor.txt').write_text('134\n')
+        for path in GATE.ORDER:
+            if path not in GATE.COMMANDS:
+                self.package(path)
+        receipt = self.root / 'receipt.json'
+        self.assertEqual(self.command('domain', receipt).returncode, 0)
+        result = self.command('remaining', receipt)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('10 packages, no skipped tests', result.stdout)
+
+    def test_native_command_marker_cannot_hide_missing_integration_tests(self):
+        for path in GATE.ORDER:
+            if path not in GATE.COMMANDS:
+                self.package(path)
+        self.command_gate()
+        result = self.command('domain', self.root / 'receipt.json')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing=['./cmd/yueboard']", result.stderr)
+
+    def test_native_command_success_without_execution_is_rejected(self):
+        self.package(GATE.COMMANDS[0])
+        self.command_gate('true')
+        with working_directory(self.root), mock.patch.dict(os.environ,self.environment,clear=True):
+            with self.assertRaisesRegex(RuntimeError,'not run and passed'):
+                GATE.run_commands([self.package(GATE.COMMANDS[0])])
+
+    def test_native_command_skip_is_rejected(self):
+        row = self.package(GATE.COMMANDS[0], 't.Skip("root issuer not reached")')
+        self.command_gate()
+        with working_directory(self.root), mock.patch.dict(os.environ,self.environment,clear=True):
+            with self.assertRaisesRegex(RuntimeError,'not run and passed'):
+                GATE.run_commands([row])
 
     def test_changed_source_cannot_reuse_earlier_domain_proof(self):
         for path in GATE.ORDER:
