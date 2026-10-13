@@ -392,7 +392,7 @@ jobs:
           ref: ${{ needs.plan.outputs.yueboard_contract_ref }}
           token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           path: .ci-yueboard
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Checkout immutable central native-node policy
@@ -615,6 +615,12 @@ jobs:
           # These fixtures use initdb as the runner user, never a production DB.
           [ "$(id -u)" -ne 0 ] || { echo '::error::native PostgreSQL fixtures require a non-root runner'; exit 1; }
           echo "$pg_bin" >> "$GITHUB_PATH"
+
+      - name: Install native YueOps NGINX test toolchain
+        if: matrix.validation == 'yueops'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nginx libnginx-mod-stream logrotate
 
       - name: Preflight validation dependencies
         env:
@@ -1080,6 +1086,7 @@ jobs:
         if: matrix.validation == 'yueops'
         env:
           YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard
+          YUETO_CI_REPO_PATH: ${{ github.workspace }}/.ci-policy
           UV_PYTHON_DOWNLOADS: never
           # Surface the slowest tests in the log so a 640-second run can be
           # read without re-running it; pytest appends this to every
@@ -1122,6 +1129,7 @@ jobs:
           # xdist 收集时 service 包 sys.path/sys.modules 污染。
           # 覆盖与耗时取本次完整日志，不沿用旧 runner 的历史估计。
           YUEOPS_PYTEST_SERIAL=1 bash scripts/run-pytest-parallel.sh
+          sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py
 
       - name: Validate yueops frontend
         if: matrix.validation == 'yueops'
