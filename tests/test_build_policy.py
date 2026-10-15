@@ -30,6 +30,71 @@ BUILDX_INSTALLER = ROOT / "scripts" / "install-verified-buildx.sh"
 BUILDX_SHA256 = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"
 
 
+class PublishedWidgetContractTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location("widget_contract", NATIVE_VALIDATOR)
+        cls.guard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.guard)
+
+    MODEL = """function scDeviceIdentityModel(dv){
+      const rows=dv.identities.map(i=>({kind:'identity'}));
+      const onlineIdentities=dv.identities.filter(i=>i.online).length;
+      return {rows,onlineIdentities,sharedIps:[...new Set(dv.ips)],
+        unmatchedOnline:Math.max(dv.count-onlineIdentities,0)};
+    }var SC_RESET_OPERATION_PREFIX='fixture';"""
+
+    def test_public_identity_behavior_and_bounded_failures(self):
+        self.guard.validate_widget_identity_artifact(self.MODEL)
+        mutations = {
+            "network_rows": self.MODEL.replace("return {rows,", "dv.ips.forEach(()=>rows.push({kind:'identity'}));return {rows,"),
+            "network_count": self.MODEL.replace("dv.count-onlineIdentities", "0"),
+            "duplicates": self.MODEL.replace("[...new Set(dv.ips)]", "dv.ips"),
+            "missing": self.MODEL.replace("scDeviceIdentityModel", "missingModel"),
+            "duplicate": self.MODEL + self.MODEL,
+            "unbounded": self.MODEL.replace("const rows=", "while(true){};const rows="),
+            "host_access": self.MODEL.replace("const rows=", "process.exit(0);const rows="),
+        }
+        for name, artifact in mutations.items():
+            with self.subTest(mutation=name), self.assertRaises(RuntimeError):
+                self.guard.validate_widget_identity_artifact(artifact)
+
+    def test_public_projection_rejects_consumer_manifest_and_source_drift(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in ("checkin-api/static", "nginx/html/assets", "site/scripts"):
+                (root / relative).mkdir(parents=True)
+            api = root / "checkin-api/static/chat-widget.js"
+            site = root / "nginx/html/assets/chat-widget.js"
+            manifest = root / "site/published.json"
+            generator = root / "site/scripts/lib.mjs"
+            source_digest = "a" * 64
+            body = self.MODEL.encode()
+            data = {"inputs_sha256": source_digest, "files": {"assets/chat-widget.js": hashlib.sha256(body).hexdigest()}}
+            for mutation in (None, "api", "site", "manifest", "source", "model"):
+                with self.subTest(mutation=mutation):
+                    api.write_bytes(body)
+                    site.write_bytes(body)
+                    manifest.write_text(json.dumps(data))
+                    generator.write_text("export function inputsDigest(){return '" + source_digest + "';}")
+                    if mutation in ("api", "site"):
+                        (api if mutation == "api" else site).write_bytes(body + b"changed")
+                    elif mutation == "manifest":
+                        manifest.write_text(json.dumps(dict(data, files={})))
+                    elif mutation == "source":
+                        generator.write_text("export function inputsDigest(){return 'changed';}")
+                    elif mutation == "model":
+                        invalid = body.replace(b"dv.count-onlineIdentities", b"0")
+                        api.write_bytes(invalid)
+                        site.write_bytes(invalid)
+                        manifest.write_text(json.dumps(dict(data, files={"assets/chat-widget.js": hashlib.sha256(invalid).hexdigest()})))
+                    if mutation is None:
+                        self.assertEqual(self.guard.validate_widget_projection(root), self.MODEL)
+                    else:
+                        with self.assertRaises(RuntimeError):
+                            self.guard.validate_widget_projection(root)
+
+
 class LockedPythonDualAuditTest(unittest.TestCase):
     def test_both_provider_results_are_required_without_skips(self) -> None:
         source = WORKFLOW.read_text()

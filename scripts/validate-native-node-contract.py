@@ -8,6 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 
@@ -387,6 +388,65 @@ def validate_node(root: Path, contract: dict) -> None:
     )
 
 
+def validate_widget_identity_artifact(widget: str) -> None:
+    """Execute the identity model extracted from the shipped artifact, offline."""
+    start, end = "function scDeviceIdentityModel(dv)", "var SC_RESET_OPERATION_PREFIX"
+    if widget.count(start) != 1 or widget.count(end) != 1:
+        raise RuntimeError("published widget identity model boundaries drifted")
+    model = widget[widget.index(start):widget.index(end)]
+    if not 0 < len(model) <= 16384:
+        raise RuntimeError("published widget identity model is not bounded")
+    # No require/process/browser objects enter the VM. Both the VM and its
+    # parent process are bounded; the input is the actual public artifact.
+    script = r"""
+const vm = require('node:vm');
+const fs = require('node:fs');
+const model = fs.readFileSync(0, 'utf8');
+for (const [input, expected] of [
+  [{identities:[{online:true,source:'hwid'},{online:false,source:'manual'}],
+    ips:['a','b','c','a'],count:4}, [2,1,3,3]],
+  [{identities:[],ips:['a','b'],count:2}, [0,0,2,2]],
+]) {
+  const sandbox = Object.create(null);
+  const result = vm.runInNewContext(
+    'const input=' + JSON.stringify(input) + ';function T(a,b){return b;}\n' + model +
+    '\nJSON.stringify(scDeviceIdentityModel(input))', sandbox,
+    {timeout:1000,codeGeneration:{strings:false,wasm:false}});
+  const value = JSON.parse(result);
+  const actual = [value.rows.length,value.onlineIdentities,value.sharedIps.length,value.unmatchedOnline];
+  if (JSON.stringify(actual) !== JSON.stringify(expected) || value.rows.some(row=>row.kind!=='identity'))
+    throw new Error('published widget combines network projection with identity rows');
+}
+"""
+    try:
+        subprocess.run(["node", "-e", script], input=model, text=True,
+                       capture_output=True, check=True, timeout=10)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise RuntimeError("published widget identity behavior failed") from exc
+
+
+def validate_widget_projection(root: Path) -> str:
+    """Bind the readable inputs, manifest and both public consumers."""
+    widget = read_bytes(root / "checkin-api/static/chat-widget.js")
+    if widget != read_bytes(root / "nginx/html/assets/chat-widget.js"):
+        raise RuntimeError("published widget API/site bytes diverged")
+    manifest = json.loads(read(root / "site/published.json"))
+    if manifest.get("files", {}).get("assets/chat-widget.js") != hashlib.sha256(widget).hexdigest():
+        raise RuntimeError("published widget digest differs from generated manifest")
+    # Reuse the generator's own input list and hashing, not another source list.
+    script = "import { inputsDigest } from './site/scripts/lib.mjs'; process.stdout.write(await inputsDigest());"
+    try:
+        result = subprocess.run(["node", "--input-type=module", "-e", script],
+                                cwd=root, capture_output=True, text=True, check=True, timeout=10)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise RuntimeError("published widget input digest could not be verified") from exc
+    if manifest.get("inputs_sha256") != result.stdout:
+        raise RuntimeError("published widget readable inputs drifted from generated manifest")
+    public = widget.decode("utf-8")
+    validate_widget_identity_artifact(public)
+    return public
+
+
 def validate_yueops(
     root: Path, contract: dict, yueboard_contract_root: Path | None
 ) -> None:
@@ -419,7 +479,8 @@ def validate_yueops(
     telemetry_ingest = read(root / "checkin-api/telemetry/ingest.py")
     telemetry_dashboard = read(root / "checkin-api/telemetry/dashboard.py")
     ai_runtime = read(root / "telegram-bot/yue/yue_ai_runtime.py")
-    widget = read(root / "checkin-api/static/chat-widget.js")
+    widget = validate_widget_projection(root)
+    widget_source = read(root / "checkin-api/src/chat-widget.js")
     widget_test = read(root / "tests/test_chat_widget_device_identity_20260730.py")
     account_api = read(root / "checkin-api/api/account.py")
     layout = contract["layout"]
@@ -608,11 +669,10 @@ def validate_yueops(
         "Yue AI runtime dependency injection",
     )
     require(
-        widget,
+        widget_source,
         [
             "function scParseDevices(response)",
             "var countFloor = Math.max(onlineRows, data.shared_online ? 1 : 0);",
-            "IPs remain diagnostic and never become device rows",
             identity["devices_endpoint"],
             identity["reset_endpoint"],
             identity["reset_identity_field"],
@@ -621,6 +681,17 @@ def validate_yueops(
             "/api/client/account/overview",
         ],
         "YueOps account widget device identity boundary",
+    )
+    require(
+        re.sub(r"\s+", "", widget),
+        [re.sub(r"\s+", "", fragment) for fragment in (
+            "function scParseDevices(response)",
+            "var countFloor = Math.max(onlineRows, data.shared_online ? 1 : 0);",
+            identity["devices_endpoint"], identity["reset_endpoint"], identity["reset_identity_field"],
+            "data.applied_user_ids.length === 1", "data.applied_user_ids[0] === expectedUserId",
+            "/api/client/account/overview",
+        )],
+        "YueOps published widget device identity boundary",
     )
     require(
         widget_test,
