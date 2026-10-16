@@ -483,7 +483,7 @@ class BuildPolicyTest(unittest.TestCase):
             "docker/setup-qemu-action@*",
             "sigstore/cosign-installer@*",
         )
-        section = self.readme.split("## Actions 白名单闭包", 1)[1].split(
+        section = self.readme.split("## Actions allowlist closure", 1)[1].split(
             "\n## ", 1
         )[0]
         documented_patterns = tuple(
@@ -578,11 +578,10 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertEqual(self.workflow.count(selector), 3)
         self.assertIn(
-            "`self-hosted`、`Linux`、`X64` 标签并添加唯一自定义\n"
-            "  标签 `yue-local-release`",
+            "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,
         )
-        self.assertIn("本仓保持 public 时不得注册常驻 self-hosted runner", self.readme)
+        self.assertIn("While this repository is public, do not register a persistent self-hosted runner.", self.readme)
         self.assertIn("`--ephemeral --disableupdate` runner", self.readme)
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
         # Service mapping + integration DSNs + isolated clean-PG DSNs +
