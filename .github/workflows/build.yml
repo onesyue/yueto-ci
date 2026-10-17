@@ -1160,6 +1160,25 @@ jobs:
           "$YUE_CI_PYTHON" "$audit_gate" \
             "$GITHUB_WORKSPACE/telegram-bot/yue/miniapp"
 
+      # 2026-10-17 W6.10: the Mini App, console and site `node --test` suites
+      # existed but no CI ran them, so only a developer's workstation could catch
+      # a red one. Same lens as the rest of validate-yueops (TZ=UTC, Linux).
+      - name: Run yueops node unit tests (Mini App, console, site)
+        if: matrix.validation == 'yueops'
+        run: |
+          set -euo pipefail
+          npm --prefix telegram-bot/yue/miniapp test
+          npm --prefix frontend test
+          corepack enable
+          site_pm=$(node -p "require('./site/package.json').packageManager || ''")
+          [ -n "$site_pm" ] || {
+            echo "::error::site/package.json has no packageManager pin"
+            exit 1
+          }
+          corepack install --global "$site_pm"
+          pnpm --dir site install --frozen-lockfile --ignore-scripts
+          pnpm --dir site test
+
       - name: Lint changed YueOps SQL migrations
         if: matrix.validation == 'yueops'
         env:
