@@ -1,0 +1,21 @@
+version: 2
+
+# Dependency policy: security-only (W8.2, 2026-10-17), same as yuelink.
+# Single-maintainer, direct-push repository: routine version-update PRs are noise,
+# so `open-pull-requests-limit: 0` disables them while every ecosystem stays
+# registered and Dependabot security updates still open PRs for known CVEs.
+# Supply-chain cooldown: a new release must be 3 days old (Actions: 7, because
+# tags can be re-pointed) before a version PR; security updates are exempt.
+# Root guard: scripts/check-supply-chain-pins.py (cooldown on every ecosystem).
+
+updates:
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 0
+    labels: [dependencies, ci, security]
