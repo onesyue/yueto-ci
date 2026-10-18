@@ -1378,6 +1378,9 @@ class BuildPolicyTest(unittest.TestCase):
             "./internal/modules/handoff",
             "./internal/platform/deviceidentity",
             "./internal/modules/nodesync",
+            "./internal/modules/statcron",
+            "./internal/modules/subscribe",
+            "./internal/modules/remindmailcron",
         ):
             with self.subTest(integration_package=package):
                 self.assertIn(package, runner)

@@ -89,7 +89,7 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         self.assertEqual(remaining.returncode, 0, remaining.stdout + remaining.stderr)
         data = json.loads(receipt.read_text())
         self.assertEqual(sum((data[group]['packages'] for group in ('domain','commands','modules','migrations')), []), GATE.ORDER)
-        self.assertEqual(sum(data[k]['top_level_passed'] for k in ('domain','commands','modules','migrations')), 11)
+        self.assertEqual(sum(data[k]['top_level_passed'] for k in ('domain','commands','modules','migrations')), len(GATE.ORDER))
         self.assertNotIn('(cached)', domain.stdout + remaining.stdout)
 
     def test_missing_each_dsn_is_a_hard_execution_failure(self):
@@ -127,7 +127,7 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
 
     def test_filter_matching_no_tests_is_not_execution(self):
         row = self.package(GATE.DOMAIN[0])
-        self.environment['GOFLAGS'] = '-run=^DoesNotExist$'
+        row['tests'] = ['TestDoesNotExist']
         _, output, error = self.run_group(row)
         self.assertIn('no tests to run', output)
         self.assertIn('integration tests not run and passed', error)
@@ -141,9 +141,9 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
     def test_unit_pass_cannot_cover_missing_integration_execution(self):
         row = self.package(GATE.DOMAIN[0])
         (self.root / row['path'] / 'unit_test.go').write_text('package fixture\nimport "testing"\nfunc TestUnit(t *testing.T) {}\n')
-        self.environment['GOFLAGS'] = '-run=^TestUnit$'
+        row['tests'].append('TestMissingIntegration')
         _, output, error = self.run_group(row)
-        self.assertIn('--- PASS: TestUnit', output)
+        self.assertNotIn('=== RUN   TestUnit', output)
         self.assertIn('integration tests not run and passed', error)
 
     def test_unplanned_new_integration_package_requires_reviewed_order(self):
@@ -164,7 +164,7 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
     def test_explicit_older_floor_runs_only_its_actual_known_suites(self):
         (self.root / 'schema-floor.txt').write_text('129\n')
         for path in GATE.ORDER:
-            if path not in GATE.HISTORICAL_ADDITIONS | set(GATE.COMMANDS):
+            if path not in GATE.HISTORICAL_ADDITIONS | set(GATE.COMMANDS) | set(GATE.FLOOR_ADDITIONS) | set(GATE.CAPABILITY_ADDITIONS):
                 self.package(path)
         receipt = self.root / 'receipt.json'
         domain = self.command('domain', receipt)
@@ -176,7 +176,7 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
     def test_current_floor_before_operator_cli_keeps_its_ten_packages(self):
         (self.root / 'schema-floor.txt').write_text('134\n')
         for path in GATE.ORDER:
-            if path not in GATE.COMMANDS:
+            if path not in set(GATE.COMMANDS) | set(GATE.FLOOR_ADDITIONS) | set(GATE.CAPABILITY_ADDITIONS):
                 self.package(path)
         receipt = self.root / 'receipt.json'
         self.assertEqual(self.command('domain', receipt).returncode, 0)
@@ -231,6 +231,39 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(expected, result.stderr)
 
+
+    def test_current_floor_requires_statcron_and_subscribe_even_if_deleted(self):
+        (self.root / 'schema-floor.txt').write_text('140\n')
+        for path in GATE.ORDER:
+            self.package(path)
+        for path in GATE.FLOOR_ADDITIONS:
+            with self.subTest(path=path):
+                shutil.rmtree(self.root / path)
+                result = self.command('domain', self.root / 'receipt.json')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("missing=['" + path + "']", result.stderr)
+                self.package(path)
+
+    def test_expiry_consumer_marker_requires_its_real_integration_package(self):
+        (self.root / 'schema-floor.txt').write_text('140\n')
+        for path in GATE.ORDER:
+            if path not in GATE.CAPABILITY_ADDITIONS:
+                self.package(path)
+        marker = self.root / GATE.CAPABILITY_ADDITIONS['./internal/modules/remindmailcron']
+        marker.parent.mkdir(parents=True)
+        marker.write_text('package reminderrules\n')
+        result = self.command('domain', self.root / 'receipt.json')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing=['./internal/modules/remindmailcron']", result.stderr)
+
+    def test_pg_execution_does_not_run_unrelated_optional_unit_test(self):
+        row = self.package('./internal/modules/subscribe')
+        (self.root / row['path'] / 'unit_test.go').write_text(
+            'package fixture\nimport "testing"\nfunc TestOptionalBinary(t *testing.T) {t.Skip("no optional binary")}\n')
+        result, output, error = self.run_group(row)
+        self.assertIsNone(error, output)
+        self.assertEqual(result['top_level_passed'], 1)
+        self.assertNotIn('TestOptionalBinary', output)
 
 class PostgresWorkflowWiringTest(unittest.TestCase):
     def test_two_phase_real_consumer_wraps_existing_clean_lifecycle(self):

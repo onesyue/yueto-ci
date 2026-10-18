@@ -18,15 +18,20 @@ MODULES = [
     './internal/modules/user', './internal/platform/referencelock',
     './internal/modules/order', './internal/modules/emby', './internal/modules/handoff',
     './internal/platform/deviceidentity', './internal/modules/nodesync',
+    './internal/modules/subscribe', './internal/modules/statcron',
+    './internal/modules/remindmailcron',
 ]
 MIGRATIONS = ['./internal/platform/db', './internal/platform/nativeproto']
 ORDER = DOMAIN + COMMANDS + MODULES + MIGRATIONS
 COMMAND_GATE = Path('scripts/ci/net-operator-pg18-gate.sh')
-# These three suites were absent from older candidates. Floor 130 and later
-# must contain all ten packages; earlier sources still execute every discovered
-# integration suite, and may omit only these explicitly identified additions.
+# Historical sources may omit only reviewed additions whose schema/capability
+# did not exist yet. Every suite actually discovered still must execute.
 HISTORICAL_ADDITIONS = {'./internal/modules/user', './internal/platform/referencelock',
                         './internal/platform/nativeproto'}
+FLOOR_ADDITIONS = {'./internal/modules/subscribe': 138, './internal/modules/statcron': 139}
+CAPABILITY_ADDITIONS = {
+    './internal/modules/remindmailcron': Path('internal/platform/reminderrules/rules_g.go'),
+}
 DSNS = ['YUEBOARD_TEST_DATABASE_URL', 'YUEBOARD_TRAFFIC_TEST_DATABASE_URL',
         'YUEBOARD_EMAILVERIFY_TEST_DATABASE_URL', 'YUEBOARD_MIGRATION_TEST_DATABASE_URL']
 
@@ -62,6 +67,8 @@ def discover() -> list[dict]:
     # Floor 134 predates the root-only operator CLI. Its owned Linux gate is
     # the capability marker; older sources may omit only this command package.
     required = set(ORDER) - set(COMMANDS) - (HISTORICAL_ADDITIONS if floor < 130 else set())
+    required -= {path for path, minimum in FLOOR_ADDITIONS.items() if floor < minimum}
+    required -= {path for path, marker in CAPABILITY_ADDITIONS.items() if not marker.is_file()}
     if COMMAND_GATE.is_file():
         required.update(COMMANDS)
     if not required <= found or found - set(ORDER) or len(found) != len(entries):
@@ -80,7 +87,13 @@ def run_group(paths: list[str], entries: list[dict]) -> dict:
     selected = [path for path in paths if any(row['path'] == path for row in entries)]
     if not selected or not expected:
         fail('empty integration execution group')
-    command = ['go', 'test', '-count=1', '-p', '1', '-tags', 'integration', '-json', '-v', *selected]
+    # The earlier backend phase runs all ordinary tests and the race suite.
+    # Here execute exactly the AST-discovered integration tests; unrelated
+    # opt-in binary/template unit checks must not masquerade as PG coverage.
+    test_names = sorted(set().union(*expected.values()))
+    pattern = '^(' + '|'.join(re.escape(name) for name in test_names) + ')$'
+    command = ['go', 'test', '-count=1', '-p', '1', '-tags', 'integration',
+               '-run', pattern, '-json', '-v', *selected]
     print('+ ' + ' '.join(command), flush=True)
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     runs: dict[str, set[str]] = {package: set() for package in expected}
