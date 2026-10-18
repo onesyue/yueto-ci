@@ -328,7 +328,9 @@ jobs:
   validate:
     needs: plan
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
-    timeout-minutes: 60
+    # The 22k-test serial Ops gate reached 96% at the former 60-minute limit.
+    # Keep all tests and allow the remaining suite/frontend stages to finish.
+    timeout-minutes: 120
     # The central gate must judge time-dependent tests in the same clock
     # everywhere: GitHub-hosted runners are UTC, the manual self-hosted
     # release runner and developer workstations (+08) are not. A local
