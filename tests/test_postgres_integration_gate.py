@@ -224,6 +224,20 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'not run and passed'):
                 GATE.run_commands([row])
 
+    def test_quota_cli_executes_and_missing_cutover_cannot_pass(self):
+        names = ['TestQuotaRemindersCLIProcess', 'TestQuotaRemindersIndependentCutoverCLI']
+        row = self.package(GATE.COMMANDS[0], extra='\n'.join(
+            'func ' + name + '(t *testing.T) { t.Log("quota reached") }' for name in names))
+        row['tests'].extend(names)
+        self.command_gate("go test -count=1 -tags integration -v -run '^TestConsumer$' ./cmd/yueboard")
+        with working_directory(self.root), mock.patch.dict(os.environ, self.environment, clear=True):
+            result = GATE.run_commands([row])
+            self.assertEqual(result['top_level_passed'], 3)
+            self.assertEqual(result['skipped'], 0)
+            self.package(GATE.COMMANDS[0], extra='func TestQuotaRemindersCLIProcess(t *testing.T) {}')
+            with self.assertRaisesRegex(RuntimeError, 'TestQuotaRemindersIndependentCutoverCLI'):
+                GATE.run_commands([row])
+
     def test_changed_source_cannot_reuse_earlier_domain_proof(self):
         for path in GATE.ORDER:
             self.package(path)
