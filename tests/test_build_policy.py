@@ -831,12 +831,24 @@ class BuildPolicyTest(unittest.TestCase):
             workflow_files,
             [
                 "alert-chain-deadman.yml",
+                "board-visual-capture.yml",
                 "build.yml",
                 "image-rescan.yml",
                 "policy-ci.yml",
                 "poll-sources.yml",
             ],
         )
+
+        capture = (WORKFLOW_DIR / "board-visual-capture.yml").read_text()
+        capture_code = "\n".join(
+            line for line in capture.splitlines() if not line.lstrip().startswith("#")
+        )
+        self.assertIn("permissions:\n  contents: read", capture_code)
+        self.assertIn("['yueboard_contract_pin']", capture_code)
+        self.assertIn("specs/plan-change-confirm.spec.ts --update-snapshots=changed", capture_code)
+        self.assertIn("assert len(files) == 4", capture_code)
+        for forbidden in ("build-push-action", "imagetools create", "cosign", "promote=true", "packages: write"):
+            self.assertNotIn(forbidden, capture_code)
 
         # poll-sources.yml 只允许**请求**构建，永远不许自己构建或 promote。
         # 它是定时跑的、无人看着的，所以「它只能做安全的那半」必须由门禁钉住，
@@ -1707,7 +1719,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(self.native_contract["schema_floor"], 141)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
-            "3ca0f2563a430eea24660b1da3246392f27e43fa",
+            "d596793e53677eddb4e76824cae18174c725f39d",
         )
         self.assertEqual(
             self.native_contract["presence"],
