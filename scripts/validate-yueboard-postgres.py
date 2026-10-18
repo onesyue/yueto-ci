@@ -156,11 +156,21 @@ def run_commands(entries: list[dict]) -> dict:
     print(process.stdout, end='', flush=True)
     runs = set(re.findall(r'^\s*=== RUN\s+(\S+)\s*$', process.stdout, re.M))
     passed = set(re.findall(r'^\s*--- PASS: (\S+) ', process.stdout, re.M))
-    missing = set(selected[0]['tests']) - (runs & passed)
+    # The native operator gate owns privileged issuer/UID controls only. These
+    # two independently reviewed traffic CLI tests use the disposable CI PG
+    # and must run through the ordinary JSON execution verifier, not be waived.
+    traffic = {'TestTrafficLedgerCLIProcess', 'TestTrafficLedgerIndependentCLIRefusesRollbackOnTimeout'}
+    traffic_tests = set(selected[0]['tests']) & traffic
+    missing = (set(selected[0]['tests']) - traffic_tests) - (runs & passed)
     if process.returncode or missing or re.search(r'--- (SKIP|FAIL):', process.stdout):
         fail(f'native command gate exited {process.returncode}; integration tests not run and passed: {sorted(missing)}')
     counts = {'top_level_passed': sum('/' not in test for test in passed),
               'subtests_passed': sum('/' in test for test in passed), 'skipped': 0}
+    if traffic_tests:
+        traffic_row = {**selected[0], 'tests': sorted(traffic_tests)}
+        extra = run_group(COMMANDS, [traffic_row])
+        for key in counts:
+            counts[key] += extra[key]
     print('Native command execution: ' + json.dumps({'packages': COMMANDS, **counts}), flush=True)
     return {'packages': COMMANDS, **counts}
 

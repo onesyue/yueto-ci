@@ -200,6 +200,23 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'not run and passed'):
                 GATE.run_commands([self.package(GATE.COMMANDS[0])])
 
+    def test_traffic_cli_executes_after_privileged_native_gate(self):
+        row = self.package(GATE.COMMANDS[0], extra='func TestTrafficLedgerCLIProcess(t *testing.T) { t.Log("traffic reached") }\n')
+        row['tests'].append('TestTrafficLedgerCLIProcess')
+        self.command_gate("go test -count=1 -tags integration -v -run '^TestConsumer$' ./cmd/yueboard")
+        with working_directory(self.root), mock.patch.dict(os.environ, self.environment, clear=True):
+            result = GATE.run_commands([row])
+        self.assertEqual(result['top_level_passed'], 2)
+        self.assertEqual(result['skipped'], 0)
+
+    def test_traffic_cli_false_success_is_rejected(self):
+        row = self.package(GATE.COMMANDS[0])
+        row['tests'].append('TestTrafficLedgerCLIProcess')
+        self.command_gate()
+        with working_directory(self.root), mock.patch.dict(os.environ, self.environment, clear=True):
+            with self.assertRaisesRegex(RuntimeError, 'not run and passed'):
+                GATE.run_commands([row])
+
     def test_native_command_skip_is_rejected(self):
         row = self.package(GATE.COMMANDS[0], 't.Skip("root issuer not reached")')
         self.command_gate()
