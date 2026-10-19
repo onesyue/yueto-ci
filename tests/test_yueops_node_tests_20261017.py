@@ -109,6 +109,8 @@ def _assert_native_contract(test, workflow):
         'sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python"',
         '"$native_driver" tests/test_node_systemd_pilot_20261018.py 38 0',
         'scripts/run-native-nginx-tests.py',
+        'sudo -n env PATH="$PATH" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"',
+        'tests/test_schema_contract_receipt_20261020.py 30 0',
     ):
         test.assertIn(required, workflow)
 
@@ -135,6 +137,74 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
         ):
             with self.subTest(removed=removed), self.assertRaises(AssertionError):
                 _assert_native_contract(self, workflow.replace(removed, '', 1))
+
+    def test_receipt_contract_rejects_removed_call_floor_uid_or_board_env(self):
+        workflow = (ROOT / '.github/workflows/build.yml').read_text()
+        target = 'tests/test_schema_contract_receipt_20261020.py'
+        for before, after in (
+            (target + ' 30 0', ''),
+            (target + ' 30 0', target + ' 29 0'),
+            (target + ' 30 0', target + ' 30 1001'),
+            ('YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"', ''),
+            ('YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"', 'YUEBOARD_REPO_PATH=/tmp/unbound'),
+        ):
+            with self.subTest(after=after), self.assertRaises(AssertionError):
+                _assert_native_contract(self, workflow.replace(before, after, 1))
+
+    def test_actual_native_step_dispatches_receipt_root_context_and_preserves_failure(self):
+        import json
+        import os
+        import subprocess
+        import sys
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            bindir = root / 'bin'
+            bindir.mkdir()
+            fixture = root / '.ci-yueboard/test/fixtures/schema.sql'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text('-- isolated fixture\n')
+            for name, body in {
+                'jq': 'echo fixture-pin',
+                'git': 'case "$*" in *rev-parse*) echo fixture-pin;; esac',
+                'id': 'echo 1001',
+                'sudo': 'test "$1" = -n; shift; exec "$@"',
+            }.items():
+                path = bindir / name
+                path.write_text('#!/bin/sh\n' + body + '\n')
+                path.chmod(0o755)
+            python = root / '.venv/bin/python'
+            python.parent.mkdir(parents=True)
+            python.write_text('#!' + sys.executable + '\n' + textwrap.dedent("""
+                import json, os, sys
+                from pathlib import Path
+                with open(os.environ['CALL_LOG'], 'a') as log:
+                    log.write(json.dumps({'argv': sys.argv[1:],
+                        'board': os.environ.get('YUEBOARD_REPO_PATH'),
+                        'tz': os.environ.get('TZ')}) + '\\n')
+                if 'test_schema_contract_receipt' in sys.argv[2]:
+                    assert Path(os.environ['YUEBOARD_REPO_PATH']).is_dir()
+                    raise SystemExit(int(os.environ['RECEIPT_RC']))
+                """))
+            python.chmod(0o755)
+            log = root / 'calls.jsonl'
+            env = {**os.environ, 'PATH': str(bindir) + ':' + os.environ['PATH'],
+                   'CALL_LOG': str(log), 'RUNNER_TEMP': str(root),
+                   'YUEBOARD_MONEY_SCHEMA_FIXTURE': str(fixture)}
+            env.pop('YUEBOARD_REPO_PATH', None)
+            for code in (0, 19):
+                with self.subTest(code=code):
+                    log.write_text('')
+                    result = subprocess.run(['bash', '-c', _native_step()['run']],
+                        cwd=root, env={**env, 'RECEIPT_RC': str(code)},
+                        capture_output=True, text=True, timeout=20, check=False)
+                    self.assertEqual(result.returncode, code, result.stderr)
+                    rows = [json.loads(line) for line in log.read_text().splitlines()]
+                    self.assertEqual(len(rows), 3)
+                    self.assertEqual(rows[-1]['argv'][1:],
+                        ['tests/test_schema_contract_receipt_20261020.py', '30', '0'])
+                    self.assertEqual(rows[-1]['board'], str(root / '.ci-yueboard'))
+                    self.assertEqual(rows[-1]['tz'], 'UTC')
+                    self.assertFalse(list(root.glob('yueops-native.*.py')))
 
     def test_real_driver_refuses_wrong_execution_context_before_importing_pytest(self):
         import os
