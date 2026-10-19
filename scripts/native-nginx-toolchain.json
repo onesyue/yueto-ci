@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "version": "1.30.5",
+  "package_version": "1.30.5-1~noble",
+  "distribution": "ubuntu",
+  "codename": "noble",
+  "packages": {
+    "amd64": {
+      "url": "https://nginx.org/packages/ubuntu/pool/nginx/n/nginx/nginx_1.30.5-1~noble_amd64.deb",
+      "sha256": "2ed3c0c4c5e24fe6c2bb46a5fc255d7e0de718e5ff5d8d6c9e17c79a1313dc05"
+    },
+    "arm64": {
+      "url": "https://nginx.org/packages/ubuntu/pool/nginx/n/nginx/nginx_1.30.5-1~noble_arm64.deb",
+      "sha256": "29ce3c42ba35a2afe2eb0015d072da8ae5cb5267504eb4b21cb35cc6a8fb5007"
+    }
+  }
+}

@@ -621,8 +621,8 @@ jobs:
       - name: Install native YueOps NGINX test toolchain
         if: matrix.validation == 'yueops'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nginx libnginx-mod-stream logrotate
+          set -euo pipefail
+          sudo -n env PATH="$PATH" bash .ci-policy/scripts/install-native-nginx.sh
 
       - name: Preflight validation dependencies
         env:
