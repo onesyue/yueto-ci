@@ -1133,6 +1133,77 @@ jobs:
           YUEOPS_PYTEST_SERIAL=1 bash scripts/run-pytest-parallel.sh
           sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py
 
+      - name: Validate yueops PostgreSQL and systemd native obligations
+        if: matrix.validation == 'yueops'
+        env:
+          YUEBOARD_MONEY_SCHEMA_FIXTURE: ${{ github.workspace }}/.ci-yueboard/test/fixtures/schema.sql
+        run: |
+          set -euo pipefail
+          # Use the reviewed checkout, not an unbound local schema or moving ref.
+          board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
+          test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"
+          test -f "$YUEBOARD_MONEY_SCHEMA_FIXTURE"
+          test ! -L "$YUEBOARD_MONEY_SCHEMA_FIXTURE"
+          git -C .ci-yueboard diff --exit-code "$board_pin" -- test/fixtures/schema.sql
+          test "$(id -u)" = 1001
+          native_driver=$(mktemp "${RUNNER_TEMP:?}/yueops-native.XXXXXX.py")
+          trap 'rm -f -- "$native_driver"' EXIT
+          cat > "$native_driver" <<'PY'
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+          import sys
+
+          target, floor, uid = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+          if sys.platform != "linux" or os.geteuid() != uid:
+              raise SystemExit("native obligation execution context differs")
+          import pytest
+          source = Path.cwd() / "scripts/run-native-nginx-tests.py"
+          spec = importlib.util.spec_from_file_location("source_native_gate", source)
+          consumer = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(consumer)
+
+          class RequiredCases(consumer.NativeGate):
+              def __init__(self):
+                  super().__init__([])
+                  self.collection_bad = False
+
+              def pytest_deselected(self, items):
+                  self.collection_bad = True
+
+              def pytest_collectreport(self, report):
+                  if report.failed or report.skipped:
+                      self.collection_bad = True
+
+              def pytest_collection_finish(self, session):
+                  names = [item.nodeid for item in session.items]
+                  self.required = set(names)
+                  self.collection_bad |= (
+                      len(names) != len(self.required) or len(names) < floor
+                      or any(not name.startswith(target + "::") for name in names)
+                  )
+
+              def pytest_sessionfinish(self, session, exitstatus):
+                  super().pytest_sessionfinish(session, exitstatus)
+                  if self.collection_bad or len(self.required) < floor:
+                      session.exitstatus = 1
+                  print("NATIVE_OBLIGATION_RECEIPT " + json.dumps({
+                      "target": target, "platform": sys.platform, "uid": os.geteuid(),
+                      "required": sorted(self.required), "passed": sorted(self.passed),
+                      "failed_or_skipped": sorted(self.bad),
+                      "collection_bad": self.collection_bad,
+                      "exitstatus": int(session.exitstatus),
+                  }, sort_keys=True))
+
+          raise SystemExit(pytest.main(["-q", "-ra", target], plugins=[RequiredCases()]))
+          PY
+          # PG creates its own disposable cluster as UID1001. Root is a separate
+          # phase; never make the ordinary suite root or silently accept skips.
+          .venv/bin/python "$native_driver" tests/test_board139_schema_acl_native_20261018.py 6 1001
+          sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" \
+            "$native_driver" tests/test_node_systemd_pilot_20261018.py 38 0
+
       - name: Validate yueops frontend
         if: matrix.validation == 'yueops'
         working-directory: frontend
