@@ -1716,10 +1716,10 @@ class BuildPolicyTest(unittest.TestCase):
         # YueOps three-stage deployer is retired/frozen since P2 §4 A3; the
         # validator requires its RETIRED marker instead of a live floor).
         self.assertIsInstance(self.native_contract["schema_floor"], int)
-        self.assertEqual(self.native_contract["schema_floor"], 141)
+        self.assertEqual(self.native_contract["schema_floor"], 142)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
-            "c2258a06c27413a8aca8b60c3a9d1566a697f212",
+            "2ac03c203151642e735416e6881f2d278c77c439",
         )
         self.assertEqual(
             self.native_contract["presence"],
