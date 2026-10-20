@@ -84,7 +84,8 @@ def install(output, site):
     print(identity["invocation_id"])
 
 
-def summarize(output):
+def inspect(output):
+    """Read diagnostic evidence without changing the original artifacts."""
     result = {
         "schema": 1, "evidence_status": "MISSING", "release_acceptance": False,
         "problems": [], "sessions": [], "resources": {"status": "UNKNOWN"},
@@ -201,6 +202,11 @@ def summarize(output):
                     result["problems"].append(f"incomplete or duplicate case phases: {nodeid}")
             session["reported_cases"] = len(grouped)
         result["evidence_status"] = "PARTIAL" if result["problems"] else "COMPLETE"
+    return result
+
+
+def summarize(output):
+    result = inspect(output)
     output.mkdir(parents=True, exist_ok=True)
     (output / "summary.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps({"evidence_status": result["evidence_status"],
