@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-import importlib.util
+import fnmatch
+import glob
 import hashlib
+import importlib.util
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
+from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -147,6 +150,169 @@ pathlib.Path(args[args.index('--output') + 1]).write_text(json.dumps({'dependenc
                         self.assertEqual(calls.read_text().splitlines(), ["pypi", "osv"])
                     else:
                         self.assertNotEqual(result.returncode, 0, "an incomplete audit must never pass")
+
+
+class LockedPythonAuditRetentionTest(unittest.TestCase):
+    def step(self, name):
+        match = re.search(
+            rf"^      - name: {re.escape(name)}\n(?P<body>(?:(?!^      - |^  [a-z]).*\n)*)",
+            WORKFLOW.read_text(), re.MULTILINE)
+        self.assertIsNotNone(match, name)
+        body = match.group("body")
+        script = re.search(r"^        run: \|\n((?:          .*\n|\n)*)", body, re.MULTILINE)
+        return body, textwrap.dedent(script.group(1)) if script else ""
+
+    def run_backend(self, behavior="clean", provider="pypi", role="native", missing_env=None):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        source, runner, bindir = root / "source", root / "runner", root / "bin"
+        for path in (source / "scripts", source / ".venv/bin", source / "web",
+                     source / "checkin-api", source / "telegram-bot/yue", runner, bindir):
+            path.mkdir(parents=True, exist_ok=True)
+        (source / ".venv/bin/python").symlink_to(sys.executable)
+        for name in ("check-python-dependency-groups.py", "audit-route-consistency.py"):
+            (source / "scripts" / name).write_text("")
+        (source / "scripts/security_scan.sh").write_text('echo \'{"fail":0}\'\n')
+        (source / "scripts/run-pytest-parallel.sh").write_text("exit 0\n")
+        timing = runner / "yueops-pytest-timing"
+        timing.mkdir()
+        (timing / "metadata.json").write_text('{"invocation_id":"fixture-only"}')
+        uv = bindir / "uv"
+        uv.write_text(f"#!{sys.executable}\n" + textwrap.dedent('''
+            import json, os, pathlib, sys
+            args = sys.argv[1:]
+            root = pathlib.Path(os.environ['AUDIT_FIXTURE_ROOT'])
+            def record(value):
+                with (root / 'calls').open('a') as handle: handle.write(value + '\\n')
+            if args == ['lock', '--check']:
+                record('lock')
+                raise SystemExit(12 if os.environ['AUDIT_BEHAVIOR'] == 'pre-audit' else 0)
+            if args[0] == 'export':
+                pathlib.Path(args[args.index('--output-file') + 1]).write_text('fixture==1.0\\n')
+                raise SystemExit(0)
+            if 'pip-audit' not in args:
+                assert args == ['run', '--frozen', '--only-group', 'lint', 'ruff', 'check', '.']
+                record('later-ruff')
+                raise SystemExit(0)
+            for required in ('--frozen', '--only-group', '--require-hashes', '--disable-pip', '--strict', '--cache-dir'):
+                assert required in args, required
+            provider = args[args.index('--vulnerability-service') + 1]
+            assert provider in ('pypi', 'osv')
+            record(provider)
+            behavior = os.environ['AUDIT_BEHAVIOR'] if provider == os.environ['AUDIT_FAILURE_PROVIDER'] else 'clean'
+            if behavior == 'error': raise SystemExit(7)
+            rows = [{'name':'fixture-' + str(i), 'version':'1.0', 'vulns':[]} for i in range(139)]
+            if behavior in ('vulnerability', 'zero-exit-vulnerability'):
+                rows[0]['vulns'] = [{'id':'GHSA-fixture'}]
+            if behavior == 'skip': rows[0]['skip_reason'] = 'fixture missing metadata'
+            if behavior == 'incomplete': rows = rows[:1]
+            raw = '{malformed' if behavior == 'malformed' else json.dumps({'dependencies':rows})
+            pathlib.Path(args[args.index('--output') + 1]).write_text(raw)
+            (root / (provider + '.expected')).write_text(raw)
+            raise SystemExit(1 if behavior == 'vulnerability' else 0)
+        '''))
+        uv.chmod(0o755)
+        sudo = bindir / "sudo"
+        sudo.write_text('#!/bin/sh\nprintf "later-native\\n" >> "$AUDIT_FIXTURE_ROOT/calls"\n')
+        sudo.chmod(0o755)
+        env = dict(os.environ, PATH=str(bindir) + os.pathsep + os.environ["PATH"],
+                   RUNNER_TEMP=str(runner), OPS_ROLE=role, GITHUB_RUN_ID="12345",
+                   GITHUB_RUN_ATTEMPT="2", AUDIT_FIXTURE_ROOT=str(root),
+                   AUDIT_BEHAVIOR=behavior, AUDIT_FAILURE_PROVIDER=provider,
+                   PYTHONDONTWRITEBYTECODE="1")
+        if missing_env:
+            env.pop(missing_env)
+        _, script = self.step("Validate yueops backend")
+        result = subprocess.run(["bash", "-c", script], cwd=source, env=env,
+                                capture_output=True, text=True, timeout=20, check=False)
+        calls = (root / "calls").read_text().splitlines() if (root / "calls").exists() else []
+        return result, root, runner, calls
+
+    def assert_retained(self, root, runner, providers):
+        reports = list(runner.glob("python-audit-reports.*/*.json"))
+        self.assertEqual(sorted(p.name for p in reports), sorted(p + ".json" for p in providers))
+        for path in reports:
+            self.assertEqual(path.read_bytes(), (root / (path.stem + ".expected")).read_bytes())
+        for prefix in ("security-scan.", "python-lock-audit.", "python-audit-cache."):
+            self.assertFalse(list(runner.glob(prefix + "*")), prefix)
+        self.assertFalse((runner / "ops-shard-evidence").exists())
+        self.assertFalse(list(runner.rglob("native.json")))
+        self.assertFalse(list(runner.rglob("native-context.json")))
+
+    def test_failed_provider_json_survives_actual_exit_cleanup(self):
+        for role in ("native", "legacy"):
+            for provider in ("pypi", "osv"):
+                with self.subTest(role=role, provider=provider):
+                    result, root, runner, calls = self.run_backend("vulnerability", provider, role)
+                    self.assertEqual(result.returncode, 1, result.stderr)
+                    providers = ["pypi"] if provider == "pypi" else ["pypi", "osv"]
+                    self.assertEqual(calls, ["lock", *providers])
+                    self.assert_retained(root, runner, providers)
+
+    def test_clean_reports_survive_and_no_output_failure_is_not_fabricated(self):
+        for role in ("native", "legacy"):
+            with self.subTest(role=role):
+                result, root, runner, calls = self.run_backend(role=role)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(calls, ["lock", "pypi", "osv", "later-ruff", "later-native"])
+                self.assert_retained(root, runner, ["pypi", "osv"])
+        for behavior, provider, expected, providers in (
+                ("pre-audit", "pypi", 12, []), ("error", "pypi", 7, []),
+                ("error", "osv", 7, ["pypi"])):
+            with self.subTest(behavior=behavior, provider=provider):
+                result, root, runner, calls = self.run_backend(behavior, provider)
+                self.assertEqual(result.returncode, expected, result.stderr)
+                self.assertFalse(any(c.startswith("later-") for c in calls))
+                self.assert_retained(root, runner, providers)
+
+    def test_real_jq_refusals_keep_original_reports_without_later_work(self):
+        for behavior in ("malformed", "incomplete", "skip", "zero-exit-vulnerability"):
+            with self.subTest(behavior=behavior):
+                result, root, runner, calls = self.run_backend(behavior)
+                self.assertNotEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(calls, ["lock", "pypi"])
+                self.assert_retained(root, runner, ["pypi"])
+
+    def test_missing_run_attempt_or_role_refuses_unbound_diagnostics(self):
+        for key in ("GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT", "OPS_ROLE"):
+            with self.subTest(key=key):
+                result, _, runner, calls = self.run_backend(missing_env=key)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(calls, [])
+                self.assertFalse(list(runner.glob("python-audit-reports.*/*.json")))
+                self.assertFalse((runner / "ops-shard-evidence").exists())
+
+    def test_diagnostic_upload_is_bound_and_cannot_supply_native_evidence(self):
+        body, _ = self.step("Retain Ops Python audit diagnostics")
+        self.assertIn("if: always() && matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')", body)
+        self.assertIn("if-no-files-found: warn", body)
+        self.assertIn("retention-days: 14", body)
+        self.assertIn("uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", body)
+        backend, _ = self.step("Validate yueops backend")
+        self.assertIn("OPS_ROLE: ${{ matrix.ops_role }}", backend)
+        name = re.search(r"^          name: (.*)$", body, re.MULTILINE).group(1)
+        path = re.search(r"^          path: (.*)$", body, re.MULTILINE).group(1)
+        for role in ("native", "legacy"):
+            result, root, runner, _ = self.run_backend(role=role)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            replacements = {"runner.temp": str(runner), "github.run_id": "12345",
+                            "github.run_attempt": "2", "matrix.ops_role": role}
+            rendered_name, rendered_path = name, path
+            for key, value in replacements.items():
+                rendered_name = rendered_name.replace("${{ " + key + " }}", value)
+                rendered_path = rendered_path.replace("${{ " + key + " }}", value)
+            self.assertFalse(fnmatch.fnmatchcase(rendered_name, "ops-shard-12345-2-*"))
+            self.assertEqual(rendered_name, "ops-audit-diagnostics-12345-2-" + role)
+            self.assert_retained(root, runner, ["pypi", "osv"])
+            other = runner / ("python-audit-reports.12344.2." + role + ".old")
+            other.mkdir()
+            (other / "pypi.json").write_text('{"previous_run":true}')
+            current = next(runner.glob("python-audit-reports.12345.2." + role + ".*"))
+            (current / "not-a-provider.txt").write_text("must not upload")
+            selected = [Path(p) for p in glob.glob(rendered_path)]
+            self.assertEqual(sorted(p.name for p in selected), ["osv.json", "pypi.json"])
+            self.assertTrue(all(p.parent == current for p in selected))
 
 
 class VisualBaselineDiscoveryTest(unittest.TestCase):

@@ -1258,11 +1258,10 @@ jobs:
           security_report=$(mktemp "${RUNNER_TEMP:?}/security-scan.XXXXXX.json")
           python_lock_audit=$(mktemp "${RUNNER_TEMP:?}/python-lock-audit.XXXXXX.txt")
           python_audit_cache=$(mktemp -d "${RUNNER_TEMP:?}/python-audit-cache.XXXXXX")
-          python_audit_reports=$(mktemp -d "${RUNNER_TEMP:?}/python-audit-reports.XXXXXX")
+          python_audit_reports=$(mktemp -d "${RUNNER_TEMP:?}/python-audit-reports.${GITHUB_RUN_ID:?}.${GITHUB_RUN_ATTEMPT:?}.${OPS_ROLE:?}.XXXXXX")
           cleanup_reports() {
             rm -f -- "$security_report" "$python_lock_audit"
             rm -rf -- "$python_audit_cache"
-            rm -rf -- "$python_audit_reports"
           }
           trap cleanup_reports EXIT
           uv lock --check
@@ -1302,6 +1301,16 @@ jobs:
             if [ "$pytest_rc" -ne 0 ]; then exit "$pytest_rc"; fi
           fi
           sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py
+
+      # Provider JSON is diagnostic only. Never put it in native/shard evidence.
+      - name: Retain Ops Python audit diagnostics
+        if: always() && matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ops-audit-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.ops_role }}
+          path: ${{ runner.temp }}/python-audit-reports.${{ github.run_id }}.${{ github.run_attempt }}.${{ matrix.ops_role }}.*/*.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Summarize passive yueops pytest timing
         if: always() && matrix.validation == 'yueops' && matrix.ops_role == 'legacy'
