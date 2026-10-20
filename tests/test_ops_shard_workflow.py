@@ -154,6 +154,92 @@ class OpsShardWorkflow(unittest.TestCase):
         return self.call(self.consumer.join, self.admission, self.artifacts, result,
                          expected or self.admission["admission_sha256"])
 
+    def test_actual_mixed_runner_allocations_reach_source_native_and_complete_join(self):
+        roles = ["reference", *[a["id"] for a in self.admission["ops_plan"]["assignments"]], "native"]
+        images = {}
+        for i, role in enumerate(roles):
+            images[role] = f"20261012.{334+i}.1"
+            ran = self.run_role(role, {"ImageVersion": images[role]})
+            self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
+        with patch.dict(self.env, {"ImageVersion": "separate-join-allocation"}):
+            result = self.join()
+        observed = result["runner_observations"]
+        self.assertEqual({k: v["runner_image"] for k, v in observed["roles"].items()}, images)
+        self.assertEqual(observed["planning_runner_image"], "fixture-image")
+        self.assertTrue(observed["mixed_execution_images"])
+        self.assertEqual(result["ordinary"]["case_count"], 8)
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+        context = result["native_and_source_gates"]
+        for row in context["obligations"].values():
+            self.assertEqual(row["binding"]["runner_context"], observed["roles"]["native"])
+        # A native terminal cannot substitute another allocation after preparation.
+        directory = self.artifacts / (self.prefix + "native")
+        (directory / "native.json").unlink()
+        with self.assertRaisesRegex(ValueError, "changed during execution"):
+            self.call(self.consumer.native_terminal, self.admission, self.source, self.board, directory)
+        self.assertFalse((directory / "native.json").exists())
+
+    def test_actual_precollection_rejection_is_retained_without_a_test_terminal(self):
+        for extra in ({"RUNNER_OS": "Windows"}, {"RUNNER_ARCH": "ARM64"},
+                      {"ImageVersion": ""}, {"ImageVersion": "UNKNOWN"}):
+            with self.subTest(extra=extra):
+                ran = self.run_role("reference", extra)
+                self.assertNotEqual(ran.returncode, 0, ran.stdout + ran.stderr)
+                directory = self.artifacts / (self.prefix + "reference")
+                self.assertEqual([p.name for p in directory.iterdir()], ["rejected.json"])
+                receipt = json.loads((directory / "rejected.json").read_text())
+                self.assertEqual(receipt["status"], "REJECTED")
+                self.assertFalse(receipt["release_acceptance"])
+                self.assertEqual(receipt["assignment_id"], "reference")
+                expected_image = extra.get("ImageVersion", self.env["ImageVersion"]) or None
+                self.assertEqual(receipt["identity"]["ImageVersion"], expected_image)
+                self.assertIn(receipt["reason_code"], ("RUNNER_PLATFORM_MISMATCH", "RUNNER_IDENTITY_MISSING"))
+                with self.assertRaises(ValueError):
+                    self.join()
+                shutil.rmtree(directory)
+                shutil.rmtree(self.base / "runner-reference")
+        # The actual native-start CLI must also retain its pre-pytest rejection.
+        admission = self.base / "native-rejected-admission.json"
+        admission.write_text(json.dumps(self.admission))
+        native_output = self.base / "native-rejected"
+        ran = subprocess.run(
+            [sys.executable, str(self.policy / "scripts/pytest-shards.py"), "native-start",
+             "--admission", str(admission), "--source", str(self.source), "--board", str(self.board),
+             "--output", str(native_output)], cwd=self.source,
+            env=self.env | {"RUNNER_OS": "Windows"}, capture_output=True, text=True,
+            timeout=15, check=False)
+        self.assertNotEqual(ran.returncode, 0)
+        self.assertEqual([p.name for p in native_output.iterdir()], ["rejected.json"])
+        self.assertEqual(json.loads((native_output / "rejected.json").read_text())["stage"],
+                         "native-start")
+        # Source rejection follows the same actual CLI, before recorder/selection.
+        (self.source / "tests/test_a.py").write_text("def test_changed(): pass\n")
+        ran = self.run_role("reference")
+        self.assertNotEqual(ran.returncode, 0)
+        directory = self.artifacts / (self.prefix + "reference")
+        self.assertEqual([p.name for p in directory.iterdir()], ["rejected.json"])
+        self.assertEqual(json.loads((directory / "rejected.json").read_text())["reason_code"],
+                         "SOURCE_IDENTITY_MISMATCH")
+
+    def test_rejection_writer_preserves_existing_files_and_refuses_symlink_paths(self):
+        from argparse import Namespace
+        admission = self.base / "rejection-admission.json"
+        admission.write_text(json.dumps(self.admission))
+        output = self.base / "rejected"
+        args = Namespace(command="run", output=output, role="reference", admission=admission)
+        self.call(self.consumer.retain_rejection, args, ValueError("private failure sentinel"))
+        original = (output / "rejected.json").read_bytes()
+        self.assertNotIn(b"private failure sentinel", original)
+        with self.assertRaises(FileExistsError):
+            self.call(self.consumer.retain_rejection, args, ValueError("again"))
+        self.assertEqual((output / "rejected.json").read_bytes(), original)
+        link = self.base / "linked-output"
+        link.symlink_to(output, target_is_directory=True)
+        args.output = link / "child"
+        with self.assertRaisesRegex(ValueError, "unsafe"):
+            self.call(self.consumer.retain_rejection, args, ValueError("failure"))
+        self.assertFalse((output / "child").exists())
+
     def test_actual_yaml_source_entry_and_join_keep_complete_corpus(self):
         result = self.full_bundle()
         self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")

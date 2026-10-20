@@ -79,6 +79,25 @@ def context_ok(context):
                 and context[key] != "UNKNOWN", f"missing {key}")
 
 
+def runner_context(planned, environment):
+    """Bind this allocation, not the separately allocated planning job's image."""
+    observed = {key: environment.get(name) for name, key in (
+        ("RUNNER_OS", "runner_os"), ("RUNNER_ARCH", "runner_arch"),
+        ("ImageVersion", "runner_image"))}
+    require(all(isinstance(v, str) and re.fullmatch(r"[A-Za-z0-9._-]{1,128}", v)
+                and v != "UNKNOWN" for v in observed.values()), "missing runner identity")
+    require(all(observed[k] == planned[k] for k in ("runner_os", "runner_arch")),
+            "executing runner OS or architecture differs")
+    return observed
+
+
+def runner_summary(planned, roles):
+    images = sorted({r["runner_image"] for r in roles.values()})
+    return {"planning_runner_image": planned["runner_image"], "roles": roles,
+            "execution_images": images, "mixed_execution_images": len(images) > 1,
+            "performance_comparison": "NOT_ESTABLISHED"}
+
+
 def plan(source, context, count, serial):
     """Select whole tracked modules before importing pytest or product code."""
     source = source.resolve()
@@ -319,6 +338,8 @@ def skip_baseline():
 def inspect_session(directory, value, assignment, *, expected_empty=False):
     """Validate immutable invocation binding before consuming passive case evidence."""
     require(directory.is_dir() and not directory.is_symlink(), "invalid evidence directory")
+    require(not (directory / "rejected.json").exists()
+            and not (directory / "rejected.json").is_symlink(), "rejected execution evidence")
     for name in FILES:
         require((directory / name).is_file() and not (directory / name).is_symlink(),
                 f"missing or symlink evidence: {name}")
@@ -350,11 +371,11 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
             and metadata.get("serial") is True, "source/policy/recorder identity mismatch")
     identity = metadata.get("identity", {})
     mapping = {"GITHUB_RUN_ID": "run_id", "GITHUB_RUN_ATTEMPT": "run_attempt",
-               "GITHUB_SHA": "policy_revision", "RUNNER_OS": "runner_os",
-               "RUNNER_ARCH": "runner_arch", "ImageVersion": "runner_image"}
+               "GITHUB_SHA": "policy_revision"}
     require(identity.get("GITHUB_REPOSITORY") == "onesyue/yueto-ci"
             and all(identity.get(k) == value["context"][v] for k, v in mapping.items()),
             "run/attempt/runner identity mismatch")
+    actual_runner = runner_context(value["context"], identity)
     identity_copy = dict(metadata)
     invocation = identity_copy.pop("invocation_id", None)
     require(invocation == sha(json.dumps(identity_copy, sort_keys=True).encode()),
@@ -419,6 +440,7 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
         "pytest_process_exit_code": rc, "empty_assigned_collection": expected_rc == 5,
         "nonpassing_outcomes": outcomes,
         "execution_context": {k: start.get(k) for k in ("platform", "uid")},
+        "runner_context": actual_runner,
         "collection_skips": collection_skips(directory / "pytest.xml", allowed) if has_xml else None,
         "junit_sha256": sha((directory / "pytest.xml").read_bytes()) if has_xml else None,
         "evidence_sha256": {n: sha((directory / n).read_bytes()) for n in FILES},
@@ -453,6 +475,8 @@ def aggregate(value, reference, directories):
         "modules_without_selected_cases": sorted(set(value["modules"])
                                                 - {n.split("::", 1)[0] for n in union}),
         "reference": expected, "shards": sorted(results, key=lambda r: r["assignment_id"]),
+        "runner_observations": runner_summary(value["context"], {
+            r["assignment_id"]: r["runner_context"] for r in [expected, *results]}),
         "resources": {"status": "UNKNOWN"},
     }
 
@@ -610,10 +634,7 @@ def execute(value, source, board, role, output, site):
                    sum(a["id"].startswith("ordinary-") for a in expected["assignments"]),
                    serial_modules(source))
     require(current == expected, "source collection inputs or assignments changed")
-    for environment, key in (("RUNNER_OS", "runner_os"), ("RUNNER_ARCH", "runner_arch"),
-                             ("ImageVersion", "runner_image")):
-        require(os.environ.get(environment) == expected["context"][key],
-                "executing runner image differs")
+    actual_runner = runner_context(expected["context"], os.environ)
     require(os.environ.get("PYTEST_ADDOPTS", "") in ("", "--durations=25"),
             "unexpected pytest options")
     require(not os.environ.get("PYTEST_PLUGINS"), "unexpected pytest plugin override")
@@ -628,6 +649,8 @@ def execute(value, source, board, role, output, site):
     selection_path = output / "command.json"
     selection_path.write_text(json.dumps(selection) + "\n")
     metadata = read_json(output / "metadata.json")
+    require(runner_context(expected["context"], metadata["identity"]) == actual_runner,
+            "runner identity changed during preparation")
     env = os.environ | {"LENS_REPORT": str(output / "events.jsonl"),
                         "LENS_INVOCATION_ID": metadata["invocation_id"],
                         "YUEOPS_PYTEST_SERIAL": "1"}
@@ -639,6 +662,8 @@ def execute(value, source, board, role, output, site):
     )
     (output / "pytest-finish-unix-ns.txt").write_text(str(time.time_ns()))
     (output / "pytest-exit-code.txt").write_text(str(result.returncode))
+    require(runner_context(expected["context"], os.environ) == actual_runner,
+            "runner identity changed during execution")
     timing.summarize(output)
     if result.returncode == 5 and role != "reference":
         # A zero-case command is not passed; the independent reference must
@@ -655,28 +680,41 @@ def native_context(value):
             "board_revision": value["board_revision"], "role": "native"}
 
 
+def native_execution_context(value, output):
+    result = read_json(output / "native-context.json")
+    require(isinstance(result, dict), "invalid native context")
+    observed = result.get("runner_context", {})
+    require(isinstance(observed, dict)
+            and set(observed) == {"runner_os", "runner_arch", "runner_image"},
+            "missing native runner identity")
+    validated = runner_context(value["ops_plan"]["context"], {
+        "RUNNER_OS": observed["runner_os"], "RUNNER_ARCH": observed["runner_arch"],
+        "ImageVersion": observed["runner_image"]})
+    require(result == native_context(value) | {"runner_context": validated},
+            "native context differs")
+    return result
+
+
 def native_start(value, source, board, output):
     check_source(value, source, board)
     require(value["mode"] in ("sharded", "legacy"), "unexpected native start")
-    if value["mode"] == "sharded":
-        for environment, key in (("RUNNER_OS", "runner_os"), ("RUNNER_ARCH", "runner_arch"),
-                                 ("ImageVersion", "runner_image")):
-            require(os.environ.get(environment) == value["ops_plan"]["context"][key],
-                    "native runner image differs")
+    observed = (runner_context(value["ops_plan"]["context"], os.environ)
+                if value["mode"] == "sharded" else None)
     output.mkdir(parents=True, exist_ok=False)
     result = native_context(value)
+    if observed is not None:
+        result["runner_context"] = observed
     (output / "native-context.json").write_text(json.dumps(result) + "\n")
     return result
 
 
 def native_receipts(value, output):
     require(output.is_dir() and not output.is_symlink(), "invalid native evidence directory")
-    context = native_context(value)
+    context = native_execution_context(value, output)
     expected_files = {"native-context.json", *[Path(t).stem + ".json" for t in NATIVE_TARGETS]}
     actual_files = {p.name for p in output.iterdir()}
     require(actual_files in (expected_files, expected_files | {"native.json"}),
             "missing or unexpected native receipt files")
-    require(read_json(output / "native-context.json") == context, "native context differs")
     records, hashes = {}, {}
     for target, (floor, uid) in NATIVE_TARGETS.items():
         path = output / (Path(target).stem + ".json")
@@ -705,7 +743,10 @@ def native_receipts(value, output):
 def native_terminal(value, source, board, output):
     check_source(value, source, board)
     require(value["mode"] == "sharded", "unexpected native terminal")
-    result = native_context(value) | {"status": "success"} | native_receipts(value, output)
+    context = native_execution_context(value, output)
+    require(context["runner_context"] == runner_context(value["ops_plan"]["context"], os.environ),
+            "native runner identity changed during execution")
+    result = context | {"status": "success"} | native_receipts(value, output)
     seal(result, "native_sha256")
     with (output / "native.json").open("x") as handle:
         handle.write(json.dumps(result) + "\n")
@@ -780,15 +821,52 @@ def join(value, evidence, validation_result, expected_sha):
             "missing or unexpected evidence roles")
     native_directory = evidence / (prefix + "native")
     native = read_json(native_directory / "native.json")
-    expected_native = native_context(value) | {"status": "success"} | native_receipts(value, native_directory)
+    expected_native = (native_execution_context(value, native_directory)
+                       | {"status": "success"} | native_receipts(value, native_directory))
     seal(expected_native, "native_sha256")
     require(native == expected_native, "native/source gate receipt differs")
     result = aggregate(expected, evidence / (prefix + "reference"),
                        [evidence / (prefix + a["id"]) for a in expected["assignments"]])
+    runners = {r["assignment_id"]: r["runner_context"]
+               for r in [result["reference"], *result["shards"]]}
+    runners["native"] = native["runner_context"]
     return {"schema": 1, "status": "VALIDATION_MATRIX_COMPLETE", "mode": "sharded",
             "admission_sha256": value["admission_sha256"], "ordinary": result,
             "skip_admission": admit_skips(value, result, native),
+            "runner_observations": runner_summary(expected["context"], runners),
             "native_and_source_gates": native, "host_linux_skip_policy": "ROOT_GATE_UNCHANGED"}
+
+
+def retain_rejection(args, error):
+    """Keep a failed diagnostic, never a synthetic pytest/native terminal."""
+    output = args.output.absolute()
+    require(not any(p.is_symlink() for p in (output, *output.parents)),
+            "unsafe rejection evidence directory")
+    output.mkdir(parents=True, exist_ok=True)
+    require(output.is_dir(), "invalid rejection evidence directory")
+    safe = {}
+    for key in ("GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT", "GITHUB_SHA",
+                "RUNNER_OS", "RUNNER_ARCH", "ImageVersion"):
+        value = os.environ.get(key)
+        safe[key] = (value if isinstance(value, str)
+                     and re.fullmatch(r"[A-Za-z0-9._-]{1,128}", value) else None)
+    record = {"schema": 1, "status": "REJECTED", "release_acceptance": False,
+              "stage": args.command, "error_class": type(error).__name__,
+              "identity": safe, "recorded_unix_ns": time.time_ns()}
+    record["reason_code"] = {
+        "missing runner identity": "RUNNER_IDENTITY_MISSING",
+        "executing runner OS or architecture differs": "RUNNER_PLATFORM_MISMATCH",
+        "executing source differs or is dirty": "SOURCE_IDENTITY_MISMATCH",
+        "runner identity changed during preparation": "RUNNER_CHANGED",
+        "runner identity changed during execution": "RUNNER_CHANGED",
+        "native runner identity changed during execution": "RUNNER_CHANGED",
+    }.get(str(error), "VALIDATION_REJECTED")
+    role = getattr(args, "role", "native")
+    record["assignment_id"] = role if re.fullmatch(r"[A-Za-z0-9_-]{1,64}", role) else None
+    if args.admission.is_file() and not args.admission.is_symlink():
+        record["admission_file_sha256"] = sha(args.admission.read_bytes())
+    with (output / "rejected.json").open("x") as handle:
+        handle.write(json.dumps(record) + "\n")
 
 
 def main():
@@ -854,6 +932,12 @@ def main():
             result = join(read_json(args.admission), args.evidence, args.validation_result,
                           args.expected_sha)
     except (ValueError, OSError, KeyError, TypeError, subprocess.CalledProcessError) as error:
+        if args.command in ("run", "native-start", "native-terminal"):
+            try:
+                retain_rejection(args, error)
+            except (ValueError, OSError) as retained_error:
+                print(json.dumps({"diagnostic_retention": "FAILED",
+                                  "error_class": type(retained_error).__name__}), file=sys.stderr)
         print(json.dumps({"status": "REJECTED", "release_acceptance": False,
                           "problem": str(error)}), file=sys.stderr)
         return 1

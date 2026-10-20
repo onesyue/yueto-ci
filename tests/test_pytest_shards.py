@@ -288,12 +288,47 @@ class ShardPrimitives(unittest.TestCase):
             with self.subTest(key=key):
                 old = self.mutate_json(directories[0], "metadata.json",
                                        lambda d, k=key: d["identity"].update({k: "other"}))
-                self.reject(reference, directories, "identity")
+                self.reject(reference, directories,
+                            "invocation digest" if key == "ImageVersion" else "identity")
                 (directories[0] / "metadata.json").write_bytes(old)
         plan = copy.deepcopy(self.plan)
         plan["assignments"][0]["modules"] = plan["assignments"][1]["modules"]
         with self.assertRaisesRegex(ValueError, "digest"):
             SHARDS.aggregate(plan, reference, directories)
+
+    def test_actual_sessions_bind_each_image_without_replacing_planning_provenance(self):
+        reference, ran = self.run_session(ImageVersion="20261012.334.1")
+        self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
+        directories = []
+        for i, assignment in enumerate(self.plan["assignments"]):
+            output, ran = self.run_session(assignment, ImageVersion=f"20261018.{340+i}.1")
+            self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
+            directories.append(output)
+        result = SHARDS.aggregate(self.plan, reference, directories)
+        observations = result["runner_observations"]
+        self.assertEqual(observations["planning_runner_image"], "fixture-image")
+        self.assertTrue(observations["mixed_execution_images"])
+        self.assertEqual(observations["roles"]["reference"]["runner_image"], "20261012.334.1")
+        self.assertEqual(len(observations["execution_images"]), len(directories) + 1)
+        self.assertEqual(observations["performance_comparison"], "NOT_ESTABLISHED")
+        self.assertEqual(result["case_count"], 6)
+        self.assertFalse(result["release_acceptance"])
+
+    def test_per_role_runtime_context_and_rejection_cannot_be_omitted_or_relabelled(self):
+        reference, directories = self.bundle()
+        path = directories[0] / "metadata.json"
+        original = path.read_bytes()
+        for key, value in (("RUNNER_OS", "Windows"), ("RUNNER_ARCH", "ARM64"),
+                           ("ImageVersion", ""), ("ImageVersion", "UNKNOWN"),
+                           ("ImageVersion", "line\nbreak")):
+            with self.subTest(key=key, value=value):
+                metadata = json.loads(original)
+                metadata["identity"][key] = value
+                path.write_text(json.dumps(metadata))
+                self.reject(reference, directories, "runner")
+        path.write_bytes(original)
+        (directories[0] / "rejected.json").write_text('{"status":"REJECTED"}')
+        self.reject(reference, directories, "rejected execution")
 
     def test_lost_case_deselection_and_missing_terminal_reject(self):
         reference, directories = self.bundle()
