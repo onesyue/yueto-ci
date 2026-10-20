@@ -234,14 +234,20 @@ def shared_inputs(source, revision):
 
 
 def admit_shared_inputs(baseline, common, files=None):
-    """Admit the historical map or its one independently reviewed lock conversion.
+    """Admit only complete historical, frontend or reviewed Python input maps.
 
     The historical skip/collection evidence is never relabeled as a new run.
     Exact effective inputs remain sealed into this run's admission envelope.
     """
     original = dict(baseline)
+    python_record = original.pop("reviewed_python_input_transition", None)
     record = original.pop("reviewed_shared_input_transition", None)
     expected = original["common_inputs"]
+    accepted = [expected]
+    require("reviewed_python_input_transition" not in baseline or isinstance(python_record, dict),
+            "invalid reviewed Python input transition")
+    require(python_record is None or record is not None,
+            "Python input transition requires its frontend predecessor")
     if record is not None:
         require(isinstance(record, dict) and set(record) == {
             "schema", "original_baseline_sha256", "source_before", "source_after",
@@ -270,10 +276,41 @@ def admit_shared_inputs(baseline, common, files=None):
             require({p: files.get(p, (None, None))[0] for p in common} == modes,
                     "shared collection/dependency input modes changed")
         effective = expected | {path: record["after_blob"]}
-        require(common == expected or common == effective,
-                "shared collection/dependency inputs changed")
-    else:
-        require(common == expected, "shared collection/dependency inputs changed")
+        accepted.append(effective)
+        if python_record is not None:
+            require(isinstance(python_record, dict) and set(python_record) == {
+                "schema", "original_baseline_sha256", "prior_frontend_transition_sha256",
+                "source_before", "source_after", "independent_review_sha256",
+                "source_freeze_sha256", "changes",
+            } and python_record["schema"] == 1, "invalid reviewed Python input transition")
+            require(python_record["original_baseline_sha256"] == sha(restored)
+                    and python_record["prior_frontend_transition_sha256"] == sha(encoded(record)),
+                    "Python input history or predecessor changed")
+            require(all(isinstance(python_record[k], str) and SHA.fullmatch(python_record[k])
+                        for k in ("source_before", "source_after"))
+                    and python_record["source_before"] == record["source_after"]
+                    and python_record["source_before"] != python_record["source_after"]
+                    and all(isinstance(python_record[k], str)
+                            and re.fullmatch(r"[0-9a-f]{64}", python_record[k])
+                            for k in ("independent_review_sha256", "source_freeze_sha256")),
+                    "missing exact Python input review identity")
+            changes = python_record["changes"]
+            require(isinstance(changes, dict) and set(changes) == {
+                "pyproject.toml", "uv.lock", "telegram-bot/yue/requirements.txt",
+            }, "unreviewed Python input paths")
+            converted = dict(effective)
+            for changed_path, change in changes.items():
+                require(isinstance(change, dict) and set(change) == {
+                    "before_blob", "after_blob", "mode",
+                } and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                          for k in ("before_blob", "after_blob"))
+                        and change["before_blob"] == effective.get(changed_path)
+                        and change["before_blob"] != change["after_blob"]
+                        and change["mode"] == modes.get(changed_path) == "100644",
+                        "unreviewed Python input blob or mode")
+                converted[changed_path] = change["after_blob"]
+            accepted.append(converted)
+    require(common in accepted, "shared collection/dependency inputs changed")
 
 
 def collection_skips(path, modules):

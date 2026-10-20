@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import itertools
 import json
 import os
 import shutil
@@ -213,6 +214,69 @@ class OpsShardWorkflow(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.call(self.consumer.expand, self.targets, self.source,
                               self.board_sha, "ubuntu-24.04", 4, 4)
+
+    def reviewed_python_transition(self):
+        """Keep real dependency blobs in both sides of the Git fixture history."""
+        paths = ("pyproject.toml", "uv.lock", "telegram-bot/yue/requirements.txt")
+        for name in paths:
+            path = self.source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("# original dependency fixture\n")
+        self.fixture.git(self.source, "add", *paths)
+        self.fixture.commit(self.source)
+        before = self.reviewed_lock_transition()
+        policy = self.policy / "ops-pytest-skip-baseline.json"
+        baseline = json.loads(policy.read_text())
+        old_files = self.consumer.tree_inputs(self.source, before)
+        for name in paths:
+            (self.source / name).write_text("# reviewed dependency fixture\n")
+        self.fixture.git(self.source, "add", *paths)
+        self.fixture.commit(self.source)
+        after = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
+        for row in self.targets["matrix"] + self.targets["validation_matrix"]:
+            row["ref"] = after
+        with self.assertRaisesRegex(ValueError, "shared collection/dependency inputs changed"):
+            self.call(self.consumer.expand, self.targets, self.source,
+                      self.board_sha, "ubuntu-24.04", 4, 4)
+        new_files = self.consumer.tree_inputs(self.source, after)
+        predecessor = baseline["reviewed_shared_input_transition"]
+        baseline["reviewed_python_input_transition"] = {
+            "schema": 1, "original_baseline_sha256": predecessor["original_baseline_sha256"],
+            "prior_frontend_transition_sha256": self.consumer.sha(self.consumer.encoded(predecessor)),
+            "source_before": before, "source_after": after,
+            "independent_review_sha256": "c" * 64, "source_freeze_sha256": "d" * 64,
+            "changes": {p: {"before_blob": old_files[p][1], "after_blob": new_files[p][1],
+                            "mode": old_files[p][0]} for p in paths},
+        }
+        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
+        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json")
+        self.fixture.commit(self.policy)
+        self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
+        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+                                   self.board_sha, "ubuntu-24.04", 4, 4)
+        self.assertEqual(self.admission["common_inputs"],
+                         self.consumer.shared_inputs(self.source, after))
+
+    def test_reviewed_python_inputs_reach_actual_native_and_join(self):
+        self.reviewed_python_transition()
+        joined = self.full_bundle()
+        self.assertFalse(joined["skip_admission"]["skips_are_passes"])
+        self.call(self.consumer.envelope, self.admission)
+        for path in ("pyproject.toml", "uv.lock", "telegram-bot/yue/requirements.txt"):
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, "inputs changed"):
+                wrong = copy.deepcopy(self.admission)
+                wrong["common_inputs"][path] = "e" * 40
+                del wrong["admission_sha256"]
+                self.consumer.seal(wrong, "admission_sha256")
+                self.call(self.consumer.envelope, wrong)
+        (self.artifacts / (self.prefix + "native") / "native.json").unlink()
+        with self.assertRaises(ValueError):
+            self.join()
+
+    def test_reviewed_python_inputs_still_reject_actual_new_skip(self):
+        self.reviewed_python_transition()
+        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
+            self.full_bundle({"NEW_SKIP": "1"})
 
     def run_role(self, role, extra=None):
         runner = self.base / ("runner-" + role)
@@ -682,11 +746,18 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
     def test_exact_original_baseline_and_historical_collection_are_preserved(self):
         import hashlib
         original = dict(self.baseline)
+        python_record = original.pop("reviewed_python_input_transition")
+        frontend_bytes = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+        self.assertEqual(hashlib.sha256(frontend_bytes).hexdigest(),
+                         "a78106fca2d61bcbb1cd7e72435eccc9c8f65bfaf4f82a6661f19bc3e4dc7061")
         record = original.pop("reviewed_shared_input_transition")
         restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
         self.assertEqual(hashlib.sha256(restored).hexdigest(),
                          "49d7462f8d59b9a9a035d36fc113647f82a01c71079886c053fc637da2092e9f")
         self.assertEqual(record["original_baseline_sha256"], hashlib.sha256(restored).hexdigest())
+        self.assertEqual(python_record["original_baseline_sha256"], hashlib.sha256(restored).hexdigest())
+        self.assertEqual(python_record["prior_frontend_transition_sha256"],
+                         self.consumer.sha(self.consumer.encoded(record)))
         del original["reviewed_hosted"]
         digest = hashlib.sha256((json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()).hexdigest()
         self.assertEqual(digest, self.reviewed["observation"]["original_baseline_sha256"])
@@ -721,6 +792,7 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
                 wrong = copy.deepcopy(self.baseline)
                 del wrong["reviewed_shared_input_transition"][key]
                 self.consumer.admit_shared_inputs(wrong, effective, files)
+
         for key, value in (("path", "frontend/other-lock.json"),
                            ("before_blob", "d" * 40), ("original_baseline_sha256", "e" * 64),
                            ("source_after", "UNKNOWN"), ("independent_review_sha256", "UNKNOWN"),
@@ -729,6 +801,100 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
                 wrong = copy.deepcopy(self.baseline)
                 wrong["reviewed_shared_input_transition"][key] = value
                 self.consumer.admit_shared_inputs(wrong, effective, files)
+
+    def test_python_transition_all_16_complete_input_maps(self):
+        baseline = self.baseline
+        record = baseline["reviewed_python_input_transition"]
+        frontend = baseline["reviewed_shared_input_transition"]
+        self.assertEqual(record["source_before"], frontend["source_after"])
+        self.assertEqual(record["source_after"], "5cbb65a1b6d7a02a509f97e26291ec53ef855645")
+        self.assertEqual(record["independent_review_sha256"],
+                         "8b87cb3d92e8eea856f891af9a01d7102bbf06e4bd29bc351e2b02c165c69a82")
+        self.assertEqual(record["source_freeze_sha256"],
+                         "b3308860976dbcec269212e44c623ad79fe52b8f1ca4ec9f9f9e89cd8520919b")
+        changes = {frontend["path"]: frontend["after_blob"]} | {
+            p: c["after_blob"] for p, c in record["changes"].items()}
+        accepted = []
+        for bits in itertools.product((0, 1), repeat=4):
+            common = dict(baseline["common_inputs"])
+            common.update({p: b for bit, (p, b) in zip(bits, changes.items(), strict=True) if bit})
+            files = {p: (frontend["common_input_modes"][p], b) for p, b in common.items()}
+            with self.subTest(bits=bits):
+                if bits in ((0, 0, 0, 0), (1, 0, 0, 0), (1, 1, 1, 1)):
+                    self.consumer.admit_shared_inputs(baseline, common, files)
+                    accepted.append(bits)
+                else:
+                    with self.assertRaisesRegex(ValueError, "inputs changed"):
+                        self.consumer.admit_shared_inputs(baseline, common, files)
+        self.assertEqual(len(accepted), 3)
+
+    def test_python_transition_rejects_record_and_predecessor_drift_on_every_map(self):
+        record = self.baseline["reviewed_python_input_transition"]
+        frontend = self.baseline["reviewed_shared_input_transition"]
+        original = self.baseline["common_inputs"]
+        effective = original | {frontend["path"]: frontend["after_blob"]}
+        converted = effective | {p: c["after_blob"] for p, c in record["changes"].items()}
+        mutations = []
+        for key in record:
+            wrong = copy.deepcopy(self.baseline)
+            del wrong["reviewed_python_input_transition"][key]
+            mutations.append(("missing-" + key, wrong))
+        for key, value in (("unknown", True), ("schema", 2),
+                           ("original_baseline_sha256", "a" * 64),
+                           ("prior_frontend_transition_sha256", "b" * 64),
+                           ("source_before", "c" * 40), ("source_after", "UNKNOWN"),
+                           ("independent_review_sha256", None), ("source_freeze_sha256", "UNKNOWN")):
+            wrong = copy.deepcopy(self.baseline)
+            wrong["reviewed_python_input_transition"][key] = value
+            mutations.append((key, wrong))
+        for path in record["changes"]:
+            for key, value in (("before_blob", "e" * 40), ("after_blob", "UNKNOWN"),
+                               ("after_blob", record["changes"][path]["before_blob"]),
+                               ("mode", "100755"), ("extra", True)):
+                wrong = copy.deepcopy(self.baseline)
+                wrong["reviewed_python_input_transition"]["changes"][path][key] = value
+                mutations.append((path + key + str(value), wrong))
+            wrong = copy.deepcopy(self.baseline)
+            del wrong["reviewed_python_input_transition"]["changes"][path]
+            mutations.append(("missing-path-" + path, wrong))
+        wrong = copy.deepcopy(self.baseline)
+        wrong["reviewed_python_input_transition"]["changes"]["requirements.txt"] = dict(
+            next(iter(record["changes"].values())))
+        mutations.append(("unknown-path", wrong))
+        for kind in ("missing-predecessor", "changed-predecessor", "changed-history", "null"):
+            wrong = copy.deepcopy(self.baseline)
+            if kind == "missing-predecessor":
+                del wrong["reviewed_shared_input_transition"]
+            elif kind == "changed-predecessor":
+                wrong["reviewed_shared_input_transition"]["independent_review_sha256"] = "e" * 64
+            elif kind == "changed-history":
+                wrong["source_revision"] = "f" * 40
+            else:
+                wrong["reviewed_python_input_transition"] = None
+            mutations.append((kind, wrong))
+        for label, wrong in mutations:
+            for index, common in enumerate((original, effective, converted)):
+                with self.subTest(mutation=label, map=index), self.assertRaises(ValueError):
+                    self.consumer.admit_shared_inputs(wrong, common)
+
+    def test_python_transition_keeps_all_input_blobs_modes_and_members(self):
+        frontend = self.baseline["reviewed_shared_input_transition"]
+        record = self.baseline["reviewed_python_input_transition"]
+        common = self.baseline["common_inputs"] | {frontend["path"]: frontend["after_blob"]}
+        common.update({p: c["after_blob"] for p, c in record["changes"].items()})
+        files = {p: (frontend["common_input_modes"][p], b) for p, b in common.items()}
+        for path in common:
+            with self.subTest(blob=path), self.assertRaises(ValueError):
+                self.consumer.admit_shared_inputs(self.baseline, common | {path: "d" * 40}, files)
+            for mode in ("100755", "120000"):
+                with self.subTest(path=path, mode=mode), self.assertRaises(ValueError):
+                    self.consumer.admit_shared_inputs(
+                        self.baseline, common, files | {path: (mode, files[path][1])})
+            with self.subTest(missing=path), self.assertRaises(ValueError):
+                self.consumer.admit_shared_inputs(self.baseline, {p: b for p, b in common.items()
+                                                                  if p != path}, files)
+        with self.assertRaises(ValueError):
+            self.consumer.admit_shared_inputs(self.baseline, common | {"new.lock": "e" * 40}, files)
 
     def test_each_exact_variant_retains_disposition_and_rejects_identity_drift(self):
         selected = [(n, r) for n, r in self.reviewed["cases"].items()
