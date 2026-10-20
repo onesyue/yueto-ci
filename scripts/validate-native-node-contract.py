@@ -195,6 +195,85 @@ def rpc_name(path: str) -> str:
     return path.rsplit("/", 1)[-1]
 
 
+def validate_node_test_chain(makefile: str) -> None:
+    """Recognize the two reviewed Make test chains without executing Make.
+
+    This is a closed subset for the owned declarations, not a general Make
+    evaluator. Detached words/comments, conditional or ambiguous definitions
+    cannot authorize the default test entry.
+    """
+    names = {"test", "test-vendored", "verify-fork-tags", "check-profile-deps"}
+    targets: dict[str, tuple[list[str], list[tuple[int, str]]]] = {}
+    phony: set[str] = set()
+    current = None
+    depth = 0
+    for raw in makefile.splitlines():
+        if raw.startswith("\t"):
+            if current is not None:
+                targets[current][1].append((depth, raw[1:].strip()))
+            continue
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        if (re.match(r"(?:-?include|sinclude|define|override)\b", line)
+                or re.search(r"\$[({]eval\s", line)
+                or re.match(r"(?:export\s+)?(?:\.ONESHELL|\.RECIPEPREFIX|\.IGNORE|\.SHELLFLAGS|SHELL|MAKE)\s*[:?+!=]", line)):
+            raise RuntimeError("yue-node Make test chain uses unsupported control syntax")
+        if re.match(r"(?:ifeq|ifneq|ifdef|ifndef)\b", line):
+            depth += 1
+            continue
+        if line == "else" or line.startswith("else "):
+            if depth == 0:
+                raise RuntimeError("yue-node Make test chain has unmatched conditional")
+            continue
+        if line == "endif":
+            depth -= 1
+            if depth < 0:
+                raise RuntimeError("yue-node Make test chain has unmatched conditional")
+            continue
+        current = None
+        match = re.fullmatch(r"([^:=]+):([^=].*|)", line)
+        if match is None:
+            continue
+        lhs, rhs = match.groups()
+        declared = lhs.split()
+        if declared == [".PHONY"] and depth == 0:
+            phony.update(rhs.split())
+        selected = names.intersection(declared)
+        if selected:
+            if depth != 0 or len(declared) != 1 or selected.intersection(targets):
+                raise RuntimeError("yue-node Make test chain has ambiguous or conditional target")
+            current = declared[0]
+            targets[current] = (rhs.split(), [])
+    if depth != 0:
+        raise RuntimeError("yue-node Make test chain has unmatched conditional")
+
+    def target(name: str) -> tuple[list[str], list[tuple[int, str]]]:
+        if name not in targets or name not in phony:
+            raise RuntimeError(f"yue-node Make test chain lacks owned phony target {name}")
+        return targets[name]
+
+    for name, command in (("verify-fork-tags", "bash scripts/verify-fork-tags.sh"),
+                          ("check-profile-deps", "sh scripts/check-profile-deps.sh")):
+        if target(name) != ([], [(0, command)]):
+            raise RuntimeError(f"yue-node Make test chain disconnects {name}")
+    dependencies, recipe = target("test")
+    if dependencies == ["verify-fork-tags"]:
+        if recipe != [(0, "$(MAKE) test-vendored")]:
+            raise RuntimeError("yue-node Make test chain lacks required recursive delegation")
+        dependencies, recipe = target("test-vendored")
+        if dependencies != ["check-profile-deps"]:
+            raise RuntimeError("yue-node Make test chain lacks vendored profile prerequisite")
+    elif dependencies != ["verify-fork-tags", "check-profile-deps"]:
+        raise RuntimeError("yue-node Make test chain lacks verification/profile prerequisites")
+    expected = [(0, "bash scripts/test-check-vulnerabilities.sh")] + [
+        (0, f'go test -race -count=1 -timeout $(TEST_TIMEOUT) -tags "$(TEST_COMMON_TAGS) yue_profile_{profile}" ./...')
+        for profile in ("hy2", "vless")
+    ]
+    if recipe[:len(expected)] != expected:
+        raise RuntimeError("yue-node Make test chain disconnects the required test body")
+
+
 def validate_node(root: Path, contract: dict) -> None:
     dockerfile = read(root / "Dockerfile")
     makefile = read(root / "Makefile")
@@ -249,14 +328,8 @@ def validate_node(root: Path, contract: dict) -> None:
         ],
         "yue-node Dockerfile",
     )
-    require(
-        makefile,
-        [
-            "VALID_BUILD_PROFILES := auto hy2 vless",
-            "test: verify-fork-tags check-profile-deps",
-        ],
-        "yue-node Makefile",
-    )
+    require(makefile, ["VALID_BUILD_PROFILES := auto hy2 vless"], "yue-node Makefile")
+    validate_node_test_chain(makefile)
     require(
         launcher,
         [

@@ -33,6 +33,138 @@ BUILDX_INSTALLER = ROOT / "scripts" / "install-verified-buildx.sh"
 BUILDX_SHA256 = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"
 
 
+class NativeNodeMakeChainTest(unittest.TestCase):
+    """Drive the actual CLI; unrelated ABI inputs are a bounded static fixture."""
+
+    PREFIX = (
+        "VALID_BUILD_PROFILES := auto hy2 vless\n"
+        ".PHONY: test test-vendored verify-fork-tags check-profile-deps\n"
+        "verify-fork-tags:\n\tbash scripts/verify-fork-tags.sh\n"
+        "check-profile-deps:\n\tsh scripts/check-profile-deps.sh\n"
+    )
+    BODY = (
+        "\tbash scripts/test-check-vulnerabilities.sh\n"
+        '\tgo test -race -count=1 -timeout $(TEST_TIMEOUT) -tags "$(TEST_COMMON_TAGS) yue_profile_hy2" ./...\n'
+        '\tgo test -race -count=1 -timeout $(TEST_TIMEOUT) -tags "$(TEST_COMMON_TAGS) yue_profile_vless" ./...\n'
+        "ifeq ($(shell uname -s),Linux)\n\tgo test ./native-fixture\n"
+        "else\n\t$(MAKE) native-fixture\nendif\n"
+    )
+    CURRENT = "test: verify-fork-tags\n\t$(MAKE) test-vendored\ntest-vendored: check-profile-deps\n"
+    LEGACY = "test: verify-fork-tags check-profile-deps\n"
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.node = self.root / "node"
+        self.board = self.root / "board"
+        contract = json.loads(NATIVE_CONTRACT.read_text())
+
+        def write(path, value):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(value, encoding="utf-8")
+
+        files = {
+            "Dockerfile": (
+                "ARG BUILD_PROFILE=auto\n-o yue-node-hy2 ./cmd/yue-node\n"
+                "-o yue-node-vless ./cmd/yue-node\n-o yue-node ./cmd/yue-node-launcher\n"
+                "COPY --from=builder /build/yue-node* /usr/local/bin/"
+            ),
+            "cmd/yue-node-launcher/main.go": (
+                "case capability.KernelHysteria:\ncase capability.KernelXray:\n"
+                'target := filepath.Join(filepath.Dir(executable), "yue-node-"+profile)\n'
+                "syscall.Exec(target"
+            ),
+            "scripts/check-profile-deps.sh": "yue_profile_hy2 yue_profile_vless profile dependency violation",
+            "internal/capability/manifest.go": 'InboundProtocols:    []string{"vless"}\nStructuredOutbounds: []string{"vless", "socks", "http", "wireguard"}',
+        }
+        for path, value in files.items():
+            write(self.node / path, value)
+        packages = [
+            ("config", 5, 0, "package config", ""),
+            ("controlplane", 5, 0, '\n'.join(['"' + c + '"' for c in contract["presence"]["release_a_rollout_capabilities"]] + [
+                '"crypto/rand"', "io.ReadFull(entropy, processRaw[:])", "ProcessInstanceId: c.processInstanceID",
+                "PresenceInstanceId: p.cp.processInstanceID", "GetAcknowledgedUserGeneration()", "GetAcknowledgedDeviceGeneration()"]), ""),
+            ("service", 8, 3, "s.kernel.UpdateGlobalDevices(users)\nDeviceState is an account-ID/IP projection\nruntime admission",
+             "TestDeviceGenerationPublishesAccountIPAdmissionPolicy\naccount/IP generation was rejected"),
+            ("model", 8, 0, "package model", ""),
+            ("kernel/xray", 20, 10, "local∪global union\ncanonicalDeviceIP",
+             "TestLimitDispatcherDeviceLimitUsesDeduplicatedLocalGlobalUnion"),
+            ("kernel/hysteria", 8, 10, "local∪global union\ncanonicalDeviceIP",
+             "TestDeviceLimitDeduplicatesCanonicalLocalGlobalUnion"),
+        ]
+        for package, count, tests, source, test in packages:
+            for index in range(count):
+                write(self.node / "internal" / package / f"fixture{index}.go", source)
+            for index in range(tests):
+                write(self.node / "internal" / package / f"fixture{index}_test.go", test)
+        rpcs = contract["control"]["static_node_rpcs"] + [
+            contract["control"]["machine_status_rpc"], contract["presence"]["report_rpc"]]
+        proto = "reserved 15 to 20;\n" + "\n".join("rpc " + p.rsplit("/", 1)[-1] + "(" for p in rpcs)
+        relative = "proto/yuenode/v1/yuenode.proto"
+        write(self.node / relative, proto)
+        write(self.board / relative, proto)
+        write(self.node / "proto/CANONICAL.sha256", hashlib.sha256(proto.encode()).hexdigest() + "  yuenode/v1/yuenode.proto\n")
+
+    def cli(self, makefile):
+        (self.node / "Makefile").write_text(makefile)
+        return subprocess.run(
+            [sys.executable, "-B", str(NATIVE_VALIDATOR), "--kind", "yue-node",
+             "--source", str(self.node), "--yueboard-contract-source", str(self.board)],
+            capture_output=True, text=True, timeout=20, check=False,
+        )
+
+    def test_actual_cli_accepts_current_and_complete_legacy_test_chains(self):
+        for topology in (self.CURRENT, self.LEGACY):
+            with self.subTest(topology=topology):
+                result = self.cli(self.PREFIX + topology + self.BODY)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("verified for yue-node", result.stdout)
+
+    def test_actual_cli_rejects_disconnected_or_ambiguous_current_targets(self):
+        good = self.PREFIX + self.CURRENT + self.BODY
+        mutations = {
+            "no-verification": good.replace("test: verify-fork-tags\n", "test:\n"),
+            "no-recursion": good.replace("\t$(MAKE) test-vendored\n", "\ttrue\n"),
+            "ignored-recursion": good.replace("\t$(MAKE) test-vendored\n", "\t-$(MAKE) test-vendored\n"),
+            "unused-delegation": good.replace("\t$(MAKE) test-vendored\n", "\ttrue\nunused:\n\t$(MAKE) test-vendored\n"),
+            "no-profile": good.replace("test-vendored: check-profile-deps", "test-vendored:"),
+            "commented-profile": good.replace("test-vendored: check-profile-deps", "test-vendored: # check-profile-deps"),
+            "commented-chain": self.PREFIX + "test:\n\ttrue\n# " + self.CURRENT.replace("\n", "\n# ") + self.BODY,
+            "conditional-chain": self.PREFIX + "ifeq (never,true)\n" + self.CURRENT + self.BODY + "endif\n",
+            "duplicate-target": good + "test:\n\ttrue\n",
+            "multi-target": good.replace("test: verify-fork-tags", "test unused: verify-fork-tags"),
+            "missing-phony": good.replace(".PHONY: test ", ".PHONY: "),
+            "verifier-noop": good.replace("\tbash scripts/verify-fork-tags.sh", "\ttrue # bash scripts/verify-fork-tags.sh"),
+            "profile-noop": good.replace("\tsh scripts/check-profile-deps.sh", "\ttrue # sh scripts/check-profile-deps.sh"),
+            "disconnected-body": good.replace("test-vendored: check-profile-deps\n", "test-vendored: check-profile-deps\n\ttrue\nunused:\n"),
+            "missing-full-profile": good.replace(self.BODY.splitlines(keepends=True)[2], ""),
+            "included-override": good + "include other.mk\n",
+            "exported-shell-noop": "export SHELL := /bin/true\n" + good,
+            "ignored-failures": good + ".IGNORE: test-vendored\n",
+        }
+        for name, source in mutations.items():
+            with self.subTest(mutation=name):
+                result = self.cli(source)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("yue-node Make test chain", result.stderr)
+
+    def test_actual_cli_rejects_legacy_strings_without_its_owned_body(self):
+        good = self.PREFIX + self.LEGACY + self.BODY
+        mutations = {
+            "no-profile": good.replace(self.LEGACY, "test: verify-fork-tags\n"),
+            "no-verification": good.replace(self.LEGACY, "test: check-profile-deps\n"),
+            "detached-body": self.PREFIX + self.LEGACY + "\ttrue\nunused:\n" + self.BODY,
+            "comment-only": self.PREFIX + "# " + self.LEGACY + "test:\n\ttrue\n",
+            "conditional-body": self.PREFIX + self.LEGACY + "ifeq (never,true)\n" + self.BODY + "endif\n",
+        }
+        for name, source in mutations.items():
+            with self.subTest(mutation=name):
+                result = self.cli(source)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("yue-node Make test chain", result.stderr)
+
+
 class PublishedWidgetContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
