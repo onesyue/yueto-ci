@@ -15,16 +15,18 @@ Every positive assertion is paired with a mutation that must turn it red.
 from __future__ import annotations
 
 import base64
+import copy
 import datetime as dt
 import importlib.util
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import unittest
-
+from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
@@ -354,6 +356,309 @@ class ShadowWiringTest(unittest.TestCase):
         source = (ROOT / "scripts" / "verification-evidence.py").read_text()
         self.assertIn('"enabled": False', source)
         self.assertNotIn('"enabled": True', source)
+
+
+class AffectedFeedbackTest(unittest.TestCase):
+    """Actual committed-tree/CLI consumers, with no live API or test collection."""
+
+    def setUp(self):
+        self.repo = Repo()
+        self.addCleanup(self.repo.tmp.cleanup)
+        self.base = self.repo.commit({
+            **BASE_FILES, "tests/test_removed.py": "old\n",
+            "tests/test_rename.py": "rename\n", "tests/test_mode.py": "mode\n",
+            "tests/test_schema_contract_receipt_20261020.py": "native\n",
+        })
+        self.head = self.repo.commit({
+            "tests/test_app.py": "changed\n", "tests/test_added.py": "new\n",
+            "tests/test_removed.py": None, "tests/test_rename.py": None,
+            "tests/test_renamed.py": "rename\n", "tests/conftest.py": "fixture\n",
+            "tests/helpers/io.py": "helper\n", "generated/schema.json": "{}\n",
+            "scripts/generate.py": "generate\n", "uv.lock": "new lock\n",
+            ".python-version": "3.13\n", "app/main.py": "runtime\n",
+            "unknown.input": "unknown\n",
+            "tests/test_schema_contract_receipt_20261020.py": "new native\n",
+        }, mode={"tests/test_mode.py": "755"})
+        (self.repo.path / "tests/test_link.py").symlink_to("test_app.py")
+        self.repo.git("add", "tests/test_link.py")
+        self.repo.git("update-index", "--add", "--cacheinfo", f"160000,{self.base},vendor/submodule")
+        self.repo.git("commit", "-qm", "special modes")
+        self.head = self.repo.git("rev-parse", "HEAD")
+        self.matrix = [{"service": service, "repo": "onesyue/yueops", "ref": self.head,
+                        "validation": "yueops"}
+                       for service in ("yueops-web", "checkin-api", "yue-bot")]
+        self.validators = [{"validation": "yueops", "repo": "onesyue/yueops",
+                            "ref": self.head, "ops_role": role}
+                           for role in ("reference", "native", "ordinary-000", "serial")]
+        self.context = {"policy_commit": "a" * 40, "run_id": "123", "run_attempt": "1"}
+
+    def manifest(self, source=None, **overrides):
+        args = {"source": source or FP.LocalGit(self.repo.path), "base": self.base,
+                "matrix": self.matrix, "validators": self.validators, "context": self.context}
+        args.update(overrides)
+        return FP.feedback_manifest(**args)
+
+    def assert_complete(self, value):
+        FP.validate_feedback_manifest(value)
+        self.assertEqual(value["status"], "COMPLETE")
+        # Git's independent raw diff is the oracle, not the selector's helper.
+        expected = self.repo.git("diff", "--no-renames", "--name-only", self.base, self.head).splitlines()
+        self.assertEqual([c["path"] for c in value["changed_paths"]], expected)
+        self.assertGreater(len(expected), 8)
+        self.assertEqual([o["id"] for o in value["selected_obligations"]],
+                         ["pytest-module:tests/test_app.py", "pytest-module:tests/test_mode.py"])
+        self.assertEqual(value["full_validation_obligations"], [
+            "validate-yueops-native", "validate-yueops-ordinary-000",
+            "validate-yueops-reference", "validate-yueops-serial"])
+        self.assertEqual({r["path"] for r in value["fallback"]["reasons"]}, set(expected))
+        self.assertFalse(value["release_admission"])
+        self.assertTrue(value["preliminary"])
+
+    def remote(self):
+        local = FP.LocalGit(self.repo.path)
+        remote = FP.GitHubTree("onesyue/yueops", "fixture-not-a-token")
+
+        def get(path):
+            if path.startswith("commits/"):
+                return {"sha": local.resolve(path.split("/", 1)[1])}
+            revision = path.split("/")[2].split("?")[0]
+            return {"truncated": False, "tree": [
+                {"path": name, "mode": mode, "type": kind, "sha": oid}
+                for name, (mode, kind, oid) in local.entries(revision).items()]}
+        remote._get = get
+        return remote
+
+    def test_complete_raw_changes_local_remote_and_special_modes(self):
+        local = self.manifest()
+        self.assert_complete(local)
+        self.assertEqual(local, self.manifest(self.remote()))
+        changes = {c["path"]: c for c in local["changed_paths"]}
+        self.assertEqual(changes["tests/test_link.py"]["after"]["mode"], "120000")
+        self.assertEqual(changes["vendor/submodule"]["after"]["kind"], "commit")
+        self.assertEqual(changes["tests/test_mode.py"]["before"]["mode"], "100644")
+        self.assertEqual(changes["tests/test_mode.py"]["after"]["mode"], "100755")
+        self.assertEqual(changes["tests/test_rename.py"]["operation"], "delete")
+        self.assertEqual(changes["tests/test_renamed.py"]["operation"], "add")
+        self.assertEqual(local["inputs"]["base"], self.base)
+        self.assertEqual(local["inputs"]["head"], self.head)
+        self.assertEqual(local["inputs"]["policy_commit"], "a" * 40)
+
+    def test_dirty_bytes_are_not_source_and_equal_tree_grants_no_waiver(self):
+        before = self.manifest()
+        (self.repo.path / "tests/test_app.py").write_text("uncommitted\n")
+        (self.repo.path / "tests/test_untracked.py").write_text("untracked\n")
+        self.assertEqual(before, self.manifest())
+        same = self.manifest(base=self.head)
+        self.assertEqual(same["changed_paths"], [])
+        self.assertEqual(same["changed_count"], 0)
+        self.assertEqual(same["fallback"]["scope"], "full-gate")
+        self.assertFalse(same["release_admission"])
+
+    def test_invalid_identity_and_missing_objects_are_unknown(self):
+        bad = []
+        for base in ("", "master", self.base[:12], "f" * 40):
+            bad.append({"base": base})
+        for key, value in (("repo", "other/yueops"), ("ref", "master"),
+                           ("ref", "f" * 40), ("service", "unsupported")):
+            rows = copy.deepcopy(self.matrix)
+            rows[0][key] = value
+            bad.append({"matrix": rows})
+        bad.extend([{"matrix": self.matrix + [self.matrix[0]]},
+                    {"matrix": []}, {"validators": []},
+                    {"validators": self.validators + [self.validators[0]]},
+                    {"validators": [{**self.validators[0], "ops_role": "unexpected"}]},
+                    {"validators": [{**self.validators[0], "ref": "f" * 40}]},
+                    {"matrix": None}, {"validators": [{}]}])
+        for key, value in (("policy_commit", "master"), ("run_id", "0"), ("run_attempt", "")):
+            bad.append({"context": {**self.context, key: value}})
+        for fields in bad:
+            with self.subTest(fields=fields):
+                result = self.manifest(**fields)
+                FP.validate_feedback_manifest(result)
+                self.assertEqual(result["status"], "UNKNOWN")
+                self.assertIsNone(result["changed_count"])
+                self.assertIsNone(result["changed_paths"])
+                self.assertEqual(result["selected_obligations"], [])
+                self.assertTrue(result["fallback"]["reasons"])
+
+    def test_no_ops_is_not_applicable_and_keeps_all_other_obligations(self):
+        result = self.manifest(matrix=[{"validation": "yueboard"}],
+                               validators=[{"validation": "yueboard"}])
+        FP.validate_feedback_manifest(result)
+        self.assertEqual(result["status"], "NOT_APPLICABLE")
+        self.assertEqual(result["full_validation_obligations"], ["validate-yueboard"])
+        self.assertIsNone(result["changed_paths"])
+
+    def test_truncated_malformed_and_unavailable_remote_never_mean_unchanged(self):
+        objects = [
+            {"truncated": True, "tree": []}, {"truncated": False},
+            {"truncated": False, "tree": {}}, {"truncated": False, "tree": [None]},
+            {"truncated": False, "tree": [{"type": "unexpected"}]},
+            {"truncated": False, "tree": [{"path": "../bad", "mode": "100644",
+                                         "type": "blob", "sha": "a" * 40}]},
+            {"truncated": False, "tree": [{"path": "bad", "mode": "100644",
+                                         "type": "blob", "sha": "short"}]},
+        ]
+        duplicate = {"path": "same", "mode": "100644", "type": "blob", "sha": "a" * 40}
+        objects.append({"truncated": False, "tree": [duplicate, duplicate]})
+        for body in objects + [FP.http.client.IncompleteRead(b"partial", 100),
+                               FP.Unknown("sensitive URL and response body")]:
+            with self.subTest(body=type(body).__name__):
+                source = self.remote()
+                original = source._get
+
+                def get(path, original=original, body=body):
+                    if path.startswith("commits/"):
+                        return original(path)
+                    if isinstance(body, Exception):
+                        raise body
+                    return body
+                source._get = get
+                result = self.manifest(source)
+                FP.validate_feedback_manifest(result)
+                self.assertEqual(result["status"], "UNKNOWN")
+                self.assertIsNone(result["changed_paths"])
+                self.assertNotIn("sensitive", json.dumps(result))
+
+    def test_real_cli_persists_complete_unknown_and_refuses_overwrite(self):
+        output = self.repo.path / "feedback.json"
+        command = [sys.executable, str(ROOT / "scripts/input-fingerprint.py"), "feedback",
+                   "--repo", str(self.repo.path), "--base", self.base,
+                   "--matrix", json.dumps(self.matrix),
+                   "--validation-matrix", json.dumps(self.validators),
+                   "--policy-commit", self.context["policy_commit"],
+                   "--run-id", "123", "--run-attempt", "1", "--output", str(output)]
+        run = subprocess.run(command, capture_output=True, text=True, check=False)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assert_complete(json.loads(output.read_text()))
+        original = output.read_bytes()
+        self.assertNotEqual(subprocess.run(command, capture_output=True, check=False).returncode, 0)
+        self.assertEqual(output.read_bytes(), original)
+        output.unlink()
+        command[command.index("--matrix") + 1] = "{"
+        run = subprocess.run(command, capture_output=True, text=True, check=False)
+        self.assertEqual(run.returncode, 3, run.stderr)
+        value = json.loads(output.read_text())
+        FP.validate_feedback_manifest(value)
+        self.assertEqual(value["status"], "UNKNOWN")
+        output.unlink()
+        command[command.index("--output") + 1] = str(self.repo.path / "missing/out.json")
+        self.assertNotEqual(subprocess.run(command, capture_output=True, check=False).returncode, 0)
+        self.assertFalse(output.exists())
+
+    def test_removed_mapping_truncated_and_image_only_inventory_are_detected(self):
+        self.assert_complete(self.manifest())
+        original = FP._feedback_changes
+        with mock.patch.object(FP, "_feedback_changes",
+                               side_effect=lambda a, b: original(a, b)[:8]), \
+                self.assertRaises(AssertionError):
+            self.assert_complete(self.manifest())
+        policy = FP._feedback_policy("pytest-shards.py")
+        original_loader = FP._feedback_policy
+        with mock.patch.object(policy, "safe_module", return_value=False), \
+                mock.patch.object(FP, "_feedback_policy", side_effect=lambda name:
+                                  policy if name == "pytest-shards.py" else original_loader(name)), \
+                self.assertRaises(AssertionError):
+            self.assert_complete(self.manifest())
+        original_tree = FP._feedback_tree
+        with mock.patch.object(FP, "_feedback_tree", side_effect=lambda s, r: {
+                p: v for p, v in original_tree(s, r).items() if not p.startswith("tests/")}), \
+                self.assertRaises(AssertionError):
+            self.assert_complete(self.manifest())
+
+    def test_missing_fallback_omission_and_digest_corruption_reject(self):
+        value = self.manifest()
+        for mutation in ("fallback", "omit", "digest", "reuse"):
+            with self.subTest(mutation=mutation):
+                bad = copy.deepcopy(value)
+                if mutation == "fallback":
+                    bad["fallback"]["reasons"] = []
+                elif mutation == "omit":
+                    bad["changed_paths"].pop()
+                elif mutation == "reuse":
+                    bad["release_admission"] = True
+                else:
+                    bad["manifest_sha256"] = "sha256:" + "0" * 64
+                if mutation != "digest":
+                    bad.pop("manifest_sha256")
+                    bad["manifest_sha256"] = FP._digest(bad)
+                with self.assertRaises(FP.Unknown):
+                    FP.validate_feedback_manifest(bad)
+
+
+class AffectedFeedbackWiringTest(unittest.TestCase):
+    """Execute the workflow's actual folded command with a local object source."""
+
+    setUp = AffectedFeedbackTest.setUp
+
+    def wiring(self, text):
+        job = re.search(r"(?ms)^  input-shadow:\n(.*?)(?=^  validate:\n)", text).group(1)
+        feedback = re.search(r"(?ms)^      - name: Affected Ops source feedback.*?\n"
+                             r"(.*?)(?=^      - name:)", job).group(1)
+        upload = job[job.index("      - name: Retain preliminary affected-change manifest"):]
+        self.assertIn("        if: always()\n", feedback)
+        self.assertIn("        if: always()\n", upload)
+        self.assertIn("if-no-files-found: error", upload)
+        self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", upload)
+        self.assertIn("path: ${{ runner.temp }}/affected-feedback.json", upload)
+        self.assertIn("name: affected-feedback-${{ github.run_id }}-${{ github.run_attempt }}", upload)
+        self.assertIn("MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}", feedback)
+        self.assertIn("VALIDATION_MATRIX: ${{ needs.plan.outputs.validation_matrix }}", feedback)
+        self.assertIn("BUILD_MATRIX: ${{ needs.plan.outputs.matrix }}", feedback)
+        command = " ".join(re.search(r"(?ms)^        run: >-\n(.*)", feedback).group(1).split())
+        self.assertIn("python3 scripts/input-fingerprint.py feedback", command)
+        self.assertNotIn("needs.input-shadow", text)
+        self.assertFalse(any("input-shadow" in x for x in re.findall(r"(?m)^    needs: (.+)$", text)))
+        self.assertNotIn("affected-feedback", text.replace(job, ""))
+        self.assertNotIn("reuse_verification", text)
+        self.assertNotIn('needs.validate.result == \'skipped\'', text)
+        return command
+
+    def test_actual_command_and_always_retained_unknown_after_other_shadow_failure(self):
+        command = self.wiring(WORKFLOW.read_text())
+        # Only transport is substituted: all actual workflow CLI arguments remain.
+        import shlex
+        command = command.replace("python3 scripts/input-fingerprint.py feedback",
+                                  f"{shlex.quote(sys.executable)} scripts/input-fingerprint.py feedback"
+                                  f" --repo {shlex.quote(str(self.repo.path))}")
+        env = {**os.environ, "MIGRATION_BASE": self.base, "BUILD_MATRIX": json.dumps(self.matrix),
+               "VALIDATION_MATRIX": json.dumps(self.validators), "RUNNER_TEMP": str(self.repo.path),
+               "GITHUB_SHA": "a" * 40, "GITHUB_RUN_ID": "123", "GITHUB_RUN_ATTEMPT": "1"}
+        for base, code, status in ((self.base, 0, "COMPLETE"), ("", 3, "UNKNOWN")):
+            with self.subTest(status=status):
+                # The prior image step failed; always() still selects this step.
+                prior = subprocess.run(["bash", "-c", "exit 7"], capture_output=True, check=False)
+                self.assertEqual(prior.returncode, 7)
+                result = subprocess.run(["bash", "-e", "-c", command], cwd=ROOT,
+                                        env={**env, "MIGRATION_BASE": base},
+                                        capture_output=True, text=True, check=False)
+                self.assertEqual(result.returncode, code, result.stderr)
+                output = self.repo.path / "affected-feedback.json"
+                value = json.loads(output.read_text())
+                self.assertEqual(value["status"], status)
+                FP.validate_feedback_manifest(value)
+                output.unlink()
+
+    def test_actual_wiring_mutations_reject(self):
+        text = WORKFLOW.read_text()
+        mutations = [
+            text.replace("scripts/input-fingerprint.py feedback", "scripts/input-fingerprint.py compute"),
+            text.replace("Retain preliminary affected-change manifest", "No retained manifest"),
+            text.replace("path: ${{ runner.temp }}/affected-feedback.json", "path: /missing"),
+            text.replace("if-no-files-found: error", "if-no-files-found: ignore"),
+            text.replace("    needs: [plan, validate]", "    needs: [plan, validate, input-shadow]"),
+            text.replace("  validate:\n", "  validate:\n    if: needs.input-shadow.result == 'success'\n"),
+            text.replace("  validate:\n", "  validate:\n    env: {reuse_verification: true}\n"),
+            text.replace("  validate:\n", "  validate:\n    env: {SKIP: affected-feedback}\n"),
+            text.replace("        if: always()\n        continue-on-error: true\n",
+                         "        if: success()\n        continue-on-error: true\n"),
+        ]
+        self.wiring(text)
+        for changed in mutations:
+            with self.subTest(mutation=mutations.index(changed)):
+                self.assertNotEqual(changed, text)
+                with self.assertRaises((AssertionError, ValueError, AttributeError)):
+                    self.wiring(changed)
 
 
 def _job(name: str, conclusion: str = "success", labels=None, group="GitHub Actions") -> dict:

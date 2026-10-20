@@ -395,6 +395,28 @@ jobs:
           python3 scripts/verification-evidence.py probe
           --service "$SHADOW_SERVICE" --ref "$SHADOW_REF"
           --validation-matrix "$VALIDATION_MATRIX"
+      - name: Affected Ops source feedback (preliminary only)
+        if: always()
+        continue-on-error: true
+        env:
+          GH_API_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          BUILD_MATRIX: ${{ needs.plan.outputs.matrix }}
+          VALIDATION_MATRIX: ${{ needs.plan.outputs.validation_matrix }}
+          MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}
+        run: >-
+          python3 scripts/input-fingerprint.py feedback
+          --base "$MIGRATION_BASE" --matrix "$BUILD_MATRIX"
+          --validation-matrix "$VALIDATION_MATRIX"
+          --output "$RUNNER_TEMP/affected-feedback.json"
+      - name: Retain preliminary affected-change manifest
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: affected-feedback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/affected-feedback.json
+          if-no-files-found: error
+          retention-days: 14
 
   validate:
     needs: plan
