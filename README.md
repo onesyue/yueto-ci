@@ -3,12 +3,42 @@
 Unified build and external-control repository for Yue.to server components.
 This public repository contains no business source. Private source repositories
 are checked out with scoped credentials, and outputs go only to
-`ghcr.io/onesyue/*`, without uploaded artifacts. Public Actions avoids the private
+`ghcr.io/onesyue/*`. Diagnostic artifacts are limited to the explicitly declared
+test evidence below; private source and images are not uploaded as artifacts. Public Actions avoids the private
 repository billing dependency. This repository also hosts an alert-chain deadman
 observer outside production hosts.
 
 Client builds run in [yuelink-ci](https://github.com/onesyue/yuelink-ci). These are
 the two build repositories.
+
+### Passive Ops timing evidence
+
+The formal serial Ops pytest entry records collection, selected corpus identity,
+and every setup/call/teardown phase. The existing root-owned Linux lens recorder
+is projected into `scripts/lens_report.py`; do not edit that generated file.
+Regenerate/check it from the workspace with
+`python3 scripts/sync-lens-report.py --apply|--check --ci-root <central-checkout>`.
+The central installer checks the projection's canonical-path/hash manifest;
+the workspace contract additionally checks it against the actual canonical bytes.
+
+The run/attempt-specific `yueops-pytest-timing-*` artifact retains event records,
+source/policy/recorder/entry identities, tool versions, the original pytest exit
+code and a summary for 14 days, including failed validation. It contains test
+identifiers and phase/outcome metadata, not source files or environment dumps.
+Missing starts, interrupted sessions, incomplete case phases, lost records and
+absent process-exit receipts remain MISSING/PARTIAL. A COMPLETE timing artifact
+can describe failed tests and never constitutes release acceptance.
+
+Nested pytest subprocesses do not claim the parent stream. Subtest durations
+are retained but excluded from parent-phase totals. The summary is scoped to
+the existing serial entry; native nginx/PostgreSQL/systemd obligations retain
+their separate execution and gates. Aggregate CPU and process-tree peak memory
+are UNKNOWN; no single-process high-water mark substitutes for them. Collect
+the next required run, rather than dispatching a profiling-only full suite.
+The central policy self-tests use the five hash-locked wheels in
+`requirements-policy.txt` to exercise real pytest subprocesses. Install that
+file before the existing unittest discovery command when running policy tests
+outside the Ops dependency environment.
 
 ## Covered services
 
