@@ -1,0 +1,8 @@
+{
+  "canonical_owner": "yueto-workspace",
+  "canonical_path": "scripts/linux-lens/lens_report.py",
+  "generated_path": "scripts/lens_report.py",
+  "generator": "scripts/sync-lens-report.py",
+  "schema": 1,
+  "sha256": "bd622065fdf7ad196540a39b667792bf0fc289fe7d1ad0938974fb9108bca9f0"
+}

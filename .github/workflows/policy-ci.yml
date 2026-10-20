@@ -54,6 +54,9 @@ jobs:
           "$destination/actionlint" -version
           echo "$destination" >> "$GITHUB_PATH"
 
+      - name: Install locked pytest for actual recorder policy controls
+        run: 'python3 -m pip install --require-hashes --only-binary=:all: -r requirements-policy.txt'
+
       - name: Validate central policy
         run: |
           set -euo pipefail

@@ -1118,6 +1118,13 @@ jobs:
           test "$(/usr/local/bin/gitleaks version)" = '8.30.1'
           test "$(stat -c '%u' /usr/local/bin/gitleaks)" = "$(id -u)"
 
+      - name: Prepare passive yueops pytest timing
+        if: matrix.validation == 'yueops'
+        run: |
+          set -euo pipefail
+          .venv/bin/python .ci-policy/scripts/pytest-timing.py install \
+            --output "${RUNNER_TEMP:?}/yueops-pytest-timing"
+
       - name: Validate yueops backend
         if: matrix.validation == 'yueops'
         env:
@@ -1164,8 +1171,31 @@ jobs:
           # 与本地 gauntlet 共用测试入口；中央显式串行，避免已复现的
           # xdist 收集时 service 包 sys.path/sys.modules 污染。
           # 覆盖与耗时取本次完整日志，不沿用旧 runner 的历史估计。
-          YUEOPS_PYTEST_SERIAL=1 bash scripts/run-pytest-parallel.sh
+          timing_dir="${RUNNER_TEMP:?}/yueops-pytest-timing"
+          invocation_id=$(.venv/bin/python -c 'import json,sys; print(json.load(open(sys.argv[1]))["invocation_id"])' "$timing_dir/metadata.json")
+          pytest_rc=0
+          .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-start-unix-ns.txt"
+          LENS_REPORT="$timing_dir/events.jsonl" LENS_INVOCATION_ID="$invocation_id" \
+            YUEOPS_PYTEST_SERIAL=1 bash scripts/run-pytest-parallel.sh || pytest_rc=$?
+          printf '%s\n' "$pytest_rc" > "$timing_dir/pytest-exit-code.txt"
+          .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-finish-unix-ns.txt"
+          if [ "$pytest_rc" -ne 0 ]; then exit "$pytest_rc"; fi
           sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py
+
+      - name: Summarize passive yueops pytest timing
+        if: always() && matrix.validation == 'yueops'
+        run: |
+          python3 .ci-policy/scripts/pytest-timing.py summarize \
+            --output "${RUNNER_TEMP:?}/yueops-pytest-timing"
+
+      - name: Upload passive yueops pytest timing
+        if: always() && matrix.validation == 'yueops'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: yueops-pytest-timing-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/yueops-pytest-timing/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Validate yueops PostgreSQL and systemd native obligations
         if: matrix.validation == 'yueops'
