@@ -149,6 +149,16 @@ class NativeNodeMakeChainTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
                 self.assertIn("yue-node Make test chain", result.stderr)
 
+    def test_actual_cli_rejects_make_execution_flag_assignments(self):
+        good = self.PREFIX + self.CURRENT + self.BODY
+        for variable in ("MAKEFLAGS", "GNUMAKEFLAGS", "MFLAGS"):
+            for prefix in ("", "export "):
+                for flag in ("--ignore-errors", "--just-print"):
+                    with self.subTest(variable=variable, prefix=prefix, flag=flag):
+                        result = self.cli(f"{prefix}{variable} := {flag}\n" + good)
+                        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                        self.assertIn("unsupported control syntax", result.stderr)
+
     def test_actual_cli_rejects_legacy_strings_without_its_owned_body(self):
         good = self.PREFIX + self.LEGACY + self.BODY
         mutations = {

@@ -217,7 +217,7 @@ def validate_node_test_chain(makefile: str) -> None:
             continue
         if (re.match(r"(?:-?include|sinclude|define|override)\b", line)
                 or re.search(r"\$[({]eval\s", line)
-                or re.match(r"(?:export\s+)?(?:\.ONESHELL|\.RECIPEPREFIX|\.IGNORE|\.SHELLFLAGS|SHELL|MAKE)\s*[:?+!=]", line)):
+                or re.match(r"(?:export\s+)?(?:\.ONESHELL|\.RECIPEPREFIX|\.IGNORE|\.SHELLFLAGS|SHELL|MAKE|MAKEFLAGS|GNUMAKEFLAGS|MFLAGS)\s*[:?+!=]", line)):
             raise RuntimeError("yue-node Make test chain uses unsupported control syntax")
         if re.match(r"(?:ifeq|ifneq|ifdef|ifndef)\b", line):
             depth += 1
