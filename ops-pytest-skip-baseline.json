@@ -5107,5 +5107,400 @@
       "uid": 1001
     },
     "inheritance": "Exact module and shared inputs only; not a new source execution."
+  },
+  "reviewed_hosted": {
+    "schema": 1,
+    "context": {
+      "platform": "linux",
+      "uid": 1001
+    },
+    "runner": {
+      "runner_os": "Linux",
+      "runner_arch": "X64"
+    },
+    "observation": {
+      "run_id": "39442801195",
+      "run_attempt": "1",
+      "source_revision": "d5171b5803708d5e92741966ed4c6b7c40ed725d",
+      "policy_revision": "30eaffb39f5951c4bfbd39988a4cab81680db74d",
+      "board_revision": "8b5d0fafbca3752d3c2c21274ca8d7fe6c9c00b6",
+      "runner_image": "20261018.339.1",
+      "events_sha256": "4c2099b2b842079c2e937303eb5c97a55aa2131886f18b31046597b2a67c8f94",
+      "comparison_sha256": "6be07de12b72450537ac407a46ba18ff570a949f41e1062d12bb4a8bd15104be",
+      "native_receipts_sha256": "6aa85f012d2204959822684507fbd8ab8cbabca414d3ef2544566b22c287206d",
+      "original_baseline_sha256": "87c68397f02d5c58185ddf9a564a65f07d4653c1445af40b9fd3c164d0cb31d6"
+    },
+    "cases": {
+      "tests/test_pg_grant_tripwire_security.py::test_tripwire_runs_without_becoming_visible_to_kb_role": {
+        "module_blob": "4c4d211a818e01f9168c0e6f9c5a5b4becb4a854",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "call",
+            "reason": "Skipped: docker unavailable"
+          },
+          {
+            "when": "call",
+            "reason": "Skipped: local postgres:18-alpine image unavailable"
+          }
+        ],
+        "disposition": "HISTORICAL_UNEXECUTED",
+        "existing_closure": {
+          "kind": "prior_same_source_native_host_pass",
+          "receipt": "ops-final-admission-skip-supplement-proof.json",
+          "events": "ops-final-admission-skip-host/host.jsonl",
+          "events_sha256": "e45e621e56c8a50ca8117fb75aa17e2921ca9791f4a84f6f235154a6859598ce",
+          "context": "2026-10-20 12:39:11Z d517, Darwin UID501, finite99 selection69PASS/30SKIP; this exact case passed. Not a hosted pass."
+        }
+      },
+      "tests/test_release_orchestration_20260831.py::test_promote_anchor_matches_ship_sh": {
+        "module_blob": "de5a0a28c52c4f675124621b17c6fa88011c4780",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "call",
+            "reason": "Skipped: 工作区根仓未检出：/home/runner/work/scripts/ship.sh（不可当成通过）"
+          },
+          {
+            "when": "call",
+            "reason": "Skipped: 工作区根仓未检出：/home/runner/work/yueto-ci/scripts/ship.sh（不可当成通过）"
+          }
+        ],
+        "disposition": "HISTORICAL_UNEXECUTED",
+        "existing_closure": {
+          "kind": "no_exact_pass_bound_in_this_finite_evidence",
+          "context": "Missing root checkout path; historical baseline also skipped. Not a pass."
+        }
+      },
+      "tests/test_release_orchestration_20260831.py::test_release_state_json_flag_exists_and_is_shaped": {
+        "module_blob": "de5a0a28c52c4f675124621b17c6fa88011c4780",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "call",
+            "reason": "Skipped: 工作区根仓未检出：/home/runner/work/scripts/release-state.py（不可当成通过）"
+          },
+          {
+            "when": "call",
+            "reason": "Skipped: 工作区根仓未检出：/home/runner/work/yueto-ci/scripts/release-state.py（不可当成通过）"
+          }
+        ],
+        "disposition": "HISTORICAL_UNEXECUTED",
+        "existing_closure": {
+          "kind": "no_exact_pass_bound_in_this_finite_evidence",
+          "context": "Missing root checkout path; historical baseline also skipped. Not a pass."
+        }
+      },
+      "tests/test_support_docker_native_apt_cache_20260911.py::test_native_offline_apt_upgrade_and_rollback_use_transaction_archives": {
+        "module_blob": "871ed8f33c5731b26361f5cfcf47ecc098d6fe00",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "call",
+            "reason": "Skipped: offline APT integration requires a local Docker daemon"
+          },
+          {
+            "when": "call",
+            "reason": "Skipped: offline test requires an already cached debian:trixie-slim image"
+          }
+        ],
+        "disposition": "HISTORICAL_UNEXECUTED",
+        "existing_closure": {
+          "kind": "prior_same_source_native_host_pass",
+          "receipt": "ops-final-admission-skip-supplement-proof.json",
+          "events": "ops-final-admission-skip-host/host.jsonl",
+          "events_sha256": "e45e621e56c8a50ca8117fb75aa17e2921ca9791f4a84f6f235154a6859598ce",
+          "context": "2026-10-20 12:39:11Z d517, Darwin UID501, finite99 selection69PASS/30SKIP; this exact case passed. Not a hosted pass."
+        }
+      },
+      "tests/test_support_stale_close_boundary_20260731.py::test_support_function_and_effective_acl_on_postgres_18": {
+        "module_blob": "2e68d796ee81629636586df9aefaee39f8076cc1",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "call",
+            "reason": "Skipped: docker unavailable"
+          },
+          {
+            "when": "call",
+            "reason": "Skipped: local postgres:18-alpine image unavailable"
+          }
+        ],
+        "disposition": "HISTORICAL_UNEXECUTED",
+        "existing_closure": {
+          "kind": "prior_same_source_native_host_pass",
+          "receipt": "ops-final-admission-skip-supplement-proof.json",
+          "events": "ops-final-admission-skip-host/host.jsonl",
+          "events_sha256": "e45e621e56c8a50ca8117fb75aa17e2921ca9791f4a84f6f235154a6859598ce",
+          "context": "2026-10-20 12:39:11Z d517, Darwin UID501, finite99 selection69PASS/30SKIP; this exact case passed. Not a hosted pass."
+        }
+      },
+      "tests/test_yueops_pg_restore_drill_20260924.py::test_e2e_real_backup_restores_and_passes": {
+        "module_blob": "2f57ec05cab6f9af631f66650feaaf76a7770222",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: docker unavailable"
+          },
+          {
+            "when": "setup",
+            "reason": "Skipped: base image postgres@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d not present locally"
+          }
+        ],
+        "disposition": "OWNER_CANCELED",
+        "existing_closure": {
+          "kind": "owner_canceled_historical_obligation",
+          "receipt": "ops-final-admission-skip-supplement-proof.json",
+          "context": "Seven restore cases already excluded by owner R4.2b; preserve history, not PASS, no rerun or backup resurrection."
+        }
+      },
+      "tests/test_yueops_pg_restore_drill_20260924.py::test_e2e_key_table_empty_in_backup_is_a_failed_drill": {
+        "module_blob": "2f57ec05cab6f9af631f66650feaaf76a7770222",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: docker unavailable"
+          },
+          {
+            "when": "setup",
+            "reason": "Skipped: base image postgres@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d not present locally"
+          }
+        ],
+        "disposition": "OWNER_CANCELED",
+        "existing_closure": {
+          "kind": "owner_canceled_historical_obligation",
+          "receipt": "ops-final-admission-skip-supplement-proof.json",
+          "context": "Seven restore cases already excluded by owner R4.2b; preserve history, not PASS, no rerun or backup resurrection."
+        }
+      },
+      "tests/test_yueops_pg_restore_drill_20260924.py::test_e2e_stale_corrupt_empty_and_missing_helper": {
+        "module_blob": "2f57ec05cab6f9af631f66650feaaf76a7770222",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: docker unavailable"
+          },
+          {
+            "when": "setup",
+            "reason": "Skipped: base image postgres@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d not present locally"
+          }
+        ],
+        "disposition": "OWNER_CANCELED",
+        "existing_closure": {
+          "kind": "owner_canceled_historical_obligation",
+          "receipt": "ops-final-admission-skip-supplement-proof.json",
+          "context": "Seven restore cases already excluded by owner R4.2b; preserve history, not PASS, no rerun or backup resurrection."
+        }
+      },
+      "tests/test_yueops_pg_restore_drill_20260924.py::test_e2e_gate_checks_physical_indexes_with_restricted_role_and_keeps_retention": {
+        "module_blob": "2f57ec05cab6f9af631f66650feaaf76a7770222",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: docker unavailable"
+          },
+          {
+            "when": "setup",
+            "reason": "Skipped: base image postgres@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d not present locally"
+          }
+        ],
+        "disposition": "OWNER_CANCELED",
+        "existing_closure": {
+          "kind": "owner_canceled_historical_obligation",
+          "receipt": "ops-final-admission-skip-supplement-proof.json",
+          "context": "Seven restore cases already excluded by owner R4.2b; preserve history, not PASS, no rerun or backup resurrection."
+        }
+      },
+      "tests/test_yueops_pg_restore_drill_20260924.py::test_e2e_corrupt_unique_source_is_retired_without_deletion_and_restores": {
+        "module_blob": "2f57ec05cab6f9af631f66650feaaf76a7770222",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: docker unavailable"
+          },
+          {
+            "when": "setup",
+            "reason": "Skipped: base image postgres@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d not present locally"
+          }
+        ],
+        "disposition": "OWNER_CANCELED",
+        "existing_closure": {
+          "kind": "owner_canceled_historical_obligation",
+          "receipt": "ops-final-admission-skip-supplement-proof.json",
+          "context": "Seven restore cases already excluded by owner R4.2b; preserve history, not PASS, no rerun or backup resurrection."
+        }
+      },
+      "tests/test_yueops_pg_restore_drill_20260924.py::test_e2e_identity_recovery_refuses_ambiguous_groups_atomically[ownership]": {
+        "module_blob": "2f57ec05cab6f9af631f66650feaaf76a7770222",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: docker unavailable"
+          },
+          {
+            "when": "setup",
+            "reason": "Skipped: base image postgres@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d not present locally"
+          }
+        ],
+        "disposition": "OWNER_CANCELED",
+        "existing_closure": {
+          "kind": "owner_canceled_historical_obligation",
+          "receipt": "ops-final-admission-skip-supplement-proof.json",
+          "context": "Seven restore cases already excluded by owner R4.2b; preserve history, not PASS, no rerun or backup resurrection."
+        }
+      },
+      "tests/test_yueops_pg_restore_drill_20260924.py::test_e2e_identity_recovery_refuses_ambiguous_groups_atomically[history]": {
+        "module_blob": "2f57ec05cab6f9af631f66650feaaf76a7770222",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: docker unavailable"
+          },
+          {
+            "when": "setup",
+            "reason": "Skipped: base image postgres@sha256:7157393f508fd8eb46119937fab39813783fe3e7d4c6316c45c12ce2ea25e61d not present locally"
+          }
+        ],
+        "disposition": "OWNER_CANCELED",
+        "existing_closure": {
+          "kind": "owner_canceled_historical_obligation",
+          "receipt": "ops-final-admission-skip-supplement-proof.json",
+          "context": "Seven restore cases already excluded by owner R4.2b; preserve history, not PASS, no rerun or backup resurrection."
+        }
+      },
+      "tests/test_board139_schema_acl_native_20261018.py::test_actual_bootstrap_adopts_139_trigger_owner_and_empty_acl": {
+        "module_blob": "7031c88d7b25d3b61ff40429cc8e54f3e7248466",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: requires frozen Board139 schema fixture; set YUEBOARD_MONEY_SCHEMA_FIXTURE"
+          }
+        ],
+        "disposition": "SAME_RUN_NATIVE_REQUIRED",
+        "native_target": "tests/test_board139_schema_acl_native_20261018.py",
+        "existing_closure": {
+          "kind": "same_current_job_native_pass",
+          "receipt": "ci-w121-ops-d517-native-obligation-receipts.json",
+          "job_log_lines": [
+            5102,
+            5104
+          ],
+          "context": "Linux UID1001; frozen Board8b fixture explicitly provided; required6=passed6, no failed/skipped; exit0"
+        }
+      },
+      "tests/test_board139_schema_acl_native_20261018.py::test_actual_audit_refuses_nonowner_execute[PUBLIC]": {
+        "module_blob": "7031c88d7b25d3b61ff40429cc8e54f3e7248466",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: requires frozen Board139 schema fixture; set YUEBOARD_MONEY_SCHEMA_FIXTURE"
+          }
+        ],
+        "disposition": "SAME_RUN_NATIVE_REQUIRED",
+        "native_target": "tests/test_board139_schema_acl_native_20261018.py",
+        "existing_closure": {
+          "kind": "same_current_job_native_pass",
+          "receipt": "ci-w121-ops-d517-native-obligation-receipts.json",
+          "job_log_lines": [
+            5102,
+            5104
+          ],
+          "context": "Linux UID1001; frozen Board8b fixture explicitly provided; required6=passed6, no failed/skipped; exit0"
+        }
+      },
+      "tests/test_board139_schema_acl_native_20261018.py::test_actual_audit_refuses_nonowner_execute[app_yue_bot]": {
+        "module_blob": "7031c88d7b25d3b61ff40429cc8e54f3e7248466",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: requires frozen Board139 schema fixture; set YUEBOARD_MONEY_SCHEMA_FIXTURE"
+          }
+        ],
+        "disposition": "SAME_RUN_NATIVE_REQUIRED",
+        "native_target": "tests/test_board139_schema_acl_native_20261018.py",
+        "existing_closure": {
+          "kind": "same_current_job_native_pass",
+          "receipt": "ci-w121-ops-d517-native-obligation-receipts.json",
+          "job_log_lines": [
+            5102,
+            5104
+          ],
+          "context": "Linux UID1001; frozen Board8b fixture explicitly provided; required6=passed6, no failed/skipped; exit0"
+        }
+      },
+      "tests/test_board139_schema_acl_native_20261018.py::test_actual_audit_refuses_nonowner_execute[app_checkin]": {
+        "module_blob": "7031c88d7b25d3b61ff40429cc8e54f3e7248466",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: requires frozen Board139 schema fixture; set YUEBOARD_MONEY_SCHEMA_FIXTURE"
+          }
+        ],
+        "disposition": "SAME_RUN_NATIVE_REQUIRED",
+        "native_target": "tests/test_board139_schema_acl_native_20261018.py",
+        "existing_closure": {
+          "kind": "same_current_job_native_pass",
+          "receipt": "ci-w121-ops-d517-native-obligation-receipts.json",
+          "job_log_lines": [
+            5102,
+            5104
+          ],
+          "context": "Linux UID1001; frozen Board8b fixture explicitly provided; required6=passed6, no failed/skipped; exit0"
+        }
+      },
+      "tests/test_board139_schema_acl_native_20261018.py::test_actual_audit_refuses_nonowner_execute[yueboard_runtime]": {
+        "module_blob": "7031c88d7b25d3b61ff40429cc8e54f3e7248466",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: requires frozen Board139 schema fixture; set YUEBOARD_MONEY_SCHEMA_FIXTURE"
+          }
+        ],
+        "disposition": "SAME_RUN_NATIVE_REQUIRED",
+        "native_target": "tests/test_board139_schema_acl_native_20261018.py",
+        "existing_closure": {
+          "kind": "same_current_job_native_pass",
+          "receipt": "ci-w121-ops-d517-native-obligation-receipts.json",
+          "job_log_lines": [
+            5102,
+            5104
+          ],
+          "context": "Linux UID1001; frozen Board8b fixture explicitly provided; required6=passed6, no failed/skipped; exit0"
+        }
+      },
+      "tests/test_board139_schema_acl_native_20261018.py::test_actual_audit_refuses_grant_option_and_foreign_owner": {
+        "module_blob": "7031c88d7b25d3b61ff40429cc8e54f3e7248466",
+        "outcome": "skipped",
+        "variants": [
+          {
+            "when": "setup",
+            "reason": "Skipped: requires frozen Board139 schema fixture; set YUEBOARD_MONEY_SCHEMA_FIXTURE"
+          }
+        ],
+        "disposition": "SAME_RUN_NATIVE_REQUIRED",
+        "native_target": "tests/test_board139_schema_acl_native_20261018.py",
+        "existing_closure": {
+          "kind": "same_current_job_native_pass",
+          "receipt": "ci-w121-ops-d517-native-obligation-receipts.json",
+          "job_log_lines": [
+            5102,
+            5104
+          ],
+          "context": "Linux UID1001; frozen Board8b fixture explicitly provided; required6=passed6, no failed/skipped; exit0"
+        }
+      }
+    }
   }
 }

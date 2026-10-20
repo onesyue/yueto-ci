@@ -31,6 +31,11 @@ IDENTITY_FIELDS = ("policy_revision", "board_revision", "run_id", "run_attempt",
 FILES = ("metadata.json", "events.jsonl", "pytest-exit-code.txt",
          "pytest-start-unix-ns.txt", "pytest-finish-unix-ns.txt", "selection.json")
 SKIP_BASELINE = "ops-pytest-skip-baseline.json"
+NATIVE_TARGETS = {
+    "tests/test_board139_schema_acl_native_20261018.py": (6, 1001),
+    "tests/test_node_systemd_pilot_20261018.py": (38, 0),
+    "tests/test_schema_contract_receipt_20261020.py": (30, 0),
+}
 
 
 def require(condition, message):
@@ -644,20 +649,75 @@ def execute(value, source, board, role, output, site):
     return result.returncode
 
 
-def native_terminal(value, source, board, output):
+def native_context(value):
+    return {"schema": 1, "admission_sha256": value["admission_sha256"],
+            "identity": value["identity"], "source_revision": value["source_revision"],
+            "board_revision": value["board_revision"], "role": "native"}
+
+
+def native_start(value, source, board, output):
     check_source(value, source, board)
-    require(value["mode"] == "sharded", "unexpected native terminal")
+    require(value["mode"] in ("sharded", "legacy"), "unexpected native start")
+    if value["mode"] == "sharded":
+        for environment, key in (("RUNNER_OS", "runner_os"), ("RUNNER_ARCH", "runner_arch"),
+                                 ("ImageVersion", "runner_image")):
+            require(os.environ.get(environment) == value["ops_plan"]["context"][key],
+                    "native runner image differs")
     output.mkdir(parents=True, exist_ok=False)
-    result = {"schema": 1, "admission_sha256": value["admission_sha256"],
-              "identity": value["identity"], "source_revision": value["source_revision"],
-              "board_revision": value["board_revision"], "role": "native", "status": "success"}
-    (output / "native.json").write_text(json.dumps(result) + "\n")
+    result = native_context(value)
+    (output / "native-context.json").write_text(json.dumps(result) + "\n")
     return result
 
 
-def admit_skips(value, result):
+def native_receipts(value, output):
+    require(output.is_dir() and not output.is_symlink(), "invalid native evidence directory")
+    context = native_context(value)
+    expected_files = {"native-context.json", *[Path(t).stem + ".json" for t in NATIVE_TARGETS]}
+    actual_files = {p.name for p in output.iterdir()}
+    require(actual_files in (expected_files, expected_files | {"native.json"}),
+            "missing or unexpected native receipt files")
+    require(read_json(output / "native-context.json") == context, "native context differs")
+    records, hashes = {}, {}
+    for target, (floor, uid) in NATIVE_TARGETS.items():
+        path = output / (Path(target).stem + ".json")
+        require(path.is_file() and not path.is_symlink()
+                and path.stat().st_size <= 1024 * 1024, "missing or unsafe native receipt")
+        row = read_json(path)
+        require(isinstance(row, dict), "invalid native receipt")
+        required, passed = row.get("required"), row.get("passed")
+        require(isinstance(required, list) and isinstance(passed, list)
+                and all(isinstance(n, str) and n.startswith(target + "::") for n in required)
+                and all(isinstance(n, str) for n in passed)
+                and len(required) >= floor and len(required) == len(set(required))
+                and passed == sorted(set(passed)) == sorted(required), "native required calls differ")
+        require(row.get("binding") == context and row.get("target") == target
+                and row.get("platform") == "linux" and type(row.get("uid")) is int
+                and row["uid"] == uid and row.get("floor") == floor
+                and row.get("collection_bad") is False and row.get("failed_or_skipped") == []
+                and type(row.get("exitstatus")) is int and row["exitstatus"] == 0
+                and type(row.get("process_exitstatus")) is int and row["process_exitstatus"] == 0,
+                "native failed, incomplete or wrong context")
+        records[target] = row
+        hashes[path.name] = sha(path.read_bytes())
+    return {"obligations": records, "receipt_sha256": hashes}
+
+
+def native_terminal(value, source, board, output):
+    check_source(value, source, board)
+    require(value["mode"] == "sharded", "unexpected native terminal")
+    result = native_context(value) | {"status": "success"} | native_receipts(value, output)
+    seal(result, "native_sha256")
+    with (output / "native.json").open("x") as handle:
+        handle.write(json.dumps(result) + "\n")
+    return result
+
+
+def admit_skips(value, result, native):
     baseline = skip_baseline()
     observed_collection = {}
+    reviewed = baseline.get("reviewed_hosted", {})
+    counts = {"HISTORICAL_UNEXECUTED": 0, "OWNER_CANCELED": 0,
+              "SAME_RUN_NATIVE_REQUIRED": 0}
     for session in [result["reference"], *result["shards"]]:
         require(session["execution_context"] == baseline["context"],
                 "skip execution context differs from baseline")
@@ -666,10 +726,29 @@ def admit_skips(value, result):
         for row in session["nonpassing_outcomes"]:
             nodeid = row["nodeid"]
             module = nodeid.split("::", 1)[0]
-            require(baseline["cases"].get(nodeid) == {
-                "outcome": row["outcome"], "reason": row.get("reason"),
-                "module_blob": value["skip_module_blobs"].get(module),
-            }, "new or changed case skip/xfail: " + nodeid)
+            specific = reviewed.get("cases", {}).get(nodeid)
+            if specific is None:
+                require(baseline["cases"].get(nodeid) == {
+                    "outcome": row["outcome"], "reason": row.get("reason"),
+                    "module_blob": value["skip_module_blobs"].get(module),
+                }, "new or changed case skip/xfail: " + nodeid)
+                disposition = "HISTORICAL_UNEXECUTED"
+            else:
+                require(reviewed.get("schema") == 1
+                        and session["execution_context"] == reviewed.get("context")
+                        and all(value["ops_plan"]["context"].get(k) == v
+                                for k, v in reviewed["runner"].items())
+                        and specific["module_blob"] == value["skip_module_blobs"].get(module)
+                        and specific["outcome"] == row["outcome"]
+                        and {"when": row.get("when"), "reason": row.get("reason")}
+                        in specific["variants"], "new or changed case skip/xfail: " + nodeid)
+                disposition = specific["disposition"]
+                require(disposition in counts, "unknown reviewed skip disposition")
+                if disposition == "SAME_RUN_NATIVE_REQUIRED":
+                    require(nodeid in native["obligations"].get(
+                        specific["native_target"], {}).get("passed", []),
+                        "ordinary skip missing exact same-run native call: " + nodeid)
+            counts[disposition] += 1
         for module, reason in session["collection_skips"].items():
             require(baseline["collection_skips"].get(module) == {
                 "reason": reason, "module_blob": value["skip_module_blobs"].get(module),
@@ -681,7 +760,8 @@ def admit_skips(value, result):
             "reference and shards have different collection skips")
     return {"status": "NO_NEW_SKIPS", "baseline_sha256": value["skip_baseline_sha256"],
             "baseline_source_revision": baseline["source_revision"],
-            "skips_are_passes": False, "host_native_acceptance": "INDEPENDENT"}
+            "skips_are_passes": False, "disposition_counts": counts,
+            "host_native_acceptance": "INDEPENDENT"}
 
 
 def join(value, evidence, validation_result, expected_sha):
@@ -698,17 +778,16 @@ def join(value, evidence, validation_result, expected_sha):
     require(evidence.is_dir() and not evidence.is_symlink(), "missing evidence directory")
     require(sorted(p.name for p in evidence.iterdir()) == sorted(prefix + r for r in roles),
             "missing or unexpected evidence roles")
-    native = read_json(evidence / (prefix + "native") / "native.json")
-    require(native == {
-        "schema": 1, "admission_sha256": value["admission_sha256"], "identity": value["identity"],
-        "source_revision": value["source_revision"], "board_revision": value["board_revision"],
-        "role": "native", "status": "success",
-    }, "native/source gate receipt differs")
+    native_directory = evidence / (prefix + "native")
+    native = read_json(native_directory / "native.json")
+    expected_native = native_context(value) | {"status": "success"} | native_receipts(value, native_directory)
+    seal(expected_native, "native_sha256")
+    require(native == expected_native, "native/source gate receipt differs")
     result = aggregate(expected, evidence / (prefix + "reference"),
                        [evidence / (prefix + a["id"]) for a in expected["assignments"]])
     return {"schema": 1, "status": "VALIDATION_MATRIX_COMPLETE", "mode": "sharded",
             "admission_sha256": value["admission_sha256"], "ordinary": result,
-            "skip_admission": admit_skips(value, result),
+            "skip_admission": admit_skips(value, result, native),
             "native_and_source_gates": native, "host_linux_skip_policy": "ROOT_GATE_UNCHANGED"}
 
 
@@ -738,9 +817,10 @@ def main():
     run_cli.add_argument("--role", required=True)
     run_cli.add_argument("--output", type=Path, required=True)
     run_cli.add_argument("--site", type=Path, default=Path(sysconfig.get_paths()["purelib"]))
-    native_cli = sub.add_parser("native-terminal")
-    for key in ("admission", "source", "board", "output"):
-        native_cli.add_argument("--" + key, type=Path, required=True)
+    for name in ("native-start", "native-terminal"):
+        native_cli = sub.add_parser(name)
+        for key in ("admission", "source", "board", "output"):
+            native_cli.add_argument("--" + key, type=Path, required=True)
     join_cli = sub.add_parser("join")
     join_cli.add_argument("--admission", type=Path, required=True)
     join_cli.add_argument("--evidence", type=Path, required=True)
@@ -767,8 +847,9 @@ def main():
         elif args.command == "run":
             return execute(read_json(args.admission), args.source, args.board, args.role,
                            args.output, args.site)
-        elif args.command == "native-terminal":
-            result = native_terminal(read_json(args.admission), args.source, args.board, args.output)
+        elif args.command in ("native-start", "native-terminal"):
+            function = native_start if args.command == "native-start" else native_terminal
+            result = function(read_json(args.admission), args.source, args.board, args.output)
         else:
             result = join(read_json(args.admission), args.evidence, args.validation_result,
                           args.expected_sha)

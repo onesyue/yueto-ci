@@ -1309,6 +1309,10 @@ jobs:
           test ! -L "$YUEBOARD_MONEY_SCHEMA_FIXTURE"
           git -C .ci-yueboard diff --exit-code "$board_pin" -- test/fixtures/schema.sql
           test "$(id -u)" = 1001
+          native_evidence="${RUNNER_TEMP:?}/ops-shard-evidence"
+          .venv/bin/python .ci-policy/scripts/pytest-shards.py native-start \
+            --admission "$RUNNER_TEMP/ops-admission/ops-admission.json" \
+            --source "$PWD" --board "$PWD/.ci-yueboard" --output "$native_evidence"
           native_driver=$(mktemp "${RUNNER_TEMP:?}/yueops-native.XXXXXX.py")
           trap 'rm -f -- "$native_driver"' EXIT
           cat > "$native_driver" <<'PY'
@@ -1351,24 +1355,37 @@ jobs:
                   super().pytest_sessionfinish(session, exitstatus)
                   if self.collection_bad or len(self.required) < floor:
                       session.exitstatus = 1
-                  print("NATIVE_OBLIGATION_RECEIPT " + json.dumps({
+                  self.receipt = {
                       "target": target, "platform": sys.platform, "uid": os.geteuid(),
                       "required": sorted(self.required), "passed": sorted(self.passed),
                       "failed_or_skipped": sorted(self.bad),
                       "collection_bad": self.collection_bad,
                       "exitstatus": int(session.exitstatus),
-                  }, sort_keys=True))
+                  }
+                  print("NATIVE_OBLIGATION_RECEIPT " + json.dumps(self.receipt, sort_keys=True))
 
-          raise SystemExit(pytest.main(["-q", "-ra", target], plugins=[RequiredCases()]))
+          gate = RequiredCases()
+          code = int(pytest.main(["-q", "-ra", target], plugins=[gate]))
+          path = Path(sys.argv[4])
+          record = gate.receipt | {
+              "floor": floor, "process_exitstatus": code,
+              "binding": json.loads((path.parent / "native-context.json").read_text()),
+          }
+          with path.open("x") as handle:
+              handle.write(json.dumps(record, sort_keys=True) + "\n")
+          raise SystemExit(code)
           PY
           # PG creates its own disposable cluster as UID1001. Root is a separate
           # phase; never make the ordinary suite root or silently accept skips.
-          .venv/bin/python "$native_driver" tests/test_board139_schema_acl_native_20261018.py 6 1001
+          .venv/bin/python "$native_driver" tests/test_board139_schema_acl_native_20261018.py 6 1001 \
+            "$native_evidence/test_board139_schema_acl_native_20261018.json"
           sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" \
-            "$native_driver" tests/test_node_systemd_pilot_20261018.py 38 0
+            "$native_driver" tests/test_node_systemd_pilot_20261018.py 38 0 \
+            "$native_evidence/test_node_systemd_pilot_20261018.json"
           sudo -n env PATH="$PATH" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard" \
             "$PWD/.venv/bin/python" "$native_driver" \
-            tests/test_schema_contract_receipt_20261020.py 30 0
+            tests/test_schema_contract_receipt_20261020.py 30 0 \
+            "$native_evidence/test_schema_contract_receipt_20261020.json"
 
       - name: Validate yueops frontend
         if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')

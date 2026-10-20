@@ -35,7 +35,7 @@ class YueOpsNodeTestPolicy(unittest.TestCase):
         steps = _validate_steps()
         names = [s.get("name", "") for s in steps]
         step = next(s for s in steps if s.get("name") == "Run yueops node unit tests (Mini App, console, site)")
-        assert step["if"] == "matrix.validation == 'yueops'"
+        assert step["if"] == "matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')"
         run = step["run"]
         for line in ("set -euo pipefail",
                      "npm --prefix telegram-bot/yue/miniapp test",
@@ -97,6 +97,69 @@ def _native_driver():
     return _native_step()['run'].split('<<\'PY\'\n', 1)[1].split('\nPY\n', 1)[0]
 
 
+def execute_fixture_native(directory, output, targets, *, mode="pass"):
+    """Real YAML driver + pytest + source NativeGate; only OS/UID and cases are controlled."""
+    import json
+    import os
+    import shutil
+    import subprocess
+    import sys
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "scripts").mkdir(exist_ok=True)
+    actual = os.environ.get("W122_OPS_ENTRY")
+    gate = directory / "scripts/run-native-nginx-tests.py"
+    if actual:
+        shutil.copyfile(Path(actual).with_name("run-native-nginx-tests.py"), gate)
+    else:
+        gate.write_text("""class NativeGate:
+    def __init__(self, required):
+        self.required,self.passed,self.bad=set(required),set(),set()
+    def pytest_runtest_logreport(self, report):
+        if report.failed or report.skipped:self.bad.add(report.nodeid)
+        if report.when=='call' and report.passed:self.passed.add(report.nodeid)
+    def pytest_sessionfinish(self, session, exitstatus):
+        if self.required-self.passed or self.bad:session.exitstatus=1
+""")
+    driver = directory / "driver.py"
+    driver.write_text(_native_driver())
+    results = []
+    for target, (floor, uid) in targets.items():
+        module = directory / target
+        module.parent.mkdir(exist_ok=True)
+        if "board139_schema_acl" in target:
+            body = """import pytest
+@pytest.mark.parametrize('role',['PUBLIC','app_yue_bot','app_checkin','yueboard_runtime'])
+def test_actual_audit_refuses_nonowner_execute(role): pass
+def test_actual_audit_refuses_grant_option_and_foreign_owner(): pass
+def test_actual_bootstrap_adopts_139_trigger_owner_and_empty_acl(): pass
+"""
+        else:
+            body = "import pytest\n" + "\n".join(
+                f"def test_case_{i}(): pass" for i in range(floor)) + "\n"
+        if mode != "pass":
+            statement = {"skip": "pytest.skip('controlled missing native tool')",
+                         "xfail": "pytest.xfail('controlled expected failure')",
+                         "failure": "assert False"}[mode]
+            body = body.replace("pass", statement, 1)
+        module.write_text(body)
+        path = output / (Path(target).stem + ".json")
+        bootstrap = (
+            "import sys,pytest;from unittest.mock import patch;"
+            f"sys.argv={[str(driver), target, str(floor), str(uid), str(path)]!r}\n"
+            f"with patch('sys.platform','linux'),patch('os.geteuid',return_value={uid}):\n"
+            f" exec(compile(open({str(driver)!r}).read(),{str(driver)!r},'exec'))\n"
+        )
+        env = dict(os.environ, PYTEST_ADDOPTS="", PYTHONPATH="", PYTEST_DISABLE_PLUGIN_AUTOLOAD="1")
+        for key in ("LENS_REPORT", "LENS_REPORT_OWNER", "LENS_INVOCATION_ID", "PYTEST_PLUGINS"):
+            env.pop(key, None)
+        ran = subprocess.run([sys.executable, "-B", "-c", bootstrap], cwd=directory,
+                             env=env, capture_output=True, text=True, timeout=20, check=False)
+        if not path.is_file():
+            raise AssertionError(ran.stdout + ran.stderr)
+        results.append((ran, json.loads(path.read_text())))
+    return results
+
+
 def _assert_native_contract(test, workflow):
     test.assertIn('YUEBOARD_MONEY_SCHEMA_FIXTURE: ${{ github.workspace }}/.ci-yueboard/test/fixtures/schema.sql', workflow)
     for required in (
@@ -121,7 +184,7 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
         _assert_native_contract(self, workflow)
         steps = _validate_steps()
         names = [step['name'] for step in steps]
-        self.assertEqual(_native_step()['if'], "matrix.validation == 'yueops'")
+        self.assertEqual(_native_step()['if'], "matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')")
         self.assertLess(names.index('Validate yueops backend'), names.index(_native_step()['name']))
         self.assertLess(names.index(_native_step()['name']), names.index('Validate yueops frontend'))
         self.assertIn('class RequiredCases(consumer.NativeGate)', _native_driver())
@@ -181,7 +244,7 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
                     log.write(json.dumps({'argv': sys.argv[1:],
                         'board': os.environ.get('YUEBOARD_REPO_PATH'),
                         'tz': os.environ.get('TZ')}) + '\\n')
-                if 'test_schema_contract_receipt' in sys.argv[2]:
+                if len(sys.argv)>2 and 'test_schema_contract_receipt' in sys.argv[2]:
                     assert Path(os.environ['YUEBOARD_REPO_PATH']).is_dir()
                     raise SystemExit(int(os.environ['RECEIPT_RC']))
                 """))
@@ -199,9 +262,11 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
                         capture_output=True, text=True, timeout=20, check=False)
                     self.assertEqual(result.returncode, code, result.stderr)
                     rows = [json.loads(line) for line in log.read_text().splitlines()]
-                    self.assertEqual(len(rows), 3)
+                    self.assertEqual(len(rows), 4)
+                    self.assertIn('native-start', rows[0]['argv'])
                     self.assertEqual(rows[-1]['argv'][1:],
-                        ['tests/test_schema_contract_receipt_20261020.py', '30', '0'])
+                        ['tests/test_schema_contract_receipt_20261020.py', '30', '0',
+                         str(root / 'ops-shard-evidence/test_schema_contract_receipt_20261020.json')])
                     self.assertEqual(rows[-1]['board'], str(root / '.ci-yueboard'))
                     self.assertEqual(rows[-1]['tz'], 'UTC')
                     self.assertFalse(list(root.glob('yueops-native.*.py')))
@@ -273,3 +338,24 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
                 self.assertEqual(receipt['platform'], 'linux')
                 self.assertEqual(session.exitstatus == 0, mode == 'pass')
                 self.assertEqual(receipt['exitstatus'], session.exitstatus)
+
+
+class PersistedNativeReceipts(unittest.TestCase):
+    def test_actual_driver_persists_success_and_nonpassing_terminal(self):
+        import json
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for mode in ("pass", "failure", "skip", "xfail"):
+                output = root / (mode + "-receipts")
+                output.mkdir()
+                binding = {"fixture": "same invocation"}
+                (output / "native-context.json").write_text(json.dumps(binding))
+                ran, receipt = execute_fixture_native(
+                    root / mode, output, {"tests/test_native_fixture.py": (6, 1001)},
+                    mode=mode)[0]
+                self.assertEqual(ran.returncode == 0, mode == "pass", ran.stdout + ran.stderr)
+                self.assertEqual(receipt["process_exitstatus"], ran.returncode)
+                self.assertEqual(receipt["binding"], binding)
+                self.assertEqual(receipt["floor"], 6)
+                self.assertEqual(len(receipt["required"]), 6)
+                self.assertEqual(bool(receipt["failed_or_skipped"]), mode != "pass")

@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 import test_pytest_shards as fixture
 import test_pytest_timing as yaml_consumer
+import test_yueops_node_tests_20261017 as native_consumer
 
 ROOT = Path(__file__).resolve().parents[1]
 TAIL = ["tests/test_telegram_locale_ordering_20260821.py",
@@ -63,6 +64,9 @@ class OpsShardWorkflow(unittest.TestCase):
                 """).replace("TAIL", repr(TAIL)) + "PY\n")
         for name in TAIL:
             (self.source / name).write_text("def test_serial(): pass\n")
+        skip_case = self.source / "tests/test_a.py"
+        skip_case.write_text(skip_case.read_text().replace("import pytest", "import os,pytest").replace(
+            "reason='existing fixture skip'", "reason=os.environ.get('REVIEWED_REASON','existing fixture skip')"))
         case = self.source / "tests/test_c.py"
         case.write_text(case.read_text().replace(
             "import os,pytest\n", "import os,pytest\n"
@@ -118,6 +122,14 @@ class OpsShardWorkflow(unittest.TestCase):
         (runner / "ops-admission").mkdir(parents=True)
         (runner / "ops-admission/ops-admission.json").write_text(json.dumps(self.admission))
         env = self.env | {"RUNNER_TEMP": str(runner), "OPS_ROLE": role} | (extra or {})
+        if role == "native":
+            output = runner / "ops-shard-evidence"
+            with patch.dict(os.environ, env, clear=True):
+                self.consumer.native_start(self.admission, self.source, self.board, output)
+            actual = native_consumer.execute_fixture_native(
+                runner / "native-fixture", output, self.consumer.NATIVE_TARGETS)
+            self.assertTrue(all(r.returncode == 0 for r, _ in actual),
+                            "\n".join(r.stdout + r.stderr for r, _ in actual))
         _, script = yaml_consumer.step("Record complete Ops native and source gates"
                                       if role == "native" else "Execute owned Ops pytest selection")
         # Redirect only plugin installation, exactly as the existing timing consumer does.
@@ -353,6 +365,176 @@ class OpsShardWorkflow(unittest.TestCase):
                       yaml_consumer.step("Retain owned Ops evidence even after failure")[0])
         self.assertNotIn("continue-on-error", text[text.index("  validate:\n"):text.index("  build:\n")]
                          .replace("continue-on-error: true", "", 2))
+
+
+    def test_real_reviewed_reason_keeps_skip_and_changed_phase_is_rejected(self):
+        nodeid = "tests/test_a.py::test_skip"
+        original = self.baseline["cases"][nodeid]
+        self.baseline["reviewed_hosted"] = {
+            "schema": 1, "context": self.baseline["context"],
+            "runner": {"runner_os": "Linux", "runner_arch": "X64"},
+            "cases": {nodeid: {"module_blob": original["module_blob"],
+                                "outcome": "skipped", "disposition": "HISTORICAL_UNEXECUTED",
+                                "variants": [{"when": "setup", "reason": original["reason"]},
+                                             {"when": "setup", "reason": "Skipped: reviewed tool absent"}]}}}
+        (self.policy / "ops-pytest-skip-baseline.json").write_text(json.dumps(self.baseline))
+        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json")
+        self.fixture.commit(self.policy)
+        self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
+        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+                                   self.board_sha, "ubuntu-24.04", 4, 4)
+        result = self.full_bundle({"REVIEWED_REASON": "reviewed tool absent"})
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+        self.assertGreater(result["skip_admission"]["disposition_counts"]["HISTORICAL_UNEXECUTED"], 0)
+        # Actual pytest emitted the reviewed phase/reason, not a hand-built positive.
+        ordinary = result["ordinary"]
+        row = next(r for session in ordinary["shards"] for r in session["nonpassing_outcomes"]
+                   if r["nodeid"] == nodeid)
+        self.assertEqual(row["when"], "setup")
+        row["when"] = "call"
+        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
+            self.consumer.admit_skips(self.admission, ordinary, result["native_and_source_gates"])
+
+    def test_durable_native_semantics_reject_missing_stale_failed_and_reduced_evidence(self):
+        result = self.full_bundle()
+        directory = self.artifacts / (self.prefix + "native")
+        originals = {p.name: p.read_bytes() for p in directory.iterdir()}
+        target = "tests/test_board139_schema_acl_native_20261018.py"
+        path = directory / (Path(target).stem + ".json")
+        for mode in ("missing", "truncated", "malformed", "duplicate", "missing-one",
+                     "wrong-module", "uid", "floor", "skip", "failed", "xfail",
+                     "collection", "deselected", "exit", "process-exit", "run", "attempt",
+                     "source", "board", "policy", "extra"):
+            with self.subTest(mode=mode):
+                for extra in directory.iterdir():
+                    extra.unlink()
+                for name, content in originals.items():
+                    (directory / name).write_bytes(content)
+                (directory / "native.json").unlink()
+                row = json.loads(path.read_text())
+                if mode == "missing": path.unlink()
+                elif mode == "truncated": path.write_text('{"target":')
+                elif mode == "malformed": path.write_text('[]')
+                elif mode == "extra": (directory / "duplicate.json").write_text('{}')
+                else:
+                    if mode == "duplicate": row["required"].append(row["required"][0])
+                    elif mode == "missing-one": row["passed"].pop()
+                    elif mode == "wrong-module": row["required"][0] = "tests/other.py::test_wrong"
+                    elif mode == "uid": row["uid"] = 0
+                    elif mode == "floor": row["floor"] = 5
+                    elif mode in ("skip", "failed", "xfail"): row["failed_or_skipped"] = [row["required"][0]]
+                    elif mode in ("collection", "deselected"): row["collection_bad"] = True
+                    elif mode == "exit": row["exitstatus"] = 2
+                    elif mode == "process-exit": row["process_exitstatus"] = 1
+                    elif mode in ("run", "attempt", "policy"):
+                        key = {"run": "run_id", "attempt": "run_attempt", "policy": "policy_revision"}[mode]
+                        row["binding"]["identity"][key] = "9" * (40 if mode == "policy" else 1)
+                    else: row["binding"][mode + "_revision"] = "e" * 40
+                    path.write_text(json.dumps(row))
+                with self.assertRaises(ValueError):
+                    self.call(self.consumer.native_terminal, self.admission,
+                              self.source, self.board, directory)
+                self.assertFalse((directory / "native.json").exists())
+        # Conditional ACL closure is identity-based, never a six-count substitute.
+        baseline = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
+        compatible = baseline["reviewed_hosted"]["cases"]
+        rows = [{"nodeid": n, "outcome": r["outcome"], **r["variants"][0]}
+                for n, r in compatible.items() if r["disposition"] == "SAME_RUN_NATIVE_REQUIRED"]
+        value = copy.deepcopy(self.admission)
+        value["skip_module_blobs"].update({n.split("::")[0]: r["module_blob"]
+                                          for n, r in compatible.items()})
+        ordinary = {"reference": {"assignment_id": "reference", "execution_context": baseline["context"],
+                                   "collection_skips": {}, "junit_sha256": "a" * 64,
+                                   "nonpassing_outcomes": []}, "shards": []}
+        ordinary["shards"] = [ordinary["reference"] | {"assignment_id": "ordinary-000",
+                                                       "nonpassing_outcomes": rows}]
+        native = result["native_and_source_gates"]
+        with patch.object(self.consumer, "skip_baseline", return_value=baseline):
+            accepted = self.consumer.admit_skips(value, ordinary, native)
+            self.assertEqual(accepted["disposition_counts"]["SAME_RUN_NATIVE_REQUIRED"], 6)
+            self.assertFalse(accepted["skips_are_passes"])
+            forged = copy.deepcopy(native)
+            forged["obligations"][target]["passed"][0] = target + "::wrong_same_count"
+            with self.assertRaisesRegex(ValueError, "missing exact same-run native"):
+                self.consumer.admit_skips(value, ordinary, forged)
+
+    def test_missing_junit_and_reference_collection_disagreement_refuse(self):
+        import xml.etree.ElementTree as ET
+        self.full_bundle()
+        path = self.artifacts / (self.prefix + "reference") / "pytest.xml"
+        original = path.read_bytes()
+        path.unlink()
+        with self.assertRaises(ValueError): self.join()
+        path.write_bytes(original)
+        tree = ET.fromstring(original)
+        suite = tree.find("testsuite")
+        removed = 0
+        for case in list(suite):
+            skip = case.find("skipped")
+            if skip is not None and skip.get("message") == "collection skipped":
+                suite.remove(case)
+                removed += 1
+        self.assertEqual(removed, 1)
+        path.write_bytes(ET.tostring(tree))
+        with self.assertRaisesRegex(ValueError, "different collection skips"):
+            self.join()
+
+
+class ReviewedHostedSkipPolicy(unittest.TestCase):
+    def setUp(self):
+        self.consumer = fixture.SHARDS
+        self.baseline = self.consumer.skip_baseline()
+        self.reviewed = self.baseline["reviewed_hosted"]
+        self.value = {"skip_baseline_sha256": "a" * 64,
+                      "ops_plan": {"context": {"runner_os": "Linux", "runner_arch": "X64"}},
+                      "skip_module_blobs": {n.split("::")[0]: r["module_blob"]
+                                            for n, r in self.reviewed["cases"].items()}}
+
+    def result(self, rows):
+        session = {"execution_context": self.baseline["context"], "collection_skips": {},
+                   "junit_sha256": "b" * 64, "nonpassing_outcomes": []}
+        return {"reference": session | {"assignment_id": "reference"},
+                "shards": [session | {"assignment_id": "ordinary-000", "nonpassing_outcomes": rows}]}
+
+    def test_exact_original_baseline_and_historical_collection_are_preserved(self):
+        import hashlib
+        original = dict(self.baseline)
+        del original["reviewed_hosted"]
+        digest = hashlib.sha256((json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()).hexdigest()
+        self.assertEqual(digest, self.reviewed["observation"]["original_baseline_sha256"])
+        self.assertEqual(len(original["cases"]), 1005)
+        self.assertEqual(len(original["collection_skips"]), 1)
+        self.assertEqual(len(self.reviewed["cases"]), 18)
+
+    def test_each_exact_variant_retains_disposition_and_rejects_identity_drift(self):
+        selected = [(n, r) for n, r in self.reviewed["cases"].items()
+                    if r["disposition"] != "SAME_RUN_NATIVE_REQUIRED"]
+        self.assertEqual(len(selected), 12)
+        self.assertEqual(sum(r["disposition"] == "OWNER_CANCELED" for _, r in selected), 7)
+        for nodeid, record in selected:
+            for variant in record["variants"]:
+                row = {"nodeid": nodeid, "outcome": record["outcome"], **variant}
+                accepted = self.consumer.admit_skips(self.value, self.result([row]), {})
+                self.assertEqual(accepted["disposition_counts"][record["disposition"]], 1)
+                self.assertFalse(accepted["skips_are_passes"])
+                for key, wrong in (("nodeid", nodeid + "_new"), ("outcome", "xfail"),
+                                   ("when", "teardown"), ("reason", "Skipped: unreviewed dependency")):
+                    with self.subTest(nodeid=nodeid, key=key), self.assertRaises(ValueError):
+                        self.consumer.admit_skips(self.value, self.result([row | {key: wrong}]), {})
+                wrong_value = copy.deepcopy(self.value)
+                wrong_value["skip_module_blobs"][nodeid.split("::")[0]] = "c" * 40
+                with self.assertRaises(ValueError):
+                    self.consumer.admit_skips(wrong_value, self.result([row]), {})
+                context = self.result([row])
+                context["shards"][0]["execution_context"] = {"platform": "linux", "uid": 0}
+                with self.assertRaises(ValueError): self.consumer.admit_skips(self.value, context, {})
+                wrong_value = copy.deepcopy(self.value)
+                wrong_value["ops_plan"]["context"]["runner_arch"] = "UNKNOWN"
+                with self.assertRaises(ValueError):
+                    self.consumer.admit_skips(wrong_value, self.result([row]), {})
+        # Tests improving from historical SKIP to PASS do not have to remain skipped.
+        self.assertEqual(sum(self.consumer.admit_skips(self.value, self.result([]), {})[
+            "disposition_counts"].values()), 0)
 
 
 if __name__ == "__main__":
