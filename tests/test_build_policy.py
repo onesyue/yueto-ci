@@ -507,11 +507,7 @@ class BuildPolicyTest(unittest.TestCase):
         # toolchain-pin-agreement is what joins them now.
         self.assertNotIn("matrix.validation == 'yue-node' &&", body)
         self.assertNotIn("go-version-file:", body)
-        self.assertIn(
-            "cache: ${{ github.event_name != 'workflow_dispatch' || "
-            "github.event.inputs.runner != 'yue-local-release' }}",
-            body,
-        )
+        self.assertIn("cache: false", body)
 
     def test_local_release_never_exports_the_remote_build_cache(self) -> None:
         compute = re.search(

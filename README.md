@@ -142,6 +142,26 @@ implements this. Unknown facts cause a normal build, subject to YueOps's SQL
 baseline prerequisite. A skipped build creates no `built-*` marker: the existing
 artifact retains its original source identity, and the next poll checks again.
 
+## Go validation cache ownership
+
+`setup-go` installs the pinned compiler with its combined cache disabled. Explicit
+module and compiler caches use the existing pinned `actions/cache`; only hosted
+`master` workflow runs with source commits reachable from the registered source
+`origin/master` can read/write them. Missing trust/runner/toolchain metadata runs
+without remote cache. The local release runner keeps its local caches and never
+uploads these remote caches.
+
+The module key covers dependencies and workload/toolchain identity. The compiler
+key additionally names the actual checked-out source SHA; its single restore
+prefix retains the exact repository, profile, workflow, dependencies, compiler,
+C compiler and runner image. Changed source can reuse compatible objects then
+save its newly compiled objects after successful validation; an exact hit never
+creates a redundant entry. There is no run-ID key, broad fallback or cache-based
+gate skip. `go clean -testcache` expires test results while retaining compiled
+objects. Cache download failures remain optional and cold validation remains
+valid. Measure changed-source reuse in the next required central run; this change
+alone does not establish a whole-pipeline speedup.
+
 ## Required secrets (Settings → Secrets → Actions)
 
 - `YUETO_CI_PAT`: classic PAT with `repo` and `write:packages` for private checkout
