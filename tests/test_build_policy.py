@@ -151,9 +151,15 @@ class NativeNodeMakeChainTest(unittest.TestCase):
 
     def test_actual_cli_rejects_make_execution_flag_assignments(self):
         good = self.PREFIX + self.CURRENT + self.BODY
-        for variable in ("MAKEFLAGS", "GNUMAKEFLAGS", "MFLAGS"):
+        controls = {
+            "MAKEFLAGS": ("--ignore-errors", "--just-print"),
+            "GNUMAKEFLAGS": ("--ignore-errors", "--just-print"),
+            "MFLAGS": ("--ignore-errors", "--just-print"),
+            "MAKEFILES": ("other.mk",),
+        }
+        for variable, values in controls.items():
             for prefix in ("", "export "):
-                for flag in ("--ignore-errors", "--just-print"):
+                for flag in values:
                     with self.subTest(variable=variable, prefix=prefix, flag=flag):
                         result = self.cli(f"{prefix}{variable} := {flag}\n" + good)
                         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
