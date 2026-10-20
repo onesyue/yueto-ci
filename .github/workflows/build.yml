@@ -67,7 +67,10 @@ jobs:
     timeout-minutes: 10
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
-      validation_matrix: ${{ steps.plan.outputs.validation_matrix }}
+      validation_matrix: ${{ steps.ops_plan.outputs.validation_matrix }}
+      validation_parallelism: ${{ steps.ops_plan.outputs.max_parallel }}
+      ops_mode: ${{ steps.ops_plan.outputs.ops_mode }}
+      admission_sha256: ${{ steps.ops_plan.outputs.admission_sha256 }}
       has_builds: ${{ steps.plan.outputs.has_builds }}
       promote: ${{ steps.plan.outputs.promote }}
       yueboard_contract_ref: ${{ steps.plan.outputs.yueboard_contract_ref }}
@@ -92,7 +95,7 @@ jobs:
       - name: Preflight planning dependencies
         run: |
           set -euo pipefail
-          for tool in bash curl git jq; do
+          for tool in bash curl git jq python3; do
             command -v "$tool" >/dev/null 2>&1 || {
               echo "::error::runner is missing required planning tool: $tool"
               exit 1
@@ -255,6 +258,32 @@ jobs:
               exit 1
               ;;
           esac
+          ops_count="$(jq '[.validation_matrix[] | select(.validation == "yueops")] | length' <<<"$target_plan")"
+          ops_source=""
+          case "$ops_count" in
+            0) ;;
+            1)
+              ops_repo="$(jq -er '.validation_matrix[] | select(.validation == "yueops") | .repo' <<<"$target_plan")"
+              [ "$ops_repo" = onesyue/yueops ]
+              ops_ref="$(jq -er '.validation_matrix[] | select(.validation == "yueops") | .ref' <<<"$target_plan")"
+              if [[ "$ops_ref" =~ ^[0-9a-f]{40}$ ]]; then
+                ops_source="$ops_ref"
+              else
+                encoded_ops_ref="$(jq -rn --arg ref "$ops_ref" '$ref | @uri')"
+                ops_source="$(curl --fail --silent --show-error --retry 3 \
+                  -H "Authorization: Bearer ${GH_API_TOKEN}" \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  "https://api.github.com/repos/onesyue/yueops/commits/${encoded_ops_ref}" \
+                  | jq -er '.sha | select(test("^[0-9a-f]{40}$"))')"
+              fi
+              target_plan="$(jq --arg ref "$ops_source" \
+                '(.matrix[], .validation_matrix[]) |= (if .validation == "yueops" then .ref = $ref else . end)' \
+                <<<"$target_plan")"
+              ;;
+            *) echo '::error::duplicate Ops validation entries'; exit 1 ;;
+          esac
+          printf '%s\n' "$target_plan" > "${RUNNER_TEMP:?}/build-target-plan.json"
           matrix="$(jq -c '.matrix' <<<"$target_plan")"
           validation_matrix="$(jq -c '.validation_matrix' <<<"$target_plan")"
           has_builds="$(jq -r '.has_builds' <<<"$target_plan")"
@@ -263,12 +292,54 @@ jobs:
             exit 1
           fi
           {
+            echo "ops_source=$ops_source"
             echo "matrix=$matrix"
             echo "validation_matrix=$validation_matrix"
             echo "has_builds=$has_builds"
             echo "promote=$promote"
             echo "yueboard_contract_ref=$yueboard_contract_ref"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact Ops source for module planning
+        if: steps.plan.outputs.ops_source != '' && github.event.inputs.runner != 'yue-local-release'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueops
+          ref: ${{ steps.plan.outputs.ops_source }}
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          path: .ops-shard-source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Plan complete Ops jobs before collection
+        id: ops_plan
+        env:
+          OPS_RUNNER: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}
+          OPS_BOARD: ${{ steps.plan.outputs.yueboard_contract_ref }}
+          # Four groups are this batch's bounded resource choice, not a fixed architecture.
+          OPS_SHARDS: ${{ vars.YUEOPS_PYTEST_SHARDS || '4' }}
+          OPS_CAPACITY: ${{ vars.YUEOPS_VALIDATION_PARALLELISM || '4' }}
+        run: |
+          set -euo pipefail
+          python3 scripts/pytest-shards.py expand \
+            --targets "${RUNNER_TEMP:?}/build-target-plan.json" \
+            --source "$PWD/.ops-shard-source" --board "$OPS_BOARD" \
+            --runner "$OPS_RUNNER" --shards "$OPS_SHARDS" --capacity "$OPS_CAPACITY" \
+            > "$RUNNER_TEMP/ops-admission.json"
+          {
+            echo "validation_matrix=$(jq -c '.validation_matrix' "$RUNNER_TEMP/ops-admission.json")"
+            echo "max_parallel=$(jq -er '.max_parallel' "$RUNNER_TEMP/ops-admission.json")"
+            echo "ops_mode=$(jq -er '.mode' "$RUNNER_TEMP/ops-admission.json")"
+            echo "admission_sha256=$(jq -er '.admission_sha256' "$RUNNER_TEMP/ops-admission.json")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Retain exact Ops admission plan
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ops-admission-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ops-admission.json
+          if-no-files-found: error
+          retention-days: 14
 
   # P2/P3 shadow analysis (2026-09-24). Read-only and NON-GATING by
   # construction: no job `needs` it, `continue-on-error` keeps a broken probe
@@ -339,9 +410,10 @@ jobs:
       TZ: UTC
     strategy:
       fail-fast: false
+      max-parallel: ${{ fromJSON(needs.plan.outputs.validation_parallelism) }}
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.validation_matrix) }}
-    name: ${{ matrix.node_profile && format('validate-yue-node-{0}', matrix.node_profile) || format('validate-{0}', matrix.validation) }}
+    name: ${{ matrix.ops_role && matrix.ops_role != 'legacy' && format('validate-yueops-{0}', matrix.ops_role) || matrix.node_profile && format('validate-yue-node-{0}', matrix.node_profile) || format('validate-{0}', matrix.validation) }}
     services:
       postgres:
         image: postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
@@ -406,6 +478,14 @@ jobs:
           path: .ci-policy
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Download exact Ops admission plan
+        if: matrix.validation == 'yueops' && matrix.ops_role != 'legacy'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ops-admission-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ops-admission
+          digest-mismatch: error
 
       - name: Set up Go
         if: matrix.validation == 'yue-node' || matrix.validation == 'yueboard'
@@ -1118,19 +1198,35 @@ jobs:
           test "$(/usr/local/bin/gitleaks version)" = '8.30.1'
           test "$(stat -c '%u' /usr/local/bin/gitleaks)" = "$(id -u)"
 
+      - name: Execute owned Ops pytest selection
+        if: matrix.validation == 'yueops' && matrix.ops_role != 'legacy' && matrix.ops_role != 'native'
+        env:
+          YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard
+          YUETO_CI_REPO_PATH: ${{ github.workspace }}/.ci-policy
+          PYTEST_ADDOPTS: --durations=25
+          UV_PYTHON_DOWNLOADS: never
+          OPS_ROLE: ${{ matrix.ops_role }}
+        run: |
+          set -euo pipefail
+          .venv/bin/python .ci-policy/scripts/pytest-shards.py run \
+            --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
+            --source "$PWD" --board "$PWD/.ci-yueboard" --role "$OPS_ROLE" \
+            --output "$RUNNER_TEMP/ops-shard-evidence"
+
       - name: Prepare passive yueops pytest timing
-        if: matrix.validation == 'yueops'
+        if: matrix.validation == 'yueops' && matrix.ops_role == 'legacy'
         run: |
           set -euo pipefail
           .venv/bin/python .ci-policy/scripts/pytest-timing.py install \
             --output "${RUNNER_TEMP:?}/yueops-pytest-timing"
 
       - name: Validate yueops backend
-        if: matrix.validation == 'yueops'
+        if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         env:
           YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard
           YUETO_CI_REPO_PATH: ${{ github.workspace }}/.ci-policy
           UV_PYTHON_DOWNLOADS: never
+          OPS_ROLE: ${{ matrix.ops_role }}
           # Surface the slowest tests in the log so a 640-second run can be
           # read without re-running it; pytest appends this to every
           # invocation inside scripts/run-pytest-parallel.sh.
@@ -1168,28 +1264,31 @@ jobs:
           .venv/bin/python -m compileall -q web checkin-api telegram-bot/yue
           uv run --frozen --only-group lint ruff check .
           .venv/bin/python scripts/audit-route-consistency.py
-          # 与本地 gauntlet 共用测试入口；中央显式串行，避免已复现的
-          # xdist 收集时 service 包 sys.path/sys.modules 污染。
-          # 覆盖与耗时取本次完整日志，不沿用旧 runner 的历史估计。
-          timing_dir="${RUNNER_TEMP:?}/yueops-pytest-timing"
-          invocation_id=$(.venv/bin/python -c 'import json,sys; print(json.load(open(sys.argv[1]))["invocation_id"])' "$timing_dir/metadata.json")
-          pytest_rc=0
-          .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-start-unix-ns.txt"
-          LENS_REPORT="$timing_dir/events.jsonl" LENS_INVOCATION_ID="$invocation_id" \
-            YUEOPS_PYTEST_SERIAL=1 bash scripts/run-pytest-parallel.sh || pytest_rc=$?
-          printf '%s\n' "$pytest_rc" > "$timing_dir/pytest-exit-code.txt"
-          .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-finish-unix-ns.txt"
-          if [ "$pytest_rc" -ne 0 ]; then exit "$pytest_rc"; fi
+          # The manual branch is selected before execution, never after a shard failure.
+          if [ "$OPS_ROLE" = legacy ]; then
+            # 与本地 gauntlet 共用测试入口；中央显式串行，避免已复现的
+            # xdist 收集时 service 包 sys.path/sys.modules 污染。
+            # 覆盖与耗时取本次完整日志，不沿用旧 runner 的历史估计。
+            timing_dir="${RUNNER_TEMP:?}/yueops-pytest-timing"
+            invocation_id=$(.venv/bin/python -c 'import json,sys; print(json.load(open(sys.argv[1]))["invocation_id"])' "$timing_dir/metadata.json")
+            pytest_rc=0
+            .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-start-unix-ns.txt"
+            LENS_REPORT="$timing_dir/events.jsonl" LENS_INVOCATION_ID="$invocation_id" \
+              YUEOPS_PYTEST_SERIAL=1 bash scripts/run-pytest-parallel.sh || pytest_rc=$?
+            printf '%s\n' "$pytest_rc" > "$timing_dir/pytest-exit-code.txt"
+            .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-finish-unix-ns.txt"
+            if [ "$pytest_rc" -ne 0 ]; then exit "$pytest_rc"; fi
+          fi
           sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py
 
       - name: Summarize passive yueops pytest timing
-        if: always() && matrix.validation == 'yueops'
+        if: always() && matrix.validation == 'yueops' && matrix.ops_role == 'legacy'
         run: |
           python3 .ci-policy/scripts/pytest-timing.py summarize \
             --output "${RUNNER_TEMP:?}/yueops-pytest-timing"
 
       - name: Upload passive yueops pytest timing
-        if: always() && matrix.validation == 'yueops'
+        if: always() && matrix.validation == 'yueops' && matrix.ops_role == 'legacy'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: yueops-pytest-timing-${{ github.run_id }}-${{ github.run_attempt }}
@@ -1198,7 +1297,7 @@ jobs:
           retention-days: 14
 
       - name: Validate yueops PostgreSQL and systemd native obligations
-        if: matrix.validation == 'yueops'
+        if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         env:
           YUEBOARD_MONEY_SCHEMA_FIXTURE: ${{ github.workspace }}/.ci-yueboard/test/fixtures/schema.sql
         run: |
@@ -1272,7 +1371,7 @@ jobs:
             tests/test_schema_contract_receipt_20261020.py 30 0
 
       - name: Validate yueops frontend
-        if: matrix.validation == 'yueops'
+        if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         working-directory: frontend
         run: |
           set -euo pipefail
@@ -1286,7 +1385,7 @@ jobs:
           "$YUE_CI_PYTHON" "$audit_gate" "$GITHUB_WORKSPACE/frontend"
 
       - name: Validate Yue mini app
-        if: matrix.validation == 'yueops'
+        if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         working-directory: telegram-bot/yue/miniapp
         run: |
           set -euo pipefail
@@ -1304,7 +1403,7 @@ jobs:
       # existed but no CI ran them, so only a developer's workstation could catch
       # a red one. Same lens as the rest of validate-yueops (TZ=UTC, Linux).
       - name: Run yueops node unit tests (Mini App, console, site)
-        if: matrix.validation == 'yueops'
+        if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         run: |
           set -euo pipefail
           npm --prefix telegram-bot/yue/miniapp test
@@ -1323,7 +1422,7 @@ jobs:
           pnpm --dir site test
 
       - name: Lint changed YueOps SQL migrations
-        if: matrix.validation == 'yueops'
+        if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         env:
           MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}
         run: |
@@ -1359,8 +1458,62 @@ jobs:
           test "$("$squawk_bin" --version)" = 'squawk 2.60.0'
           "$squawk_bin" "${squawk_flags[@]}" "${migrations[@]}"
 
-  build:
+      - name: Record complete Ops native and source gates
+        if: matrix.validation == 'yueops' && matrix.ops_role == 'native'
+        run: |
+          set -euo pipefail
+          .venv/bin/python .ci-policy/scripts/pytest-shards.py native-terminal \
+            --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
+            --source "$PWD" --board "$PWD/.ci-yueboard" \
+            --output "$RUNNER_TEMP/ops-shard-evidence"
+
+      - name: Retain owned Ops evidence even after failure
+        if: always() && matrix.validation == 'yueops' && matrix.ops_role != 'legacy'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ops-shard-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.ops_role }}
+          path: ${{ runner.temp }}/ops-shard-evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+  validation-evidence:
     needs: [plan, validate]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download original admission plan
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ops-admission-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ops-admission
+          digest-mismatch: error
+      - name: Download all current Ops role evidence
+        if: needs.plan.outputs.ops_mode == 'sharded'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: ops-shard-${{ github.run_id }}-${{ github.run_attempt }}-*
+          path: ${{ runner.temp }}/ops-shard-evidence
+          merge-multiple: false
+          digest-mismatch: error
+      - name: Require complete selected validation and corpus
+        env:
+          VALIDATION_RESULT: ${{ needs.validate.result }}
+          ADMISSION_SHA256: ${{ needs.plan.outputs.admission_sha256 }}
+        run: |
+          set -euo pipefail
+          python3 scripts/pytest-shards.py join \
+            --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
+            --expected-sha "$ADMISSION_SHA256" \
+            --evidence "$RUNNER_TEMP/ops-shard-evidence" \
+            --validation-result "$VALIDATION_RESULT"
+
+  build:
+    needs: [plan, validate, validation-evidence]
     # Job-level `if` is evaluated before strategy expansion.  A source-only
     # target therefore skips this job without asking Actions to expand or run
     # an empty Docker matrix.

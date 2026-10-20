@@ -444,6 +444,13 @@ class EvidenceProbeTest(unittest.TestCase):
                                      {"validation": "yueops"}]),
             ["validate-yue-node-hy2", "validate-yue-node-vless", "validate-yueops"],
         )
+        self.assertEqual(
+            EV.validation_job_names([{"validation": "yueops", "ops_role": role}
+                                     for role in ("legacy", "reference", "ordinary-000",
+                                                  "serial", "native")]),
+            ["validate-yueops", "validate-yueops-native", "validate-yueops-ordinary-000",
+             "validate-yueops-reference", "validate-yueops-serial"],
+        )
 
 
 if __name__ == "__main__":

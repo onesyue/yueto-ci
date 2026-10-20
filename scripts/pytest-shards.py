@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
-"""Plan complete Ops modules and inspect ordinary shard evidence, without running tests.
+"""Plan Ops jobs, execute the source-owned selection and strictly join evidence.
 
-This primitive is not connected to build.yml. It never supplies release acceptance:
-native obligations, skip policy and every other existing gate remain separate.
+The ordinary corpus verdict alone never supplies complete release acceptance.
 """
 from __future__ import annotations
 
 import argparse
+import ast
 import configparser
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import sys
+import sysconfig
+import time
+import xml.etree.ElementTree as ET
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,6 +30,7 @@ IDENTITY_FIELDS = ("policy_revision", "board_revision", "run_id", "run_attempt",
                    "runner_os", "runner_arch", "runner_image")
 FILES = ("metadata.json", "events.jsonl", "pytest-exit-code.txt",
          "pytest-start-unix-ns.txt", "pytest-finish-unix-ns.txt", "selection.json")
+SKIP_BASELINE = "ops-pytest-skip-baseline.json"
 
 
 def require(condition, message):
@@ -124,7 +129,7 @@ def plan(source, context, count, serial):
         for i in range(count)
     ]
     if serial:
-        assignments.append({"id": "serial", "modules": sorted(serial)})
+        assignments.append({"id": "serial", "modules": list(serial)})
     result = {
         "schema": 1, "kind": "ops-pytest-module-plan",
         "source_revision": revision, "context": context,
@@ -177,6 +182,135 @@ def load_timing():
     return module
 
 
+def tree_inputs(source, revision):
+    require(SHA.fullmatch(revision), "baseline requires an exact source revision")
+    rows = git(source, "ls-tree", "-rz", revision).decode().split("\0")
+    files = {}
+    for row in rows:
+        if row:
+            metadata, path = row.split("\t", 1)
+            mode, kind, blob = metadata.split()
+            if kind == "blob":
+                files[path] = (mode, blob)
+    return files
+
+
+def shared_inputs(source, revision):
+    result = {}
+    for path, (mode, blob) in tree_inputs(source, revision).items():
+        name = PurePosixPath(path).name
+        if (name in ("conftest.py", "pytest.ini", "pyproject.toml", "uv.lock",
+                     "package.json", "package-lock.json", "pnpm-lock.yaml")
+                or name.startswith("requirements") and name.endswith((".txt", ".lock"))
+                or path.startswith("tests/") and path.endswith(".py") and not safe_module(path)):
+            require(mode == "100644" or mode == "100755", "symlink shared test input")
+            result[path] = blob
+    require("pytest.ini" in result, "missing shared collection inputs")
+    return result
+
+
+def collection_skips(path, modules):
+    require(path.is_file() and not path.is_symlink(), "missing native JUnit evidence")
+    data = path.read_bytes()
+    require(len(data) <= 32 * 1024 * 1024
+            and b"<!DOCTYPE" not in data and b"<!ENTITY" not in data, "unsafe JUnit evidence")
+    root = ET.fromstring(data)
+    require(root.tag == "testsuites" and len(root.findall("testsuite")) == 1,
+            "unexpected JUnit document")
+    suite = root.find("testsuite")
+    require(suite.get("errors") == "0" and suite.get("failures") == "0",
+            "failed JUnit evidence")
+    result = {}
+    for case in suite.findall("testcase"):
+        skipped = case.find("skipped")
+        if skipped is None or skipped.get("message") != "collection skipped":
+            continue
+        matches = [m for m in modules if m[:-3].replace("/", ".") == case.get("name")]
+        require(case.get("classname") == "" and len(matches) == 1, "unbound collection skip")
+        module = matches[0]
+        detail = ast.literal_eval(skipped.text or "")
+        require(isinstance(detail, tuple) and len(detail) == 3
+                and isinstance(detail[0], str) and isinstance(detail[1], int)
+                and isinstance(detail[2], str) and detail[2]
+                and (detail[0] == module or detail[0].endswith("/" + module))
+                and module not in result, "invalid collection skip identity")
+        result[module] = detail[2]
+    return result
+
+
+def baseline_events(path, allowed_exit=(0,)):
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    starts = [r for r in rows if r.get("event") == "start"]
+    ends = [r for r in rows if r.get("event") == "finish"]
+    timings = [r for r in rows if r.get("event") == "session_timing"]
+    require(rows and rows[0].get("event") == "start" and rows[-1].get("event") == "finish"
+            and len(starts) == len(ends) == len(timings) == 1
+            and ends[0].get("exitstatus") in allowed_exit
+            and timings[0].get("exitstatus") == ends[0]["exitstatus"]
+            and timings[0].get("terminal") == "finished" and timings[0].get("lost_records") == 0
+            and not any(r.get("event") == "collect_error" or r.get("outcome") == "failed"
+                        for r in rows), "incomplete or failed skip baseline")
+    context = {k: starts[0].get(k) for k in ("platform", "uid")}
+    require(isinstance(context["platform"], str) and type(context["uid"]) is int
+            and context["uid"] > 0, "baseline context must be actual nonroot execution")
+    return rows, context
+
+
+def generate_skip_baseline(source, revision, events, collection_xml, collection_events,
+                           collection_revision, collection_at):
+    """Generate reviewed historical SKIP data; never infer PASS or refresh during a run."""
+    files = tree_inputs(source, revision)
+    rows, context = baseline_events(events)
+    _, collection_context = baseline_events(collection_events, (0, 5))
+    require(context == collection_context, "historical collection context differs")
+    common = shared_inputs(source, revision)
+    require(common == shared_inputs(source, collection_revision),
+            "historical collection shared inputs differ")
+    historical_files = tree_inputs(source, collection_revision)
+    modules = {p for p in files if safe_module(p)}
+    collected = collection_skips(collection_xml, modules)
+    cases = {}
+    for row in rows:
+        if "event" in row or row.get("outcome") not in ("skipped", "xfail"):
+            continue
+        nodeid, reason = row.get("nodeid"), row.get("reason")
+        require(isinstance(nodeid, str) and isinstance(reason, str) and reason,
+                "unidentified baseline skip")
+        module = nodeid.split("::", 1)[0]
+        require(module in modules and files[module][0] in ("100644", "100755"),
+                "baseline skip module is not owned")
+        record = {"outcome": row["outcome"], "reason": reason, "module_blob": files[module][1]}
+        require(nodeid not in cases or cases[nodeid] == record, "contradictory baseline skip")
+        cases[nodeid] = record
+    require(cases or collected, "empty skip baseline")
+    collection = {}
+    for module, reason in collected.items():
+        require(files[module] == historical_files.get(module), "historical skipped module differs")
+        collection[module] = {"reason": reason, "module_blob": files[module][1]}
+    require(isinstance(collection_at, str) and collection_at.strip(),
+            "historical collection timestamp missing")
+    return {
+        "schema": 1, "status": "HISTORICAL_SKIPS_NOT_PASSES", "source_revision": revision,
+        "events_sha256": sha(events.read_bytes()), "context": context, "common_inputs": common,
+        "cases": cases, "collection_skips": collection,
+        "collection_evidence": {
+            "source_revision": collection_revision, "recorded_at": collection_at,
+            "xml_sha256": sha(collection_xml.read_bytes()),
+            "events_sha256": sha(collection_events.read_bytes()), "context": collection_context,
+            "inheritance": "Exact module and shared inputs only; not a new source execution.",
+        },
+    }
+
+
+def skip_baseline():
+    value = read_json(ROOT / SKIP_BASELINE)
+    require(value.get("schema") == 1 and value.get("status") == "HISTORICAL_SKIPS_NOT_PASSES"
+            and SHA.fullmatch(value.get("source_revision", ""))
+            and value.get("common_inputs") and isinstance(value.get("cases"), dict)
+            and isinstance(value.get("collection_skips"), dict), "invalid skip baseline")
+    return value
+
+
 def inspect_session(directory, value, assignment, *, expected_empty=False):
     """Validate immutable invocation binding before consuming passive case evidence."""
     require(directory.is_dir() and not directory.is_symlink(), "invalid evidence directory")
@@ -196,8 +330,11 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
             "selection does not match the exact plan")
     argv = selection["pytest_argv"]
     suffix = ["-m", "pytest", *(["--collect-only"] if reference else []), "-q", *modules]
-    require(isinstance(argv, list) and len(argv) == len(suffix) + 1
-            and isinstance(argv[0], str) and argv[0] and argv[1:] == suffix,
+    has_xml = (isinstance(argv, list) and len(argv) == len(suffix) + 3
+               and argv[-2] == "--junitxml" and isinstance(argv[-1], str)
+               and Path(argv[-1]).is_absolute() and Path(argv[-1]).name == "pytest.xml")
+    require(isinstance(argv, list) and isinstance(argv[0], str) and argv[0]
+            and (argv[1:-2] == suffix if has_xml else argv[1:] == suffix),
             "unexpected pytest arguments or filtering")
     require(metadata.get("source_revision") == value["source_revision"]
             and metadata.get("policy_revision") == value["context"]["policy_revision"]
@@ -226,7 +363,7 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
         return selected[0]
     require(rows and rows[0].get("event") == "start"
             and rows[-1].get("event") == "finish", "absent session boundary")
-    one("start")
+    start = one("start")
     terminal = one("finish")
     session = one("session_identity")
     timing = one("session_timing")
@@ -276,6 +413,9 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
         "assignment_id": role, "invocation_id": session["invocation_id"], "nodeids": nodeids,
         "pytest_process_exit_code": rc, "empty_assigned_collection": expected_rc == 5,
         "nonpassing_outcomes": outcomes,
+        "execution_context": {k: start.get(k) for k in ("platform", "uid")},
+        "collection_skips": collection_skips(directory / "pytest.xml", allowed) if has_xml else None,
+        "junit_sha256": sha((directory / "pytest.xml").read_bytes()) if has_xml else None,
         "evidence_sha256": {n: sha((directory / n).read_bytes()) for n in FILES},
         "process_seconds": (end - begin) / 1_000_000_000,
     }
@@ -312,6 +452,266 @@ def aggregate(value, reference, directories):
     }
 
 
+def workflow_identity():
+    identity = {
+        "policy_revision": os.environ.get("GITHUB_SHA"),
+        "run_id": os.environ.get("GITHUB_RUN_ID"),
+        "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+    }
+    require(SHA.fullmatch(identity["policy_revision"] or "")
+            and identity["policy_revision"] == git(ROOT, "rev-parse", "HEAD").decode().strip(),
+            "workflow policy identity differs")
+    for key in ("run_id", "run_attempt"):
+        require(re.fullmatch(r"[1-9][0-9]*", identity[key] or ""), f"invalid {key}")
+    require(os.environ.get("GITHUB_REPOSITORY") == "onesyue/yueto-ci",
+            "unexpected workflow repository")
+    return identity
+
+
+def seal(value, key):
+    value[key] = sha(encoded(value))
+    return value
+
+
+def role_order(value):
+    assignments = [a["id"] for a in value["assignments"]]
+    return ["native", "reference", *[a for a in assignments if a == "serial"],
+            *[a for a in assignments if a != "serial"]]
+
+
+def envelope(value):
+    expected = dict(value)
+    digest = expected.pop("admission_sha256", None)
+    require(value.get("schema") == 1 and digest == sha(encoded(expected)),
+            "admission envelope digest differs")
+    require(value.get("identity") == workflow_identity(), "stale workflow admission")
+    require(value.get("mode") in ("none", "legacy", "sharded"), "unknown admission mode")
+    matrix = value.get("validation_matrix")
+    require(isinstance(matrix, list) and matrix, "missing selected validators")
+    ops = [m for m in matrix if m.get("validation") == "yueops"]
+    if value["mode"] == "none":
+        require(not ops and value.get("ops_plan") is None, "unexpected Ops selection")
+    else:
+        require(all(m.get("ref") == value["source_revision"]
+                    and m.get("repo") == "onesyue/yueops" for m in ops),
+                "Ops matrix source differs")
+        if value["mode"] == "legacy":
+            require([m.get("ops_role") for m in ops] == ["legacy"]
+                    and value.get("ops_plan") is None, "invalid legacy role selection")
+        else:
+            planned = validate_plan(value["ops_plan"])
+            baseline = skip_baseline()
+            require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
+                    and value.get("common_inputs") == baseline["common_inputs"]
+                    and isinstance(value.get("skip_module_blobs"), dict),
+                    "skip baseline or shared collection inputs differ")
+            require(planned["source_revision"] == value["source_revision"]
+                    and planned["context"]["board_revision"] == value["board_revision"]
+                    and all(planned["context"][k] == v for k, v in value["identity"].items()),
+                    "ordinary plan identity differs")
+            require([m.get("ops_role") for m in ops]
+                    == role_order(planned),
+                    "missing or unexpected selected Ops roles")
+    return value
+
+
+def serial_modules(source):
+    result = subprocess.run(["bash", "scripts/run-pytest-parallel.sh", "--describe-ci-selection"],
+                            cwd=source, capture_output=True, text=True, check=True, timeout=15)
+    description = json.loads(result.stdout)
+    require(set(description) == {"schema", "serial_modules"} and description["schema"] == 1
+            and isinstance(description["serial_modules"], list)
+            and description["serial_modules"], "invalid source serial declaration")
+    return description["serial_modules"]
+
+
+def expand(targets, source, board, runner, capacity, shards):
+    """Expand an exact target plan, without pytest collection or import."""
+    require(type(capacity) is int and capacity > 0, "capacity must be positive")
+    require(runner in ("ubuntu-24.04", "yue-local-release"), "unsupported runner")
+    matrix = targets["validation_matrix"]
+    require(isinstance(matrix, list) and matrix, "empty validation matrix")
+    selected = [m for m in matrix if m.get("validation") == "yueops"]
+    require(len(selected) <= 1, "duplicate Ops validation records")
+    value = {"schema": 1, "identity": workflow_identity(), "mode": "none",
+             "source_revision": None, "board_revision": board,
+             "ops_plan": None, "validation_matrix": matrix}
+    if selected:
+        ops = selected[0]
+        require(ops.get("repo") == "onesyue/yueops" and SHA.fullmatch(ops.get("ref", "")),
+                "Ops source must be resolved exactly")
+        require(SHA.fullmatch(board), "invalid reviewed Board identity")
+        require(all(m.get("ref") == ops["ref"] for m in targets["matrix"]
+                    if m.get("validation") == "yueops"), "Ops image and validation differ")
+        value["source_revision"] = ops["ref"]
+        if runner == "yue-local-release":
+            value["mode"] = "legacy"
+            roles = ["legacy"]
+        else:
+            require(source is not None, "Ops source checkout missing")
+            context = value["identity"] | {
+                "board_revision": board, "runner_os": os.environ.get("RUNNER_OS"),
+                "runner_arch": os.environ.get("RUNNER_ARCH"),
+                "runner_image": os.environ.get("ImageVersion"),
+            }
+            expected = plan(source, context, shards, serial_modules(source))
+            require(expected["source_revision"] == ops["ref"], "planned source checkout differs")
+            baseline = skip_baseline()
+            common = shared_inputs(source, ops["ref"])
+            require(common == baseline["common_inputs"], "shared collection/dependency inputs changed")
+            files = tree_inputs(source, ops["ref"])
+            value.update(mode="sharded", ops_plan=expected, common_inputs=common,
+                         skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
+                         skip_module_blobs={p: files[p][1] for p in expected["modules"]})
+            roles = role_order(expected)
+        value["validation_matrix"] = [
+            row for m in matrix
+            for row in ([m | {"ops_role": role} for role in roles] if m is ops else [m])
+        ]
+        if value["mode"] == "sharded":
+            # Put short admission owners ahead of long ordinary groups even
+            # for an all-target dispatch. Other validators keep their order.
+            priority = {"native": 0, "reference": 1, "serial": 2}
+            value["validation_matrix"].sort(
+                key=lambda row: priority.get(row.get("ops_role"),
+                                             4 if row.get("ops_role") else 3))
+    value["max_parallel"] = min(capacity, len(value["validation_matrix"]))
+    if runner == "yue-local-release":
+        value["max_parallel"] = 1
+    return seal(value, "admission_sha256")
+
+
+def check_source(value, source, board):
+    envelope(value)
+    require(git(source, "rev-parse", "HEAD").decode().strip() == value["source_revision"]
+            and not git(source, "status", "--porcelain", "--untracked-files=no"),
+            "executing source differs or is dirty")
+    require(git(board, "rev-parse", "HEAD").decode().strip() == value["board_revision"]
+            and not git(board, "status", "--porcelain", "--untracked-files=no"),
+            "executing Board fixture differs or is dirty")
+    contract = read_json(ROOT / "native-node-contract.json")
+    require(contract["yueboard_contract_pin"] == value["board_revision"],
+            "Board fixture is not the reviewed policy pin")
+
+
+def execute(value, source, board, role, output, site):
+    """Run exactly one actual source entry; preserve failed and empty exits."""
+    check_source(value, source, board)
+    require(value["mode"] == "sharded", "selection is hosted-only")
+    expected = validate_plan(value["ops_plan"])
+    assignments = {a["id"]: a for a in expected["assignments"]}
+    require(role == "reference" or role in assignments, "unknown execution role")
+    current = plan(source, expected["context"],
+                   sum(a["id"].startswith("ordinary-") for a in expected["assignments"]),
+                   serial_modules(source))
+    require(current == expected, "source collection inputs or assignments changed")
+    for environment, key in (("RUNNER_OS", "runner_os"), ("RUNNER_ARCH", "runner_arch"),
+                             ("ImageVersion", "runner_image")):
+        require(os.environ.get(environment) == expected["context"][key],
+                "executing runner image differs")
+    require(os.environ.get("PYTEST_ADDOPTS", "") in ("", "--durations=25"),
+            "unexpected pytest options")
+    require(not os.environ.get("PYTEST_PLUGINS"), "unexpected pytest plugin override")
+    timing = load_timing()
+    timing.install(output, site)
+    modules = ["tests"] if role == "reference" else assignments[role]["modules"]
+    selection = {
+        "schema": 1, "plan_sha256": expected["plan_sha256"],
+        "source_revision": expected["source_revision"], "entry_sha256": expected["entry_sha256"],
+        "assignment_id": role, "modules": modules,
+    }
+    selection_path = output / "command.json"
+    selection_path.write_text(json.dumps(selection) + "\n")
+    metadata = read_json(output / "metadata.json")
+    env = os.environ | {"LENS_REPORT": str(output / "events.jsonl"),
+                        "LENS_INVOCATION_ID": metadata["invocation_id"],
+                        "YUEOPS_PYTEST_SERIAL": "1"}
+    (output / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
+    result = subprocess.run(
+        ["bash", "scripts/run-pytest-parallel.sh", "--ci-selection", str(selection_path),
+         "--selection-receipt", str(output / "selection.json")],
+        cwd=source, env=env, check=False,
+    )
+    (output / "pytest-finish-unix-ns.txt").write_text(str(time.time_ns()))
+    (output / "pytest-exit-code.txt").write_text(str(result.returncode))
+    timing.summarize(output)
+    if result.returncode == 5 and role != "reference":
+        # A zero-case command is not passed; the independent reference must
+        # still prove that its assigned modules were actually empty at join.
+        inspect_session(output, expected, assignments[role], expected_empty=True)
+        print("EMPTY_ASSIGNED_COLLECTION: exit 5 retained; reference join still required")
+        return 0
+    return result.returncode
+
+
+def native_terminal(value, source, board, output):
+    check_source(value, source, board)
+    require(value["mode"] == "sharded", "unexpected native terminal")
+    output.mkdir(parents=True, exist_ok=False)
+    result = {"schema": 1, "admission_sha256": value["admission_sha256"],
+              "identity": value["identity"], "source_revision": value["source_revision"],
+              "board_revision": value["board_revision"], "role": "native", "status": "success"}
+    (output / "native.json").write_text(json.dumps(result) + "\n")
+    return result
+
+
+def admit_skips(value, result):
+    baseline = skip_baseline()
+    observed_collection = {}
+    for session in [result["reference"], *result["shards"]]:
+        require(session["execution_context"] == baseline["context"],
+                "skip execution context differs from baseline")
+        require(isinstance(session["collection_skips"], dict) and session["junit_sha256"],
+                "missing collection-skip evidence")
+        for row in session["nonpassing_outcomes"]:
+            nodeid = row["nodeid"]
+            module = nodeid.split("::", 1)[0]
+            require(baseline["cases"].get(nodeid) == {
+                "outcome": row["outcome"], "reason": row.get("reason"),
+                "module_blob": value["skip_module_blobs"].get(module),
+            }, "new or changed case skip/xfail: " + nodeid)
+        for module, reason in session["collection_skips"].items():
+            require(baseline["collection_skips"].get(module) == {
+                "reason": reason, "module_blob": value["skip_module_blobs"].get(module),
+            }, "new or changed collection skip: " + module)
+            if session["assignment_id"] != "reference":
+                require(module not in observed_collection, "duplicate collection skip")
+                observed_collection[module] = reason
+    require(observed_collection == result["reference"]["collection_skips"],
+            "reference and shards have different collection skips")
+    return {"status": "NO_NEW_SKIPS", "baseline_sha256": value["skip_baseline_sha256"],
+            "baseline_source_revision": baseline["source_revision"],
+            "skips_are_passes": False, "host_native_acceptance": "INDEPENDENT"}
+
+
+def join(value, evidence, validation_result, expected_sha):
+    envelope(value)
+    require(value["admission_sha256"] == expected_sha, "plan job admission digest differs")
+    require(validation_result == "success", "selected validation matrix did not succeed")
+    if value["mode"] != "sharded":
+        return {"schema": 1, "status": "VALIDATION_MATRIX_COMPLETE",
+                "mode": value["mode"], "admission_sha256": value["admission_sha256"],
+                "sharded_corpus_evaluated": False}
+    expected = validate_plan(value["ops_plan"])
+    prefix = f"ops-shard-{value['identity']['run_id']}-{value['identity']['run_attempt']}-"
+    roles = ["reference", *[a["id"] for a in expected["assignments"]], "native"]
+    require(evidence.is_dir() and not evidence.is_symlink(), "missing evidence directory")
+    require(sorted(p.name for p in evidence.iterdir()) == sorted(prefix + r for r in roles),
+            "missing or unexpected evidence roles")
+    native = read_json(evidence / (prefix + "native") / "native.json")
+    require(native == {
+        "schema": 1, "admission_sha256": value["admission_sha256"], "identity": value["identity"],
+        "source_revision": value["source_revision"], "board_revision": value["board_revision"],
+        "role": "native", "status": "success",
+    }, "native/source gate receipt differs")
+    result = aggregate(expected, evidence / (prefix + "reference"),
+                       [evidence / (prefix + a["id"]) for a in expected["assignments"]])
+    return {"schema": 1, "status": "VALIDATION_MATRIX_COMPLETE", "mode": "sharded",
+            "admission_sha256": value["admission_sha256"], "ordinary": result,
+            "skip_admission": admit_skips(value, result),
+            "native_and_source_gates": native, "host_linux_skip_policy": "ROOT_GATE_UNCHANGED"}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -324,12 +724,54 @@ def main():
     verify.add_argument("--plan", type=Path, required=True)
     verify.add_argument("--reference", type=Path, required=True)
     verify.add_argument("--shard", type=Path, action="append", required=True)
+    expand_cli = sub.add_parser("expand")
+    expand_cli.add_argument("--targets", type=Path, required=True)
+    expand_cli.add_argument("--source", type=Path)
+    expand_cli.add_argument("--board", required=True)
+    expand_cli.add_argument("--runner", required=True)
+    expand_cli.add_argument("--capacity", type=int, required=True)
+    expand_cli.add_argument("--shards", type=int, required=True)
+    run_cli = sub.add_parser("run")
+    run_cli.add_argument("--admission", type=Path, required=True)
+    run_cli.add_argument("--source", type=Path, required=True)
+    run_cli.add_argument("--board", type=Path, required=True)
+    run_cli.add_argument("--role", required=True)
+    run_cli.add_argument("--output", type=Path, required=True)
+    run_cli.add_argument("--site", type=Path, default=Path(sysconfig.get_paths()["purelib"]))
+    native_cli = sub.add_parser("native-terminal")
+    for key in ("admission", "source", "board", "output"):
+        native_cli.add_argument("--" + key, type=Path, required=True)
+    join_cli = sub.add_parser("join")
+    join_cli.add_argument("--admission", type=Path, required=True)
+    join_cli.add_argument("--evidence", type=Path, required=True)
+    join_cli.add_argument("--validation-result", required=True)
+    join_cli.add_argument("--expected-sha", required=True)
+    baseline_cli = sub.add_parser("generate-skip-baseline")
+    for key in ("source", "events", "collection-xml", "collection-events"):
+        baseline_cli.add_argument("--" + key, type=Path, required=True)
+    for key in ("revision", "collection-revision", "collection-at"):
+        baseline_cli.add_argument("--" + key, required=True)
     args = parser.parse_args()
     try:
         if args.command == "plan":
             result = plan(args.source, read_json(args.context), args.shards, args.serial_module)
-        else:
+        elif args.command == "aggregate":
             result = aggregate(read_json(args.plan), args.reference, args.shard)
+        elif args.command == "expand":
+            result = expand(read_json(args.targets), args.source, args.board,
+                            args.runner, args.capacity, args.shards)
+        elif args.command == "generate-skip-baseline":
+            result = generate_skip_baseline(
+                args.source, args.revision, args.events, args.collection_xml,
+                args.collection_events, args.collection_revision, args.collection_at)
+        elif args.command == "run":
+            return execute(read_json(args.admission), args.source, args.board, args.role,
+                           args.output, args.site)
+        elif args.command == "native-terminal":
+            result = native_terminal(read_json(args.admission), args.source, args.board, args.output)
+        else:
+            result = join(read_json(args.admission), args.evidence, args.validation_result,
+                          args.expected_sha)
     except (ValueError, OSError, KeyError, TypeError, subprocess.CalledProcessError) as error:
         print(json.dumps({"status": "REJECTED", "release_acceptance": False,
                           "problem": str(error)}), file=sys.stderr)

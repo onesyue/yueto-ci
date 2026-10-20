@@ -153,7 +153,10 @@ def assess(current: dict, candidates: list[dict], now: dt.datetime, max_age_hour
 def validation_job_names(matrix: list[dict]) -> list[str]:
     """Mirror the validate job's `name:` expression in build.yml."""
     return sorted(
-        f"validate-yue-node-{m['node_profile']}" if m.get("node_profile") else f"validate-{m['validation']}"
+        (f"validate-yueops-{m['ops_role']}"
+         if m.get("ops_role") and m["ops_role"] != "legacy"
+         else f"validate-yue-node-{m['node_profile']}" if m.get("node_profile")
+         else f"validate-{m['validation']}")
         for m in matrix
     )
 

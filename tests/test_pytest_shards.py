@@ -111,7 +111,8 @@ class ShardPrimitives(unittest.TestCase):
         env["LENS_INVOCATION_ID"] = installed.stdout.strip()
         modules = ["tests"] if assignment is None else assignment["modules"]
         argv = [sys.executable, "-m", "pytest",
-                *(["--collect-only"] if assignment is None else []), "-q", *modules]
+                *(["--collect-only"] if assignment is None else []), "-q", *modules,
+                "--junitxml", str(output / "pytest.xml")]
         selection = {
             "plan_sha256": self.plan["plan_sha256"],
             "assignment_id": "reference" if assignment is None else assignment["id"],
@@ -374,7 +375,7 @@ class ShardPrimitives(unittest.TestCase):
         self.assertEqual(recorded[0]["nodeids"], [])
         self.assertIsNotNone(empty)
 
-    def test_cli_errors_fail_closed_and_leave_workflow_unwired(self):
+    def test_cli_errors_fail_closed_and_workflow_requires_join(self):
         context = self.base / "context.json"
         context.write_text(json.dumps(self.context))
         result = subprocess.run(
@@ -383,7 +384,9 @@ class ShardPrimitives(unittest.TestCase):
             capture_output=True, text=True, timeout=10, check=False)
         self.assertEqual(result.returncode, 1)
         self.assertEqual(json.loads(result.stderr)["status"], "REJECTED")
-        self.assertNotIn("pytest-shards.py", (ROOT / ".github/workflows/build.yml").read_text())
+        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        self.assertIn("pytest-shards.py join", workflow)
+        self.assertIn("needs: [plan, validate, validation-evidence]", workflow)
 
 
 if __name__ == "__main__":

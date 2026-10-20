@@ -572,7 +572,7 @@ class BuildPolicyTest(unittest.TestCase):
             "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
             "'[\"ubuntu-24.04\"]')"
         )
-        self.assertEqual(self.workflow.count(selector), 3)
+        self.assertEqual(self.workflow.count(selector), 4)
         self.assertIn(
             "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,
@@ -1450,7 +1450,7 @@ class BuildPolicyTest(unittest.TestCase):
         that a locally green gauntlet is evidence for the central gate.
         """
 
-        for job in ("plan", "validate", "build"):
+        for job in ("plan", "validate", "validation-evidence", "build"):
             header = re.search(
                 rf"(?ms)^  {job}:\n(?P<body>.*?)^    steps:\n", workflow
             )
@@ -1462,13 +1462,14 @@ class BuildPolicyTest(unittest.TestCase):
         validate = re.search(r"(?ms)^  validate:\n(?P<body>.*?)^    steps:\n", workflow)
         assert validate is not None
         self.assertIn("\n    env:\n      TZ: UTC\n", validate.group("body"))
-        yueops = re.search(
-            r"(?ms)^      - name: Validate yueops backend\n(?P<body>.*?)(?=^      - name:)",
-            workflow,
-        )
-        self.assertIsNotNone(yueops)
-        assert yueops is not None
-        self.assertIn("PYTEST_ADDOPTS: --durations=25", yueops.group("body"))
+        for name in ("Validate yueops backend", "Execute owned Ops pytest selection"):
+            yueops = re.search(
+                rf"(?ms)^      - name: {name}\n(?P<body>.*?)(?=^      - name:)",
+                workflow,
+            )
+            self.assertIsNotNone(yueops)
+            assert yueops is not None
+            self.assertIn("PYTEST_ADDOPTS: --durations=25", yueops.group("body"))
 
     def test_release_jobs_have_bounded_timeouts_and_utc_clock(self) -> None:
         self.assert_release_jobs_are_bounded(self.workflow)
@@ -1480,7 +1481,7 @@ class BuildPolicyTest(unittest.TestCase):
     def test_unbounded_release_job_is_rejected(self) -> None:
         """Deletion mutation: removing any single bound must turn the guard red."""
 
-        for job in ("plan", "validate", "build"):
+        for job in ("plan", "validate", "validation-evidence", "build"):
             with self.subTest(job=job):
                 mutated = re.sub(
                     rf"(?ms)(^  {job}:\n.*?)^    timeout-minutes: [0-9]+\n",

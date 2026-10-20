@@ -68,6 +68,7 @@ class PytestTimingConsumer(unittest.TestCase):
             PYTHONPATH=str(self.site), RUNNER_TEMP=str(self.output.parent),
             TIMING_TEST_PYTHON=sys.executable, NATIVE_CALLED=str(self.base / "native"),
             PYTEST_ADDOPTS="--durations=25", PYTHONDONTWRITEBYTECODE="1", TZ="UTC",
+            OPS_ROLE="legacy",
             GITHUB_RUN_ID="12345", GITHUB_RUN_ATTEMPT="2", GITHUB_JOB="validate",
             GITHUB_REPOSITORY="onesyue/yueto-ci",
         )
