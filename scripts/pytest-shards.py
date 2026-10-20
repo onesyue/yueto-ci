@@ -233,6 +233,49 @@ def shared_inputs(source, revision):
     return result
 
 
+def admit_shared_inputs(baseline, common, files=None):
+    """Admit the historical map or its one independently reviewed lock conversion.
+
+    The historical skip/collection evidence is never relabeled as a new run.
+    Exact effective inputs remain sealed into this run's admission envelope.
+    """
+    original = dict(baseline)
+    record = original.pop("reviewed_shared_input_transition", None)
+    expected = original["common_inputs"]
+    if record is not None:
+        require(isinstance(record, dict) and set(record) == {
+            "schema", "original_baseline_sha256", "source_before", "source_after",
+            "independent_review_sha256", "source_freeze_sha256", "path",
+            "before_blob", "after_blob", "common_input_modes",
+        } and record["schema"] == 1, "invalid reviewed shared-input transition")
+        restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+        require(record["original_baseline_sha256"] == sha(restored),
+                "historical skip baseline changed")
+        require(all(isinstance(record[k], str) and SHA.fullmatch(record[k]) for k in
+                    ("source_before", "source_after", "before_blob", "after_blob"))
+                and record["source_before"] != record["source_after"]
+                and record["before_blob"] != record["after_blob"]
+                and all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                        for k in ("independent_review_sha256", "source_freeze_sha256")),
+                "missing exact shared-input review identity")
+        path = record["path"]
+        require(path == "frontend/package-lock.json"
+                and expected.get(path) == record["before_blob"],
+                "unreviewed shared-input path or original blob")
+        modes = record["common_input_modes"]
+        require(isinstance(modes, dict) and set(modes) == set(expected)
+                and all(m in ("100644", "100755") for m in modes.values())
+                and modes[path] == "100644", "incomplete reviewed shared-input modes")
+        if files is not None:
+            require({p: files.get(p, (None, None))[0] for p in common} == modes,
+                    "shared collection/dependency input modes changed")
+        effective = expected | {path: record["after_blob"]}
+        require(common == expected or common == effective,
+                "shared collection/dependency inputs changed")
+    else:
+        require(common == expected, "shared collection/dependency inputs changed")
+
+
 def collection_skips(path, modules):
     require(path.is_file() and not path.is_symlink(), "missing native JUnit evidence")
     data = path.read_bytes()
@@ -531,9 +574,9 @@ def envelope(value):
             planned = validate_plan(value["ops_plan"])
             baseline = skip_baseline()
             require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
-                    and value.get("common_inputs") == baseline["common_inputs"]
                     and isinstance(value.get("skip_module_blobs"), dict),
                     "skip baseline or shared collection inputs differ")
+            admit_shared_inputs(baseline, value.get("common_inputs"))
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -587,8 +630,8 @@ def expand(targets, source, board, runner, capacity, shards):
             require(expected["source_revision"] == ops["ref"], "planned source checkout differs")
             baseline = skip_baseline()
             common = shared_inputs(source, ops["ref"])
-            require(common == baseline["common_inputs"], "shared collection/dependency inputs changed")
             files = tree_inputs(source, ops["ref"])
+            admit_shared_inputs(baseline, common, files)
             value.update(mode="sharded", ops_plan=expected, common_inputs=common,
                          skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
                          skip_module_blobs={p: files[p][1] for p in expected["modules"]})

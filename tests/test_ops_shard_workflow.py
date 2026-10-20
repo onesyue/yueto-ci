@@ -117,6 +117,103 @@ class OpsShardWorkflow(unittest.TestCase):
         with patch.dict(os.environ, self.env, clear=True):
             return function(*args)
 
+    def reviewed_lock_transition(self):
+        """Prepare two real Git lock blobs and a source-bound policy fixture."""
+        lock = self.source / "frontend/package-lock.json"
+        lock.parent.mkdir()
+        value = {"packages": {"first": {"version": "1.0"}, "second": {"version": "1.0"}}}
+        lock.write_text(json.dumps(value))
+        self.fixture.git(self.source, "add", "frontend/package-lock.json")
+        self.fixture.commit(self.source)
+        before = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
+        baseline = copy.deepcopy(self.baseline)
+        baseline["source_revision"] = before
+        baseline["common_inputs"] = self.consumer.shared_inputs(self.source, before)
+        raw = (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()
+        files = self.consumer.tree_inputs(self.source, before)
+        value["packages"]["first"]["version"] = "1.1"
+        lock.write_text(json.dumps(value))
+        self.fixture.git(self.source, "add", "frontend/package-lock.json")
+        self.fixture.commit(self.source)
+        after = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
+        for row in self.targets["matrix"] + self.targets["validation_matrix"]:
+            row["ref"] = after
+        policy = self.policy / "ops-pytest-skip-baseline.json"
+        policy.write_bytes(raw)
+        with self.assertRaisesRegex(ValueError, "shared collection/dependency inputs changed"):
+            self.call(self.consumer.expand, self.targets, self.source,
+                      self.board_sha, "ubuntu-24.04", 4, 4)
+        baseline["reviewed_shared_input_transition"] = {
+            "schema": 1, "original_baseline_sha256": self.consumer.sha(raw),
+            "source_before": before, "source_after": after,
+            "independent_review_sha256": "a" * 64, "source_freeze_sha256": "b" * 64,
+            "path": "frontend/package-lock.json",
+            "before_blob": files["frontend/package-lock.json"][1],
+            "after_blob": self.consumer.tree_inputs(self.source, after)["frontend/package-lock.json"][1],
+            "common_input_modes": {p: files[p][0] for p in baseline["common_inputs"]},
+        }
+        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
+        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json")
+        self.fixture.commit(self.policy)
+        self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
+        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+                                   self.board_sha, "ubuntu-24.04", 4, 4)
+        return after
+
+    def test_reviewed_lock_reaches_actual_source_native_and_join_without_waiving_evidence(self):
+        self.reviewed_lock_transition()
+        self.assertNotEqual(self.admission["common_inputs"], self.baseline["common_inputs"])
+        joined = self.full_bundle()
+        self.assertFalse(joined["skip_admission"]["skips_are_passes"])
+        wrong = copy.deepcopy(self.admission)
+        wrong["common_inputs"]["frontend/package-lock.json"] = "c" * 40
+        del wrong["admission_sha256"]
+        self.consumer.seal(wrong, "admission_sha256")
+        with self.assertRaisesRegex(ValueError, "shared collection/dependency inputs changed"):
+            self.call(self.consumer.envelope, wrong)
+        (self.artifacts / (self.prefix + "native") / "native.json").unlink()
+        with self.assertRaises(ValueError):
+            self.join()
+
+    def test_reviewed_lock_does_not_waive_actual_new_skip(self):
+        self.reviewed_lock_transition()
+        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
+            self.full_bundle({"NEW_SKIP": "1"})
+
+    def test_reviewed_lock_rejects_actual_unreviewed_tree_and_mode_changes(self):
+        accepted = self.reviewed_lock_transition()
+        lock = self.source / "frontend/package-lock.json"
+        for change in ("second-node", "other-blob", "other-input", "added", "missing",
+                       "lock-mode", "other-mode", "symlink"):
+            with self.subTest(change=change):
+                self.fixture.git(self.source, "reset", "--hard", accepted)
+                if change == "second-node":
+                    value = json.loads(lock.read_text())
+                    value["packages"]["second"]["version"] = "1.1"
+                    lock.write_text(json.dumps(value))
+                elif change == "other-blob":
+                    lock.write_text(lock.read_text() + "\n")
+                elif change == "other-input":
+                    config = self.source / "pytest.ini"
+                    config.write_text(config.read_text() + "# unreviewed\n")
+                elif change == "added":
+                    (self.source / "pyproject.toml").write_text("# new shared input\n")
+                elif change == "missing":
+                    lock.unlink()
+                elif change in ("lock-mode", "other-mode"):
+                    (lock if change == "lock-mode" else self.source / "pytest.ini").chmod(0o755)
+                else:
+                    lock.unlink()
+                    lock.symlink_to("../pytest.ini")
+                self.fixture.git(self.source, "add", "-A")
+                self.fixture.commit(self.source)
+                revision = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
+                for row in self.targets["matrix"] + self.targets["validation_matrix"]:
+                    row["ref"] = revision
+                with self.assertRaises(ValueError):
+                    self.call(self.consumer.expand, self.targets, self.source,
+                              self.board_sha, "ubuntu-24.04", 4, 4)
+
     def run_role(self, role, extra=None):
         runner = self.base / ("runner-" + role)
         (runner / "ops-admission").mkdir(parents=True)
@@ -585,12 +682,53 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
     def test_exact_original_baseline_and_historical_collection_are_preserved(self):
         import hashlib
         original = dict(self.baseline)
+        record = original.pop("reviewed_shared_input_transition")
+        restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+        self.assertEqual(hashlib.sha256(restored).hexdigest(),
+                         "49d7462f8d59b9a9a035d36fc113647f82a01c71079886c053fc637da2092e9f")
+        self.assertEqual(record["original_baseline_sha256"], hashlib.sha256(restored).hexdigest())
         del original["reviewed_hosted"]
         digest = hashlib.sha256((json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()).hexdigest()
         self.assertEqual(digest, self.reviewed["observation"]["original_baseline_sha256"])
         self.assertEqual(len(original["cases"]), 1005)
         self.assertEqual(len(original["collection_skips"]), 1)
         self.assertEqual(len(self.reviewed["cases"]), 18)
+
+    def test_reviewed_shared_input_preserves_all_55_inputs_and_rejects_other_changes(self):
+        record = self.baseline["reviewed_shared_input_transition"]
+        original = self.baseline["common_inputs"]
+        self.assertEqual(len(original), 55)
+        self.assertEqual(record["source_after"], "a2a16b8f66185c7b73e50aafd6d40e79faa4ad75")
+        self.assertEqual(record["independent_review_sha256"],
+                         "77ac618111acb7e27a683e009460a77a1376afb240c4bc16910df16777854449")
+        self.assertEqual(record["source_freeze_sha256"],
+                         "8d25e29294003c98fa28a7e7a0542f1cad5933c0d6311fe7935d0c8ad6cd49f6")
+        self.assertEqual(record["before_blob"], "e265053bb00e8a6cc36bef7c5f37c29fdd7c2936")
+        self.assertEqual(record["after_blob"], "5383263b00bee86a0a1ac093ab2360e9ea828cde")
+        effective = original | {record["path"]: record["after_blob"]}
+        files = {p: (record["common_input_modes"][p], b) for p, b in effective.items()}
+        self.consumer.admit_shared_inputs(self.baseline, original, files)
+        self.consumer.admit_shared_inputs(self.baseline, effective, files)
+        for path in original:
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                self.consumer.admit_shared_inputs(self.baseline, effective | {path: "c" * 40}, files)
+            with self.subTest(mode=path), self.assertRaises(ValueError):
+                wrong = files | {path: ("100755" if files[path][0] == "100644" else "100644",
+                                       files[path][1])}
+                self.consumer.admit_shared_inputs(self.baseline, effective, wrong)
+        for key in record:
+            with self.subTest(missing=key), self.assertRaises(ValueError):
+                wrong = copy.deepcopy(self.baseline)
+                del wrong["reviewed_shared_input_transition"][key]
+                self.consumer.admit_shared_inputs(wrong, effective, files)
+        for key, value in (("path", "frontend/other-lock.json"),
+                           ("before_blob", "d" * 40), ("original_baseline_sha256", "e" * 64),
+                           ("source_after", "UNKNOWN"), ("independent_review_sha256", "UNKNOWN"),
+                           ("common_input_modes", {})):
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                wrong = copy.deepcopy(self.baseline)
+                wrong["reviewed_shared_input_transition"][key] = value
+                self.consumer.admit_shared_inputs(wrong, effective, files)
 
     def test_each_exact_variant_retains_disposition_and_rejects_identity_drift(self):
         selected = [(n, r) for n, r in self.reviewed["cases"].items()
