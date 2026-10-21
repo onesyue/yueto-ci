@@ -509,20 +509,23 @@ jobs:
           path: ${{ runner.temp }}/ops-admission
           digest-mismatch: error
 
-      - name: Set up Go
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueboard'
+      - name: Set up YueBoard Go
+        if: matrix.validation == 'yueboard'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          # Both Go release repos now sit on the same reviewed patch line
-          # (1.27.2). This is one literal on purpose: a per-repo conditional
-          # reads as if it tracked each go.mod, but nothing made it do so, so a
-          # divergence would silently build one repo with the other's compiler.
-          # The workspace guard `toolchain-pin-agreement` is what actually joins
-          # this literal to both repos' go.mod/ci.yml/Dockerfile pins; if they
-          # ever have to diverge, make that guard model it, not this expression.
-          go-version: '1.27.2'
+          # Board requires the crypto/x509 security fix in Go 1.27.3. The
+          # policy test binds each service to its exact compiler, while the
+          # workspace toolchain-pin-agreement guard checks repository pins.
+          go-version: '1.27.3'
           # Separate module lifetime from source-varying compiler output below.
           # setup-go's dependency-only exact hit would never save new objects.
+          cache: false
+
+      - name: Set up Go
+        if: matrix.validation == 'yue-node'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.2'
           cache: false
 
       - name: Set up Python on GitHub-hosted runner

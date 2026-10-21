@@ -807,21 +807,78 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("`github_owned_allowed=true`", self.readme)
         self.assertIn("`verified_allowed=false`", self.readme)
 
-    def test_release_go_toolchain_is_an_exact_security_patch(self) -> None:
-        setup = re.search(
-            r"(?ms)^      - name: Set up Go\n(?P<body>.*?)(?=^      - name:)",
-            self.workflow,
+    def assert_release_go_toolchains(self, workflow: str) -> None:
+        validation = re.search(
+            r"(?ms)^  validate:\n(?P<body>.*?)(?=^  [a-zA-Z][a-zA-Z0-9_-]*:|\Z)",
+            workflow,
         )
-        self.assertIsNotNone(setup)
-        assert setup is not None
-        body = setup.group("body")
-        self.assertIn("go-version: '1.27.2'", body)
-        # A per-repo conditional used to live here. It looked like it tracked
-        # each repo's go.mod and did not; the workspace guard
-        # toolchain-pin-agreement is what joins them now.
-        self.assertNotIn("matrix.validation == 'yue-node' &&", body)
-        self.assertNotIn("go-version-file:", body)
-        self.assertIn("cache: false", body)
+        self.assertIsNotNone(validation)
+        assert validation is not None
+        steps = re.split(r"(?m)^      - ", validation.group("body"))[1:]
+        setup = [
+            step for step in steps
+            if re.search(r"(?m)(?:\Auses:|^        uses:) actions/setup-go@", step)
+        ]
+        expected = {
+            "name: Set up YueBoard Go": ("yueboard", "1.27.3"),
+            "name: Set up Go": ("yue-node", "1.27.2"),
+        }
+        self.assertCountEqual([step.splitlines()[0] for step in setup], expected)
+        for step in setup:
+            service, version = expected[step.splitlines()[0]]
+            self.assertEqual(
+                re.findall(r"(?m)^        if: (.+)$", step),
+                [f"matrix.validation == '{service}'"],
+            )
+            self.assertEqual(
+                re.findall(r"(?m)^          go-version: (.+)$", step),
+                [f"'{version}'"],
+            )
+            self.assertEqual(re.findall(r"(?m)^          cache: (.+)$", step), ["false"])
+            self.assertNotIn("go-version-file:", step)
+
+    def test_release_go_toolchain_is_an_exact_security_patch(self) -> None:
+        self.assert_release_go_toolchains(self.workflow)
+
+    def test_release_go_toolchain_rejects_wrong_service_or_version(self) -> None:
+        blocks = {}
+        for service, name in (("yueboard", "Set up YueBoard Go"), ("yue-node", "Set up Go")):
+            match = re.search(
+                rf"(?ms)^      - name: {name}\n.*?(?=^      - name:)",
+                self.workflow,
+            )
+            self.assertIsNotNone(match)
+            assert match is not None
+            blocks[service] = match.group()
+        board, node = blocks["yueboard"], blocks["yue-node"]
+        mutations = {
+            "swapped-versions": self.workflow.replace(
+                board, board.replace("'1.27.3'", "'1.27.2'")
+            ).replace(node, node.replace("'1.27.2'", "'1.27.3'")),
+            "swapped-services": self.workflow.replace(
+                board, board.replace("== 'yueboard'", "== 'yue-node'")
+            ).replace(node, node.replace("== 'yue-node'", "== 'yueboard'")),
+            "duplicate-setup": self.workflow.replace(board, board + node),
+        }
+        for service, block in blocks.items():
+            condition = f"        if: matrix.validation == '{service}'\n"
+            changes = {
+                "missing-setup": "",
+                "unconditional": block.replace(condition, ""),
+                "broad-condition": block.replace(condition, condition.rstrip() + " || true\n"),
+                "disabled": block.replace(condition, "        if: false\n"),
+                "floating-version": re.sub(r"go-version: '[^']+'", "go-version: '1.27.x'", block),
+                "version-file": re.sub(r"go-version: '[^']+'", "go-version-file: go.mod", block),
+                "implicit-cache": block.replace("          cache: false\n", ""),
+                "enabled-cache": block.replace("cache: false", "cache: true"),
+            }
+            for label, changed in changes.items():
+                mutations[f"{service}-{label}"] = self.workflow.replace(block, changed)
+        for label, workflow in mutations.items():
+            with self.subTest(mutation=label):
+                self.assertNotEqual(workflow, self.workflow)
+                with self.assertRaises(AssertionError):
+                    self.assert_release_go_toolchains(workflow)
 
     def test_local_release_never_exports_the_remote_build_cache(self) -> None:
         compute = re.search(
