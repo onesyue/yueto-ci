@@ -5622,5 +5622,28 @@
     "before_blob": "969def46e1d6ea13c73ad68d477f43e668bf386e",
     "after_blob": "b0ab7d24f6e8cd595b6d2f013d7a5b2da5debe5e",
     "mode": "100644"
+  },
+  "reviewed_ssh_skip_module_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "8332986b05c7036540653f9ed8f85813bacb720c90a2252c3453de254dfd89ae",
+    "source_before": "65696a61c77cc5d6145da516c64d9c6b5477fd3c",
+    "source_after": "4a5a0734dae4e3b982b8f3fb744e6dbc720a3d9e",
+    "qualified_source": "f29a9e7e43e7f09d91d0ae01ab8600ecd048d506",
+    "independent_review_sha256": "ed8608fa7816762c4460409ac83172360f69d860aeaf8f03b9521331521386ce",
+    "source_freeze_sha256": "27336c62a78e36d0876a510d1565245dac0f164a4dff6cbcfd1af924d90c1f1f",
+    "qualification_receipt_sha256": "783078c7c89794c275ffe7b6d0a70f2c909c272c258a09e1e5cec87def36948e",
+    "composition_review_sha256": "af43391afaac350908b1551924c35048528f9cd305f89ad4b116300f09864511",
+    "cases": {
+      "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent": {
+        "before_blob": "12ed3e6e232c038eb0be2c644354157d0f5fc506",
+        "after_blob": "93fee09ae4aea0ff77c45046660af3d20292feb8",
+        "mode": "100644"
+      },
+      "tests/test_installed_checker_transport_20261014.py::test_real_pinned_sshd_json_transport_plan_apply_readback_and_old_n_negative": {
+        "before_blob": "3cae44b8761d88827357dc9e0d8333fc7f2a8142",
+        "after_blob": "6b4472d3f3ecf219a033bfecf92db63375d0911a",
+        "mode": "100644"
+      }
+    }
   }
 }

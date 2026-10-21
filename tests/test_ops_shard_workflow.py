@@ -664,6 +664,127 @@ class OpsShardWorkflow(unittest.TestCase):
                 self.call(self.consumer.expand, self.targets, self.source,
                           self.board_sha, "ubuntu-24.04", 4, 4)
 
+    def reviewed_ssh_skip_transition(self, *, original_source=False):
+        """Run real skips, then pin the isolated policy to exactly two successors."""
+        actual = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
+        for nodeid in sorted(self.consumer.SSH_SKIP_CASES):
+            module, case = nodeid.split("::")
+            reason = actual["cases"][nodeid]["reason"].removeprefix("Skipped: ")
+            (self.source / module).write_text(
+                "import os,pytest\n"
+                f"@pytest.mark.skip(reason=os.environ.get('SSH_REVIEWED_REASON',{reason!r}))\n"
+                f"def {case}(): pass\n")
+        paths = sorted(n.split("::")[0] for n in self.consumer.SSH_SKIP_CASES)
+        self.fixture.git(self.source, "add", *paths)
+        self.fixture.commit(self.source)
+        before = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
+        files = self.consumer.tree_inputs(self.source, before)
+        modules = sorted(p for p in files if self.consumer.safe_module(p))
+        self.fixture.env["GITHUB_SHA"] = self.env["GITHUB_SHA"]
+        directory, executed = self.fixture.run_session({"id": "ordinary-000", "modules": modules})
+        self.assertEqual(executed.returncode, 0, executed.stdout + executed.stderr)
+        baseline = self.consumer.generate_skip_baseline(
+            self.source, before, directory / "events.jsonl", directory / "pytest.xml",
+            directory / "events.jsonl", before, "fixture original execution")
+        for name in paths:
+            path = self.source / name
+            path.write_text(path.read_text() + "\n# Reviewed consumer coverage addition.\n")
+        self.fixture.git(self.source, "add", *paths)
+        self.fixture.commit(self.source)
+        after = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
+        successors = self.consumer.tree_inputs(self.source, after)
+        record = {
+            "schema": 1,
+            "prior_baseline_sha256": self.consumer.sha(
+                (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()),
+            "source_before": before, "source_after": after, "qualified_source": after,
+            "independent_review_sha256": "1" * 64, "source_freeze_sha256": "2" * 64,
+            "qualification_receipt_sha256": "3" * 64, "composition_review_sha256": "4" * 64,
+            "cases": {n: {"before_blob": files[n.split("::")[0]][1],
+                           "after_blob": successors[n.split("::")[0]][1], "mode": "100644"}
+                      for n in sorted(self.consumer.SSH_SKIP_CASES)},
+        }
+        baseline["reviewed_ssh_skip_module_transition"] = record
+        policy = self.policy / "ops-pytest-skip-baseline.json"
+        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
+        # Bind the actual copied CLI to this fixture's exact reviewed record.
+        # Production has no environment override or mutable admission allowlist.
+        consumer = self.policy / "scripts/pytest-shards.py"
+        consumer.write_text(consumer.read_text().replace(
+            self.consumer.SSH_SKIP_TRANSITION_SHA256,
+            self.consumer.sha(self.consumer.encoded(record)), 1))
+        spec = importlib.util.spec_from_file_location("actual_ssh_skip_consumer", consumer)
+        self.consumer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.consumer)
+        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json", "scripts/pytest-shards.py")
+        self.fixture.commit(self.policy)
+        self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
+        revision = before if original_source else after
+        if original_source:
+            self.fixture.git(self.source, "reset", "--hard", before)
+        for row in self.targets["matrix"] + self.targets["validation_matrix"]:
+            row["ref"] = revision
+        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+                                   self.board_sha, "ubuntu-24.04", 4, 4)
+        return baseline
+
+    def test_reviewed_ssh_successors_reach_real_join_without_reclassifying_skips(self):
+        baseline = self.reviewed_ssh_skip_transition()
+        result = self.full_bundle()
+        self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+        self.assertEqual(result["skip_admission"]["disposition_counts"]["SAME_RUN_NATIVE_REQUIRED"], 0)
+        rows = {r["nodeid"]: r for session in result["ordinary"]["shards"]
+                for r in session["nonpassing_outcomes"]}
+        for nodeid in self.consumer.SSH_SKIP_CASES:
+            self.assertEqual(rows[nodeid]["outcome"], "skipped")
+            self.assertEqual(rows[nodeid]["reason"], baseline["cases"][nodeid]["reason"])
+        # Replacing a valid review digest cannot reuse an already admitted run.
+        policy = self.policy / "ops-pytest-skip-baseline.json"
+        original = policy.read_bytes()
+        mutations = []
+        for field in ("prior_baseline_sha256", "independent_review_sha256", "source_freeze_sha256",
+                      "qualification_receipt_sha256", "composition_review_sha256"):
+            changed = copy.deepcopy(baseline)
+            changed["reviewed_ssh_skip_module_transition"][field] = "f" * 64
+            mutations.append((field, changed))
+        for nodeid in sorted(self.consumer.SSH_SKIP_CASES):
+            changed = copy.deepcopy(baseline)
+            changed["reviewed_ssh_skip_module_transition"]["cases"][nodeid]["after_blob"] = "f" * 40
+            mutations.append((nodeid, changed))
+        for label, changed in mutations:
+            policy.write_text(json.dumps(changed))
+            with self.subTest(join_mutation=label), self.assertRaisesRegex(
+                    ValueError, "skip baseline or shared collection inputs differ"):
+                self.join()
+        policy.write_bytes(original)
+        # A second, unreviewed module revision is not covered by the transition.
+        module = sorted(self.consumer.SSH_SKIP_CASES)[0].split("::")[0]
+        wrong = copy.deepcopy(self.admission)
+        wrong["skip_module_blobs"][module] = "e" * 40
+        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
+            self.consumer.admit_skips(wrong, result["ordinary"], result["native_and_source_gates"])
+        # Independent qualification cannot replace this run's original native gates.
+        (self.artifacts / (self.prefix + "native") / "native.json").unlink()
+        with self.assertRaises(ValueError):
+            self.join()
+
+    def test_reviewed_ssh_transition_keeps_actual_original_source_admission(self):
+        self.reviewed_ssh_skip_transition(original_source=True)
+        result = self.full_bundle()
+        self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+
+    def test_reviewed_ssh_transition_rejects_actual_new_case_skip(self):
+        self.reviewed_ssh_skip_transition()
+        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
+            self.full_bundle({"NEW_SKIP": "1"})
+
+    def test_reviewed_ssh_transition_rejects_actual_changed_skip_reason(self):
+        self.reviewed_ssh_skip_transition()
+        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
+            self.full_bundle({"SSH_REVIEWED_REASON": "different but plausible missing tool"})
+
     def test_actual_plan_yaml_expands_all_targets_before_collection(self):
         other = [{"repo": "onesyue/yueboard", "ref": "b" * 40, "validation": "yueboard"},
                  {"repo": "onesyue/yue-node", "ref": "c" * 40, "validation": "yue-node",
@@ -914,6 +1035,7 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
     def setUp(self):
         self.consumer = fixture.SHARDS
         self.baseline = self.consumer.skip_baseline()
+        self.ssh_record = self.baseline.pop("reviewed_ssh_skip_module_transition")
         self.reviewed = self.baseline["reviewed_hosted"]
         self.value = {"skip_baseline_sha256": "a" * 64,
                       "ops_plan": {"context": {"runner_os": "Linux", "runner_arch": "X64"}},
@@ -925,6 +1047,44 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
                    "junit_sha256": "b" * 64, "nonpassing_outcomes": []}
         return {"reference": session | {"assignment_id": "reference"},
                 "shards": [session | {"assignment_id": "ordinary-000", "nonpassing_outcomes": rows}]}
+
+    def test_exact_ssh_record_and_all_validly_shaped_identity_mutations(self):
+        baseline = self.baseline | {"reviewed_ssh_skip_module_transition": self.ssh_record}
+        original, successors = self.consumer.reviewed_skip_module_transition(baseline)
+        self.assertEqual(original, self.baseline)
+        self.assertEqual(self.ssh_record["prior_baseline_sha256"],
+                         "8332986b05c7036540653f9ed8f85813bacb720c90a2252c3453de254dfd89ae")
+        self.assertEqual(set(successors), self.consumer.SSH_SKIP_CASES)
+        mutations = []
+        for field in ("prior_baseline_sha256", "independent_review_sha256", "source_freeze_sha256",
+                      "qualification_receipt_sha256", "composition_review_sha256"):
+            changed = copy.deepcopy(baseline)
+            changed["reviewed_ssh_skip_module_transition"][field] = "f" * 64
+            mutations.append((field, changed))
+        for field in ("source_before", "source_after", "qualified_source"):
+            changed = copy.deepcopy(baseline)
+            changed["reviewed_ssh_skip_module_transition"][field] = "f" * 40
+            mutations.append((field, changed))
+        for nodeid in sorted(self.consumer.SSH_SKIP_CASES):
+            for field in ("before_blob", "after_blob"):
+                changed = copy.deepcopy(baseline)
+                changed["reviewed_ssh_skip_module_transition"]["cases"][nodeid][field] = "f" * 40
+                mutations.append((nodeid + field, changed))
+        for label, changed in mutations:
+            with self.subTest(mutation=label), self.assertRaisesRegex(ValueError, "transition identity"):
+                self.consumer.reviewed_skip_module_transition(changed)
+        for mutation in ("missing", "null", "additional_case", "historical_reason"):
+            changed = copy.deepcopy(baseline)
+            if mutation == "missing":
+                del changed["reviewed_ssh_skip_module_transition"]["source_freeze_sha256"]
+            elif mutation == "null":
+                changed["reviewed_ssh_skip_module_transition"] = None
+            elif mutation == "additional_case":
+                changed["reviewed_ssh_skip_module_transition"]["cases"]["tests/test_other.py::test_skip"] = {}
+            else:
+                changed["cases"][sorted(self.consumer.SSH_SKIP_CASES)[0]]["reason"] = "Skipped: changed"
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                self.consumer.reviewed_skip_module_transition(changed)
 
     def test_exact_original_baseline_and_historical_collection_are_preserved(self):
         import hashlib

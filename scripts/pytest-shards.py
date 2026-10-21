@@ -31,6 +31,13 @@ IDENTITY_FIELDS = ("policy_revision", "board_revision", "run_id", "run_attempt",
 FILES = ("metadata.json", "events.jsonl", "pytest-exit-code.txt",
          "pytest-start-unix-ns.txt", "pytest-finish-unix-ns.txt", "selection.json")
 SKIP_BASELINE = "ops-pytest-skip-baseline.json"
+# The exact reviewed record is pinned independently of its baseline payload.
+SSH_SKIP_TRANSITION_SHA256 = "df44974b4d4e883d73ffa6d3067a378441650456d3d1a64655f4d7ae73d1547f"
+SSH_SKIP_CASES = {
+    "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
+    "tests/test_installed_checker_transport_20261014.py::"
+    "test_real_pinned_sshd_json_transport_plan_apply_readback_and_old_n_negative",
+}
 NATIVE_TARGETS = {
     "tests/test_board139_schema_acl_native_20261018.py": (6, 1001),
     "tests/test_node_systemd_pilot_20261018.py": (38, 0),
@@ -233,13 +240,65 @@ def shared_inputs(source, revision):
     return result
 
 
+def reviewed_skip_module_transition(baseline, files=None):
+    """Preserve historical skips while admitting two reviewed source successors.
+
+    Independent UID0 qualification is evidence, not a same-run native receipt or
+    an ordinary PASS. The signed policy and admission digest bind that evidence.
+    """
+    original = dict(baseline)
+    key = "reviewed_ssh_skip_module_transition"
+    record = original.pop(key, None)
+    if key not in baseline:
+        return original, {}
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "qualified_source", "independent_review_sha256", "source_freeze_sha256",
+        "qualification_receipt_sha256", "composition_review_sha256", "cases",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid reviewed SSH skip transition")
+    require(sha(encoded(record)) == SSH_SKIP_TRANSITION_SHA256,
+            "unreviewed SSH skip transition identity")
+    restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(restored),
+            "SSH skip transition historical baseline changed")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k]) for k in
+                ("source_before", "source_after", "qualified_source"))
+            and record["source_before"] != record["source_after"]
+            and all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                    for k in ("independent_review_sha256", "source_freeze_sha256",
+                              "qualification_receipt_sha256", "composition_review_sha256")),
+            "missing exact SSH skip review identity")
+    changes = record["cases"]
+    require(isinstance(changes, dict) and set(changes) == SSH_SKIP_CASES,
+            "unreviewed SSH skip cases")
+    successors = {}
+    for nodeid, change in changes.items():
+        historical = original["cases"].get(nodeid)
+        require(isinstance(historical, dict) and historical.get("outcome") == "skipped"
+                and isinstance(historical.get("reason"), str)
+                and nodeid not in original.get("reviewed_hosted", {}).get("cases", {})
+                and isinstance(change, dict) and set(change) == {
+                    "before_blob", "after_blob", "mode",
+                } and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                          for k in ("before_blob", "after_blob"))
+                and change["before_blob"] == historical.get("module_blob")
+                and change["before_blob"] != change["after_blob"]
+                and change["mode"] == "100644", "unreviewed SSH skip blob or mode")
+        module = nodeid.split("::", 1)[0]
+        if files is not None and files.get(module, (None, None))[1] == change["after_blob"]:
+            require(files[module][0] == change["mode"], "SSH skip module mode changed")
+        successors[nodeid] = historical | {"module_blob": change["after_blob"]}
+    return original, successors
+
+
 def admit_shared_inputs(baseline, common, files=None):
     """Admit complete historical maps and the exact reviewed security successor.
 
     The historical skip/collection evidence is never relabeled as a new run.
     Exact effective inputs remain sealed into this run's admission envelope.
     """
-    original = dict(baseline)
+    original, _ = reviewed_skip_module_transition(baseline, files)
     miniapp_record = original.pop("reviewed_miniapp_security_transition", None)
     security_record = original.pop("reviewed_frontend_security_transition", None)
     python_record = original.pop("reviewed_python_input_transition", None)
@@ -904,6 +963,7 @@ def native_terminal(value, source, board, output):
 
 def admit_skips(value, result, native):
     baseline = skip_baseline()
+    _, successors = reviewed_skip_module_transition(baseline)
     observed_collection = {}
     reviewed = baseline.get("reviewed_hosted", {})
     counts = {"HISTORICAL_UNEXECUTED": 0, "OWNER_CANCELED": 0,
@@ -918,10 +978,12 @@ def admit_skips(value, result, native):
             module = nodeid.split("::", 1)[0]
             specific = reviewed.get("cases", {}).get(nodeid)
             if specific is None:
-                require(baseline["cases"].get(nodeid) == {
+                observed = {
                     "outcome": row["outcome"], "reason": row.get("reason"),
                     "module_blob": value["skip_module_blobs"].get(module),
-                }, "new or changed case skip/xfail: " + nodeid)
+                }
+                require(observed in (baseline["cases"].get(nodeid), successors.get(nodeid)),
+                        "new or changed case skip/xfail: " + nodeid)
                 disposition = "HISTORICAL_UNEXECUTED"
             else:
                 require(reviewed.get("schema") == 1
