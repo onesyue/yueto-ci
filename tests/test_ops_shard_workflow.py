@@ -51,7 +51,7 @@ class OpsShardWorkflow(unittest.TestCase):
             self.assertTrue(Path(actual).is_file(), "declared actual source entry is missing")
             entry.write_bytes(Path(actual).read_bytes())
         else:
-            entry.write_text("#!/bin/sh\nexec python3 - \"$@\" <<'PY'\n" + textwrap.dedent("""
+            entry.write_text("#!/bin/sh\nexec .venv/bin/python - \"$@\" <<'PY'\n" + textwrap.dedent("""
                 import json,os,sys
                 from pathlib import Path
                 if sys.argv[1:]==["--describe-ci-selection"]:
@@ -83,6 +83,9 @@ class OpsShardWorkflow(unittest.TestCase):
         (self.source / ".ci-policy").symlink_to(self.policy, target_is_directory=True)
         (self.source / ".ci-yueboard").symlink_to(self.board, target_is_directory=True)
         (self.source / ".venv").symlink_to(Path(sys.prefix), target_is_directory=True)
+        # Git mutation controls must not commit or reset the fixture's runtime links.
+        exclude = self.source / ".git/info/exclude"
+        exclude.write_text(exclude.read_text() + "\n/.ci-policy\n/.ci-yueboard\n/.venv\n")
         self.env["PATH"] = str(self.source / ".venv/bin") + os.pathsep + os.environ["PATH"]
         self.env["YUEBOARD_REPO_PATH"] = str(self.board)
         self.env["YUETO_CI_REPO_PATH"] = str(self.policy)
@@ -373,7 +376,11 @@ class OpsShardWorkflow(unittest.TestCase):
                 revision = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
                 for row in self.targets["matrix"] + self.targets["validation_matrix"]:
                     row["ref"] = revision
-                with self.assertRaises(ValueError):
+                reason = ("symlink shared test input" if change == "symlink" else
+                          "shared collection/dependency input modes changed"
+                          if change in ("added", "missing", "lock-mode", "other-mode") else
+                          "shared collection/dependency inputs changed")
+                with self.assertRaisesRegex(ValueError, reason):
                     self.call(self.consumer.expand, self.targets, self.source,
                               self.board_sha, "ubuntu-24.04", 4, 4)
 
@@ -572,7 +579,9 @@ class OpsShardWorkflow(unittest.TestCase):
         self.assertFalse(result["skip_admission"]["skips_are_passes"])
         self.assertEqual(result["host_linux_skip_policy"], "ROOT_GATE_UNCHANGED")
         receipt = json.loads((self.artifacts / (self.prefix + "serial") / "selection.json").read_text())
+        metadata = json.loads((self.artifacts / (self.prefix + "serial") / "metadata.json").read_text())
         self.assertEqual(receipt["modules"], TAIL)
+        self.assertEqual(receipt["pytest_argv"][0], metadata["python_executable"])
         self.assertEqual(receipt["pytest_argv"][1:-2], ["-m", "pytest", "-q", *TAIL])
         self.assertEqual(receipt["pytest_argv"][-2], "--junitxml")
         empty = [r for r in result["ordinary"]["shards"] if r["empty_assigned_collection"]]
@@ -594,6 +603,18 @@ class OpsShardWorkflow(unittest.TestCase):
                 self.assertEqual(json.loads(executed.stdout)["status"], "VALIDATION_MATRIX_COMPLETE")
             else:
                 self.assertNotEqual(executed.returncode, 0, executed.stdout + executed.stderr)
+
+    def test_actual_selection_rejects_wrong_interpreter_identity(self):
+        ran = self.run_role("reference")
+        self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
+        directory = self.artifacts / (self.prefix + "reference")
+        self.consumer.inspect_session(directory, self.admission["ops_plan"], None)
+        path = directory / "selection.json"
+        receipt = json.loads(path.read_text())
+        receipt["pytest_argv"][0] += ".wrong-interpreter"
+        path.write_text(json.dumps(receipt))
+        with self.assertRaisesRegex(ValueError, "wrong Python executable"):
+            self.consumer.inspect_session(directory, self.admission["ops_plan"], None)
 
     def test_actual_failure_is_not_retried_as_legacy(self):
         assignment = next(a for a in self.admission["ops_plan"]["assignments"]

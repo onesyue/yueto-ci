@@ -155,8 +155,13 @@ class PlanPromotionGateTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "out"
             output.touch()
+            bin_dir = Path(temp) / "bin"
+            bin_dir.mkdir()
+            curl = bin_dir / "curl"
+            curl.write_text("#!/bin/sh\necho 'unexpected fixture network request' >&2\nexit 97\n")
+            curl.chmod(0o755)
             env = {
-                "PATH": os.environ["PATH"],
+                "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"],
                 "GH_API_TOKEN": "",
                 "SERVICE": "yue-node",
                 "REF_OVERRIDE": "",
@@ -169,6 +174,7 @@ class PlanPromotionGateTest(unittest.TestCase):
                 "MANUAL_YUEBOARD_CONTRACT_REF": "",
                 "DISPATCH_YUEBOARD_CONTRACT_REF": "",
                 "GITHUB_OUTPUT": str(output),
+                "RUNNER_TEMP": temp,
                 **overrides,
             }
             result = subprocess.run(
@@ -176,6 +182,9 @@ class PlanPromotionGateTest(unittest.TestCase):
                 text=True, capture_output=True, timeout=60,
             )
             result.outputs = output.read_text()  # type: ignore[attr-defined]
+            target_plan = Path(temp) / "build-target-plan.json"
+            result.target_plan = (json.loads(target_plan.read_text())
+                                  if target_plan.exists() else None)
             return result
 
     def test_candidate_builds_still_accept_branch_refs(self) -> None:
@@ -192,9 +201,17 @@ class PlanPromotionGateTest(unittest.TestCase):
                     self.assertNotEqual(result.returncode, 0)
                     self.assertIn("migration_base", result.stdout)
                     self.assertEqual(result.outputs, "")
-        result = self.run_plan(SERVICE="yueops", MIGRATION_BASE="a" * 40)
+        sha = "b" * 40
+        result = self.run_plan(SERVICE="yueops", MIGRATION_BASE="a" * 40, REF_OVERRIDE=sha)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("validation_matrix=", result.outputs)
+        self.assertEqual({entry["ref"] for entry in result.target_plan["validation_matrix"]}, {sha})
+
+    def test_real_plan_requires_authoritative_runner_temp(self) -> None:
+        result = self.run_plan(RUNNER_TEMP="")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("RUNNER_TEMP", result.stderr)
+        self.assertIsNone(result.target_plan)
 
     def test_exact_sha_promotion_from_master_is_planned(self) -> None:
         sha = "a" * 40

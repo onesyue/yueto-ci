@@ -69,6 +69,9 @@ class Repo:
         self.tmp = tempfile.TemporaryDirectory()
         self.path = Path(self.tmp.name)
         self.git("init", "-q", "-b", "master")
+        # A disposable fixture must not start maintenance beyond its owner lifetime.
+        self.git("config", "maintenance.auto", "false")
+        self.git("config", "gc.auto", "0")
         self.git("config", "user.email", "t@example.invalid")
         self.git("config", "user.name", "t")
         self.git("config", "commit.gpgsign", "false")
