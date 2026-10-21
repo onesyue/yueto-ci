@@ -234,12 +234,13 @@ def shared_inputs(source, revision):
 
 
 def admit_shared_inputs(baseline, common, files=None):
-    """Admit only complete historical, frontend or reviewed Python input maps.
+    """Admit complete historical maps and the exact reviewed security successor.
 
     The historical skip/collection evidence is never relabeled as a new run.
     Exact effective inputs remain sealed into this run's admission envelope.
     """
     original = dict(baseline)
+    security_record = original.pop("reviewed_frontend_security_transition", None)
     python_record = original.pop("reviewed_python_input_transition", None)
     record = original.pop("reviewed_shared_input_transition", None)
     expected = original["common_inputs"]
@@ -248,6 +249,10 @@ def admit_shared_inputs(baseline, common, files=None):
             "invalid reviewed Python input transition")
     require(python_record is None or record is not None,
             "Python input transition requires its frontend predecessor")
+    require("reviewed_frontend_security_transition" not in baseline
+            or isinstance(security_record, dict), "invalid frontend security transition")
+    require(security_record is None or python_record is not None and record is not None,
+            "frontend security transition requires both predecessors")
     if record is not None:
         require(isinstance(record, dict) and set(record) == {
             "schema", "original_baseline_sha256", "source_before", "source_after",
@@ -310,6 +315,35 @@ def admit_shared_inputs(baseline, common, files=None):
                         "unreviewed Python input blob or mode")
                 converted[changed_path] = change["after_blob"]
             accepted.append(converted)
+            if security_record is not None:
+                require(set(security_record) == {
+                    "schema", "original_baseline_sha256", "prior_transition_chain_sha256",
+                    "source_before", "source_after", "independent_review_sha256",
+                    "source_freeze_sha256", "path", "before_blob", "after_blob", "mode",
+                } and type(security_record["schema"]) is int
+                        and security_record["schema"] == 1,
+                        "invalid frontend security transition")
+                prior_chain = {"reviewed_shared_input_transition": record,
+                               "reviewed_python_input_transition": python_record}
+                require(security_record["original_baseline_sha256"] == sha(restored)
+                        and security_record["prior_transition_chain_sha256"]
+                        == sha(encoded(prior_chain)),
+                        "frontend security history or predecessor changed")
+                require(all(isinstance(security_record[k], str)
+                            and SHA.fullmatch(security_record[k]) for k in
+                            ("source_before", "source_after", "before_blob", "after_blob"))
+                        and security_record["source_before"] != security_record["source_after"]
+                        and security_record["before_blob"] != security_record["after_blob"]
+                        and all(isinstance(security_record[k], str)
+                                and re.fullmatch(r"[0-9a-f]{64}", security_record[k]) for k in
+                                ("independent_review_sha256", "source_freeze_sha256")),
+                        "missing exact frontend security review identity")
+                path = security_record["path"]
+                require(path == "frontend/package-lock.json"
+                        and security_record["before_blob"] == converted.get(path)
+                        and security_record["mode"] == modes.get(path) == "100644",
+                        "unreviewed frontend security input blob or mode")
+                accepted.append(converted | {path: security_record["after_blob"]})
     require(common in accepted, "shared collection/dependency inputs changed")
 
 

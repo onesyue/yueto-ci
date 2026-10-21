@@ -5596,5 +5596,18 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_frontend_security_transition": {
+    "schema": 1,
+    "original_baseline_sha256": "49d7462f8d59b9a9a035d36fc113647f82a01c71079886c053fc637da2092e9f",
+    "prior_transition_chain_sha256": "e8fa7f3363b5e4ea13f707d1676f335d0425926eaea2c30cbd4b1c553fa0d701",
+    "source_before": "cfffeaceacf7af592c80e27fa4ac25cc341b9f6e",
+    "source_after": "0eae63e400813a392f0c68c8aea5aee5125e165a",
+    "independent_review_sha256": "e44a0008ba5f625f0363104883c3efcbd7e6296da61dad1e104432026fad911d",
+    "source_freeze_sha256": "30a3251bd44840b4161577a93816f730595fa1d143396fa8d922c9d80fcf6e58",
+    "path": "frontend/package-lock.json",
+    "before_blob": "5383263b00bee86a0a1ac093ab2360e9ea828cde",
+    "after_blob": "394ffd6bac0bdd00ddc5e6d0045344d1543adf85",
+    "mode": "100644"
   }
 }

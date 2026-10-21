@@ -40,6 +40,16 @@ The central policy self-tests use the five hash-locked wheels in
 file before the existing unittest discovery command when running policy tests
 outside the Ops dependency environment.
 
+Shared test/dependency inputs remain exact complete maps. A reviewed frontend
+security lock update appends its own transition after the original frontend and
+Python transitions, binding their history, the previous lock blob and its regular
+file mode. Both source admission and sealed-envelope validation consume that
+transition; mixed dependency generations and unrelated changes still fail.
+The release coordinator verifies the actual signed source, independent review and
+freeze artifacts before recording their identities. Hash syntax alone does not
+authenticate those artifacts. Historical skip/collection evidence stays dated;
+an admitted input map does not reuse successful jobs from an earlier release.
+
 ## Covered services
 
 `services.json` lists image targets: yue-node, yueops-web, checkin-api, yue-bot and
