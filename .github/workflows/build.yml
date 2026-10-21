@@ -1424,6 +1424,7 @@ jobs:
         run: |
           set -euo pipefail
           npm ci --ignore-scripts
+          npm run lint
           npm run build
           audit_gate="$GITHUB_WORKSPACE/scripts/npm-audit-gate.py"
           [ -f "$audit_gate" ] || {

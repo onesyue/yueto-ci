@@ -16,18 +16,115 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _validate_steps() -> list[dict]:
-    text = (ROOT / ".github" / "workflows" / "build.yml").read_text()
+def _validate_steps(text: str | None = None) -> list[dict]:
+    if text is None:
+        text = (ROOT / ".github" / "workflows" / "build.yml").read_text()
     job = text.split("\n  validate:\n", 1)[1].split("\n  build:\n", 1)[0]
     result = []
     for match in re.finditer(r"^      - name: (.+)\n((?:(?!^      - |^  [a-z]).*\n)*)", job, re.M):
         body = match.group(2)
         condition = re.search(r"^        if: (.+)$", body, re.M)
+        directory = re.search(r"^        working-directory: (.+)$", body, re.M)
+        optional = re.search(r"^        continue-on-error: (.+)$", body, re.M)
         script = re.search(r"^        run: \|\n((?:          .*\n|\n)*)", body, re.M)
         result.append({"name": match.group(1), "if": condition.group(1) if condition else "",
+                       "working-directory": directory.group(1) if directory else "",
+                       "continue-on-error": optional.group(1) if optional else "",
                        "run": textwrap.dedent(script.group(1)) if script else ""})
     assert len(result) >= 20, "validation step scan did not reach its target"
     return result
+
+
+def _console_lint_step(workflow: str) -> dict:
+    steps = _validate_steps(workflow)
+    names = [step["name"] for step in steps]
+    assert names.count("Validate yueops frontend") == 1
+    step = steps[names.index("Validate yueops frontend")]
+    assert step["if"] == "matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')"
+    assert step["working-directory"] == "frontend"
+    assert not step["continue-on-error"]
+    commands = step["run"].splitlines()
+    assert commands[:4] == ["set -euo pipefail", "npm ci --ignore-scripts",
+                            "npm run lint", "npm run build"]
+    assert commands.count("npm run lint") == 1
+    assert names.index(step["name"]) < names.index("Run yueops node unit tests (Mini App, console, site)")
+    assert names.index(step["name"]) < names.index("Record complete Ops native and source gates")
+    return step
+
+
+class YueOpsConsoleLintPolicy(unittest.TestCase):
+    def workflow(self):
+        return (ROOT / ".github" / "workflows" / "build.yml").read_text()
+
+    def test_console_lint_is_required_in_the_existing_early_frontend_step(self):
+        _console_lint_step(self.workflow())
+
+    def test_actual_workflow_guard_rejects_absent_optional_wrong_consumer_and_order(self):
+        workflow = self.workflow()
+        start = workflow.index("      - name: Validate yueops frontend\n")
+        end = workflow.index("      - name: Validate Yue mini app\n", start)
+        body = workflow[start:end]
+        changes = {
+            "omitted": body.replace("          npm run lint\n", ""),
+            "optional": body.replace("npm run lint", "npm run lint --if-present"),
+            "wrong directory": body.replace("working-directory: frontend", "working-directory: telegram-bot/yue/miniapp"),
+            "wrong consumer": body.replace("npm run lint", "npm --prefix telegram-bot/yue/miniapp run lint"),
+            "before install": body.replace("npm ci --ignore-scripts\n          npm run lint", "npm run lint\n          npm ci --ignore-scripts"),
+            "after build": body.replace("npm run lint\n          npm run build", "npm run build\n          npm run lint"),
+            "ignored failure": body.replace("npm run lint", "npm run lint || true"),
+            "optional step": body.replace("        run: |", "        continue-on-error: true\n        run: |"),
+            "wrong role": body.replace("matrix.ops_role == 'native'", "matrix.ops_role == 'ordinary'"),
+        }
+        for name, changed in changes.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                _console_lint_step(workflow[:start] + changed + workflow[end:])
+
+    def test_real_console_step_runs_lint_after_install_and_propagates_failure(self):
+        import json
+        import os
+        import subprocess
+        import sys
+        step = _console_lint_step(self.workflow())
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "frontend").mkdir()
+            (root / "scripts").mkdir()
+            bindir = root / "bin"
+            bindir.mkdir()
+            log = root / "calls.jsonl"
+            npm = bindir / "npm"
+            npm.write_text(f"#!{sys.executable}\n" + """import json, os, pathlib, sys
+args = sys.argv[1:]
+phase = {('ci', '--ignore-scripts'): 'install', ('run', 'lint'): 'lint', ('run', 'build'): 'build'}.get(tuple(args))
+if phase is None:
+    raise SystemExit(91)
+with open(os.environ['CALL_LOG'], 'a') as out:
+    out.write(json.dumps({'phase': phase, 'cwd': str(pathlib.Path.cwd()), 'argv': args}) + '\\n')
+raise SystemExit(int(os.environ['FAIL_EXIT']) if phase == os.environ['FAIL_PHASE'] else 0)
+""")
+            npm.chmod(0o755)
+            audit = root / "scripts" / "npm-audit-gate.py"
+            audit.write_text("""import json, os, pathlib, sys
+with open(os.environ['CALL_LOG'], 'a') as out:
+    out.write(json.dumps({'phase': 'audit', 'cwd': str(pathlib.Path.cwd()), 'argv': sys.argv[1:]}) + '\\n')
+""")
+            env = {**os.environ, "PATH": str(bindir) + os.pathsep + os.environ["PATH"],
+                   "CALL_LOG": str(log), "GITHUB_WORKSPACE": str(root), "YUE_CI_PYTHON": sys.executable}
+            for failure, code, expected in (("", 0, ["install", "lint", "build", "audit"]),
+                                            ("install", 23, ["install"]),
+                                            ("lint", 37, ["install", "lint"])):
+                with self.subTest(failure=failure):
+                    log.write_text("")
+                    result = subprocess.run(["bash", "-c", step["run"]],
+                                            cwd=root / step["working-directory"],
+                                            env={**env, "FAIL_PHASE": failure, "FAIL_EXIT": str(code)},
+                                            capture_output=True, text=True, timeout=10)
+                    calls = [json.loads(line) for line in log.read_text().splitlines()]
+                    self.assertEqual(result.returncode, code, result.stderr)
+                    self.assertEqual([row["phase"] for row in calls], expected)
+                    self.assertTrue(all(Path(row["cwd"]) == (root / "frontend").resolve() for row in calls))
+                    if not failure:
+                        self.assertEqual(calls[-1]["argv"], [str(root / "frontend")])
 
 
 class YueOpsNodeTestPolicy(unittest.TestCase):
