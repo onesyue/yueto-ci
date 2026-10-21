@@ -45,6 +45,11 @@ security lock update appends its own transition after the original frontend and
 Python transitions, binding their history, the previous lock blob and its regular
 file mode. Both source admission and sealed-envelope validation consume that
 transition; mixed dependency generations and unrelated changes still fail.
+The MiniApp security lock successor adds one complete map after those four
+historical maps. Its separate transition binds all three earlier records, the
+frontend security source as its exact parent, and only the regular MiniApp lock
+blob. Missing predecessor records, mixed Python/frontend/MiniApp generations,
+changed shared inputs and resealed inconsistent envelopes are rejected.
 The release coordinator verifies the actual signed source, independent review and
 freeze artifacts before recording their identities. Hash syntax alone does not
 authenticate those artifacts. Historical skip/collection evidence stays dated;

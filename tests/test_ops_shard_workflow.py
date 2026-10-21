@@ -252,6 +252,92 @@ class OpsShardWorkflow(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "shared collection/dependency inputs changed"):
             self.call(self.consumer.envelope, wrong)
 
+    def test_miniapp_successor_reaches_expand_cli_reference_and_resealed_refusals(self):
+        miniapp_path = "telegram-bot/yue/miniapp/package-lock.json"
+        lock = self.source / miniapp_path
+        lock.parent.mkdir(parents=True)
+        lock.write_text('{"controlled_miniapp": "before"}\n')
+        self.fixture.git(self.source, "add", miniapp_path)
+        self.fixture.commit(self.source)
+        # Preserve and execute the preceding transition's actual CLI/reference
+        # controls before adding the separately admitted MiniApp-only commit.
+        self.test_security_successor_reaches_expand_cli_and_reference_envelope()
+        (self.base / "runner-reference").rename(self.base / "runner-reference-frontend")
+        prior_reference = self.artifacts / (self.prefix + "reference")
+        prior_reference.rename(self.artifacts / (self.prefix + "frontend-reference"))
+        policy = self.policy / "ops-pytest-skip-baseline.json"
+        baseline = json.loads(policy.read_text())
+        security = baseline["reviewed_frontend_security_transition"]
+        before = self.consumer.tree_inputs(self.source, security["source_after"])
+        lock.write_text('{"controlled_miniapp": "after"}\n')
+        self.fixture.git(self.source, "add", miniapp_path)
+        self.fixture.commit(self.source)
+        after_source = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
+        after = self.consumer.tree_inputs(self.source, after_source)
+        for row in self.targets["matrix"] + self.targets["validation_matrix"]:
+            row["ref"] = after_source
+        targets = self.base / "miniapp-targets.json"
+        targets.write_text(json.dumps(self.targets))
+        command = [sys.executable, str(self.policy / "scripts/pytest-shards.py"), "expand",
+                   "--targets", str(targets), "--source", str(self.source),
+                   "--board", self.board_sha, "--runner", "ubuntu-24.04",
+                   "--capacity", "4", "--shards", "4"]
+        rejected = subprocess.run(command, env=self.env, capture_output=True, text=True)
+        self.assertEqual(rejected.returncode, 1, rejected.stdout + rejected.stderr)
+        self.assertIn("shared collection/dependency inputs changed", rejected.stderr)
+        key = "reviewed_miniapp_security_transition"
+        baseline[key] = {
+            "schema": 1, "original_baseline_sha256": security["original_baseline_sha256"],
+            "prior_transition_chain_sha256": self.consumer.sha(self.consumer.encoded({
+                name: baseline[name] for name in ("reviewed_shared_input_transition",
+                    "reviewed_python_input_transition", "reviewed_frontend_security_transition")})),
+            "source_before": security["source_after"], "source_after": after_source,
+            "independent_review_sha256": "1" * 64, "source_freeze_sha256": "2" * 64,
+            "path": miniapp_path, "before_blob": before[miniapp_path][1],
+            "after_blob": after[miniapp_path][1], "mode": "100644",
+        }
+        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
+        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json")
+        self.fixture.commit(self.policy)
+        self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
+        admitted = subprocess.run(command, env=self.env, capture_output=True, text=True)
+        self.assertEqual(admitted.returncode, 0, admitted.stdout + admitted.stderr)
+        self.admission = json.loads(admitted.stdout)
+        self.assertEqual(self.admission["common_inputs"][miniapp_path], after[miniapp_path][1])
+        ran = self.run_role("reference")
+        self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
+        self.call(self.consumer.envelope, self.admission)
+        frontend = baseline["reviewed_shared_input_transition"]
+        for path, blob in (("uv.lock", baseline["common_inputs"]["uv.lock"]),
+                           ("frontend/package-lock.json", frontend["after_blob"]),
+                           (miniapp_path, "0" * 40)):
+            wrong = copy.deepcopy(self.admission)
+            wrong["common_inputs"][path] = blob
+            del wrong["admission_sha256"]
+            self.consumer.seal(wrong, "admission_sha256")
+            with self.subTest(resealed_path=path), self.assertRaisesRegex(ValueError, "inputs changed"):
+                self.call(self.consumer.envelope, wrong)
+        for mutation in ("omit", "null", "changed_predecessor_review", "changed_parent"):
+            wrong_baseline = copy.deepcopy(baseline)
+            if mutation == "omit":
+                del wrong_baseline[key]
+            elif mutation == "null":
+                wrong_baseline[key] = None
+            elif mutation == "changed_predecessor_review":
+                wrong_baseline["reviewed_frontend_security_transition"]["independent_review_sha256"] = "0" * 64
+            else:
+                wrong_baseline[key]["source_before"] = "0" * 40
+            policy.write_text(json.dumps(wrong_baseline, indent=2, ensure_ascii=False) + "\n")
+            wrong = copy.deepcopy(self.admission)
+            wrong["skip_baseline_sha256"] = self.consumer.sha(policy.read_bytes())
+            del wrong["admission_sha256"]
+            self.consumer.seal(wrong, "admission_sha256")
+            with self.subTest(resealed_policy=mutation), self.assertRaises(ValueError):
+                self.call(self.consumer.envelope, wrong)
+            rejected = subprocess.run(command, env=self.env, capture_output=True, text=True)
+            self.assertEqual(rejected.returncode, 1, rejected.stdout + rejected.stderr)
+        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
+
     def test_reviewed_lock_does_not_waive_actual_new_skip(self):
         self.reviewed_lock_transition()
         with self.assertRaisesRegex(ValueError, "new or changed case skip"):
@@ -822,6 +908,14 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
     def test_exact_original_baseline_and_historical_collection_are_preserved(self):
         import hashlib
         original = dict(self.baseline)
+        miniapp_record = original.pop("reviewed_miniapp_security_transition")
+        prior_bytes = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+        self.assertEqual(hashlib.sha256(prior_bytes).hexdigest(),
+                         "c88859a02e303a79a784e4f51db1faa7ffddf1adb26ec45d7c42f90e7aa36edd")
+        self.assertEqual(miniapp_record["prior_transition_chain_sha256"],
+                         self.consumer.sha(self.consumer.encoded({name: original[name] for name in (
+                             "reviewed_shared_input_transition", "reviewed_python_input_transition",
+                             "reviewed_frontend_security_transition")})))
         security_record = original.pop("reviewed_frontend_security_transition")
         python_record = original.pop("reviewed_python_input_transition")
         frontend_bytes = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
@@ -1050,7 +1144,108 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
         *historical, common = self.security_maps()
         files = {p: (frontend["common_input_modes"][p], b) for p, b in common.items()}
         omitted = dict(self.baseline)
+        # Exercise the exact historical policy without either security successor.
+        omitted.pop("reviewed_miniapp_security_transition")
         del omitted["reviewed_frontend_security_transition"]
+        for old in historical:
+            self.consumer.admit_shared_inputs(omitted, old, files)
+        with self.assertRaisesRegex(ValueError, "inputs changed"):
+            self.consumer.admit_shared_inputs(omitted, common, files)
+        for path in common:
+            with self.subTest(blob=path), self.assertRaises(ValueError):
+                self.consumer.admit_shared_inputs(self.baseline, common | {path: "0" * 40}, files)
+            for mode in ("100755", "120000"):
+                with self.subTest(path=path, mode=mode), self.assertRaises(ValueError):
+                    self.consumer.admit_shared_inputs(
+                        self.baseline, common, files | {path: (mode, files[path][1])})
+            with self.subTest(missing=path), self.assertRaises(ValueError):
+                self.consumer.admit_shared_inputs(self.baseline, {p: b for p, b in common.items()
+                                                                  if p != path}, files)
+        with self.assertRaises(ValueError):
+            self.consumer.admit_shared_inputs(self.baseline, common | {"new.lock": "0" * 40}, files)
+
+    def miniapp_maps(self):
+        historical = self.security_maps()
+        record = self.baseline["reviewed_miniapp_security_transition"]
+        return (*historical, historical[-1] | {record["path"]: record["after_blob"]})
+
+    def test_miniapp_transition_all_48_complete_input_maps(self):
+        frontend = self.baseline["reviewed_shared_input_transition"]
+        python_record = self.baseline["reviewed_python_input_transition"]
+        security = self.baseline["reviewed_frontend_security_transition"]
+        miniapp = self.baseline["reviewed_miniapp_security_transition"]
+        maps = self.miniapp_maps()
+        self.assertEqual(miniapp["source_before"], security["source_after"])
+        self.assertEqual(miniapp["before_blob"], maps[0][miniapp["path"]])
+        accepted, attempted = [], 0
+        for lock, bits, mini in itertools.product(range(3), itertools.product((0, 1), repeat=3), (0, 1)):
+            common = dict(maps[0])
+            common[security["path"]] = (frontend["before_blob"], frontend["after_blob"],
+                                         security["after_blob"])[lock]
+            common[miniapp["path"]] = (miniapp["before_blob"], miniapp["after_blob"])[mini]
+            for bit, (path, change) in zip(bits, python_record["changes"].items(), strict=True):
+                if bit:
+                    common[path] = change["after_blob"]
+            files = {p: (frontend["common_input_modes"][p], b) for p, b in common.items()}
+            with self.subTest(lock=lock, python=bits, miniapp=mini):
+                attempted += 1
+                if common in maps:
+                    self.consumer.admit_shared_inputs(self.baseline, common, files)
+                    accepted.append((lock, bits, mini))
+                else:
+                    with self.assertRaisesRegex(ValueError, "inputs changed"):
+                        self.consumer.admit_shared_inputs(self.baseline, common, files)
+        self.assertEqual((attempted, len(accepted)), (48, 5))
+
+    def test_miniapp_transition_rejects_record_history_and_predecessor_drift(self):
+        key = "reviewed_miniapp_security_transition"
+        record = self.baseline[key]
+        mutations = []
+        for field in record:
+            wrong = copy.deepcopy(self.baseline)
+            del wrong[key][field]
+            mutations.append(("missing-" + field, wrong))
+        for field, value in (("schema", True), ("schema", 2), ("extra", True),
+                             ("original_baseline_sha256", "0" * 64),
+                             ("prior_transition_chain_sha256", "0" * 64),
+                             ("source_before", "0" * 40), ("source_after", record["source_before"]),
+                             ("source_after", "UNKNOWN"), ("independent_review_sha256", None),
+                             ("source_freeze_sha256", "UNKNOWN"),
+                             ("path", "frontend/package-lock.json"), ("mode", "100755"),
+                             ("before_blob", "0" * 40), ("after_blob", record["before_blob"]),
+                             ("after_blob", "UNKNOWN")):
+            wrong = copy.deepcopy(self.baseline)
+            wrong[key][field] = value
+            mutations.append((field + str(value), wrong))
+        for predecessor in ("reviewed_shared_input_transition", "reviewed_python_input_transition",
+                            "reviewed_frontend_security_transition"):
+            for mutation in ("missing", "null", "changed-review", "changed-freeze"):
+                wrong = copy.deepcopy(self.baseline)
+                if mutation == "missing":
+                    del wrong[predecessor]
+                elif mutation == "null":
+                    wrong[predecessor] = None
+                else:
+                    field = "independent_review_sha256" if mutation == "changed-review" else "source_freeze_sha256"
+                    wrong[predecessor][field] = "0" * 64
+                mutations.append((mutation + predecessor, wrong))
+        wrong = copy.deepcopy(self.baseline)
+        wrong["source_revision"] = "0" * 40
+        mutations.append(("changed-original-history", wrong))
+        for value in (None, [], False):
+            mutations.append(("invalid-record-" + str(value), self.baseline | {key: value}))
+        for label, wrong in mutations:
+            for index, common in enumerate(self.miniapp_maps()):
+                with self.subTest(mutation=label, map=index), self.assertRaises(ValueError):
+                    self.consumer.admit_shared_inputs(wrong, common)
+
+    def test_miniapp_transition_preserves_all_inputs_modes_and_omission_refusal(self):
+        frontend = self.baseline["reviewed_shared_input_transition"]
+        *historical, common = self.miniapp_maps()
+        self.assertEqual(len(common), 55)
+        files = {p: (frontend["common_input_modes"][p], b) for p, b in common.items()}
+        omitted = dict(self.baseline)
+        del omitted["reviewed_miniapp_security_transition"]
         for old in historical:
             self.consumer.admit_shared_inputs(omitted, old, files)
         with self.assertRaisesRegex(ValueError, "inputs changed"):

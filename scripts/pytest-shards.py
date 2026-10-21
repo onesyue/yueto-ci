@@ -240,6 +240,7 @@ def admit_shared_inputs(baseline, common, files=None):
     Exact effective inputs remain sealed into this run's admission envelope.
     """
     original = dict(baseline)
+    miniapp_record = original.pop("reviewed_miniapp_security_transition", None)
     security_record = original.pop("reviewed_frontend_security_transition", None)
     python_record = original.pop("reviewed_python_input_transition", None)
     record = original.pop("reviewed_shared_input_transition", None)
@@ -253,6 +254,10 @@ def admit_shared_inputs(baseline, common, files=None):
             or isinstance(security_record, dict), "invalid frontend security transition")
     require(security_record is None or python_record is not None and record is not None,
             "frontend security transition requires both predecessors")
+    require("reviewed_miniapp_security_transition" not in baseline
+            or isinstance(miniapp_record, dict), "invalid MiniApp security transition")
+    require(miniapp_record is None or security_record is not None,
+            "MiniApp security transition requires its frontend security predecessor")
     if record is not None:
         require(isinstance(record, dict) and set(record) == {
             "schema", "original_baseline_sha256", "source_before", "source_after",
@@ -343,7 +348,37 @@ def admit_shared_inputs(baseline, common, files=None):
                         and security_record["before_blob"] == converted.get(path)
                         and security_record["mode"] == modes.get(path) == "100644",
                         "unreviewed frontend security input blob or mode")
-                accepted.append(converted | {path: security_record["after_blob"]})
+                secured = converted | {path: security_record["after_blob"]}
+                accepted.append(secured)
+                if miniapp_record is not None:
+                    require(set(miniapp_record) == {
+                        "schema", "original_baseline_sha256", "prior_transition_chain_sha256",
+                        "source_before", "source_after", "independent_review_sha256",
+                        "source_freeze_sha256", "path", "before_blob", "after_blob", "mode",
+                    } and type(miniapp_record["schema"]) is int
+                            and miniapp_record["schema"] == 1,
+                            "invalid MiniApp security transition")
+                    prior_chain["reviewed_frontend_security_transition"] = security_record
+                    require(miniapp_record["original_baseline_sha256"] == sha(restored)
+                            and miniapp_record["prior_transition_chain_sha256"]
+                            == sha(encoded(prior_chain)),
+                            "MiniApp security history or predecessor changed")
+                    require(all(isinstance(miniapp_record[k], str)
+                                and SHA.fullmatch(miniapp_record[k]) for k in
+                                ("source_before", "source_after", "before_blob", "after_blob"))
+                            and miniapp_record["source_before"] == security_record["source_after"]
+                            and miniapp_record["source_before"] != miniapp_record["source_after"]
+                            and miniapp_record["before_blob"] != miniapp_record["after_blob"]
+                            and all(isinstance(miniapp_record[k], str)
+                                    and re.fullmatch(r"[0-9a-f]{64}", miniapp_record[k]) for k in
+                                    ("independent_review_sha256", "source_freeze_sha256")),
+                            "missing exact MiniApp security review identity")
+                    path = miniapp_record["path"]
+                    require(path == "telegram-bot/yue/miniapp/package-lock.json"
+                            and miniapp_record["before_blob"] == secured.get(path)
+                            and miniapp_record["mode"] == modes.get(path) == "100644",
+                            "unreviewed MiniApp security input blob or mode")
+                    accepted.append(secured | {path: miniapp_record["after_blob"]})
     require(common in accepted, "shared collection/dependency inputs changed")
 
 

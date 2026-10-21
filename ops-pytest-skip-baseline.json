@@ -5609,5 +5609,18 @@
     "before_blob": "5383263b00bee86a0a1ac093ab2360e9ea828cde",
     "after_blob": "394ffd6bac0bdd00ddc5e6d0045344d1543adf85",
     "mode": "100644"
+  },
+  "reviewed_miniapp_security_transition": {
+    "schema": 1,
+    "original_baseline_sha256": "49d7462f8d59b9a9a035d36fc113647f82a01c71079886c053fc637da2092e9f",
+    "prior_transition_chain_sha256": "64660422e1f8d69bf9de94879cf0e04faae53a15c6a9511ac6c57cb177fef321",
+    "source_before": "0eae63e400813a392f0c68c8aea5aee5125e165a",
+    "source_after": "7980928e87c894e273c31d3df791ce539dd38212",
+    "independent_review_sha256": "c3e25e9f1d5ef2888db3a4fe45f3419f9575191f931ece0424398f9aa802078d",
+    "source_freeze_sha256": "d1e3fc3ff23a5300e3e4077ceabe676ade4ce8c2329cfec65bebe217323b5124",
+    "path": "telegram-bot/yue/miniapp/package-lock.json",
+    "before_blob": "969def46e1d6ea13c73ad68d477f43e668bf386e",
+    "after_blob": "b0ab7d24f6e8cd595b6d2f013d7a5b2da5debe5e",
+    "mode": "100644"
   }
 }
