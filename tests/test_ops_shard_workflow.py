@@ -6,6 +6,7 @@ import importlib.util
 import itertools
 import json
 import os
+import py_compile
 import shutil
 import subprocess
 import sys
@@ -710,12 +711,31 @@ class OpsShardWorkflow(unittest.TestCase):
         # Bind the actual copied CLI to this fixture's exact reviewed record.
         # Production has no environment override or mutable admission allowlist.
         consumer = self.policy / "scripts/pytest-shards.py"
-        consumer.write_text(consumer.read_text().replace(
-            self.consumer.SSH_SKIP_TRANSITION_SHA256,
-            self.consumer.sha(self.consumer.encoded(record)), 1))
+        original_pin = self.consumer.SSH_SKIP_TRANSITION_SHA256
+        fixture_pin = self.consumer.sha(self.consumer.encoded(record))
+        original_stat = consumer.stat()
+        original_bytes = consumer.read_bytes()
+        py_compile.compile(str(consumer), doraise=True,
+                           invalidation_mode=py_compile.PycInvalidationMode.TIMESTAMP)
+        current_bytes = original_bytes.replace(original_pin.encode(), fixture_pin.encode(), 1)
+        self.assertNotEqual(original_pin, fixture_pin)
+        self.assertEqual(len(current_bytes), len(original_bytes))
+        consumer.write_bytes(current_bytes)
+        os.utime(consumer, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+        self.assertEqual((consumer.stat().st_mtime_ns, consumer.stat().st_size),
+                         (original_stat.st_mtime_ns, original_stat.st_size))
+        # Deliberately reproduce the public failure: a valid timestamp/size pyc
+        # still contains the old pin, even though the owned source bytes changed.
+        stale_spec = importlib.util.spec_from_file_location("stale_ssh_skip_consumer", consumer)
+        stale = importlib.util.module_from_spec(stale_spec)
+        stale_spec.loader.exec_module(stale)
+        self.assertEqual(stale.SSH_SKIP_TRANSITION_SHA256, original_pin)
         spec = importlib.util.spec_from_file_location("actual_ssh_skip_consumer", consumer)
         self.consumer = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(self.consumer)
+        # Preserve module metadata while executing this mutable fixture's exact
+        # written source, which is also the source used by the real CLI below.
+        exec(compile(consumer.read_bytes(), str(consumer), "exec"), self.consumer.__dict__)
+        self.assertEqual(self.consumer.SSH_SKIP_TRANSITION_SHA256, fixture_pin)
         self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json", "scripts/pytest-shards.py")
         self.fixture.commit(self.policy)
         self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
