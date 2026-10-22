@@ -421,7 +421,15 @@ class ShardPrimitives(unittest.TestCase):
         self.assertEqual(json.loads(result.stderr)["status"], "REJECTED")
         workflow = (ROOT / ".github/workflows/build.yml").read_text()
         self.assertIn("pytest-shards.py join", workflow)
-        self.assertIn("needs: [plan, validate, validation-evidence]", workflow)
+        build_job = workflow.split("\n  build:\n", 1)[1].split("\n  publish:\n", 1)[0]
+        publish = workflow.split("\n  publish:\n", 1)[1]
+        self.assertTrue(build_job.startswith("    needs: [plan]\n"))
+        self.assertNotIn("Authorize and promote verified default-branch digest", build_job)
+        self.assertNotIn("built-${SOURCE_SHA}", build_job)
+        self.assertIn("needs: [build, plan, validate, validation-evidence]", publish)
+        self.assertIn("Authorize and promote verified default-branch digest", publish)
+        self.assertIn("built-${SOURCE_SHA}", publish)
+        self.assertEqual(workflow.count("Authorize and promote verified default-branch digest"), 1)
 
 
 if __name__ == "__main__":

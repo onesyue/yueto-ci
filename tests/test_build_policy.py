@@ -649,6 +649,7 @@ class VerifiedBuildxTest(unittest.TestCase):
                     )
         self.assertEqual(set(consumers), {
             ("build.yml", "build:"),
+            ("build.yml", "publish:"),
             ("poll-sources.yml", "poll:"),
             ("image-rescan.yml", "scan:"),
         })
@@ -943,7 +944,8 @@ class BuildPolicyTest(unittest.TestCase):
             "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
             "'[\"ubuntu-24.04\"]')"
         )
-        self.assertEqual(self.workflow.count(selector), 4)
+        # plan, validate, validation-evidence, candidate build, and publish.
+        self.assertEqual(self.workflow.count(selector), 5)
         self.assertIn(
             "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,

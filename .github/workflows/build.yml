@@ -1565,7 +1565,9 @@ jobs:
             --validation-result "$VALIDATION_RESULT"
 
   build:
-    needs: [plan, validate, validation-evidence]
+    needs: [plan]
+    # Candidate preparation overlaps validation. built-<sha> and :latest
+    # move only in publish, after validation-evidence.
     # Job-level `if` is evaluated before strategy expansion.  A source-only
     # target therefore skips this job without asking Actions to expand or run
     # an empty Docker matrix.
@@ -1584,7 +1586,7 @@ jobs:
     concurrency:
       group: verified-image-${{ matrix.service }}
       cancel-in-progress: false
-    name: ${{ matrix.service }}
+    name: candidate-${{ matrix.service }}
     steps:
       # 凭据切换开关（README「CI 凭据迁移」）：仓库变量 YUETO_CI_APP_CLIENT_ID 为空时
       # 本步跳过、下面沿用旧 YUETO_CI_PAT；设置后改用 GitHub App 按需签发的一小时
@@ -2047,6 +2049,147 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
           create-storage-record: false
+
+  publish:
+    needs: [build, plan, validate, validation-evidence]
+    # Retag and :latest wait until the candidate exists and validation-evidence
+    # succeeded. A failed or skipped candidate skips this job.
+    if: needs.plan.outputs.has_builds == 'true'
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    concurrency:
+      group: verified-image-${{ matrix.service }}
+      cancel-in-progress: false
+    name: ${{ matrix.service }}
+    steps:
+      # 凭据切换开关（README「CI 凭据迁移」）：仓库变量 YUETO_CI_APP_CLIENT_ID 为空时
+      # 本步跳过、下面沿用旧 YUETO_CI_PAT；设置后改用 GitHub App 按需签发的一小时
+      # 只读 token（contents:read，仅限列出的源码仓）。签发失败即整个 job 失败，
+      # 不会静默回退到 PAT——回退只由「变量是否设置」这一处显式决定。
+      - name: Mint read-only source token (GitHub App)
+        id: source_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          permission-contents: read
+      - name: Checkout source repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Vulnerability-gate policy (reviewed .trivyignore) lives in this repo,
+      # not in the per-service source checkout that fills the workspace root.
+      - name: Checkout build policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueto-ci
+          ref: ${{ github.sha }}
+          path: .ci-policy
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install verified Docker Buildx
+        run: bash .ci-policy/scripts/install-verified-buildx.sh
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        with:
+          # Reuse the fixed-version, SHA-verified plugin installed above.
+          # An explicit action version would download/execute a second copy.
+          # The docker-container driver defaults to the mutable
+          # moby/buildkit:buildx-stable-1 tag. The builder has the Docker
+          # socket's authority, so bind it to an immutable OCI index too.
+          driver-opts: image=moby/buildkit:buildx-stable-1@sha256:2f5adac4ecd194d9f8c10b7b5d7bceb5186853db1b26e5abd3a657af0b7e26ec
+
+      - name: Login to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          # Central builder publishes packages owned by several private source
+          # repositories. GitHub Apps cannot authenticate to GHCR, so the
+          # replacement for the classic PAT here is this job's own GITHUB_TOKEN
+          # (packages: write above). It works only after every package listed
+          # in services.json grants onesyue/yueto-ci the Write role under
+          # "Manage Actions access"; the repository variable
+          # YUETO_CI_GHCR_VIA_GITHUB_TOKEN=true is the cut-over switch and
+          # leaving it unset keeps the legacy PAT path unchanged.
+          username: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
+          password: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+
+      - name: Preflight build and promotion dependencies
+        run: |
+          set -euo pipefail
+          # sigstore/cosign-installer expands its install path with envsubst;
+          # Debian provides it in gettext-base rather than the base image.
+          for tool in bash curl docker envsubst git jq; do
+            command -v "$tool" >/dev/null 2>&1 || {
+              echo "::error::runner is missing required build tool: $tool"
+              exit 1
+            }
+          done
+          docker info >/dev/null
+          docker buildx version >/dev/null
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          # v3 writes Sigstore bundles as OCI 1.1 referrers.  This keeps our
+          # CycloneDX attestations discoverable beside GitHub provenance.
+          #
+          # >= v3.1.3 (2026-08-06) for GHSA-fx35-mq7g-6g98 (High, 7.4): a legacy
+          # JSON bundle carrying a bare public key in its `cert` field made
+          # `verify-blob*` skip CheckCertificatePolicy outright — it printed
+          # "Verified OK" while ignoring --certificate-identity entirely. Image
+          # `verify` / `verify-attestation` (all this pipeline and
+          # yueops/scripts/verify-image-signature.sh use) are unaffected, so for
+          # us this is defence in depth, not an active hole. Bumped anyway: the
+          # whole supply chain is anchored on cosign's identity checks actually
+          # being performed, and a version whose verifier can be talked out of
+          # checking identity has no business signing our production digests.
+          cosign-release: v3.1.3
+
+      - name: Resolve source identity
+        id: meta
+        run: |
+          set -euo pipefail
+          SOURCE_SHA=$(git rev-parse HEAD)
+          IMG="ghcr.io/onesyue/${{ matrix.service }}"
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          {
+            echo "image=${IMG}"
+            echo "source_sha=${SOURCE_SHA}"
+            echo "candidate_tag=${IMG}:candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve pushed candidate digest
+        id: build
+        env:
+          CANDIDATE_TAG: ${{ steps.meta.outputs.candidate_tag }}
+        run: |
+          set -euo pipefail
+          inspect=$(docker buildx imagetools inspect "$CANDIDATE_TAG")
+          digest=$(printf '%s\n' "$inspect" | awk '/^Digest: /{print $2; exit}')
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::candidate tag did not return a sha256 digest"
+            printf '%s\n' "$inspect" >&2
+            exit 1
+          }
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
       # `built-<full sha>` — the answer to "does an image already exist for
       # this commit?", stored where the truth is: on the artifact itself.

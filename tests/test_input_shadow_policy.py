@@ -313,7 +313,13 @@ class RecipeTest(unittest.TestCase):
     def test_build_job_slice_is_stable_when_build_is_last_or_followed(self) -> None:
         entry = self.services[0]
         base = FP.recipe(entry, self.text)["fingerprint"]
-        self.assertTrue(self.text.rstrip().endswith(FP.BUILD_JOB.search(self.text).group(0).rstrip()))
+        build_slice = FP.BUILD_JOB.search(self.text).group(0)
+        self.assertNotIn("\n  publish:", build_slice)
+        self.assertIn("\n  publish:\n", self.text)
+        self.assertEqual(
+            FP.recipe(entry, self.text.split("\n  publish:\n", 1)[0])["fingerprint"],
+            base,
+        )
         followed = self.text.rstrip("\n") + "\n\n  later-job:\n    runs-on: x\n"
         self.assertEqual(FP.recipe(entry, followed)["fingerprint"], base)
 

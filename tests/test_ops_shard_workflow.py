@@ -920,7 +920,14 @@ class OpsShardWorkflow(unittest.TestCase):
 
     def test_build_and_each_original_required_gate_keep_actual_role_owner(self):
         text = (ROOT / ".github/workflows/build.yml").read_text()
-        self.assertIn("needs: [plan, validate, validation-evidence]", text)
+        build_job = text.split("\n  build:\n", 1)[1].split("\n  publish:\n", 1)[0]
+        publish = text.split("\n  publish:\n", 1)[1]
+        self.assertTrue(build_job.startswith("    needs: [plan]\n"))
+        self.assertNotIn("Authorize and promote verified default-branch digest", build_job)
+        self.assertNotIn("built-${SOURCE_SHA}", build_job)
+        self.assertIn("needs: [build, plan, validate, validation-evidence]", publish)
+        self.assertEqual(text.count("- name: Authorize and promote verified default-branch digest"), 1)
+        self.assertEqual(text.count("- name: Mark this source revision as built"), 1)
         build = text.split("  build:\n", 1)[1]
         self.assertIn("if: needs.plan.outputs.has_builds == 'true'", build)
         self.assertNotIn("if: always()", build.split("    steps:", 1)[0])
