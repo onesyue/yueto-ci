@@ -821,7 +821,7 @@ class BuildPolicyTest(unittest.TestCase):
         ]
         expected = {
             "name: Set up YueBoard Go": ("yueboard", "1.27.3"),
-            "name: Set up Go": ("yue-node", "1.27.2"),
+            "name: Set up Go": ("yue-node", "1.27.3"),
         }
         self.assertCountEqual([step.splitlines()[0] for step in setup], expected)
         for step in setup:
@@ -854,7 +854,7 @@ class BuildPolicyTest(unittest.TestCase):
         mutations = {
             "swapped-versions": self.workflow.replace(
                 board, board.replace("'1.27.3'", "'1.27.2'")
-            ).replace(node, node.replace("'1.27.2'", "'1.27.3'")),
+            ).replace(node, node.replace("'1.27.3'", "'1.27.2'")),
             "swapped-services": self.workflow.replace(
                 board, board.replace("== 'yueboard'", "== 'yue-node'")
             ).replace(node, node.replace("== 'yue-node'", "== 'yueboard'")),
