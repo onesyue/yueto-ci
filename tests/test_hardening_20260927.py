@@ -207,6 +207,30 @@ class PlanPromotionGateTest(unittest.TestCase):
         self.assertIn("validation_matrix=", result.outputs)
         self.assertEqual({entry["ref"] for entry in result.target_plan["validation_matrix"]}, {sha})
 
+    def test_node_validation_only_reaches_real_plan_with_both_profiles(self) -> None:
+        sha = "b" * 40
+        result = self.run_plan(SERVICE="yue-node-validation", REF_OVERRIDE=sha)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.target_plan["matrix"], [])
+        self.assertFalse(result.target_plan["has_builds"])
+        self.assertEqual(
+            result.target_plan["validation_matrix"],
+            [{"repo": "onesyue/yue-node", "ref": sha,
+              "validation": "yue-node", "node_profile": profile}
+             for profile in ("hy2", "vless")],
+        )
+        self.assertIn("has_builds=false", result.outputs)
+        self.assertIn("promote=false", result.outputs)
+
+    def test_node_validation_only_refuses_promotion_before_publishing_outputs(self) -> None:
+        result = self.run_plan(
+            SERVICE="yue-node-validation", REF_OVERRIDE="b" * 40, MANUAL_PROMOTE="true",
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("validation-only targets cannot be promoted", result.stderr)
+        self.assertEqual(result.outputs, "")
+        self.assertEqual(result.target_plan["matrix"], [])
+
     def test_real_plan_requires_authoritative_runner_temp(self) -> None:
         result = self.run_plan(RUNNER_TEMP="")
         self.assertNotEqual(result.returncode, 0)

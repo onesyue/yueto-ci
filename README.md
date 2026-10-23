@@ -59,8 +59,10 @@ an admitted input map does not reuse successful jobs from an earlier release.
 
 `services.json` lists image targets: yue-node, yueops-web, checkin-api, yue-bot and
 yueboard. `validation-targets.json` separately lists source-contract-only targets,
-currently YueLink. Keep these lists separate so the client cannot enter the Docker
-build matrix accidentally.
+currently YueLink and the explicit `yue-node-validation` target. Keep these lists
+separate: source-only targets never enter the Docker build matrix. The Node
+target runs the existing complete HY2 and VLESS validators without building or
+publishing an image; ordinary `service=yue-node` retains its image build.
 
 ## Triggers
 
@@ -107,6 +109,11 @@ gh workflow run build.yml -R onesyue/yueto-ci -f service=all \
 # Validate the exact remote YueLink source revision without building an image.
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yuelink -f ref=<40-hex-yuelink-sha>
+
+# Validate an exact Node test-only successor through both native profiles.
+# This target refuses promote=true and performs no registry writes.
+gh workflow run build.yml -R onesyue/yueto-ci \
+  -f service=yue-node-validation -f ref=<40-hex-yue-node-sha> -f promote=false
 
 # Promotion additionally requires explicit promote=true, default-branch ancestry,
 # image inputs identical to HEAD, no regression behind :latest, and YueBoard's

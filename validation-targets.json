@@ -5,5 +5,12 @@
     "repo": "onesyue/yuelink",
     "ref": "master",
     "validation": "yuelink"
+  },
+  {
+    "service": "yue-node-validation",
+    "group": "yue-node-validation",
+    "repo": "onesyue/yue-node",
+    "ref": "master",
+    "validation": "yue-node"
   }
 ]

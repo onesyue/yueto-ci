@@ -2336,7 +2336,7 @@ class BuildPolicyTest(unittest.TestCase):
 
     def test_yuelink_is_a_remote_validation_only_target(self) -> None:
         self.assertEqual(
-            self.validation_targets,
+            [target for target in self.validation_targets if target["service"] == "yuelink"],
             [
                 {
                     "service": "yuelink",
@@ -2410,6 +2410,47 @@ class BuildPolicyTest(unittest.TestCase):
             {entry["validation"] for entry in plan["validation_matrix"]},
             {"yue-node", "yueops", "yueboard", "yuelink"},
         )
+        node_entries = [entry for entry in plan["validation_matrix"]
+                        if entry["validation"] == "yue-node"]
+        self.assertEqual(len(node_entries), 2)
+        self.assertEqual({entry["node_profile"] for entry in node_entries}, {"hy2", "vless"})
+
+    def test_node_source_only_target_keeps_both_profiles_without_an_image(self) -> None:
+        exact_ref = "b" * 40
+        result = subprocess.run(
+            ["bash", str(TARGET_PLANNER), "yue-node-validation", exact_ref],
+            cwd=ROOT, check=True, capture_output=True, text=True,
+        )
+        plan = json.loads(result.stdout)
+        self.assertEqual(plan["matrix"], [])
+        self.assertFalse(plan["has_builds"])
+        self.assertEqual(
+            plan["validation_matrix"],
+            [{"repo": "onesyue/yue-node", "ref": exact_ref,
+              "validation": "yue-node", "node_profile": profile}
+             for profile in ("hy2", "vless")],
+        )
+        self.assertNotIn("yue-node-validation", {entry["service"] for entry in self.services})
+        self.assertIn("-f service=yue-node-validation -f ref=<40-hex-yue-node-sha>", self.readme)
+
+    def test_removed_node_validation_registration_refuses_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "scripts").mkdir()
+            planner = root / "scripts" / TARGET_PLANNER.name
+            shutil.copyfile(TARGET_PLANNER, planner)
+            shutil.copyfile(SERVICES, root / SERVICES.name)
+            (root / VALIDATION_TARGETS.name).write_text(json.dumps(
+                [target for target in self.validation_targets
+                 if target["service"] != "yue-node-validation"]
+            ))
+            result = subprocess.run(
+                ["bash", str(planner), "yue-node-validation", "b" * 40],
+                cwd=root, check=False, capture_output=True, text=True,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("unknown build service or validation target", result.stderr)
 
     def test_node_profiles_both_gate_the_single_release_image(self) -> None:
         result = subprocess.run(
@@ -2458,7 +2499,13 @@ class BuildPolicyTest(unittest.TestCase):
             self.assertEqual(target["ref"], "master")
             self.assertNotIn(target["service"], names)
             names.add(target["service"])
-        self.assertEqual(names, {"yuelink"})
+        self.assertEqual(names, {"yuelink", "yue-node-validation"})
+        self.assertEqual(
+            [target for target in self.validation_targets
+             if target["service"] == "yue-node-validation"],
+            [{"service": "yue-node-validation", "group": "yue-node-validation",
+              "repo": "onesyue/yue-node", "ref": "master", "validation": "yue-node"}],
+        )
 
     def test_native_validator_rejects_stale_pinned_yueboard_floor(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
