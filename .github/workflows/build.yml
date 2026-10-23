@@ -690,29 +690,55 @@ jobs:
           set -euo pipefail
           pg_bin=/usr/lib/postgresql/18/bin
           if [ ! -x "$pg_bin/postgres" ]; then
-            elevate=()
+            elevate=(env)
             if [ "$(id -u)" -ne 0 ]; then
               elevate=(sudo -n)
             fi
-            "${elevate[@]}" apt-get update
-            "${elevate[@]}" apt-get install -y --no-install-recommends ca-certificates curl gnupg
             . /etc/os-release
-            [[ "$VERSION_CODENAME" =~ ^[a-z]+$ ]]
-            pg_key="${RUNNER_TEMP:?}/pgdg.asc"
+            [ "${ID:-}" = ubuntu ]
+            [ "${VERSION_ID:-}" = 24.04 ]
+            [ "${VERSION_CODENAME:-}" = noble ]
+            [ "$(dpkg --print-architecture)" = amd64 ]
+            ubuntu_key=/usr/share/keyrings/ubuntu-archive-keyring.gpg
+            [ -s "$ubuntu_key" ]
+            [ -r "$ubuntu_key" ]
+            # Use only reviewed Ubuntu and PGDG sources, including fresh list
+            # state; unrelated runner repositories must not enter this install.
+            apt_dir=$(mktemp -d /tmp/yueops-pg18-apt.XXXXXX)
+            trap '"${elevate[@]}" rm -rf -- "$apt_dir"' EXIT
+            chmod 0755 "$apt_dir"
+            mkdir -m0755 "$apt_dir/sources.list.d" "$apt_dir/lists"
+            printf '%s\n' \
+              'Types: deb' 'URIs: https://archive.ubuntu.com/ubuntu' \
+              'Suites: noble noble-updates' 'Components: main universe' \
+              "Signed-By: $ubuntu_key" '' \
+              'Types: deb' 'URIs: https://security.ubuntu.com/ubuntu' \
+              'Suites: noble-security' 'Components: main universe' \
+              "Signed-By: $ubuntu_key" > "$apt_dir/ubuntu.sources"
+            apt=("${elevate[@]}" apt-get \
+              -o "Dir::Etc::sourcelist=$apt_dir/ubuntu.sources" \
+              -o "Dir::Etc::sourceparts=$apt_dir/sources.list.d" \
+              -o "Dir::State::lists=$apt_dir/lists" \
+              -o 'Dir::Cache::pkgcache=' -o 'Dir::Cache::srcpkgcache=' \
+              -o APT::Update::Error-Mode=any \
+              -o Acquire::AllowInsecureRepositories=false \
+              -o Acquire::AllowDowngradeToInsecureRepositories=false \
+              -o APT::Get::AllowUnauthenticated=false)
+            "${apt[@]}" update
+            "${apt[@]}" install -y --no-install-recommends ca-certificates curl gnupg
+            pg_key="$apt_dir/pgdg.asc"
             curl --fail --silent --show-error --location \
               --proto '=https' --proto-redir '=https' --tlsv1.2 \
               https://www.postgresql.org/media/keys/ACCC4CF8.asc --output "$pg_key"
             fingerprint=$(gpg --batch --show-keys --with-colons "$pg_key" | awk -F: '$1 == "fpr" && !seen {print $10; seen=1}')
             [ "$fingerprint" = B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 ]
-            "${elevate[@]}" install -d -m0755 /usr/share/postgresql-common/pgdg
-            "${elevate[@]}" install -m0644 "$pg_key" /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+            chmod 0644 "$pg_key"
             printf '%s\n' \
               'Types: deb' 'URIs: https://apt.postgresql.org/pub/repos/apt' \
               "Suites: ${VERSION_CODENAME}-pgdg" 'Components: main' \
-              'Signed-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc' \
-              | "${elevate[@]}" tee /etc/apt/sources.list.d/pgdg.sources >/dev/null
-            "${elevate[@]}" apt-get update
-            "${elevate[@]}" apt-get install -y --no-install-recommends postgresql-18 postgresql-client-18
+              "Signed-By: $pg_key" > "$apt_dir/sources.list.d/pgdg.sources"
+            "${apt[@]}" update
+            "${apt[@]}" install -y --no-install-recommends postgresql-18 postgresql-client-18
           fi
           for tool in postgres initdb pg_ctl psql; do
             [ -x "$pg_bin/$tool" ]

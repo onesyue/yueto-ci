@@ -40,6 +40,16 @@ The central policy self-tests use the five hash-locked wheels in
 file before the existing unittest discovery command when running policy tests
 outside the Ops dependency environment.
 
+The native Ops PostgreSQL 18 bootstrap admits Ubuntu 24.04 amd64 and uses
+temporary APT sources and index state containing only HTTPS Ubuntu archive and
+security repositories plus fingerprint-verified PGDG. Explicit Signed-By keys
+and fatal update errors preserve repository authentication while excluding
+unrelated runner repositories. Existing PG18 installations still pass all tool,
+major-version and non-root checks. `tests/test_native_postgres_toolchain.py`
+executes the workflow shell with controlled command fixtures, covering the
+unrelated Microsoft-source failure and fail-closed OS, trust, fetch, APT and
+toolchain cases; it does not substitute for native public release validation.
+
 Shared test/dependency inputs remain exact complete maps. A reviewed frontend
 security lock update appends its own transition after the original frontend and
 Python transitions, binding their history, the previous lock blob and its regular
