@@ -50,6 +50,16 @@ historical maps. Its separate transition binds all three earlier records, the
 frontend security source as its exact parent, and only the regular MiniApp lock
 blob. Missing predecessor records, mixed Python/frontend/MiniApp generations,
 changed shared inputs and resealed inconsistent envelopes are rejected.
+The W8.5 observability successor adds one seventh complete map after the
+reviewed W8.5 pyproject/uv.lock map. Its separate transition binds Ops
+1d8ae9784b709ebb220f064c52a33ef42d3a5145 to
+8e1a9c514ef61a423540ad7de4951867ab6b9b89, qualified policy
+bff07d53690d007dcc303c83e5319ff8820eb57b, and only the regular
+requirements-observability.txt blob. Record hashes name already accepted
+private review, freeze, and qualification evidence. This source-neutral map
+does not waive same-run native, reference, serial, or ordinary evidence and
+does not complete the corpus join or constitute native or public release
+acceptance.
 The release coordinator verifies the actual signed source, independent review and
 freeze artifacts before recording their identities. Hash syntax alone does not
 authenticate those artifacts. Historical skip/collection evidence stays dated;

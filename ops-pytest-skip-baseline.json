@@ -5667,5 +5667,22 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_w85_observability_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "4f7b178ae050b44118efb1e2be1c294f2ad26d5fa0300bd5121a33d9029d96db",
+    "source_before": "1d8ae9784b709ebb220f064c52a33ef42d3a5145",
+    "source_after": "8e1a9c514ef61a423540ad7de4951867ab6b9b89",
+    "qualified_policy_revision": "bff07d53690d007dcc303c83e5319ff8820eb57b",
+    "independent_review_sha256": "87971a39c8839bb2784fa3d603458f7f3dff5d3e274d656349b5427b898e3025",
+    "source_freeze_sha256": "b8c255201e7ba245c14842b0f06d80b1dfc79631e040605617a020ae58ee3ff8",
+    "qualification_receipt_sha256": "44f01abc3259a3f8c212264caafce44f2e64516c1da015a1e59f087634f2c502",
+    "changes": {
+      "requirements-observability.txt": {
+        "before_blob": "acd388f90b41f54482df25935b934476a7bc6e6a",
+        "after_blob": "5411e4aadd7fbecb2ad3f6d6894ffd420b4a27b7",
+        "mode": "100644"
+      }
+    }
   }
 }

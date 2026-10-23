@@ -34,6 +34,7 @@ SKIP_BASELINE = "ops-pytest-skip-baseline.json"
 # The exact reviewed record is pinned independently of its baseline payload.
 SSH_SKIP_TRANSITION_SHA256 = "df44974b4d4e883d73ffa6d3067a378441650456d3d1a64655f4d7ae73d1547f"
 W85_INPUT_TRANSITION_SHA256 = "975897eb2f19379c17e81bb26ebbd6ea0d362563519174c27ceef000ff14223c"
+W85_OBSERVABILITY_TRANSITION_SHA256 = "aa2582effcfb53d71b11abe0a60db1e9231c9236da6badc6cf49a1c128548c98"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
     "tests/test_installed_checker_transport_20261014.py::"
@@ -241,8 +242,30 @@ def shared_inputs(source, revision):
     return result
 
 
+def reviewed_w85_observability_transition(baseline):
+    """Peel the exact observability successor without changing historical evidence."""
+    original = dict(baseline)
+    key = "reviewed_w85_observability_transition"
+    record = original.pop(key, None)
+    if key not in baseline:
+        return original, None
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "qualified_policy_revision", "independent_review_sha256",
+        "source_freeze_sha256", "qualification_receipt_sha256", "changes",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid reviewed W8.5 observability transition")
+    require(sha(encoded(record)) == W85_OBSERVABILITY_TRANSITION_SHA256,
+            "unreviewed W8.5 observability transition identity")
+    restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(restored),
+            "W8.5 observability transition historical baseline changed")
+    return original, record
+
+
 def reviewed_w85_input_transition(baseline):
     """Peel the exact dependency successor without changing historical evidence."""
+    baseline, _ = reviewed_w85_observability_transition(baseline)
     original = dict(baseline)
     key = "reviewed_w85_input_transition"
     record = original.pop(key, None)
@@ -315,11 +338,12 @@ def reviewed_skip_module_transition(baseline, files=None):
 
 
 def admit_shared_inputs(baseline, common, files=None):
-    """Admit complete historical maps and the exact reviewed security successor.
+    """Admit complete historical maps and each exact reviewed input successor.
 
     The historical skip/collection evidence is never relabeled as a new run.
     Exact effective inputs remain sealed into this run's admission envelope.
     """
+    baseline, observability_record = reviewed_w85_observability_transition(baseline)
     original, _ = reviewed_skip_module_transition(baseline, files)
     w85_record = baseline.get("reviewed_w85_input_transition")
     miniapp_record = original.pop("reviewed_miniapp_security_transition", None)
@@ -478,6 +502,26 @@ def admit_shared_inputs(baseline, common, files=None):
                     and change["before_blob"] != change["after_blob"]
                     and change["mode"] == modes.get(path) == "100644",
                     "unreviewed W8.5 input blob or mode")
+            successor[path] = change["after_blob"]
+        accepted.append(successor)
+    if observability_record is not None:
+        require(w85_record is not None
+                and observability_record["source_before"] == w85_record["source_after"]
+                and observability_record["source_before"] != observability_record["source_after"],
+                "W8.5 observability transition requires its W8.5 predecessor")
+        changes = observability_record["changes"]
+        require(isinstance(changes, dict) and set(changes) == {"requirements-observability.txt"},
+                "unreviewed W8.5 observability input paths")
+        successor = dict(accepted[-1])
+        for path, change in changes.items():
+            require(isinstance(change, dict) and set(change) == {
+                "before_blob", "after_blob", "mode",
+            } and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                      for k in ("before_blob", "after_blob"))
+                    and change["before_blob"] == successor.get(path)
+                    and change["before_blob"] != change["after_blob"]
+                    and change["mode"] == modes.get(path) == "100644",
+                    "unreviewed W8.5 observability input blob or mode")
             successor[path] = change["after_blob"]
         accepted.append(successor)
     require(common in accepted, "shared collection/dependency inputs changed")
