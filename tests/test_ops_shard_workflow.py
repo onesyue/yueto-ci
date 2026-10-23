@@ -1051,10 +1051,166 @@ class OpsShardWorkflow(unittest.TestCase):
             self.join()
 
 
+class ReviewedW85InputPolicy(unittest.TestCase):
+    def setUp(self):
+        self.consumer = fixture.SHARDS
+        self.baseline = self.consumer.skip_baseline()
+        self.key = "reviewed_w85_input_transition"
+        self.record = self.baseline[self.key]
+        self.maps = [dict(self.baseline["common_inputs"])]
+        for key in ("reviewed_shared_input_transition", "reviewed_python_input_transition",
+                    "reviewed_frontend_security_transition", "reviewed_miniapp_security_transition",
+                    self.key):
+            record = self.baseline[key]
+            changes = ({p: c["after_blob"] for p, c in record["changes"].items()}
+                       if "changes" in record else {record["path"]: record["after_blob"]})
+            self.maps.append(self.maps[-1] | changes)
+        self.modes = self.baseline["reviewed_shared_input_transition"]["common_input_modes"]
+
+    def files(self, common):
+        return {p: (self.modes[p], blob) for p, blob in common.items()}
+
+    def test_exact_w85_record_preserves_entire_prior_policy_and_skip_evidence(self):
+        original, record = self.consumer.reviewed_w85_input_transition(self.baseline)
+        raw = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+        self.assertEqual(self.consumer.sha(raw),
+                         "f32c36a2e73051004a1b2cf164cdfb09204e14a0247361cdc6974f6080a3d779")
+        self.assertEqual(record["source_after"], "1d8ae9784b709ebb220f064c52a33ef42d3a5145")
+        self.assertEqual(record["qualified_policy_revision"], "c7e67c4b51cdc9c12d2779b2618be3ef608f3ccf")
+        self.assertEqual(len(original["cases"]), 1005)
+        self.assertEqual(len(original["collection_skips"]), 1)
+        self.assertEqual(len(original["reviewed_hosted"]["cases"]), 18)
+        self.assertEqual(self.consumer.reviewed_skip_module_transition(self.baseline),
+                         self.consumer.reviewed_skip_module_transition(original))
+        for common in self.maps[:-1]:
+            self.consumer.admit_shared_inputs(original, common, self.files(common))
+        with self.assertRaisesRegex(ValueError, "inputs changed"):
+            self.consumer.admit_shared_inputs(original, self.maps[-1], self.files(self.maps[-1]))
+
+    def test_all_108_dependency_combinations_admit_only_six_complete_maps(self):
+        paths = ["frontend/package-lock.json", "pyproject.toml", "uv.lock",
+                 "telegram-bot/yue/requirements.txt", "telegram-bot/yue/miniapp/package-lock.json"]
+        variants = [list(dict.fromkeys(m[p] for m in self.maps)) for p in paths]
+        attempted = accepted = 0
+        for blobs in itertools.product(*variants):
+            common = self.maps[0] | dict(zip(paths, blobs, strict=True))
+            attempted += 1
+            with self.subTest(blobs=blobs):
+                if common in self.maps:
+                    self.consumer.admit_shared_inputs(self.baseline, common, self.files(common))
+                    accepted += 1
+                else:
+                    with self.assertRaisesRegex(ValueError, "inputs changed"):
+                        self.consumer.admit_shared_inputs(self.baseline, common, self.files(common))
+        self.assertEqual((attempted, accepted), (108, 6))
+
+    def test_record_and_entire_history_drift_refuse_even_valid_hash_shapes(self):
+        mutations = []
+        for field in self.record:
+            changed = copy.deepcopy(self.baseline)
+            del changed[self.key][field]
+            mutations.append(("missing-" + field, changed))
+        for field in ("prior_baseline_sha256", "independent_review_sha256",
+                      "source_freeze_sha256", "dependency_audit_sha256",
+                      "source_before", "source_after", "qualified_policy_revision"):
+            changed = copy.deepcopy(self.baseline)
+            changed[self.key][field] = "f" * len(self.record[field])
+            mutations.append((field, changed))
+        for path in self.record["changes"]:
+            for field, value in (("before_blob", "f" * 40), ("after_blob", "f" * 40),
+                                 ("mode", "100755"), ("extra", True)):
+                changed = copy.deepcopy(self.baseline)
+                changed[self.key]["changes"][path][field] = value
+                mutations.append((path + field, changed))
+        for key in self.baseline:
+            if key == self.key:
+                continue
+            changed = copy.deepcopy(self.baseline)
+            del changed[key]
+            mutations.append(("missing-history-" + key, changed))
+        for key in ("reviewed_miniapp_security_transition", "reviewed_ssh_skip_module_transition"):
+            changed = copy.deepcopy(self.baseline)
+            changed[key]["independent_review_sha256"] = "f" * 64
+            mutations.append(("changed-review-" + key, changed))
+        changed = copy.deepcopy(self.baseline)
+        changed["cases"][next(iter(changed["cases"]))]["reason"] = "Skipped: invented new reason"
+        mutations.append(("historical-skip-reason", changed))
+        for value in (None, [], False):
+            mutations.append(("invalid-record-" + str(value), self.baseline | {self.key: value}))
+        for label, changed in mutations:
+            for common in self.maps:
+                with self.subTest(mutation=label, common=common), self.assertRaises(ValueError):
+                    self.consumer.admit_shared_inputs(changed, common)
+
+    def test_all_55_inputs_keep_blob_mode_membership_and_no_unknown_path(self):
+        common = self.maps[-1]
+        self.assertEqual(len(common), 55)
+        files = self.files(common)
+        for path in common:
+            with self.subTest(blob=path), self.assertRaises(ValueError):
+                self.consumer.admit_shared_inputs(self.baseline, common | {path: "f" * 40}, files)
+            for mode in ("100755", "120000"):
+                with self.subTest(path=path, mode=mode), self.assertRaises(ValueError):
+                    self.consumer.admit_shared_inputs(
+                        self.baseline, common, files | {path: (mode, files[path][1])})
+            with self.subTest(missing=path), self.assertRaises(ValueError):
+                self.consumer.admit_shared_inputs(
+                    self.baseline, {p: b for p, b in common.items() if p != path}, files)
+        with self.assertRaises(ValueError):
+            self.consumer.admit_shared_inputs(self.baseline, common | {"new.lock": "f" * 40}, files)
+
+    def test_sealed_current_map_keeps_source_policy_and_mixed_input_refusals(self):
+        policy = self.consumer.git(ROOT, "rev-parse", "HEAD").decode().strip()
+        identity = {"policy_revision": policy, "run_id": "42", "run_attempt": "1"}
+        board = "5046b327de669b1aa83907772db37da1f261a98b"
+        source = self.record["source_after"]
+        plan = self.consumer.seal({
+            "schema": 1, "kind": "ops-pytest-module-plan", "source_revision": source,
+            "context": identity | {"board_revision": board, "runner_os": "Linux",
+                                    "runner_arch": "X64", "runner_image": "controlled-image"},
+            "pytest_ini_sha256": "a" * 64, "entry_sha256": "b" * 64,
+            "recorder_sha256": "c" * 64, "modules": {"tests/test_control.py": "d" * 64},
+            "assignments": [{"id": "ordinary-000", "modules": ["tests/test_control.py"]}],
+        }, "plan_sha256")
+        value = self.consumer.seal({
+            "schema": 1, "identity": identity, "mode": "sharded", "source_revision": source,
+            "board_revision": board, "ops_plan": plan, "common_inputs": self.maps[-1],
+            "skip_baseline_sha256": self.consumer.sha((ROOT / self.consumer.SKIP_BASELINE).read_bytes()),
+            "skip_module_blobs": {"tests/test_control.py": "e" * 40},
+            "validation_matrix": [{"validation": "yueops", "repo": "onesyue/yueops",
+                                   "ref": source, "ops_role": role}
+                                  for role in self.consumer.role_order(plan)],
+        }, "admission_sha256")
+        env = {"GITHUB_SHA": policy, "GITHUB_RUN_ID": "42", "GITHUB_RUN_ATTEMPT": "1",
+               "GITHUB_REPOSITORY": "onesyue/yueto-ci"}
+        with patch.dict(os.environ, env):
+            self.consumer.envelope(value)
+            for path in self.record["changes"]:
+                wrong = copy.deepcopy(value)
+                wrong["common_inputs"][path] = self.record["changes"][path]["before_blob"]
+                del wrong["admission_sha256"]
+                self.consumer.seal(wrong, "admission_sha256")
+                with self.subTest(resealed_path=path), self.assertRaisesRegex(ValueError, "inputs changed"):
+                    self.consumer.envelope(wrong)
+            for kind in ("source", "policy", "baseline"):
+                wrong = copy.deepcopy(value)
+                if kind == "source":
+                    wrong["source_revision"] = "f" * 40
+                elif kind == "policy":
+                    wrong["identity"]["policy_revision"] = "f" * 40
+                else:
+                    wrong["skip_baseline_sha256"] = "f" * 64
+                del wrong["admission_sha256"]
+                self.consumer.seal(wrong, "admission_sha256")
+                with self.subTest(resealed_identity=kind), self.assertRaises(ValueError):
+                    self.consumer.envelope(wrong)
+
+
 class ReviewedHostedSkipPolicy(unittest.TestCase):
     def setUp(self):
         self.consumer = fixture.SHARDS
         self.baseline = self.consumer.skip_baseline()
+        self.baseline.pop("reviewed_w85_input_transition")
         self.ssh_record = self.baseline.pop("reviewed_ssh_skip_module_transition")
         self.reviewed = self.baseline["reviewed_hosted"]
         self.value = {"skip_baseline_sha256": "a" * 64,

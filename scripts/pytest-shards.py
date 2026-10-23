@@ -33,6 +33,7 @@ FILES = ("metadata.json", "events.jsonl", "pytest-exit-code.txt",
 SKIP_BASELINE = "ops-pytest-skip-baseline.json"
 # The exact reviewed record is pinned independently of its baseline payload.
 SSH_SKIP_TRANSITION_SHA256 = "df44974b4d4e883d73ffa6d3067a378441650456d3d1a64655f4d7ae73d1547f"
+W85_INPUT_TRANSITION_SHA256 = "975897eb2f19379c17e81bb26ebbd6ea0d362563519174c27ceef000ff14223c"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
     "tests/test_installed_checker_transport_20261014.py::"
@@ -240,13 +241,34 @@ def shared_inputs(source, revision):
     return result
 
 
+def reviewed_w85_input_transition(baseline):
+    """Peel the exact dependency successor without changing historical evidence."""
+    original = dict(baseline)
+    key = "reviewed_w85_input_transition"
+    record = original.pop(key, None)
+    if key not in baseline:
+        return original, None
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "qualified_policy_revision", "independent_review_sha256",
+        "source_freeze_sha256", "dependency_audit_sha256", "changes",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid reviewed W8.5 input transition")
+    require(sha(encoded(record)) == W85_INPUT_TRANSITION_SHA256,
+            "unreviewed W8.5 input transition identity")
+    restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(restored),
+            "W8.5 input transition historical baseline changed")
+    return original, record
+
+
 def reviewed_skip_module_transition(baseline, files=None):
     """Preserve historical skips while admitting two reviewed source successors.
 
     Independent UID0 qualification is evidence, not a same-run native receipt or
     an ordinary PASS. The signed policy and admission digest bind that evidence.
     """
-    original = dict(baseline)
+    original, _ = reviewed_w85_input_transition(baseline)
     key = "reviewed_ssh_skip_module_transition"
     record = original.pop(key, None)
     if key not in baseline:
@@ -299,6 +321,7 @@ def admit_shared_inputs(baseline, common, files=None):
     Exact effective inputs remain sealed into this run's admission envelope.
     """
     original, _ = reviewed_skip_module_transition(baseline, files)
+    w85_record = baseline.get("reviewed_w85_input_transition")
     miniapp_record = original.pop("reviewed_miniapp_security_transition", None)
     security_record = original.pop("reviewed_frontend_security_transition", None)
     python_record = original.pop("reviewed_python_input_transition", None)
@@ -438,6 +461,25 @@ def admit_shared_inputs(baseline, common, files=None):
                             and miniapp_record["mode"] == modes.get(path) == "100644",
                             "unreviewed MiniApp security input blob or mode")
                     accepted.append(secured | {path: miniapp_record["after_blob"]})
+    if w85_record is not None:
+        require(miniapp_record is not None
+                and w85_record["source_before"] == miniapp_record["source_after"],
+                "W8.5 input transition requires its MiniApp predecessor")
+        changes = w85_record["changes"]
+        require(isinstance(changes, dict) and set(changes) == {"pyproject.toml", "uv.lock"},
+                "unreviewed W8.5 input paths")
+        successor = dict(accepted[-1])
+        for path, change in changes.items():
+            require(isinstance(change, dict) and set(change) == {
+                "before_blob", "after_blob", "mode",
+            } and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                      for k in ("before_blob", "after_blob"))
+                    and change["before_blob"] == successor.get(path)
+                    and change["before_blob"] != change["after_blob"]
+                    and change["mode"] == modes.get(path) == "100644",
+                    "unreviewed W8.5 input blob or mode")
+            successor[path] = change["after_blob"]
+        accepted.append(successor)
     require(common in accepted, "shared collection/dependency inputs changed")
 
 

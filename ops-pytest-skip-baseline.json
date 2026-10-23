@@ -5645,5 +5645,27 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_w85_input_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "f32c36a2e73051004a1b2cf164cdfb09204e14a0247361cdc6974f6080a3d779",
+    "source_before": "7980928e87c894e273c31d3df791ce539dd38212",
+    "source_after": "1d8ae9784b709ebb220f064c52a33ef42d3a5145",
+    "qualified_policy_revision": "c7e67c4b51cdc9c12d2779b2618be3ef608f3ccf",
+    "independent_review_sha256": "9a4da738d0e183f7e5d701ac864d32d4abe3c3aad6d50ec717d458750c017ca8",
+    "source_freeze_sha256": "a8893a8603c360fc1e7bdbedbd7f9e7c9f8ad575c855bc4da42438a65079887e",
+    "dependency_audit_sha256": "6131fcf2c57e270f383114ac3af570e24fb04e7d0524453b817e0f6ef16a6e6d",
+    "changes": {
+      "pyproject.toml": {
+        "before_blob": "481dc7bf25bbd923e2be98ee2618baf494e0ea43",
+        "after_blob": "c701adca0e1dbf7bdd037c975e8a7b3bf3d607ca",
+        "mode": "100644"
+      },
+      "uv.lock": {
+        "before_blob": "6f5b8a973c891f802a7dc58ea21fbd524ba45d2a",
+        "after_blob": "7b3500fe8c9c5f394bdc0105636a7d4ada2a8b1e",
+        "mode": "100644"
+      }
+    }
   }
 }
