@@ -70,6 +70,15 @@ private review, freeze, and qualification evidence. This source-neutral map
 does not waive same-run native, reference, serial, or ordinary evidence and
 does not complete the corpus join or constitute native or public release
 acceptance.
+The audit dependency successor adds one eighth complete map after that
+observability map. Its separate transition binds Ops
+8e1a9c514ef61a423540ad7de4951867ab6b9b89 to
+36a37ac2e54096ea59af22f5afca73afd6b7c71c, qualified policy
+2751f9c9d3c1d79fff1b8e996a6e82c4a88b7c9b, and only pyproject.toml and
+uv.lock. The admitted blobs are setuptools 84.1.0 and filelock 4.2.4.
+Record hashes name the local audit and freeze evidence for that commit.
+This map does not waive same-run native, reference, serial, or ordinary
+evidence and does not constitute public release acceptance.
 The release coordinator verifies the actual signed source, independent review and
 freeze artifacts before recording their identities. Hash syntax alone does not
 authenticate those artifacts. Historical skip/collection evidence stays dated;

@@ -5684,5 +5684,27 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_audit_dependency_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "7d90cc17ec698944c1cc543de39b960faf3ad690d7e8189cb33a048d9dea730d",
+    "source_before": "8e1a9c514ef61a423540ad7de4951867ab6b9b89",
+    "source_after": "36a37ac2e54096ea59af22f5afca73afd6b7c71c",
+    "qualified_policy_revision": "2751f9c9d3c1d79fff1b8e996a6e82c4a88b7c9b",
+    "independent_review_sha256": "9bd3e65f9104c2a92cd7d694040744f22fe33f23cdb321f43dc292d4dec11681",
+    "source_freeze_sha256": "2271e819c48a1d26b3f84bffc61055047fafe3d6b090ffe059522f52efb7d17e",
+    "qualification_receipt_sha256": "25edf364af3fcf8be8d4932deed78c2b3b64883dd6cb10abb8c402dbee31b833",
+    "changes": {
+      "pyproject.toml": {
+        "before_blob": "c701adca0e1dbf7bdd037c975e8a7b3bf3d607ca",
+        "after_blob": "5714acdf3161ccc0d9a8db0e24e0787ae19647bf",
+        "mode": "100644"
+      },
+      "uv.lock": {
+        "before_blob": "7b3500fe8c9c5f394bdc0105636a7d4ada2a8b1e",
+        "after_blob": "49ca07ef18c07c43ef2396b739c437a8e7808aa0",
+        "mode": "100644"
+      }
+    }
   }
 }

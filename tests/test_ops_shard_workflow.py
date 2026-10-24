@@ -1055,6 +1055,7 @@ class ReviewedW85InputPolicy(unittest.TestCase):
     def setUp(self):
         self.consumer = fixture.SHARDS
         full = self.consumer.skip_baseline()
+        full, _ = self.consumer.reviewed_audit_dependency_transition(full)
         self.baseline, _ = self.consumer.reviewed_w85_observability_transition(full)
         self.key = "reviewed_w85_input_transition"
         self.record = self.baseline[self.key]
@@ -1211,6 +1212,7 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
     def setUp(self):
         self.consumer = fixture.SHARDS
         full = self.consumer.skip_baseline()
+        full, _ = self.consumer.reviewed_audit_dependency_transition(full)
         self.baseline, _ = self.consumer.reviewed_w85_observability_transition(full)
         self.baseline.pop("reviewed_w85_input_transition")
         self.ssh_record = self.baseline.pop("reviewed_ssh_skip_module_transition")
@@ -1673,7 +1675,8 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
         return {p: (self.modes[p], blob) for p, blob in common.items()}
 
     def test_peel_restores_bff_baseline_and_exact_observability_successor(self):
-        original, record = self.consumer.reviewed_w85_observability_transition(self.baseline)
+        peeled, _ = self.consumer.reviewed_audit_dependency_transition(self.baseline)
+        original, record = self.consumer.reviewed_w85_observability_transition(peeled)
         raw = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
         self.assertEqual(self.consumer.sha(raw),
                          "4f7b178ae050b44118efb1e2be1c294f2ad26d5fa0300bd5121a33d9029d96db")
@@ -1701,6 +1704,23 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
             self.consumer.admit_shared_inputs(original, self.maps[-1], self.files(self.maps[-1]))
         for common in self.maps:
             self.consumer.admit_shared_inputs(self.baseline, common, self.files(common))
+
+    def test_audit_dependency_successor_admits_only_the_reviewed_lock_map(self):
+        peeled, record = self.consumer.reviewed_audit_dependency_transition(self.baseline)
+        restored = (json.dumps(peeled, indent=2, ensure_ascii=False) + "\n").encode()
+        self.assertEqual(self.consumer.sha(restored), record["prior_baseline_sha256"])
+        self.assertEqual(record["source_before"], "8e1a9c514ef61a423540ad7de4951867ab6b9b89")
+        self.assertEqual(record["source_after"], "36a37ac2e54096ea59af22f5afca73afd6b7c71c")
+        self.assertEqual(self.consumer.sha(self.consumer.encoded(record)),
+                         self.consumer.AUDIT_DEPENDENCY_TRANSITION_SHA256)
+        successor = dict(self.maps[-1])
+        for path, change in record["changes"].items():
+            self.assertEqual(successor[path], change["before_blob"])
+            successor[path] = change["after_blob"]
+        self.consumer.admit_shared_inputs(self.baseline, successor, self.files(successor))
+        with self.assertRaisesRegex(ValueError, "inputs changed"):
+            self.consumer.admit_shared_inputs(
+                self.baseline, successor | {"pyproject.toml": "f" * 40}, self.files(successor))
 
     def test_216_dependency_combinations_admit_exactly_seven_maps(self):
         paths = ["frontend/package-lock.json", "pyproject.toml", "uv.lock",
@@ -1779,6 +1799,7 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
                     self.consumer.admit_shared_inputs(changed, common)
         omitted = dict(self.baseline)
         del omitted[self.key]
+        omitted.pop("reviewed_audit_dependency_transition", None)
         for common in self.maps[:-1]:
             self.consumer.admit_shared_inputs(omitted, common, self.files(common))
         with self.assertRaisesRegex(ValueError, "inputs changed"):
