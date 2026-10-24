@@ -164,7 +164,7 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
     def test_explicit_older_floor_runs_only_its_actual_known_suites(self):
         (self.root / 'schema-floor.txt').write_text('129\n')
         for path in GATE.ORDER:
-            if path not in GATE.HISTORICAL_ADDITIONS | set(GATE.COMMANDS) | set(GATE.FLOOR_ADDITIONS) | set(GATE.CAPABILITY_ADDITIONS):
+            if path not in GATE.HISTORICAL_ADDITIONS | set(GATE.COMMANDS) | set(GATE.FLOOR_ADDITIONS) | set(GATE.CAPABILITY_ADDITIONS) | set(GATE.SOURCE_CAPABILITY_ADDITIONS):
                 self.package(path)
         receipt = self.root / 'receipt.json'
         domain = self.command('domain', receipt)
@@ -176,7 +176,7 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
     def test_current_floor_before_operator_cli_keeps_its_ten_packages(self):
         (self.root / 'schema-floor.txt').write_text('134\n')
         for path in GATE.ORDER:
-            if path not in set(GATE.COMMANDS) | set(GATE.FLOOR_ADDITIONS) | set(GATE.CAPABILITY_ADDITIONS):
+            if path not in set(GATE.COMMANDS) | set(GATE.FLOOR_ADDITIONS) | set(GATE.CAPABILITY_ADDITIONS) | set(GATE.SOURCE_CAPABILITY_ADDITIONS):
                 self.package(path)
         receipt = self.root / 'receipt.json'
         self.assertEqual(self.command('domain', receipt).returncode, 0)
@@ -286,6 +286,48 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         result = self.command('domain', self.root / 'receipt.json')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("missing=['./internal/modules/remindmailcron']", result.stderr)
+
+    def test_abuse_retry_writer_requires_its_real_integration_suite(self):
+        (self.root / 'schema-floor.txt').write_text('144\n')
+        abuse_package = './internal/modules/usagepolicy'
+        for path in GATE.ORDER:
+            if path != abuse_package:
+                self.package(path)
+        self.command_gate()
+        source, marker = GATE.SOURCE_CAPABILITY_ADDITIONS[abuse_package]
+        source = self.root / source
+        source.parent.mkdir(parents=True)
+        source.write_text('package fixture\nconst pendingIntent = "' + marker + '"\n')
+        result = self.command('domain', self.root / 'receipt.json')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing=['./internal/modules/usagepolicy']", result.stderr)
+        self.package(abuse_package)
+        receipt = self.root / 'recovered.json'
+        domain = self.command('domain', receipt)
+        self.assertEqual(domain.returncode, 0, domain.stdout + domain.stderr)
+        remaining = self.command('remaining', receipt)
+        self.assertEqual(remaining.returncode, 0, remaining.stdout + remaining.stderr)
+        self.assertIn(abuse_package, json.loads(receipt.read_text())['modules']['packages'])
+
+    def test_floor_144_before_abuse_retry_writer_keeps_its_actual_suites(self):
+        (self.root / 'schema-floor.txt').write_text('144\n')
+        abuse_package = './internal/modules/usagepolicy'
+        for path in GATE.ORDER:
+            if path != abuse_package:
+                self.package(path)
+        self.command_gate()
+        source, _ = GATE.SOURCE_CAPABILITY_ADDITIONS[abuse_package]
+        source = self.root / source
+        source.parent.mkdir(parents=True)
+        source.write_text('package fixture\nconst previousWriter = true\n')
+        receipt = self.root / 'receipt.json'
+        domain = self.command('domain', receipt)
+        self.assertEqual(domain.returncode, 0, domain.stdout + domain.stderr)
+        remaining = self.command('remaining', receipt)
+        self.assertEqual(remaining.returncode, 0, remaining.stdout + remaining.stderr)
+        executed = sum((json.loads(receipt.read_text())[group]['packages']
+                        for group in ('domain', 'commands', 'modules', 'migrations')), [])
+        self.assertEqual(executed, [path for path in GATE.ORDER if path != abuse_package])
 
     def test_pg_execution_does_not_run_unrelated_optional_unit_test(self):
         row = self.package('./internal/modules/subscribe')

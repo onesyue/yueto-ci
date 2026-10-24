@@ -19,7 +19,7 @@ MODULES = [
     './internal/modules/order', './internal/modules/emby', './internal/modules/handoff',
     './internal/platform/deviceidentity', './internal/modules/nodesync',
     './internal/modules/subscribe', './internal/modules/statcron',
-    './internal/modules/remindmailcron',
+    './internal/modules/remindmailcron', './internal/modules/usagepolicy',
 ]
 MIGRATIONS = ['./internal/platform/db', './internal/platform/nativeproto']
 ORDER = DOMAIN + COMMANDS + MODULES + MIGRATIONS
@@ -31,6 +31,12 @@ HISTORICAL_ADDITIONS = {'./internal/modules/user', './internal/platform/referenc
 FLOOR_ADDITIONS = {'./internal/modules/subscribe': 138, './internal/modules/statcron': 139}
 CAPABILITY_ADDITIONS = {
     './internal/modules/remindmailcron': Path('internal/platform/reminderrules/rules_g.go'),
+}
+# Durable abuse reset retries were introduced without a schema-floor change.
+# Require their suite when the production writer supports the pending intent;
+# older sources retain their actual suite inventory, including floor 144.
+SOURCE_CAPABILITY_ADDITIONS = {
+    './internal/modules/usagepolicy': (Path('internal/modules/usagepolicy/abuse.go'), 'reset_link_pending'),
 }
 DSNS = ['YUEBOARD_TEST_DATABASE_URL', 'YUEBOARD_TRAFFIC_TEST_DATABASE_URL',
         'YUEBOARD_EMAILVERIFY_TEST_DATABASE_URL', 'YUEBOARD_MIGRATION_TEST_DATABASE_URL']
@@ -69,6 +75,8 @@ def discover() -> list[dict]:
     required = set(ORDER) - set(COMMANDS) - (HISTORICAL_ADDITIONS if floor < 130 else set())
     required -= {path for path, minimum in FLOOR_ADDITIONS.items() if floor < minimum}
     required -= {path for path, marker in CAPABILITY_ADDITIONS.items() if not marker.is_file()}
+    required -= {path for path, (source, marker) in SOURCE_CAPABILITY_ADDITIONS.items()
+                 if not source.is_file() or marker not in source.read_text()}
     if COMMAND_GATE.is_file():
         required.update(COMMANDS)
     if not required <= found or found - set(ORDER) or len(found) != len(entries):

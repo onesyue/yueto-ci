@@ -1760,6 +1760,7 @@ class BuildPolicyTest(unittest.TestCase):
             "./internal/modules/statcron",
             "./internal/modules/subscribe",
             "./internal/modules/remindmailcron",
+            "./internal/modules/usagepolicy",
         ):
             with self.subTest(integration_package=package):
                 self.assertIn(package, runner)
