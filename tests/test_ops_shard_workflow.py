@@ -1823,6 +1823,7 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
         del omitted[self.key]
         omitted.pop("reviewed_audit_dependency_transition", None)
         omitted.pop("reviewed_zod_lock_transition", None)
+        omitted.pop("reviewed_current_skip_transition", None)
         for common in self.maps[:-1]:
             self.consumer.admit_shared_inputs(omitted, common, self.files(common))
         with self.assertRaisesRegex(ValueError, "inputs changed"):

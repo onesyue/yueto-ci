@@ -5738,5 +5738,277 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_current_skip_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "9aa6b338f4411e9508bb0a0978924ee383ccf95cedcc3c0d2dd2145b50f3d7d5",
+    "source_revision": "b18aa7f2163c0b22544d780287eb4dc7f88fcf7f",
+    "independent_review_sha256": "f0cf0492af38ec31d6741c87f4f1107814854a6f1ad662fe25630a5f3a78a8ae",
+    "additions": {
+      "tests/test_host_service_contracts_20261013.py::test_legacy_receipt_native_retry_and_queue_integrity": {
+        "outcome": "skipped",
+        "reason": "Skipped: native queue ownership requires isolated Linux root",
+        "module_blob": "ef3a2d9ab9ff1ccc67d1f6bdf04c6c6481401349"
+      },
+      "tests/test_host_service_contracts_20261013.py::test_monitor_receipt_and_manual_retry_preserve_bytes": {
+        "outcome": "skipped",
+        "reason": "Skipped: native queue ownership requires isolated Linux root",
+        "module_blob": "ef3a2d9ab9ff1ccc67d1f6bdf04c6c6481401349"
+      },
+      "tests/test_node_systemd_notifications_20261018.py::NativeNotificationTest::test_exec_condition_255_fails_but_1_only_skips": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+        "module_blob": "e39d0084dd0027ec7fa492b9bdf52ceb4db3604b"
+      },
+      "tests/test_node_systemd_notifications_20261018.py::NativeNotificationTest::test_native_timeout_origin_survives_parent_restart_and_retry": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+        "module_blob": "e39d0084dd0027ec7fa492b9bdf52ceb4db3604b"
+      },
+      "tests/test_node_systemd_notifications_20261018.py::NativeNotificationTest::test_timer_ordered_before_parent_restart": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+        "module_blob": "e39d0084dd0027ec7fa492b9bdf52ceb4db3604b"
+      },
+      "tests/test_node_systemd_notifications_20261018.py::NativeNotificationTest::test_timer_without_ordering_loses_origin": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+        "module_blob": "e39d0084dd0027ec7fa492b9bdf52ceb4db3604b"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[scripts/lib/__init__.py]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[scripts/lib/__pycache__/ssh_auth.pyc]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[yueops/__pycache__/fleet_inventory_env.pyc]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[yueops/unreviewed.py]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/converge-blackholed-pool-member-rotation.py]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/fleet-inventory-env.sh]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/moonvm_rotate.py]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/owned_dns.py]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/relay_peers.py]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/ssh_auth.py]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/ssh_kr_proxy.py]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[yueops/__init__.py]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[yueops/fleet_inventory_env.py]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_old_flat_closure_is_untouched_and_new_directories_are_removed_on_rollback": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer and predecessor filesystem",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_private_inventory_bridge_and_loader_ignore_external_package": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer and isolated interpreter",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_rollback_refuses_changed_published_dependency": {
+        "outcome": "skipped",
+        "reason": "Skipped: real root installer",
+        "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      }
+    },
+    "updates": {
+      "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent": {
+        "before_blob": "12ed3e6e232c038eb0be2c644354157d0f5fc506",
+        "after_blob": "ef3a2d9ab9ff1ccc67d1f6bdf04c6c6481401349"
+      },
+      "tests/test_installed_checker_transport_20261014.py::test_real_pinned_sshd_json_transport_plan_apply_readback_and_old_n_negative": {
+        "before_blob": "3cae44b8761d88827357dc9e0d8333fc7f2a8142",
+        "after_blob": "6b4472d3f3ecf219a033bfecf92db63375d0911a"
+      },
+      "tests/test_node_systemd_notifications_20261018.py::NativeNotificationTest::test_real_native_unknown_fails_watchdog_and_queues_exact_invocation": {
+        "before_blob": "8486c21c47c7aeaabbdfc049f7124ce8b778d799",
+        "after_blob": "e39d0084dd0027ec7fa492b9bdf52ceb4db3604b"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[duplicate-document]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[duplicate-field]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[empty]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[late-diagnostic]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[none]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[wrong-sid]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_apply_accept_and_future_source_explicit_rollback": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_cold_atime_busy_lock_and_uid1001": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_failure_retains_original_and_private_recovery_record[reload]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_failure_retains_original_and_private_recovery_record[validate]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_interrupted_restore_reloads_even_when_file_is_already_original": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_sigkill_after_replacement_is_durably_recoverable": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_stale_cas_and_non_buffer_change_never_mutate": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_unaccepted_crash_record_requires_explicit_recovery": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_unsafe_config_metadata_is_rejected[hardlink]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_unsafe_config_metadata_is_rejected[symlink]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_unsafe_config_metadata_is_rejected[world-writable]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_wrong_sid_or_drift_cannot_restore": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[address]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[contract-json]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[identity]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[none]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[peers-json]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[after-proof]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[before-proof]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[none]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[source-drift]": {
+        "before_blob": "40a97e8b313a2838fbde20daa4012d69049cf5e8",
+        "after_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_apply_imports_complete_private_closure_and_rollback_preserves_evolved_lease": {
+        "before_blob": "a28979abba806fec79a86b6bb713a6b54070396d",
+        "after_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_busy_provider_service_is_not_killed_or_republished": {
+        "before_blob": "a28979abba806fec79a86b6bb713a6b54070396d",
+        "after_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_effective_unit_override_cannot_enable_writer[entrypoint]": {
+        "before_blob": "a28979abba806fec79a86b6bb713a6b54070396d",
+        "after_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_effective_unit_override_cannot_enable_writer[timeout]": {
+        "before_blob": "a28979abba806fec79a86b6bb713a6b54070396d",
+        "after_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_existing_private_closure_is_restored_as_a_pair_with_its_unit": {
+        "before_blob": "a28979abba806fec79a86b6bb713a6b54070396d",
+        "after_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_identity_change_during_wait_is_not_admitted_as_address_refresh": {
+        "before_blob": "a28979abba806fec79a86b6bb713a6b54070396d",
+        "after_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_naturally_completed_rotation_refreshes_addresses_before_delivery": {
+        "before_blob": "a28979abba806fec79a86b6bb713a6b54070396d",
+        "after_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_tuning_release_20261018.py::test_actual_independent_packages_include_every_declared_runtime_and_alert_byte": {
+        "before_blob": "d07245b1dcff6aa35e273ccab0f50ac87747d7e0",
+        "after_blob": "f6676cf9f142a29f10d21c7fe8300882b41c397a"
+      }
+    }
   }
 }

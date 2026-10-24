@@ -85,6 +85,10 @@ b18aa7f2163c0b22544d780287eb4dc7f88fcf7f and only the console and Mini App
 package manifests and lockfiles, pinning transitive zod at 4.6.7.
 A rejected map names the drifted paths. This map does not waive native,
 reference, serial, or ordinary evidence and is not public release acceptance.
+The current skip successor records 22 new ordinary-runner skips and 38
+refreshed module blobs at Ops b18aa7f2163c0b22544d780287eb4dc7f88fcf7f.
+Host and root skips stay non-acceptance. A join reports every unknown
+case in one failure instead of stopping at the first.
 The release coordinator verifies the actual signed source, independent review and
 freeze artifacts before recording their identities. Hash syntax alone does not
 authenticate those artifacts. Historical skip/collection evidence stays dated;

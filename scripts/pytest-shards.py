@@ -37,6 +37,7 @@ W85_INPUT_TRANSITION_SHA256 = "975897eb2f19379c17e81bb26ebbd6ea0d362563519174c27
 W85_OBSERVABILITY_TRANSITION_SHA256 = "aa2582effcfb53d71b11abe0a60db1e9231c9236da6badc6cf49a1c128548c98"
 AUDIT_DEPENDENCY_TRANSITION_SHA256 = "ff5a2514cd10c6c9cc81cb1e4e52afab20ba789b8a8af92ef4dcbd21cbbb1b6a"
 ZOD_LOCK_TRANSITION_SHA256 = "691c045988e884f360dc6925bffea7798295970f2d62763ffec180ff2b20e842"
+CURRENT_SKIP_TRANSITION_SHA256 = "d58aa5e3d715836b04e1939f8af6f3b4ed9f34570f7b3d3ff411948cf2d66e32"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
     "tests/test_installed_checker_transport_20261014.py::"
@@ -244,8 +245,57 @@ def shared_inputs(source, revision):
     return result
 
 
+def reviewed_current_skip_transition(baseline):
+    """Admit the exact new host skips and refreshed module blobs."""
+    original = dict(baseline)
+    key = "reviewed_current_skip_transition"
+    record = original.pop(key, None)
+    if key not in baseline:
+        return original, {}
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_revision",
+        "independent_review_sha256", "additions", "updates",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid reviewed current skip transition")
+    require(sha(encoded(record)) == CURRENT_SKIP_TRANSITION_SHA256,
+            "unreviewed current skip transition identity")
+    restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(restored),
+            "current skip transition historical baseline changed")
+    require(isinstance(record["source_revision"], str) and SHA.fullmatch(record["source_revision"])
+            and isinstance(record["independent_review_sha256"], str)
+            and re.fullmatch(r"[0-9a-f]{64}", record["independent_review_sha256"]),
+            "missing exact current skip review identity")
+    additions = record["additions"]
+    updates = record["updates"]
+    require(isinstance(additions, dict) and isinstance(updates, dict)
+            and not (set(additions) & set(updates) or set(additions) & set(original["cases"])),
+            "current skip cases overlap history")
+    successors = {}
+    for nodeid, change in updates.items():
+        historical = original["cases"].get(nodeid)
+        require(isinstance(historical, dict) and historical.get("outcome") == "skipped"
+                and isinstance(change, dict) and set(change) == {"before_blob", "after_blob"}
+                and change["before_blob"] == historical.get("module_blob")
+                and change["before_blob"] != change["after_blob"]
+                and SHA.fullmatch(change["after_blob"]),
+                "unreviewed current skip blob update: " + nodeid)
+        successors[nodeid] = {
+            "outcome": "skipped", "reason": historical["reason"],
+            "module_blob": change["after_blob"],
+        }
+    for nodeid, case in additions.items():
+        require(isinstance(case, dict) and set(case) == {"outcome", "reason", "module_blob"}
+                and case["outcome"] == "skipped" and isinstance(case["reason"], str) and case["reason"]
+                and SHA.fullmatch(case["module_blob"]),
+                "unreviewed current skip addition: " + nodeid)
+        successors[nodeid] = dict(case)
+    return original, successors
+
+
 def reviewed_zod_lock_transition(baseline):
     """Peel the exact zod 4.6.7 lock successor without changing history."""
+    baseline, _ = reviewed_current_skip_transition(baseline)
     original = dict(baseline)
     key = "reviewed_zod_lock_transition"
     record = original.pop(key, None)
@@ -1147,8 +1197,10 @@ def native_terminal(value, source, board, output):
 
 
 def admit_skips(value, result, native):
-    baseline = skip_baseline()
+    baseline, extra = reviewed_current_skip_transition(skip_baseline())
     _, successors = reviewed_skip_module_transition(baseline)
+    successors.update(extra)
+    unknown = []
     observed_collection = {}
     reviewed = baseline.get("reviewed_hosted", {})
     counts = {"HISTORICAL_UNEXECUTED": 0, "OWNER_CANCELED": 0,
@@ -1167,8 +1219,9 @@ def admit_skips(value, result, native):
                     "outcome": row["outcome"], "reason": row.get("reason"),
                     "module_blob": value["skip_module_blobs"].get(module),
                 }
-                require(observed in (baseline["cases"].get(nodeid), successors.get(nodeid)),
-                        "new or changed case skip/xfail: " + nodeid)
+                if observed not in (baseline["cases"].get(nodeid), successors.get(nodeid)):
+                    unknown.append(nodeid)
+                    continue
                 disposition = "HISTORICAL_UNEXECUTED"
             else:
                 require(reviewed.get("schema") == 1
@@ -1195,6 +1248,7 @@ def admit_skips(value, result, native):
                 observed_collection[module] = reason
     require(observed_collection == result["reference"]["collection_skips"],
             "reference and shards have different collection skips")
+    require(not unknown, "new or changed case skip/xfail: " + ", ".join(unknown))
     return {"status": "NO_NEW_SKIPS", "baseline_sha256": value["skip_baseline_sha256"],
             "baseline_source_revision": baseline["source_revision"],
             "skips_are_passes": False, "disposition_counts": counts,
