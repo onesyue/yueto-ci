@@ -97,7 +97,7 @@ class ShardPrimitives(unittest.TestCase):
         self.git(repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
                  "-c", "commit.gpgsign=false", "commit", "-qm", "source fixture")
 
-    def run_session(self, assignment=None, **extra):
+    def run_session(self, assignment=None, collect_only=False, **extra):
         """Materialize a real producer envelope around the actual pytest command."""
         self.ordinal += 1
         output = self.base / f"evidence-{self.ordinal}"
@@ -111,7 +111,7 @@ class ShardPrimitives(unittest.TestCase):
         env["LENS_INVOCATION_ID"] = installed.stdout.strip()
         modules = ["tests"] if assignment is None else assignment["modules"]
         argv = [sys.executable, "-m", "pytest",
-                *(["--collect-only"] if assignment is None else []), "-q", *modules,
+                *( ["--collect-only"] if assignment is None or collect_only else []), "-q", *modules,
                 "--junitxml", str(output / "pytest.xml")]
         selection = {
             "plan_sha256": self.plan["plan_sha256"],
@@ -423,6 +423,26 @@ class ShardPrimitives(unittest.TestCase):
         self.assertIn("pytest-shards.py join", workflow)
         self.assertIn("needs: [plan, validate, validation-evidence]", workflow)
 
+
+    def test_two_module_reference_parts_union_and_reject_a_drop_or_skip_mismatch(self):
+        ordinary = [item for item in self.plan["assignments"] if item["id"].startswith("ordinary-")]
+        self.assertGreaterEqual(len(ordinary), 2)
+        parts = []
+        for assignment in ordinary:
+            output, result = self.run_session(assignment, collect_only=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            rows = [json.loads(line) for line in (output / "events.jsonl").read_text().splitlines()]
+            corpus = next(row for row in rows if row.get("event") == "collection_corpus")
+            parts.append({"nodeids": list(corpus["nodeids"]), "collection_skips": {}})
+        joined = SHARDS.join_reference_collections(parts)
+        self.assertEqual(set(joined["nodeids"]), set().union(*(part["nodeids"] for part in parts)))
+        self.assertGreaterEqual(len({nodeid.split("::", 1)[0] for nodeid in joined["nodeids"]}), 2)
+        dropped = [dict(parts[0], nodeids=parts[0]["nodeids"][:-1]), *parts[1:]]
+        with self.assertRaisesRegex(ValueError, "missing node id"):
+            SHARDS.require_reference_join(dropped, joined["nodeids"], {})
+        mismatched = [parts[0], dict(parts[1], collection_skips={"tests/test_a.py": "other"})]
+        with self.assertRaisesRegex(ValueError, "collection skip mismatch"):
+            SHARDS.require_reference_join(mismatched, joined["nodeids"], {})
 
 if __name__ == "__main__":
     unittest.main()

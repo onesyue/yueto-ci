@@ -891,9 +891,110 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
     }
 
 
+def join_reference_collections(parts):
+    """Union collect-only parts. One process per assignment, never xdist."""
+    require(isinstance(parts, list) and parts, "missing reference part")
+    nodeids = []
+    seen = set()
+    skips = {}
+    for part in parts:
+        require(isinstance(part, dict) and isinstance(part.get("nodeids"), list)
+                and isinstance(part.get("collection_skips"), dict), "invalid reference part")
+        for nodeid in part["nodeids"]:
+            require(isinstance(nodeid, str) and nodeid not in seen, "duplicate node id")
+            seen.add(nodeid)
+            nodeids.append(nodeid)
+        for module, reason in part["collection_skips"].items():
+            require(isinstance(module, str) and isinstance(reason, str) and reason,
+                    "invalid collection skip")
+            if module in skips and skips[module] != reason:
+                require(False, "collection skip mismatch: " + module)
+            skips[module] = reason
+    return {"nodeids": nodeids, "collection_skips": skips}
+
+
+def require_reference_join(parts, expected_nodeids, expected_skips):
+    joined = join_reference_collections(parts)
+    have = set(joined["nodeids"])
+    missing = [nodeid for nodeid in expected_nodeids if nodeid not in have]
+    require(not missing, "missing node id: " + ", ".join(missing))
+    extra = [nodeid for nodeid in joined["nodeids"] if nodeid not in set(expected_nodeids)]
+    require(not extra, "missing node id: " + ", ".join(extra))
+    require(joined["collection_skips"] == expected_skips, "collection skip mismatch")
+    return joined
+
+
+def collect_reference_parts(expected, source, output, site, actual_runner, timing):
+    """Collect-only once per existing module assignment."""
+    parts = []
+    execution_context = None
+    runner = None
+    invocation = None
+    for assignment in expected["assignments"]:
+        part = output / "parts" / assignment["id"]
+        timing.install(part, site)
+        metadata = read_json(part / "metadata.json")
+        if runner is None:
+            runner = runner_context(expected["context"], metadata["identity"])
+            require(runner == actual_runner, "runner identity changed during preparation")
+            invocation = metadata["invocation_id"]
+        env = os.environ | {
+            "LENS_REPORT": str(part / "events.jsonl"),
+            "LENS_INVOCATION_ID": metadata["invocation_id"],
+            "YUEOPS_PYTEST_SERIAL": "1",
+            "PYTHONPATH": str(site),
+        }
+        xml = part / "pytest.xml"
+        argv = [sys.executable, "-m", "pytest", "--collect-only", "-q",
+                *assignment["modules"], "--junitxml", str(xml)]
+        (part / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
+        result = subprocess.run(argv, cwd=source, env=env, check=False)
+        (part / "pytest-finish-unix-ns.txt").write_text(str(time.time_ns()))
+        (part / "pytest-exit-code.txt").write_text(str(result.returncode))
+        require(result.returncode in (0, 5), "reference part failed")
+        rows = [json.loads(line) for line in (part / "events.jsonl").read_text().splitlines()]
+        corpus = next(row for row in rows if row.get("event") == "collection_corpus")
+        nodeids = corpus.get("nodeids")
+        require(isinstance(nodeids, list), "reference part has no corpus")
+        if execution_context is None:
+            start = next(row for row in rows if row.get("event") == "start")
+            execution_context = {key: start.get(key) for key in ("platform", "uid")}
+        skips = collection_skips(xml, set(assignment["modules"])) if xml.is_file() else {}
+        parts.append({"assignment_id": assignment["id"], "nodeids": nodeids,
+                      "collection_skips": skips})
+    joined = join_reference_collections(parts)
+    payload = {
+        "schema": 1, "assignment_id": "reference", "invocation_id": invocation,
+        "nodeids": joined["nodeids"], "collection_skips": joined["collection_skips"],
+        "runner_context": runner, "execution_context": execution_context,
+        "junit_sha256": sha(json.dumps(joined, sort_keys=True).encode()),
+        "parts": [part["assignment_id"] for part in parts],
+    }
+    (output / "joined.json").write_text(json.dumps(payload) + "\n")
+    require(runner_context(expected["context"], os.environ) == actual_runner,
+            "runner identity changed during execution")
+    return 0
+
+
 def aggregate(value, reference, directories):
     value = validate_plan(value)
-    expected = inspect_session(reference, value, None)
+    joined_path = reference / "joined.json"
+    if joined_path.is_file():
+        payload = read_json(joined_path)
+        require(payload.get("schema") == 1 and isinstance(payload.get("nodeids"), list)
+                and isinstance(payload.get("collection_skips"), dict)
+                and payload.get("junit_sha256") and payload.get("invocation_id"),
+                "invalid reference join")
+        expected = {
+            "assignment_id": "reference", "invocation_id": payload["invocation_id"],
+            "nodeids": payload["nodeids"], "collection_skips": payload["collection_skips"],
+            "runner_context": payload["runner_context"],
+            "execution_context": payload["execution_context"],
+            "nonpassing_outcomes": [], "junit_sha256": payload["junit_sha256"],
+            "pytest_process_exit_code": 0, "empty_assigned_collection": False,
+        }
+    else:
+        expected = inspect_session(reference, value, None)
     assignments = {item["id"]: item for item in value["assignments"]}
     require(len(directories) == len(assignments), "missing or extra shard receipts")
     results, ids, invocations, union = [], [], [expected["invocation_id"]], []
@@ -1083,7 +1184,9 @@ def execute(value, source, board, role, output, site):
     require(not os.environ.get("PYTEST_PLUGINS"), "unexpected pytest plugin override")
     timing = load_timing()
     timing.install(output, site)
-    modules = ["tests"] if role == "reference" else assignments[role]["modules"]
+    if role == "reference":
+        return collect_reference_parts(expected, source, output, site, actual_runner, timing)
+    modules = assignments[role]["modules"]
     selection = {
         "schema": 1, "plan_sha256": expected["plan_sha256"],
         "source_revision": expected["source_revision"], "entry_sha256": expected["entry_sha256"],
