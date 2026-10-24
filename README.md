@@ -79,6 +79,12 @@ uv.lock. The admitted blobs are setuptools 84.1.0 and filelock 4.2.4.
 Record hashes name the local audit and freeze evidence for that commit.
 This map does not waive same-run native, reference, serial, or ordinary
 evidence and does not constitute public release acceptance.
+The zod lock successor adds one ninth complete map after the audit map.
+It binds Ops 36a37ac2e54096ea59af22f5afca73afd6b7c71c to
+b18aa7f2163c0b22544d780287eb4dc7f88fcf7f and only the console and Mini App
+package manifests and lockfiles, pinning transitive zod at 4.6.7.
+A rejected map names the drifted paths. This map does not waive native,
+reference, serial, or ordinary evidence and is not public release acceptance.
 The release coordinator verifies the actual signed source, independent review and
 freeze artifacts before recording their identities. Hash syntax alone does not
 authenticate those artifacts. Historical skip/collection evidence stays dated;

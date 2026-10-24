@@ -5706,5 +5706,37 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_zod_lock_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "c2efe80a1c550942f8e3decd0a873321dda4d86a5270288706a6ba6d2c907369",
+    "source_before": "36a37ac2e54096ea59af22f5afca73afd6b7c71c",
+    "source_after": "b18aa7f2163c0b22544d780287eb4dc7f88fcf7f",
+    "qualified_policy_revision": "bb71e773ddfe32d816045e6e52630b90278c0c68",
+    "independent_review_sha256": "2d57881556417fe29c10db962d3e9294de14483b330c76613b288552ba10968e",
+    "source_freeze_sha256": "3ca90df583872a147f8e57c7867598cfcf9232818d7b12ef64a07a27cbeb67d2",
+    "qualification_receipt_sha256": "5afc86c1a0dd6924b85967df21120ca6a27b509f6fa9ece729a0207391b82704",
+    "changes": {
+      "frontend/package-lock.json": {
+        "before_blob": "394ffd6bac0bdd00ddc5e6d0045344d1543adf85",
+        "after_blob": "5f2ad58a8ed4517c7846ee4136aa434d8563b1d4",
+        "mode": "100644"
+      },
+      "frontend/package.json": {
+        "before_blob": "ab500d01d0d2150932129493017376023eb95a7c",
+        "after_blob": "ac9982a8269be418df8f403b02d662e113711a6f",
+        "mode": "100644"
+      },
+      "telegram-bot/yue/miniapp/package-lock.json": {
+        "before_blob": "b0ab7d24f6e8cd595b6d2f013d7a5b2da5debe5e",
+        "after_blob": "fc827ec32224f79ab1323dedeac7b9b2c5a1d8ce",
+        "mode": "100644"
+      },
+      "telegram-bot/yue/miniapp/package.json": {
+        "before_blob": "097560433d37982991f746346af7fad2a25db9e0",
+        "after_blob": "609ecfcd329f6847ebf8c63ebe1a75c10a64a0e6",
+        "mode": "100644"
+      }
+    }
   }
 }

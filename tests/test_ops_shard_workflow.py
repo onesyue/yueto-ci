@@ -1722,6 +1722,28 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
             self.consumer.admit_shared_inputs(
                 self.baseline, successor | {"pyproject.toml": "f" * 40}, self.files(successor))
 
+    def test_zod_lock_successor_admits_only_the_reviewed_client_locks(self):
+        peeled, record = self.consumer.reviewed_zod_lock_transition(self.baseline)
+        restored = (json.dumps(peeled, indent=2, ensure_ascii=False) + "\n").encode()
+        self.assertEqual(self.consumer.sha(restored), record["prior_baseline_sha256"])
+        self.assertEqual(record["source_after"], "b18aa7f2163c0b22544d780287eb4dc7f88fcf7f")
+        self.assertEqual(self.consumer.sha(self.consumer.encoded(record)),
+                         self.consumer.ZOD_LOCK_TRANSITION_SHA256)
+        successor = dict(self.maps[-1])
+        audit = self.baseline["reviewed_audit_dependency_transition"]["changes"]
+        for path, change in audit.items():
+            successor[path] = change["after_blob"]
+        for path, change in record["changes"].items():
+            self.assertEqual(successor[path], change["before_blob"])
+            successor[path] = change["after_blob"]
+        self.consumer.admit_shared_inputs(self.baseline, successor, self.files(successor))
+        with self.assertRaisesRegex(ValueError, "inputs changed"):
+            self.consumer.admit_shared_inputs(
+                self.baseline,
+                successor | {"frontend/package-lock.json": "a" * 40},
+                self.files(successor),
+            )
+
     def test_216_dependency_combinations_admit_exactly_seven_maps(self):
         paths = ["frontend/package-lock.json", "pyproject.toml", "uv.lock",
                  "telegram-bot/yue/requirements.txt", "telegram-bot/yue/miniapp/package-lock.json",
@@ -1800,6 +1822,7 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
         omitted = dict(self.baseline)
         del omitted[self.key]
         omitted.pop("reviewed_audit_dependency_transition", None)
+        omitted.pop("reviewed_zod_lock_transition", None)
         for common in self.maps[:-1]:
             self.consumer.admit_shared_inputs(omitted, common, self.files(common))
         with self.assertRaisesRegex(ValueError, "inputs changed"):
