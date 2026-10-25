@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import ast
 import configparser
+import concurrent.futures
 import hashlib
 import importlib.util
 import json
@@ -1022,54 +1023,82 @@ def require_reference_join(parts, expected_nodeids, expected_skips):
     return joined
 
 
+def map_bounded(functions, limit):
+    """Run independent functions with a fixed ceiling. Preserve order."""
+    if limit < 1:
+        raise ValueError("worker limit must be positive")
+    if len(functions) <= 1 or limit == 1:
+        return [fn() for fn in functions]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(limit, len(functions))) as pool:
+        return list(pool.map(lambda fn: fn(), functions))
+
+
+def _collect_reference_part(expected, source, output, site, actual_runner, timing, assignment):
+    part = output / "parts" / assignment["id"]
+    timing.install(part, site)
+    metadata = read_json(part / "metadata.json")
+    runner = runner_context(expected["context"], metadata["identity"])
+    require(runner == actual_runner, "runner identity changed during preparation")
+    cache = part / "pytest-cache"
+    parent_opts = os.environ.get("PYTEST_ADDOPTS", "")
+    env = os.environ | {
+        "LENS_REPORT": str(part / "events.jsonl"),
+        "LENS_INVOCATION_ID": metadata["invocation_id"],
+        "YUEOPS_PYTEST_SERIAL": "1",
+        "PYTHONPATH": str(site),
+        "PYTEST_ADDOPTS": (parent_opts + f" -o cache_dir={cache}").strip(),
+    }
+    xml = part / "pytest.xml"
+    argv = [sys.executable, "-m", "pytest", "--collect-only", "-q",
+            *assignment["modules"], "--junitxml", str(xml)]
+    (part / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
+    result = subprocess.run(argv, cwd=source, env=env, check=False)
+    (part / "pytest-finish-unix-ns.txt").write_text(str(time.time_ns()))
+    (part / "pytest-exit-code.txt").write_text(str(result.returncode))
+    require(result.returncode in (0, 5), "reference part failed")
+    rows = [json.loads(line) for line in (part / "events.jsonl").read_text().splitlines()]
+    corpus = next(row for row in rows if row.get("event") == "collection_corpus")
+    nodeids = corpus.get("nodeids")
+    require(isinstance(nodeids, list), "reference part has no corpus")
+    start = next(row for row in rows if row.get("event") == "start")
+    execution_context = {key: start.get(key) for key in ("platform", "uid")}
+    skips = collection_skips(xml, set(assignment["modules"])) if xml.is_file() else {}
+    (part / "selection.json").write_text(json.dumps({
+        "plan_sha256": expected["plan_sha256"], "assignment_id": assignment["id"],
+        "modules": assignment["modules"], "pytest_argv": argv,
+        "pytest_addopts": parent_opts,
+    }))
+    return {"assignment_id": assignment["id"], "nodeids": nodeids,
+            "collection_skips": skips, "invocation_id": metadata["invocation_id"],
+            "runner": runner, "execution_context": execution_context}
+
+
 def collect_reference_parts(expected, source, output, site, actual_runner, timing):
-    """Collect-only once per existing module assignment."""
-    parts = []
-    execution_context = None
-    runner = None
-    invocation = None
-    for assignment in expected["assignments"]:
-        part = output / "parts" / assignment["id"]
-        timing.install(part, site)
-        metadata = read_json(part / "metadata.json")
-        if runner is None:
-            runner = runner_context(expected["context"], metadata["identity"])
-            require(runner == actual_runner, "runner identity changed during preparation")
-            invocation = metadata["invocation_id"]
-        env = os.environ | {
-            "LENS_REPORT": str(part / "events.jsonl"),
-            "LENS_INVOCATION_ID": metadata["invocation_id"],
-            "YUEOPS_PYTEST_SERIAL": "1",
-            "PYTHONPATH": str(site),
-        }
-        xml = part / "pytest.xml"
-        argv = [sys.executable, "-m", "pytest", "--collect-only", "-q",
-                *assignment["modules"], "--junitxml", str(xml)]
-        (part / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
-        result = subprocess.run(argv, cwd=source, env=env, check=False)
-        (part / "pytest-finish-unix-ns.txt").write_text(str(time.time_ns()))
-        (part / "pytest-exit-code.txt").write_text(str(result.returncode))
-        require(result.returncode in (0, 5), "reference part failed")
-        rows = [json.loads(line) for line in (part / "events.jsonl").read_text().splitlines()]
-        corpus = next(row for row in rows if row.get("event") == "collection_corpus")
-        nodeids = corpus.get("nodeids")
-        require(isinstance(nodeids, list), "reference part has no corpus")
-        if execution_context is None:
-            start = next(row for row in rows if row.get("event") == "start")
-            execution_context = {key: start.get(key) for key in ("platform", "uid")}
-        skips = collection_skips(xml, set(assignment["modules"])) if xml.is_file() else {}
-        (part / "selection.json").write_text(json.dumps({
-            "plan_sha256": expected["plan_sha256"], "assignment_id": assignment["id"],
-            "modules": assignment["modules"], "pytest_argv": argv,
-            "pytest_addopts": os.environ.get("PYTEST_ADDOPTS", ""),
-        }))
-        parts.append({"assignment_id": assignment["id"], "nodeids": nodeids,
-                      "collection_skips": skips})
+    """Collect-only once per module assignment, in parallel processes.
+
+    Each part is its own interpreter. That is not xdist: workers there reuse
+    one process and the Ops import path then leaks across files. The serial
+    loop made this job the 40-minute critical path after the test shards
+    had already finished.
+    """
+    assignments = expected["assignments"]
+    limit = min(len(assignments), os.cpu_count() or 2)
+    collected = map_bounded([
+        (lambda item=item: _collect_reference_part(
+            expected, source, output, site, actual_runner, timing, item))
+        for item in assignments
+    ], limit)
+    require(all(part["runner"] == actual_runner for part in collected),
+            "runner identity changed during preparation")
+    invocation = collected[0]["invocation_id"]
+    require(all(part["invocation_id"] == invocation for part in collected), "reference invocation diverged")
+    parts = [{"assignment_id": part["assignment_id"], "nodeids": part["nodeids"],
+              "collection_skips": part["collection_skips"]} for part in collected]
     joined = join_reference_collections(parts)
     payload = {
         "schema": 1, "assignment_id": "reference", "invocation_id": invocation,
         "nodeids": joined["nodeids"], "collection_skips": joined["collection_skips"],
-        "runner_context": runner, "execution_context": execution_context,
+        "runner_context": actual_runner, "execution_context": collected[0]["execution_context"],
         "junit_sha256": sha(json.dumps(joined, sort_keys=True).encode()),
         "parts": [part["assignment_id"] for part in parts],
     }
