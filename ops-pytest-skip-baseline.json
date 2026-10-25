@@ -6154,5 +6154,22 @@
         "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
       }
     }
+  },
+  "reviewed_scanner_input_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "4c5a35bb6cc3bdbe03574118c5542d5a774cfbdbf49e79fc5c097b069d0587dd",
+    "source_before": "3b981eaeb042ed03762489e5360f61d4d0f9f16a",
+    "source_after": "4214a4c6cb36ce8ee46e7901174586db81ab75f7",
+    "qualified_policy_revision": "4cc1d14ce81daf7526cff51f8e8eba6195b1e1a9",
+    "independent_review_sha256": "8e3be922b507194868dc7abe05236096b251e39a0aea86c69c6d564ef6be3cdc",
+    "source_freeze_sha256": "92bcac0acbcdc13fe20e0653142dbde49d0250cf293af2db882a20f30f5d9d20",
+    "qualification_receipt_sha256": "8eeeba0e405f0a0ea4cfcf43947643694770b21b12e5ed0a12fff07c8df6082e",
+    "changes": {
+      "tests/_shell_early_exit_pipes.py": {
+        "before_blob": "cc552db08771988cc93b6be7ee67bd98ee376017",
+        "after_blob": "472b8b725a9e88df04fa4ab80f0e59e755fdade8",
+        "mode": "100644"
+      }
+    }
   }
 }

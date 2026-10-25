@@ -101,6 +101,14 @@ four retained unchanged journal cases; these are not same-run native receipts.
 Shared inputs, historical collection evidence, and reviewed hosted obligations
 are unchanged. Host and root skips remain non-acceptance. Unknown cases still
 fail the join.
+The scanner-helper successor adds a tenth complete shared-input map for Ops
+4214a4c6cb36ce8ee46e7901174586db81ab75f7 after reviewed source3b981eae.
+Only tests/_shell_early_exit_pipes.py changes, with exact before/after blobs and
+mode100644; accepted source freeze,131-host/131-Linux qualification and independent
+review hashes bind the record. All nine historical maps and the34/59 skip
+transition remain unchanged. Unknown paths, blobs, modes and mixed maps fail.
+Existing native receipts retain their original source/run identity; they cannot
+be transplanted to4214 or used as a new same-run native result.
 The release coordinator verifies the actual signed source, independent review and
 freeze artifacts before recording their identities. Hash syntax alone does not
 authenticate those artifacts. Historical skip/collection evidence stays dated;

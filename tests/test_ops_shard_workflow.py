@@ -1829,6 +1829,7 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
         del omitted[self.key]
         omitted.pop("reviewed_audit_dependency_transition", None)
         omitted.pop("reviewed_zod_lock_transition", None)
+        omitted.pop("reviewed_scanner_input_transition", None)
         omitted.pop("reviewed_current_skip_transition", None)
         for common in self.maps[:-1]:
             self.consumer.admit_shared_inputs(omitted, common, self.files(common))
@@ -2001,6 +2002,79 @@ class CurrentRelaySkipPolicy(unittest.TestCase):
             changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
             with self.subTest(mutation=field), self.assertRaisesRegex(ValueError, "new or changed case"):
                 consumer.admit_skips(value, changed, {"obligations": {}})
+
+
+class ScannerInputSuccessorPolicy(unittest.TestCase):
+    def setUp(self):
+        self.consumer = fixture.SHARDS
+        self.baseline = self.consumer.skip_baseline()
+        self.original, self.record = self.consumer.reviewed_scanner_input_transition(self.baseline)
+        self.path = "tests/_shell_early_exit_pipes.py"
+        self.maps = [dict(self.original["common_inputs"])]
+        for key in ("reviewed_shared_input_transition", "reviewed_python_input_transition",
+                    "reviewed_frontend_security_transition", "reviewed_miniapp_security_transition",
+                    "reviewed_w85_input_transition", "reviewed_w85_observability_transition",
+                    "reviewed_audit_dependency_transition", "reviewed_zod_lock_transition"):
+            record = self.original[key]
+            changes = record.get("changes", {record.get("path"): record})
+            self.maps.append(self.maps[-1] | {path: change["after_blob"]
+                                             for path, change in changes.items()})
+        self.successor = self.maps[-1] | {
+            self.path: self.record["changes"][self.path]["after_blob"]}
+        self.modes = self.original["reviewed_shared_input_transition"]["common_input_modes"]
+
+    def files(self, common):
+        return {path: (self.modes[path], blob) for path, blob in common.items()}
+
+    def test_exact_scanner_successor_preserves_all_nine_historical_maps(self):
+        self.assertEqual(self.record["source_before"], "3b981eaeb042ed03762489e5360f61d4d0f9f16a")
+        self.assertEqual(self.record["source_after"], "4214a4c6cb36ce8ee46e7901174586db81ab75f7")
+        self.assertEqual(self.record["qualified_policy_revision"],
+                         "4cc1d14ce81daf7526cff51f8e8eba6195b1e1a9")
+        self.assertEqual(self.record["changes"], {self.path: {
+            "before_blob": "cc552db08771988cc93b6be7ee67bd98ee376017",
+            "after_blob": "472b8b725a9e88df04fa4ab80f0e59e755fdade8", "mode": "100644"}})
+        self.assertEqual((len(self.maps), len(self.successor)), (9, 55))
+        self.assertEqual(self.consumer.reviewed_current_skip_transition(self.baseline),
+                         self.consumer.reviewed_current_skip_transition(self.original))
+        for index, common in enumerate([*self.maps, self.successor]):
+            with self.subTest(complete_map=index):
+                self.consumer.admit_shared_inputs(self.baseline, common, self.files(common))
+        with self.assertRaisesRegex(ValueError, "inputs changed"):
+            self.consumer.admit_shared_inputs(self.original, self.successor, self.files(self.successor))
+
+    def test_unknown_helper_path_mode_and_mixed_maps_are_rejected(self):
+        for label, common in (
+            ("unknown-blob", self.successor | {self.path: "f" * 40}),
+            ("unknown-path", self.successor | {"tests/_unreviewed.py": "f" * 40}),
+            ("missing-path", {p: b for p, b in self.successor.items() if p != self.path}),
+            ("mixed-map", self.successor | {"uv.lock": self.maps[0]["uv.lock"]}),
+        ):
+            with self.subTest(mutation=label), self.assertRaises(ValueError):
+                self.consumer.admit_shared_inputs(self.baseline, common)
+        files = self.files(self.successor)
+        files[self.path] = ("100755", self.successor[self.path])
+        with self.assertRaisesRegex(ValueError, "modes changed"):
+            self.consumer.admit_shared_inputs(self.baseline, self.successor, files)
+
+    def test_stale_successor_blob_and_changed_review_cannot_relabel_history(self):
+        # The complete predecessor map remains valid historical input. Its helper
+        # cannot be relabeled as the reviewed4214 successor by changing the record.
+        for field, value in (("after_blob", self.record["changes"][self.path]["before_blob"]),
+                             ("mode", "100755")):
+            changed = copy.deepcopy(self.baseline)
+            changed["reviewed_scanner_input_transition"]["changes"][self.path][field] = value
+            with self.subTest(mutation=field), self.assertRaisesRegex(ValueError, "transition identity"):
+                self.consumer.admit_shared_inputs(changed, self.successor)
+        for field in ("source_after", "independent_review_sha256", "qualification_receipt_sha256"):
+            changed = copy.deepcopy(self.baseline)
+            changed["reviewed_scanner_input_transition"][field] = "f" * len(self.record[field])
+            with self.subTest(mutation=field), self.assertRaises(ValueError):
+                self.consumer.admit_shared_inputs(changed, self.successor)
+        changed = copy.deepcopy(self.baseline)
+        changed["common_inputs"][self.path] = "f" * 40
+        with self.assertRaisesRegex(ValueError, "historical baseline changed"):
+            self.consumer.admit_shared_inputs(changed, self.successor)
 
 
 if __name__ == "__main__":

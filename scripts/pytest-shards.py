@@ -38,6 +38,7 @@ W85_OBSERVABILITY_TRANSITION_SHA256 = "aa2582effcfb53d71b11abe0a60db1e9231c9236d
 AUDIT_DEPENDENCY_TRANSITION_SHA256 = "ff5a2514cd10c6c9cc81cb1e4e52afab20ba789b8a8af92ef4dcbd21cbbb1b6a"
 ZOD_LOCK_TRANSITION_SHA256 = "691c045988e884f360dc6925bffea7798295970f2d62763ffec180ff2b20e842"
 CURRENT_SKIP_TRANSITION_SHA256 = "302153cd755ac54d2346e0c3114fcfde776ba8ea79fbe2fd4d7de9d7cdae726d"
+SCANNER_INPUT_TRANSITION_SHA256 = "5a639c8b455a5934d206af1f4e03d386d91b55a986f2e52ffc79cbedd2d1563c"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
     "tests/test_installed_checker_transport_20261014.py::"
@@ -245,8 +246,37 @@ def shared_inputs(source, revision):
     return result
 
 
+def reviewed_scanner_input_transition(baseline):
+    """Peel the exact scanner-helper successor without relabeling old evidence."""
+    original = dict(baseline)
+    key = "reviewed_scanner_input_transition"
+    record = original.pop(key, None)
+    if key not in baseline:
+        return original, None
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "qualified_policy_revision", "independent_review_sha256",
+        "source_freeze_sha256", "qualification_receipt_sha256", "changes",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid reviewed scanner input transition")
+    require(sha(encoded(record)) == SCANNER_INPUT_TRANSITION_SHA256,
+            "unreviewed scanner input transition identity")
+    restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(restored),
+            "scanner input transition historical baseline changed")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k]) for k in
+                ("source_before", "source_after", "qualified_policy_revision"))
+            and record["source_before"] != record["source_after"]
+            and all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                    for k in ("independent_review_sha256", "source_freeze_sha256",
+                              "qualification_receipt_sha256")),
+            "missing exact scanner input review identity")
+    return original, record
+
+
 def reviewed_current_skip_transition(baseline):
     """Admit the exact new host skips and refreshed module blobs."""
+    baseline, _ = reviewed_scanner_input_transition(baseline)
     original = dict(baseline)
     key = "reviewed_current_skip_transition"
     record = original.pop(key, None)
@@ -438,6 +468,7 @@ def admit_shared_inputs(baseline, common, files=None):
     The historical skip/collection evidence is never relabeled as a new run.
     Exact effective inputs remain sealed into this run's admission envelope.
     """
+    baseline, scanner_record = reviewed_scanner_input_transition(baseline)
     baseline, zod_record = reviewed_zod_lock_transition(baseline)
     baseline, audit_record = reviewed_audit_dependency_transition(baseline)
     baseline, observability_record = reviewed_w85_observability_transition(baseline)
@@ -664,6 +695,23 @@ def admit_shared_inputs(baseline, common, files=None):
                     "unreviewed zod lock input blob or mode")
             successor[path] = change["after_blob"]
         accepted.append(successor)
+    if scanner_record is not None:
+        require(zod_record is not None, "scanner input transition requires its zod predecessor")
+        changes = scanner_record["changes"]
+        path = "tests/_shell_early_exit_pipes.py"
+        require(isinstance(changes, dict) and set(changes) == {path},
+                "unreviewed scanner input paths")
+        change = changes[path]
+        require(isinstance(change, dict) and set(change) == {
+            "before_blob", "after_blob", "mode",
+        } and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                  for k in ("before_blob", "after_blob"))
+                and change["before_blob"] == accepted[-1].get(path)
+                and change["before_blob"] != change["after_blob"]
+                and change["mode"] == baseline["reviewed_shared_input_transition"][
+                    "common_input_modes"].get(path) == "100644",
+                "unreviewed scanner input blob or mode")
+        accepted.append(accepted[-1] | {path: change["after_blob"]})
     if common not in accepted:
         nearest = min(
             accepted,
