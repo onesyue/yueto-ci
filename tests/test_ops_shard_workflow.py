@@ -1943,5 +1943,65 @@ class CurrentNavigationSkipPolicy(unittest.TestCase):
                     consumer.admit_skips(value, changed, {"obligations": {}})
 
 
+class CurrentRelaySkipPolicy(unittest.TestCase):
+    def test_exact_relay_native_cases_remain_ordinary_skips(self):
+        consumer = fixture.SHARDS
+        baseline = consumer.skip_baseline()
+        record = baseline["reviewed_current_skip_transition"]
+        self.assertEqual(record["source_revision"],
+                         "3b981eaeb042ed03762489e5360f61d4d0f9f16a")
+        self.assertEqual((len(record["additions"]), len(record["updates"])), (34, 59))
+        self.assertEqual(record["prior_baseline_sha256"],
+                         "9aa6b338f4411e9508bb0a0978924ee383ccf95cedcc3c0d2dd2145b50f3d7d5")
+        module = "tests/test_relay4_tuning_20261025.py"
+        blob = "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+        reasons = {
+            "test_real_dpkg_transaction_has_a_finite_package_deadline": (
+                ["False", "True"],
+                "requires Linux UID0 and the real dpkg process and transaction database"),
+            "test_real_dpkg_leader_death_retains_custody_until_maintainer_exit": (
+                ["False", "True"], "requires Linux UID0 and real dpkg leader/maintainer processes"),
+            "test_actual_journal_unit_boundary_and_independent_recovery": (
+                ["commit", "budget_recovery", "lost_history", "missing_floor",
+                 "owner_exit_before_package"],
+                "requires an isolated Docker systemd PID1 journal lab"),
+        }
+        expected = {
+            module + "::" + name + "[" + parameter + "]": {
+                "outcome": "skipped", "reason": "Skipped: " + reason, "module_blob": blob}
+            for name, (parameters, reason) in reasons.items() for parameter in parameters
+        }
+        expected[module + "::test_systemd_custody_drains_a_maintainer_that_escapes_its_original_session"] = {
+            "outcome": "skipped", "reason": "Skipped: requires an isolated systemd PID1 cgroup custody lab",
+            "module_blob": blob}
+        actual = {key: value for key, value in record["additions"].items()
+                  if key.startswith(module + "::")}
+        self.assertEqual(actual, expected)
+        self.assertFalse(set(expected) & set(baseline["cases"]))
+        self.assertFalse(set(expected) & set(baseline["reviewed_hosted"]["cases"]))
+        value = {"skip_module_blobs": {module: blob},
+                 "skip_baseline_sha256": consumer.sha((ROOT / consumer.SKIP_BASELINE).read_bytes())}
+        rows = [{"nodeid": key, "outcome": "skipped", "when": "setup", "reason": case["reason"]}
+                for key, case in expected.items()]
+        session = {"execution_context": baseline["context"], "collection_skips": {},
+                   "junit_sha256": "b" * 64, "nonpassing_outcomes": rows}
+        result = {"reference": session | {"assignment_id": "reference"},
+                  "shards": [session | {"assignment_id": "ordinary-000"}]}
+        accepted = consumer.admit_skips(value, result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertIs(accepted["skips_are_passes"], False)
+        self.assertEqual(accepted["disposition_counts"], {
+            "HISTORICAL_UNEXECUTED": 20, "OWNER_CANCELED": 0, "SAME_RUN_NATIVE_REQUIRED": 0})
+        with self.assertRaisesRegex(ValueError, "new or changed case"):
+            consumer.admit_skips(value | {"skip_module_blobs": {module: "f" * 40}},
+                                 result, {"obligations": {}})
+        for field, replacement in (("reason", "unreviewed reason"),
+                                   ("nodeid", module + "::test_unreviewed")):
+            changed = copy.deepcopy(result)
+            changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
+            with self.subTest(mutation=field), self.assertRaisesRegex(ValueError, "new or changed case"):
+                consumer.admit_skips(value, changed, {"obligations": {}})
+
+
 if __name__ == "__main__":
     unittest.main()

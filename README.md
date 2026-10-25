@@ -91,8 +91,16 @@ It adds two panel-navigation skips and refreshes 21 module blobs for Ops
 4a128845e3039a5687b3cf71c6c973438650a440, producing 24 additions and
 59 updates. The prior current-record SHA256 is
 d58aa5e3d715836b04e1939f8af6f3b4ed9f34570f7b3d3ff411948cf2d66e32.
-Shared inputs and historical collection evidence are unchanged.
-Host and root skips remain non-acceptance. Unknown cases still fail the join.
+The final Ops successor 3b981eaeb042ed03762489e5360f61d4d0f9f16a preserves
+those 24 additions and 59 updates and adds ten exact relay-package native
+cases, producing 34 additions and 59 updates. Its prior current-record SHA256 is
+1ab7d4d2e31107b0f1355c65e40648923626f10be80690fdcc6efc2c4085859e.
+Actual ordinary Linux UID1001 execution reports 50 passes and ten skips for
+that module. Independent native qualification provides 56 fresh passes plus
+four retained unchanged journal cases; these are not same-run native receipts.
+Shared inputs, historical collection evidence, and reviewed hosted obligations
+are unchanged. Host and root skips remain non-acceptance. Unknown cases still
+fail the join.
 The release coordinator verifies the actual signed source, independent review and
 freeze artifacts before recording their identities. Hash syntax alone does not
 authenticate those artifacts. Historical skip/collection evidence stays dated;

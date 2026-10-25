@@ -5742,8 +5742,8 @@
   "reviewed_current_skip_transition": {
     "schema": 1,
     "prior_baseline_sha256": "9aa6b338f4411e9508bb0a0978924ee383ccf95cedcc3c0d2dd2145b50f3d7d5",
-    "source_revision": "4a128845e3039a5687b3cf71c6c973438650a440",
-    "independent_review_sha256": "a8e4d233d24a29e935f5def11abb35c24bb4b2a461f9f787c6da3d81c95e9c61",
+    "source_revision": "3b981eaeb042ed03762489e5360f61d4d0f9f16a",
+    "independent_review_sha256": "1c181c61ca200ddbb6397b3de67628dbd86dd4fe87b8b1c97ca2bc7a95c967f2",
     "additions": {
       "tests/test_host_service_contracts_20261013.py::test_legacy_receipt_native_retry_and_queue_integrity": {
         "outcome": "skipped",
@@ -5864,6 +5864,56 @@
         "outcome": "skipped",
         "reason": "Skipped: real-nginx E2E requires Docker; skip is not evidence",
         "module_blob": "b6f699837760729d98a3303babb475b084ff5ec2"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_real_dpkg_transaction_has_a_finite_package_deadline[False]": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires Linux UID0 and the real dpkg process and transaction database",
+        "module_blob": "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_real_dpkg_transaction_has_a_finite_package_deadline[True]": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires Linux UID0 and the real dpkg process and transaction database",
+        "module_blob": "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_real_dpkg_leader_death_retains_custody_until_maintainer_exit[False]": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires Linux UID0 and real dpkg leader/maintainer processes",
+        "module_blob": "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_real_dpkg_leader_death_retains_custody_until_maintainer_exit[True]": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires Linux UID0 and real dpkg leader/maintainer processes",
+        "module_blob": "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_systemd_custody_drains_a_maintainer_that_escapes_its_original_session": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires an isolated systemd PID1 cgroup custody lab",
+        "module_blob": "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_actual_journal_unit_boundary_and_independent_recovery[commit]": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires an isolated Docker systemd PID1 journal lab",
+        "module_blob": "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_actual_journal_unit_boundary_and_independent_recovery[budget_recovery]": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires an isolated Docker systemd PID1 journal lab",
+        "module_blob": "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_actual_journal_unit_boundary_and_independent_recovery[lost_history]": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires an isolated Docker systemd PID1 journal lab",
+        "module_blob": "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_actual_journal_unit_boundary_and_independent_recovery[missing_floor]": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires an isolated Docker systemd PID1 journal lab",
+        "module_blob": "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_actual_journal_unit_boundary_and_independent_recovery[owner_exit_before_package]": {
+        "outcome": "skipped",
+        "reason": "Skipped: requires an isolated Docker systemd PID1 journal lab",
+        "module_blob": "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
       }
     },
     "updates": {
