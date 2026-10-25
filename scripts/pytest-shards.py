@@ -42,6 +42,7 @@ CURRENT_SKIP_TRANSITION_SHA256 = "302153cd755ac54d2346e0c3114fcfde776ba8ea79fbe2
 SCANNER_INPUT_TRANSITION_SHA256 = "5a639c8b455a5934d206af1f4e03d386d91b55a986f2e52ffc79cbedd2d1563c"
 RELAY_SKIP_MODULE_TRANSITION_SHA256 = "afab000651dcbd556b14b27b27ecfc283f935f78be984293dbf2f1dcf971042b"
 RELAY_METER_MODULE_TRANSITION_SHA256 = "99945322ac036c84b3a4a87e6f9378156e14e5cc1ec6d04680d69c54d44ad2df"
+RELAY_PRESERVATION_MODULE_TRANSITION_SHA256 = "f5d43ba785159b00ab42f7034d29c77d78d8d9164f89b46b76d88a093c81407b"
 RELAY_METRICS_MODULE_TRANSITION_SHA256 = "777214bee79eb25858c97781aaa065b53770693252185f3ee61e19c3c61efa07"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
@@ -250,9 +251,57 @@ def shared_inputs(source, revision):
     return result
 
 
+def reviewed_relay_preservation_module_transition(baseline, files=None):
+    """Bind the reviewed preservation repair without relabeling any predecessor."""
+    original = dict(baseline)
+    key = "reviewed_relay_preservation_module_transition"
+    record = original.pop(key, None)
+    if key not in baseline:
+        return original, {}
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "qualified_policy_revision", "independent_review_sha256",
+        "source_freeze_sha256", "qualification_receipt_sha256", "module",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid reviewed relay preservation transition")
+    require(sha(encoded(record)) == RELAY_PRESERVATION_MODULE_TRANSITION_SHA256,
+            "unreviewed relay preservation transition identity")
+    restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(restored),
+            "relay preservation transition historical baseline changed")
+    predecessor = original.get("reviewed_relay_meter_module_transition")
+    require(isinstance(predecessor, dict)
+            and record["source_before"] == predecessor.get("source_after")
+            and record["source_before"] != record["source_after"]
+            and all(isinstance(record[k], str) and SHA.fullmatch(record[k]) for k in
+                    ("source_before", "source_after", "qualified_policy_revision"))
+            and all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                    for k in ("independent_review_sha256", "source_freeze_sha256",
+                              "qualification_receipt_sha256")),
+            "missing exact relay preservation review identity")
+    module = record["module"]
+    require(isinstance(module, dict) and set(module) == {
+        "path", "mode", "before_blob", "after_blob",
+    } and module["path"] == "tests/test_relay4_tuning_20261025.py"
+            and module["mode"] == "100644"
+            and all(isinstance(module[k], str) and SHA.fullmatch(module[k])
+                    for k in ("before_blob", "after_blob"))
+            and module["before_blob"] != module["after_blob"],
+            "invalid reviewed relay preservation module identity")
+    if files is not None and files.get(module["path"], (None, None))[1] == module["after_blob"]:
+        require(files[module["path"]][0] == module["mode"], "relay preservation module mode changed")
+    # Removing this outer record terminates the predecessor's peeling recursion.
+    _, cases = reviewed_relay_meter_module_transition(original, files)
+    require(len(cases) == 10 and all(case["module_blob"] == module["before_blob"]
+                                   for case in cases.values()),
+            "relay preservation predecessor cases differ")
+    return original, {nodeid: case | {"module_blob": module["after_blob"]}
+                      for nodeid, case in cases.items()}
+
+
 def reviewed_relay_meter_module_transition(baseline, files=None):
     """Bind the reviewed meter repair without relabeling any predecessor."""
-    original = dict(baseline)
+    original, _ = reviewed_relay_preservation_module_transition(baseline, files)
     key = "reviewed_relay_meter_module_transition"
     record = original.pop(key, None)
     if key not in baseline:
@@ -1547,7 +1596,8 @@ def native_terminal(value, source, board, output):
 
 
 def admit_skips(value, result, native):
-    baseline, meter_successors = reviewed_relay_meter_module_transition(skip_baseline())
+    baseline, preservation_successors = reviewed_relay_preservation_module_transition(skip_baseline())
+    baseline, meter_successors = reviewed_relay_meter_module_transition(baseline)
     baseline, metrics_successors = reviewed_relay_metrics_module_transition(baseline)
     baseline, relay_successors = reviewed_relay_skip_module_transition(baseline)
     baseline, extra = reviewed_current_skip_transition(baseline)
@@ -1574,7 +1624,7 @@ def admit_skips(value, result, native):
                 }
                 if observed not in (baseline["cases"].get(nodeid), successors.get(nodeid),
                                     relay_successors.get(nodeid), metrics_successors.get(nodeid),
-                                    meter_successors.get(nodeid)):
+                                    meter_successors.get(nodeid), preservation_successors.get(nodeid)):
                     unknown.append(nodeid)
                     continue
                 disposition = "HISTORICAL_UNEXECUTED"

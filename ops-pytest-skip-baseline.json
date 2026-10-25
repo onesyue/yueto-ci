@@ -6219,5 +6219,21 @@
       "before_blob": "8053af6952c5ac8dddaece3f1a25a6958f7dfeb8",
       "after_blob": "ab59ceb3deb7df97fd570d5b589e7c07b5012474"
     }
+  },
+  "reviewed_relay_preservation_module_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "cfcb07d3908f18b24ee993558d9977a3057c7440f4bf9df8dbd204a41b87b5f5",
+    "source_before": "30bd3e47a259d5057a0c7d25a917b267c2ed8a5d",
+    "source_after": "0d3448dabbc7bed04fe9b5bb09b6d8c35ef98323",
+    "qualified_policy_revision": "9fdfeebd3c91afc39aa8ba3aad7e8b08f5ebe531",
+    "independent_review_sha256": "9aea4fa9d90b6f1601ffbe50938b9578dc5055486f648959938fd0dc9efd70d7",
+    "source_freeze_sha256": "36de1b708a936b433270c1a2909b99187f4241b5ee2938f5d8c7873165c62da1",
+    "qualification_receipt_sha256": "822bb6a978e4ecfa1a46a7ce833652b46a442b6df2178f7d6ad38392e6498b37",
+    "module": {
+      "path": "tests/test_relay4_tuning_20261025.py",
+      "mode": "100644",
+      "before_blob": "ab59ceb3deb7df97fd570d5b589e7c07b5012474",
+      "after_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1"
+    }
   }
 }
