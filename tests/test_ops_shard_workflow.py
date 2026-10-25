@@ -1893,5 +1893,55 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
                     self.consumer.envelope(wrong)
 
 
+class CurrentNavigationSkipPolicy(unittest.TestCase):
+    def test_reviewed_navigation_cases_remain_unexecuted_and_exact(self):
+        consumer = fixture.SHARDS
+        baseline = consumer.skip_baseline()
+        record = baseline["reviewed_current_skip_transition"]
+        modules = {
+            "tests/test_panel_spa_error_cache_e2e.py":
+                "b6f699837760729d98a3303babb475b084ff5ec2",
+            "tests/test_miniapp_existing_app_nginx_native_20261013.py":
+                "812e3509c7213cf16f507271f5a1d4f8c0cefe29",
+        }
+        reasons = {
+            "tests/test_panel_spa_error_cache_e2e.py":
+                "Skipped: real-nginx E2E requires Docker; skip is not evidence",
+            "tests/test_miniapp_existing_app_nginx_native_20261013.py":
+                "Skipped: real Mini mirror NGINX gate requires isolated Linux UID0",
+        }
+        nodeids = set(baseline["cases"]) | set(record["additions"])
+        rows = [{"nodeid": nodeid, "outcome": "skipped", "when": "setup",
+                 "reason": reasons[nodeid.split("::", 1)[0]]}
+                for nodeid in sorted(nodeids) if nodeid.split("::", 1)[0] in modules]
+        self.assertEqual(len(rows), 23)
+        panel = "tests/test_panel_spa_error_cache_e2e.py::"
+        for plane in (0, 1):
+            self.assertIn(panel + "test_mirror_without_navigation_cookie_serves_only_"
+                          f"the_secured_interstitial[plane{plane}]", {r["nodeid"] for r in rows})
+        value = {"skip_module_blobs": modules,
+                 "skip_baseline_sha256": consumer.sha((ROOT / consumer.SKIP_BASELINE).read_bytes())}
+        session = {"execution_context": baseline["context"], "collection_skips": {},
+                   "junit_sha256": "b" * 64, "nonpassing_outcomes": rows}
+        result = {"reference": session | {"assignment_id": "reference"},
+                  "shards": [session | {"assignment_id": "ordinary-000"}]}
+        accepted = consumer.admit_skips(value, result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertIs(accepted["skips_are_passes"], False)
+        self.assertEqual(accepted["disposition_counts"]["HISTORICAL_UNEXECUTED"], 46)
+        for module in modules:
+            with self.subTest(module=module, mutation="blob"), self.assertRaises(ValueError):
+                consumer.admit_skips(value | {"skip_module_blobs": modules | {module: "f" * 40}},
+                                     result, {"obligations": {}})
+            for field, replacement in (("reason", "Skipped: unreviewed reason"),
+                                       ("nodeid", module + "::test_unreviewed")):
+                changed = copy.deepcopy(result)
+                row = next(r for r in changed["shards"][0]["nonpassing_outcomes"]
+                           if r["nodeid"].startswith(module + "::"))
+                row[field] = replacement
+                with self.subTest(module=module, mutation=field), self.assertRaises(ValueError):
+                    consumer.admit_skips(value, changed, {"obligations": {}})
+
+
 if __name__ == "__main__":
     unittest.main()

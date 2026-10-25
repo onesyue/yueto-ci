@@ -5742,8 +5742,8 @@
   "reviewed_current_skip_transition": {
     "schema": 1,
     "prior_baseline_sha256": "9aa6b338f4411e9508bb0a0978924ee383ccf95cedcc3c0d2dd2145b50f3d7d5",
-    "source_revision": "b18aa7f2163c0b22544d780287eb4dc7f88fcf7f",
-    "independent_review_sha256": "f0cf0492af38ec31d6741c87f4f1107814854a6f1ad662fe25630a5f3a78a8ae",
+    "source_revision": "4a128845e3039a5687b3cf71c6c973438650a440",
+    "independent_review_sha256": "a8e4d233d24a29e935f5def11abb35c24bb4b2a461f9f787c6da3d81c95e9c61",
     "additions": {
       "tests/test_host_service_contracts_20261013.py::test_legacy_receipt_native_retry_and_queue_integrity": {
         "outcome": "skipped",
@@ -5854,6 +5854,16 @@
         "outcome": "skipped",
         "reason": "Skipped: real root installer",
         "module_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30"
+      },
+      "tests/test_panel_spa_error_cache_e2e.py::test_mirror_without_navigation_cookie_serves_only_the_secured_interstitial[plane0]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real-nginx E2E requires Docker; skip is not evidence",
+        "module_blob": "b6f699837760729d98a3303babb475b084ff5ec2"
+      },
+      "tests/test_panel_spa_error_cache_e2e.py::test_mirror_without_navigation_cookie_serves_only_the_secured_interstitial[plane1]": {
+        "outcome": "skipped",
+        "reason": "Skipped: real-nginx E2E requires Docker; skip is not evidence",
+        "module_blob": "b6f699837760729d98a3303babb475b084ff5ec2"
       }
     },
     "updates": {
@@ -6008,6 +6018,90 @@
       "tests/test_tuning_release_20261018.py::test_actual_independent_packages_include_every_declared_runtime_and_alert_byte": {
         "before_blob": "d07245b1dcff6aa35e273ccab0f50ac87747d7e0",
         "after_blob": "f6676cf9f142a29f10d21c7fe8300882b41c397a"
+      },
+      "tests/test_panel_spa_error_cache_e2e.py::test_404_asset_bypass_leaves_successful_assets_and_other_responses_unchanged[plane0]": {
+        "before_blob": "33491f2488b470ee2c7ac0fa9ab50c1f43d623fd",
+        "after_blob": "b6f699837760729d98a3303babb475b084ff5ec2"
+      },
+      "tests/test_panel_spa_error_cache_e2e.py::test_404_asset_bypass_leaves_successful_assets_and_other_responses_unchanged[plane1]": {
+        "before_blob": "33491f2488b470ee2c7ac0fa9ab50c1f43d623fd",
+        "after_blob": "b6f699837760729d98a3303babb475b084ff5ec2"
+      },
+      "tests/test_panel_spa_error_cache_e2e.py::test_404_asset_bypass_leaves_successful_assets_and_other_responses_unchanged[plane2]": {
+        "before_blob": "33491f2488b470ee2c7ac0fa9ab50c1f43d623fd",
+        "after_blob": "b6f699837760729d98a3303babb475b084ff5ec2"
+      },
+      "tests/test_panel_spa_error_cache_e2e.py::test_404_asset_bypass_leaves_successful_assets_and_other_responses_unchanged[plane3]": {
+        "before_blob": "33491f2488b470ee2c7ac0fa9ab50c1f43d623fd",
+        "after_blob": "b6f699837760729d98a3303babb475b084ff5ec2"
+      },
+      "tests/test_panel_spa_error_cache_e2e.py::test_panel_document_csp_gains_one_fresh_request_nonce[plane0]": {
+        "before_blob": "33491f2488b470ee2c7ac0fa9ab50c1f43d623fd",
+        "after_blob": "b6f699837760729d98a3303babb475b084ff5ec2"
+      },
+      "tests/test_panel_spa_error_cache_e2e.py::test_panel_document_csp_gains_one_fresh_request_nonce[plane1]": {
+        "before_blob": "33491f2488b470ee2c7ac0fa9ab50c1f43d623fd",
+        "after_blob": "b6f699837760729d98a3303babb475b084ff5ec2"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_mini_index_assets_and_telegram_frame_policy[app.xn--9kq451mn9g.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_mini_index_assets_and_telegram_frame_policy[app.xn--jdu596h.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_mini_index_assets_and_telegram_frame_policy[mini.xn--9kq451mn9g.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_mini_index_assets_and_telegram_frame_policy[mini.xn--jdu596h.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_auth_is_not_panel_cookie_or_bearer_and_secret_paths_do_not_log[app.xn--9kq451mn9g.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_auth_is_not_panel_cookie_or_bearer_and_secret_paths_do_not_log[app.xn--jdu596h.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_auth_is_not_panel_cookie_or_bearer_and_secret_paths_do_not_log[mini.xn--9kq451mn9g.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_auth_is_not_panel_cookie_or_bearer_and_secret_paths_do_not_log[mini.xn--jdu596h.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_alias_upload_method_body_limits_and_cache[app.xn--9kq451mn9g.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_alias_upload_method_body_limits_and_cache[app.xn--jdu596h.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_alias_upload_method_body_limits_and_cache[mini.xn--9kq451mn9g.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_alias_upload_method_body_limits_and_cache[mini.xn--jdu596h.com]": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_unchanged_panel_site_url_bearer_and_default444": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_upload_rate_key_cannot_be_rotated_with_x_real_ip": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+      },
+      "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_shared_obs_log_keeps_mini_private_paths_closed": {
+        "before_blob": "b2d158c5b2cc6ef23b9de22d5ef030ecb47f161d",
+        "after_blob": "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
       }
     }
   }
