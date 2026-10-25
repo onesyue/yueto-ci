@@ -789,6 +789,7 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
     metadata = read_json(directory / "metadata.json")
     selection = read_json(directory / "selection.json")
     reference = assignment is None
+    collect_only = reference or bool(isinstance(assignment, dict) and assignment.get("collect_only"))
     modules = ["tests"] if reference else assignment["modules"]
     role = "reference" if reference else assignment["id"]
     require(set(selection) == {"plan_sha256", "assignment_id", "modules", "pytest_argv",
@@ -798,7 +799,7 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
             and selection["pytest_addopts"] in ("", "--durations=25"),
             "selection does not match the exact plan")
     argv = selection["pytest_argv"]
-    suffix = ["-m", "pytest", *(["--collect-only"] if reference else []), "-q", *modules]
+    suffix = ["-m", "pytest", *(["--collect-only"] if collect_only else []), "-q", *modules]
     has_xml = (isinstance(argv, list) and len(argv) == len(suffix) + 3
                and argv[-2] == "--junitxml" and isinstance(argv[-1], str)
                and Path(argv[-1]).is_absolute() and Path(argv[-1]).name == "pytest.xml")
@@ -868,7 +869,7 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
     begin = int((directory / "pytest-start-unix-ns.txt").read_text())
     end = int((directory / "pytest-finish-unix-ns.txt").read_text())
     require(0 < begin <= end, "invalid process window")
-    if reference:
+    if collect_only:
         require(nodeids and not any(r.get("event") == "phase_timing" for r in rows),
                 "reference must be full collection-only evidence")
     else:
@@ -960,6 +961,11 @@ def collect_reference_parts(expected, source, output, site, actual_runner, timin
             start = next(row for row in rows if row.get("event") == "start")
             execution_context = {key: start.get(key) for key in ("platform", "uid")}
         skips = collection_skips(xml, set(assignment["modules"])) if xml.is_file() else {}
+        (part / "selection.json").write_text(json.dumps({
+            "plan_sha256": expected["plan_sha256"], "assignment_id": assignment["id"],
+            "modules": assignment["modules"], "pytest_argv": argv,
+            "pytest_addopts": os.environ.get("PYTEST_ADDOPTS", ""),
+        }))
         parts.append({"assignment_id": assignment["id"], "nodeids": nodeids,
                       "collection_skips": skips})
     joined = join_reference_collections(parts)
@@ -981,6 +987,17 @@ def aggregate(value, reference, directories):
     joined_path = reference / "joined.json"
     if joined_path.is_file():
         payload = read_json(joined_path)
+        live_skips = {}
+        for role_name in payload.get("parts") or []:
+            junit = reference / "parts" / role_name / "pytest.xml"
+            require(junit.is_file() and not junit.is_symlink(), "missing reference junit")
+            selection = read_json(reference / "parts" / role_name / "selection.json")
+            for module, reason in collection_skips(junit, set(selection["modules"])).items():
+                if module in live_skips and live_skips[module] != reason:
+                    require(False, "reference and shards have different collection skips")
+                live_skips[module] = reason
+        require(live_skips == payload.get("collection_skips"),
+                "reference and shards have different collection skips")
         require(payload.get("schema") == 1 and isinstance(payload.get("nodeids"), list)
                 and isinstance(payload.get("collection_skips"), dict)
                 and payload.get("junit_sha256") and payload.get("invocation_id"),

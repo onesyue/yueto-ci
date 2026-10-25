@@ -608,14 +608,18 @@ class OpsShardWorkflow(unittest.TestCase):
     def test_actual_selection_rejects_wrong_interpreter_identity(self):
         ran = self.run_role("reference")
         self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
-        directory = self.artifacts / (self.prefix + "reference")
-        self.consumer.inspect_session(directory, self.admission["ops_plan"], None)
+        root = self.artifacts / (self.prefix + "reference")
+        directory = next(path for path in (root / "parts").iterdir() if path.is_dir())
+        assignment = next(item for item in self.admission["ops_plan"]["assignments"]
+                          if item["id"] == directory.name)
+        marked = assignment | {"collect_only": True}
+        self.consumer.inspect_session(directory, self.admission["ops_plan"], marked)
         path = directory / "selection.json"
         receipt = json.loads(path.read_text())
         receipt["pytest_argv"][0] += ".wrong-interpreter"
         path.write_text(json.dumps(receipt))
         with self.assertRaisesRegex(ValueError, "wrong Python executable"):
-            self.consumer.inspect_session(directory, self.admission["ops_plan"], None)
+            self.consumer.inspect_session(directory, self.admission["ops_plan"], marked)
 
     def test_actual_failure_is_not_retried_as_legacy(self):
         assignment = next(a for a in self.admission["ops_plan"]["assignments"]
@@ -1032,7 +1036,9 @@ class OpsShardWorkflow(unittest.TestCase):
     def test_missing_junit_and_reference_collection_disagreement_refuse(self):
         import xml.etree.ElementTree as ET
         self.full_bundle()
-        path = self.artifacts / (self.prefix + "reference") / "pytest.xml"
+        parts = self.artifacts / (self.prefix + "reference") / "parts"
+        path = next(item for item in parts.glob("*/pytest.xml")
+                    if b"collection skipped" in item.read_bytes())
         original = path.read_bytes()
         path.unlink()
         with self.assertRaises(ValueError): self.join()

@@ -435,7 +435,9 @@ jobs:
       max-parallel: ${{ fromJSON(needs.plan.outputs.validation_parallelism) }}
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.validation_matrix) }}
-    name: ${{ matrix.ops_role && matrix.ops_role != 'legacy' && format('validate-yueops-{0}', matrix.ops_role) || matrix.node_profile && format('validate-yue-node-{0}', matrix.node_profile) || format('validate-{0}', matrix.validation) }}
+    name: ${{ matrix.board_role && format('validate-yueboard-{0}', matrix.board_role) || matrix.ops_role && matrix.ops_role != 'legacy' && format('validate-yueops-{0}', matrix.ops_role) || matrix.node_profile && format('validate-yue-node-{0}', matrix.node_profile) || format('validate-{0}', matrix.validation) }}
+    # Each matrix row is its own runner, so every YueBoard role that talks to
+    # PostgreSQL gets a disposable service instead of sharing one database.
     services:
       postgres:
         image: postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
@@ -588,7 +590,7 @@ jobs:
       # (GitHub release asset digest == the release's sha256.txt, 2026-09-27)
       # on every path, including a buf already on PATH.
       - name: Set up Buf for YueBoard protocol compatibility
-        if: matrix.validation == 'yueboard'
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'
         uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
         with:
           version: '1.72.0'
@@ -921,7 +923,7 @@ jobs:
           fi
 
       - name: Validate YueBoard backend quality gates
-        if: matrix.validation == 'yueboard'
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'
         env:
           CGO_ENABLED: '1'
         run: |
@@ -953,11 +955,11 @@ jobs:
           go test -race ./...
 
       - name: Validate YueBoard protocol compatibility
-        if: matrix.validation == 'yueboard'
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'
         run: scripts/ci/proto-gate.sh
 
       - name: Validate YueBoard PostgreSQL integration
-        if: matrix.validation == 'yueboard'
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'postgres'
         env:
           YUEBOARD_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
           YUEBOARD_TRAFFIC_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
@@ -966,7 +968,6 @@ jobs:
           # The migration suite intentionally destroys public; this database is
           # the disposable PostgreSQL 18 service declared above.
           YUEBOARD_MIGRATION_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
-          YUEBOARD_MIGRATION_TEST_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE
           YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE: '1'
           # 整个集成套件共用一个测试账号、跨用例连续下单，会撞满生产默认的
           # 10 次/分钟结账闸门 —— 2026-08-02 实录：那道闸门刚加上，5 个**支付回归**
@@ -985,7 +986,7 @@ jobs:
             --phase domain --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"
 
       - name: Validate YueBoard clean PostgreSQL lifecycle
-        if: matrix.validation == 'yueboard'
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'postgres'
         env:
           YUEBOARD_ADMIN_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/postgres' || 'postgres://postgres:ci@127.0.0.1:5432/postgres' }}
           CLEAN_PG_DSN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_clean_gate' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_clean_gate' }}
@@ -1002,7 +1003,7 @@ jobs:
           scripts/ci/clean-pg-gate.sh
 
       - name: Validate YueBoard PostgreSQL module and migration integration
-        if: matrix.validation == 'yueboard'
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'migration'
         env:
           YUEBOARD_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
           YUEBOARD_TRAFFIC_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
@@ -1035,7 +1036,7 @@ jobs:
       # 判定只看这一个标记，并以 step 输出交给后面三个只属于新布局的阶段。
       - name: Validate yueboard frontends
         id: board_frontend
-        if: matrix.validation == 'yueboard'
+        if: matrix.validation == 'yueboard' && (matrix.board_role == 'frontends' || matrix.board_role == 'components' || matrix.board_role == 'e2e')
         run: |
           set -euo pipefail
           corepack enable
@@ -1088,7 +1089,7 @@ jobs:
       # 以下三个阶段只存在于新布局（W9.2–W9.6 与 W9.1 同批落地，没有「workspace 但缺它们」
       # 的合法 commit）：新布局下缺任何一个入口都是 FATAL，不是跳过；旧布局整段不适用。
       - name: Validate YueBoard frontend lint
-        if: matrix.validation == 'yueboard' && steps.board_frontend.outputs.layout == 'workspace'
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'frontends' && steps.board_frontend.outputs.layout == 'workspace'
         run: |
           set -euo pipefail
           for script in lint fmt:check; do
@@ -1103,7 +1104,7 @@ jobs:
           pnpm run fmt:check
 
       - name: Validate YueBoard component tests
-        if: matrix.validation == 'yueboard' && steps.board_frontend.outputs.layout == 'workspace'
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'components' && steps.board_frontend.outputs.layout == 'workspace'
         run: |
           set -euo pipefail
           node -e "process.exit(require('./package.json').scripts?.['test:components'] ? 0 : 1)" || {
@@ -1124,7 +1125,7 @@ jobs:
       # 本轮视觉**未比对**（醒目 warning + job summary）；有任何一张就正常比对，缺的那张照样红。
       - name: Validate YueBoard end-to-end suite
         id: board_e2e
-        if: matrix.validation == 'yueboard' && steps.board_frontend.outputs.layout == 'workspace'
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'e2e' && steps.board_frontend.outputs.layout == 'workspace'
         env:
           YUEBOARD_ADMIN_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/postgres' || 'postgres://postgres:ci@127.0.0.1:5432/postgres' }}
           YUEBOARD_E2E_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_e2e?sslmode=disable' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_e2e?sslmode=disable' }}
@@ -1156,7 +1157,7 @@ jobs:
           fi
 
       - name: Upload YueBoard E2E Linux baselines
-        if: always() && matrix.validation == 'yueboard' && steps.board_e2e.outputs.visual == 'bootstrapped'
+        if: always() && matrix.validation == 'yueboard' && matrix.board_role == 'e2e' && steps.board_e2e.outputs.visual == 'bootstrapped'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: yueboard-e2e-linux-baselines
@@ -1165,7 +1166,7 @@ jobs:
           retention-days: 14
 
       - name: Upload YueBoard E2E report
-        if: failure() && matrix.validation == 'yueboard' && steps.board_e2e.outcome == 'failure'
+        if: failure() && matrix.validation == 'yueboard' && matrix.board_role == 'e2e' && steps.board_e2e.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: yueboard-e2e-report
@@ -1177,7 +1178,7 @@ jobs:
           retention-days: 7
 
       - name: Validate YueBoard responsive and design contracts
-        if: matrix.validation == 'yueboard'
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'frontends'
         run: |
           set -euo pipefail
           node scripts/ci/verify-responsive.mjs

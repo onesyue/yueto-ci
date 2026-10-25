@@ -1811,6 +1811,47 @@ class BuildPolicyTest(unittest.TestCase):
             with self.subTest(design_gate=script):
                 self.assertIn(script, design)
 
+
+    def test_yueboard_validation_roles_keep_migration_reset_off_quality(self) -> None:
+        exact_ref = "c" * 40
+        result = subprocess.run(
+            ["bash", str(TARGET_PLANNER), "yueboard", exact_ref],
+            cwd=ROOT, check=True, capture_output=True, text=True,
+        )
+        plan = json.loads(result.stdout)
+        roles = ["quality", "postgres", "migration", "e2e", "components", "frontends"]
+        self.assertEqual(
+            [(entry["validation"], entry["board_role"], entry["ref"])
+             for entry in plan["validation_matrix"]],
+            [("yueboard", role, exact_ref) for role in roles],
+        )
+        quality = self.workflow[
+            self.workflow.index("- name: Validate YueBoard backend quality gates"):
+            self.workflow.index("- name: Validate YueBoard protocol compatibility")
+        ]
+        self.assertIn("matrix.board_role == 'quality'", quality)
+        self.assertIn("go test ./...", quality)
+        self.assertIn("go test -race ./...", quality)
+        self.assertNotIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET", quality)
+        mutated = quality.replace(
+            "go test ./...",
+            "go test ./...\n          YUEBOARD_MIGRATION_TEST_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE",
+            1,
+        )
+        with self.assertRaises(AssertionError):
+            self.assertNotIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET", mutated)
+        migration = self.workflow[
+            self.workflow.index("- name: Validate YueBoard PostgreSQL module and migration integration"):
+            self.workflow.index("- name: Validate yueboard frontends")
+        ]
+        self.assertIn("matrix.board_role == 'migration'", migration)
+        self.assertIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE", migration)
+        postgres = self.workflow[
+            self.workflow.index("- name: Validate YueBoard PostgreSQL integration"):
+            self.workflow.index("- name: Validate YueBoard clean PostgreSQL lifecycle")
+        ]
+        self.assertIn("matrix.board_role == 'postgres'", postgres)
+        self.assertNotIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET", postgres)
     def assert_release_jobs_are_bounded(self, workflow: str) -> None:
         """Every release job carries an explicit timeout and a UTC clock.
 

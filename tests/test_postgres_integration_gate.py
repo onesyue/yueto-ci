@@ -258,7 +258,8 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         ):
             with self.subTest(key=key, value=value):
                 environment = dict(self.environment, **{key: value})
-                result = self.command('domain', self.root / 'receipt.json', environment)
+                phase = 'remaining' if key == 'YUEBOARD_MIGRATION_TEST_ALLOW_RESET' else 'domain'
+                result = self.command(phase, self.root / 'receipt.json', environment)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(expected, result.stderr)
 

@@ -46,7 +46,7 @@ def fail(message: str) -> None:
     raise RuntimeError(message)
 
 
-def check_environment() -> None:
+def check_environment(phase: str) -> None:
     values = []
     for key in DSNS:
         value = os.environ.get(key, '')
@@ -58,7 +58,8 @@ def check_environment() -> None:
         values.append(value)
     if len(set(values)) != 1:
         fail('all four integration DSNs must address the same disposable service/database')
-    if os.environ.get('YUEBOARD_MIGRATION_TEST_ALLOW_RESET') != 'YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE':
+    if phase == 'remaining' and os.environ.get(
+            'YUEBOARD_MIGRATION_TEST_ALLOW_RESET') != 'YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE':
         fail('disposable migration reset acknowledgement is required')
     if os.environ.get('YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE') != '1':
         fail('production-scale migration cases must be enabled')
@@ -189,7 +190,7 @@ def main() -> None:
     parser.add_argument('--phase', choices=['domain', 'remaining'], required=True)
     parser.add_argument('--receipt', type=Path, required=True)
     args = parser.parse_args()
-    check_environment()
+    check_environment(args.phase)
     entries = discover()
     manifest = hashlib.sha256(json.dumps(entries, sort_keys=True).encode()).hexdigest()
     if args.phase == 'domain':
