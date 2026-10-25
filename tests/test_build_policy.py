@@ -1863,6 +1863,8 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow.index("- name: Validate yueboard frontends")
         ]
         self.assertIn("matrix.board_role == 'migration'", migration)
+        self.assertLess(migration.index("--phase domain"), migration.index("--phase remaining"))
+        self.assertIn("receipt is local to this runner", migration)
         self.assertIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE", migration)
         postgres = self.workflow[
             self.workflow.index("- name: Validate YueBoard PostgreSQL integration"):
