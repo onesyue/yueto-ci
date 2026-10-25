@@ -109,6 +109,14 @@ review hashes bind the record. All nine historical maps and the34/59 skip
 transition remain unchanged. Unknown paths, blobs, modes and mixed maps fail.
 Existing native receipts retain their original source/run identity; they cannot
 be transplanted to4214 or used as a new same-run native result.
+The relay observer fixture successor binds Ops4214 to Ops943a7a12 without
+rewriting that historical baseline. Its appended, independently pinned record
+admits only the reviewed relay test module blob0596e8a6 to6db5102e transition.
+The same ten ordinary skip facts retain their reasons and outcomes; all34
+additions,59 updates,55 shared inputs and native obligations remain unchanged.
+The predecessor blob remains historical input, while unknown module blobs or
+changed review/history records are rejected. Fixture qualification does not
+replace the new release's complete same-run native and ordinary evidence.
 The release coordinator verifies the actual signed source, independent review and
 freeze artifacts before recording their identities. Hash syntax alone does not
 authenticate those artifacts. Historical skip/collection evidence stays dated;

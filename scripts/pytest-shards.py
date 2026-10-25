@@ -39,6 +39,7 @@ AUDIT_DEPENDENCY_TRANSITION_SHA256 = "ff5a2514cd10c6c9cc81cb1e4e52afab20ba789b8a
 ZOD_LOCK_TRANSITION_SHA256 = "691c045988e884f360dc6925bffea7798295970f2d62763ffec180ff2b20e842"
 CURRENT_SKIP_TRANSITION_SHA256 = "302153cd755ac54d2346e0c3114fcfde776ba8ea79fbe2fd4d7de9d7cdae726d"
 SCANNER_INPUT_TRANSITION_SHA256 = "5a639c8b455a5934d206af1f4e03d386d91b55a986f2e52ffc79cbedd2d1563c"
+RELAY_SKIP_MODULE_TRANSITION_SHA256 = "afab000651dcbd556b14b27b27ecfc283f935f78be984293dbf2f1dcf971042b"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
     "tests/test_installed_checker_transport_20261014.py::"
@@ -246,8 +247,55 @@ def shared_inputs(source, revision):
     return result
 
 
+def reviewed_relay_skip_module_transition(baseline, files=None):
+    """Add one reviewed module identity without replacing historical skip facts."""
+    original = dict(baseline)
+    key = "reviewed_relay_skip_module_transition"
+    record = original.pop(key, None)
+    if key not in baseline:
+        return original, {}
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "qualified_policy_revision", "independent_review_sha256",
+        "source_freeze_sha256", "qualification_receipt_sha256", "module",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid reviewed relay skip transition")
+    require(sha(encoded(record)) == RELAY_SKIP_MODULE_TRANSITION_SHA256,
+            "unreviewed relay skip transition identity")
+    restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(restored),
+            "relay skip transition historical baseline changed")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k]) for k in
+                ("source_before", "source_after", "qualified_policy_revision"))
+            and record["source_before"] != record["source_after"]
+            and all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                    for k in ("independent_review_sha256", "source_freeze_sha256",
+                              "qualification_receipt_sha256")),
+            "missing exact relay skip review identity")
+    module = record["module"]
+    require(isinstance(module, dict) and set(module) == {
+        "path", "mode", "before_blob", "after_blob",
+    } and module["path"] == "tests/test_relay4_tuning_20261025.py"
+            and module["mode"] == "100644"
+            and all(isinstance(module[k], str) and SHA.fullmatch(module[k])
+                    for k in ("before_blob", "after_blob"))
+            and module["before_blob"] != module["after_blob"],
+            "invalid reviewed relay module identity")
+    if files is not None and files.get(module["path"], (None, None))[1] == module["after_blob"]:
+        require(files[module["path"]][0] == module["mode"], "relay skip module mode changed")
+    cases = {nodeid: case for nodeid, case in original[
+        "reviewed_current_skip_transition"]["additions"].items()
+        if nodeid.startswith(module["path"] + "::")}
+    require(len(cases) == 10 and all(
+        case["outcome"] == "skipped" and case["module_blob"] == module["before_blob"]
+        for case in cases.values()), "relay skip predecessor cases differ")
+    return original, {nodeid: case | {"module_blob": module["after_blob"]}
+                      for nodeid, case in cases.items()}
+
+
 def reviewed_scanner_input_transition(baseline):
     """Peel the exact scanner-helper successor without relabeling old evidence."""
+    baseline, _ = reviewed_relay_skip_module_transition(baseline)
     original = dict(baseline)
     key = "reviewed_scanner_input_transition"
     record = original.pop(key, None)
@@ -468,6 +516,7 @@ def admit_shared_inputs(baseline, common, files=None):
     The historical skip/collection evidence is never relabeled as a new run.
     Exact effective inputs remain sealed into this run's admission envelope.
     """
+    baseline, _ = reviewed_relay_skip_module_transition(baseline, files)
     baseline, scanner_record = reviewed_scanner_input_transition(baseline)
     baseline, zod_record = reviewed_zod_lock_transition(baseline)
     baseline, audit_record = reviewed_audit_dependency_transition(baseline)
@@ -1365,7 +1414,8 @@ def native_terminal(value, source, board, output):
 
 
 def admit_skips(value, result, native):
-    baseline, extra = reviewed_current_skip_transition(skip_baseline())
+    baseline, relay_successors = reviewed_relay_skip_module_transition(skip_baseline())
+    baseline, extra = reviewed_current_skip_transition(baseline)
     _, successors = reviewed_skip_module_transition(baseline)
     successors.update(extra)
     unknown = []
@@ -1387,7 +1437,8 @@ def admit_skips(value, result, native):
                     "outcome": row["outcome"], "reason": row.get("reason"),
                     "module_blob": value["skip_module_blobs"].get(module),
                 }
-                if observed not in (baseline["cases"].get(nodeid), successors.get(nodeid)):
+                if observed not in (baseline["cases"].get(nodeid), successors.get(nodeid),
+                                    relay_successors.get(nodeid)):
                     unknown.append(nodeid)
                     continue
                 disposition = "HISTORICAL_UNEXECUTED"

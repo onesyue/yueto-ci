@@ -1827,6 +1827,7 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
                     self.consumer.admit_shared_inputs(changed, common)
         omitted = dict(self.baseline)
         del omitted[self.key]
+        omitted.pop("reviewed_relay_skip_module_transition", None)
         omitted.pop("reviewed_audit_dependency_transition", None)
         omitted.pop("reviewed_zod_lock_transition", None)
         omitted.pop("reviewed_scanner_input_transition", None)
@@ -2007,7 +2008,8 @@ class CurrentRelaySkipPolicy(unittest.TestCase):
 class ScannerInputSuccessorPolicy(unittest.TestCase):
     def setUp(self):
         self.consumer = fixture.SHARDS
-        self.baseline = self.consumer.skip_baseline()
+        self.baseline, _ = self.consumer.reviewed_relay_skip_module_transition(
+            self.consumer.skip_baseline())
         self.original, self.record = self.consumer.reviewed_scanner_input_transition(self.baseline)
         self.path = "tests/_shell_early_exit_pipes.py"
         self.maps = [dict(self.original["common_inputs"])]
@@ -2075,6 +2077,115 @@ class ScannerInputSuccessorPolicy(unittest.TestCase):
         changed["common_inputs"][self.path] = "f" * 40
         with self.assertRaisesRegex(ValueError, "historical baseline changed"):
             self.consumer.admit_shared_inputs(changed, self.successor)
+
+
+class RelaySkipModuleSuccessorPolicy(unittest.TestCase):
+    def setUp(self):
+        self.consumer = fixture.SHARDS
+        self.baseline = self.consumer.skip_baseline()
+        self.key = "reviewed_relay_skip_module_transition"
+        self.record = self.baseline[self.key]
+        self.original, self.successors = self.consumer.reviewed_relay_skip_module_transition(
+            self.baseline)
+        self.module = "tests/test_relay4_tuning_20261025.py"
+        self.old_blob = "0596e8a63a8c68a290033d6d1ca495a4f666f5ba"
+        self.new_blob = "6db5102e988bb2fc71acf1fa7ff0c786ad7e09fc"
+        cases = self.original["reviewed_current_skip_transition"]["additions"]
+        self.cases = {key: case for key, case in cases.items()
+                      if key.startswith(self.module + "::")}
+        session = {"execution_context": self.baseline["context"], "collection_skips": {},
+                   "junit_sha256": "b" * 64,
+                   "nonpassing_outcomes": [
+                       {"nodeid": key, "outcome": case["outcome"], "when": "setup",
+                        "reason": case["reason"]} for key, case in self.cases.items()]}
+        self.result = {"reference": session | {"assignment_id": "reference"},
+                       "shards": [copy.deepcopy(session) | {"assignment_id": "ordinary-000"}]}
+
+    def value(self, blob):
+        return {"skip_module_blobs": {self.module: blob},
+                "skip_baseline_sha256": self.consumer.sha(
+                    (ROOT / self.consumer.SKIP_BASELINE).read_bytes())}
+
+    def test_exact_successor_preserves_complete_predecessor_and_all_skip_facts(self):
+        restored = (json.dumps(self.original, indent=2, ensure_ascii=False) + "\n").encode()
+        self.assertEqual(self.consumer.sha(restored),
+                         "0078b5948f06329475ea0e54a5d6f8ec89e439319c602c9fbf2049f27379e924")
+        self.assertEqual(self.record["source_before"], "4214a4c6cb36ce8ee46e7901174586db81ab75f7")
+        self.assertEqual(self.record["source_after"], "943a7a1249d2501b46f5fca1667115d369663cc2")
+        self.assertEqual(self.record["qualified_policy_revision"],
+                         "454399d13b01052a35c4ab431ec1f1f143e66693")
+        self.assertEqual(self.record["module"], {
+            "path": self.module, "mode": "100644",
+            "before_blob": self.old_blob, "after_blob": self.new_blob})
+        current = self.original["reviewed_current_skip_transition"]
+        self.assertEqual((len(current["additions"]), len(current["updates"])), (34, 59))
+        self.assertEqual(len(self.successors), 10)
+        self.assertEqual(self.successors, {
+            key: case | {"module_blob": self.new_blob} for key, case in self.cases.items()})
+        self.assertEqual(self.consumer.reviewed_scanner_input_transition(self.baseline),
+                         self.consumer.reviewed_scanner_input_transition(self.original))
+        self.assertEqual(self.baseline["reviewed_hosted"], self.original["reviewed_hosted"])
+
+    def test_native_skip_consumer_accepts_only_old_and_exact_reviewed_module(self):
+        for blob in (self.old_blob, self.new_blob):
+            with self.subTest(module=blob):
+                result = self.consumer.admit_skips(self.value(blob), self.result, {"obligations": {}})
+                self.assertEqual(result["status"], "NO_NEW_SKIPS")
+                self.assertIs(result["skips_are_passes"], False)
+                self.assertEqual(result["disposition_counts"], {
+                    "HISTORICAL_UNEXECUTED": 20, "OWNER_CANCELED": 0,
+                    "SAME_RUN_NATIVE_REQUIRED": 0})
+        with self.assertRaisesRegex(ValueError, "new or changed case"):
+            self.consumer.admit_skips(self.value("f" * 40), self.result, {"obligations": {}})
+        with patch.object(self.consumer, "skip_baseline", return_value=self.original):
+            with self.assertRaisesRegex(ValueError, "new or changed case"):
+                self.consumer.admit_skips(self.value(self.new_blob), self.result, {"obligations": {}})
+
+    def test_actual_successor_module_mode_is_checked_by_shared_input_admission(self):
+        common = self.baseline["common_inputs"]
+        modes = self.baseline["reviewed_shared_input_transition"]["common_input_modes"]
+        files = {path: (modes[path], blob) for path, blob in common.items()}
+        self.consumer.admit_shared_inputs(self.baseline, common, files)
+        self.consumer.admit_shared_inputs(
+            self.baseline, common, files | {self.module: ("100644", self.new_blob)})
+        for mode in ("100755", "120000"):
+            with self.subTest(mode=mode), self.assertRaisesRegex(
+                    ValueError, "relay skip module mode changed"):
+                self.consumer.admit_shared_inputs(
+                    self.baseline, common, files | {self.module: (mode, self.new_blob)})
+
+    def test_unknown_case_reason_or_outcome_is_not_admitted_by_new_module(self):
+        for field, replacement in (("nodeid", self.module + "::test_unreviewed"),
+                                   ("reason", "Skipped: unreviewed reason"),
+                                   ("outcome", "xfailed")):
+            changed = copy.deepcopy(self.result)
+            changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
+                self.consumer.admit_skips(self.value(self.new_blob), changed, {"obligations": {}})
+
+    def test_changed_review_module_or_history_cannot_relabel_skip_evidence(self):
+        mutations = []
+        for field in ("source_before", "source_after", "qualified_policy_revision",
+                      "independent_review_sha256", "source_freeze_sha256",
+                      "qualification_receipt_sha256"):
+            changed = copy.deepcopy(self.baseline)
+            changed[self.key][field] = "f" * len(self.record[field])
+            mutations.append((field, changed))
+        for field, value in (("path", "tests/test_unreviewed.py"), ("mode", "100755"),
+                             ("before_blob", "f" * 40), ("after_blob", self.old_blob)):
+            changed = copy.deepcopy(self.baseline)
+            changed[self.key]["module"][field] = value
+            mutations.append((field, changed))
+        changed = copy.deepcopy(self.baseline)
+        changed["reviewed_current_skip_transition"]["additions"][
+            next(iter(self.cases))]["reason"] = "Skipped: changed history"
+        mutations.append(("historical-reason", changed))
+        changed = copy.deepcopy(self.baseline)
+        del changed["reviewed_scanner_input_transition"]
+        mutations.append(("missing-predecessor", changed))
+        for label, changed in mutations:
+            with self.subTest(mutation=label), self.assertRaises(ValueError):
+                self.consumer.reviewed_relay_skip_module_transition(changed)
 
 
 if __name__ == "__main__":
