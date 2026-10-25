@@ -209,7 +209,10 @@ class GoCachePolicyTest(unittest.TestCase):
             "Validate YueBoard end-to-end suite",
         }
         for name, role in board_roles.items():
-            expected = f"matrix.validation == 'yueboard' && matrix.board_role == '{role}'"
+            expected = ("matrix.validation == 'yueboard' && "
+                        "(matrix.board_role == 'postgres' || matrix.board_role == 'migration')"
+                        if name == "Validate YueBoard PostgreSQL integration"
+                        else f"matrix.validation == 'yueboard' && matrix.board_role == '{role}'")
             if name in workspace_steps:
                 expected += " && steps.board_frontend.outputs.layout == 'workspace'"
             self.assertEqual(scalar(step(name), "if"), expected)

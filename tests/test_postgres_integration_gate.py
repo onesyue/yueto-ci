@@ -1,16 +1,19 @@
 """Exercise the release gate with real Go discovery and real test processes."""
 from __future__ import annotations
 
+import ast
 import contextlib
 import importlib.util
 import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 from unittest import mock
 
@@ -76,6 +79,84 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         script = self.root / GATE.COMMAND_GATE
         script.parent.mkdir(parents=True, exist_ok=True)
         script.write_text('#!/usr/bin/env bash\nset -euo pipefail\n' + body + '\n')
+
+    def run_workflow_role(self, workflow, role):
+        """Execute the real phase scripts in an isolated runner receipt directory."""
+        job = workflow.split('\n  validate:\n', 1)[1].split('\n  validation-evidence:', 1)[0]
+        blocks = re.findall(r'^      - name: .*?(?=^      - name: |\Z)', job, re.M | re.S)
+        selected = [block for block in blocks if block.splitlines()[0].strip() in {
+            '- name: Validate YueBoard PostgreSQL integration',
+            '- name: Validate YueBoard PostgreSQL module and migration integration',
+        }]
+        policy = self.root / '.ci-policy'
+        if not policy.exists():
+            policy.symlink_to(ROOT, target_is_directory=True)
+        phases = []
+        with tempfile.TemporaryDirectory(dir=self.root, prefix=role + '-') as runner_temp:
+            for block in selected:
+                condition = re.search(r'^        if: (.+)$', block, re.M)
+                assert condition is not None
+                expression = condition[1].replace('matrix.validation', repr('yueboard')).replace(
+                    'matrix.board_role', repr(role)).replace('&&', ' and ').replace('||', ' or ')
+                tree = ast.parse(expression, mode='eval')
+                allowed = (ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.Compare, ast.Eq, ast.Constant)
+                if any(not isinstance(node, allowed) for node in ast.walk(tree)):
+                    raise RuntimeError('unsupported role condition: ' + condition[1])
+                if not eval(compile(tree, '<workflow role>', 'eval'), {'__builtins__': {}}, {}):
+                    continue
+                environment = dict(self.environment, RUNNER_TEMP=runner_temp, YUE_CI_PYTHON=sys.executable)
+                environment.pop('YUEBOARD_MIGRATION_TEST_ALLOW_RESET', None)
+                reset = re.search(r'^          YUEBOARD_MIGRATION_TEST_ALLOW_RESET: (.+)$', block, re.M)
+                if reset:
+                    environment['YUEBOARD_MIGRATION_TEST_ALLOW_RESET'] = reset[1]
+                run = textwrap.dedent(block.split('        run: |\n', 1)[1])
+                step_phases = re.findall(r'--phase (domain|remaining)\b', run)
+                if 'domain' in step_phases and reset:
+                    raise RuntimeError('domain inherited reset acknowledgement')
+                run = run.replace('${{ github.run_id }}', '123').replace('${{ github.run_attempt }}', '1')
+                result = subprocess.run(['bash', '-c', run], cwd=self.root, env=environment,
+                                        capture_output=True, text=True, timeout=90)
+                if result.returncode:
+                    raise RuntimeError(result.stdout + result.stderr)
+                phases.extend(step_phases)
+            expected = {'postgres': ['domain'], 'migration': ['domain', 'remaining']}.get(role, [])
+            if phases != expected:
+                raise RuntimeError(f'{role}: expected local phases {expected}, executed {phases}')
+        return phases
+
+    def test_each_planned_role_executes_with_its_own_domain_receipt(self):
+        for path in GATE.ORDER:
+            self.package(path)
+        self.command_gate()
+        workflow = (ROOT / '.github/workflows/build.yml').read_text()
+        plan = subprocess.run(['bash', str(ROOT / 'scripts/plan-build-targets.sh'), 'yueboard', 'c' * 40],
+                              cwd=ROOT, check=True, capture_output=True, text=True)
+        roles = [row['board_role'] for row in json.loads(plan.stdout)['validation_matrix']]
+        self.assertEqual(roles, ['quality', 'postgres', 'migration', 'e2e', 'components', 'frontends'])
+        for role in roles:
+            with self.subTest(role=role):
+                self.run_workflow_role(workflow, role)
+
+    def test_postgres_only_domain_condition_leaves_migration_without_receipt(self):
+        for path in GATE.ORDER:
+            self.package(path)
+        workflow = (ROOT / '.github/workflows/build.yml').read_text().replace(
+            "(matrix.board_role == 'postgres' || matrix.board_role == 'migration')",
+            "matrix.board_role == 'postgres'", 1)
+        with self.assertRaisesRegex(RuntimeError, 'No such file or directory.*yueboard-pg-123-1.json'):
+            self.run_workflow_role(workflow, 'migration')
+
+    def test_moving_domain_into_reset_step_loses_postgres_and_reset_isolation(self):
+        workflow = (ROOT / '.github/workflows/build.yml').read_text()
+        command = ('"$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \\\n'
+                   '            --phase domain --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"')
+        self.assertIn(command, workflow)
+        workflow = workflow.replace(command, 'echo "domain runs in migration"', 1)
+        remaining = '          "$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \\\n            --phase remaining'
+        workflow = workflow.replace(remaining, '          ' + command + '\n' + remaining, 1)
+        for role, diagnostic in [('postgres', 'expected local phases'), ('migration', 'domain inherited reset')]:
+            with self.subTest(role=role), self.assertRaisesRegex(RuntimeError, diagnostic):
+                self.run_workflow_role(workflow, role)
 
     def test_real_domain_then_remaining_reaches_every_package_and_native_commands(self):
         for path in GATE.ORDER:
