@@ -598,7 +598,9 @@ jobs:
       # (GitHub release asset digest == the release's sha256.txt, 2026-09-27)
       # on every path, including a buf already on PATH.
       - name: Set up Buf for YueBoard protocol compatibility
-        if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'
+        # Every YueBoard role runs the shared preflight, which requires buf.
+        # Limiting the installer to quality left the other five roles red.
+        if: matrix.validation == 'yueboard'
         uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
         with:
           version: '1.72.0'

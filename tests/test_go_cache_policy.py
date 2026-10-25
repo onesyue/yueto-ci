@@ -190,11 +190,29 @@ class GoCachePolicyTest(unittest.TestCase):
             self.assertEqual(scalar(body, "SEGMENT_DOWNLOAD_TIMEOUT_MINS"), "'2'")
             self.assertNotIn("save-always:", body)
         # No service validation consumer can acquire a cache-hit skip condition.
-        names = ("Validate yue-node", "Validate YueBoard backend quality gates",
-                 "Validate YueBoard protocol compatibility", "Validate YueBoard PostgreSQL integration")
-        for name in names:
-            expected = "yue-node" if name == "Validate yue-node" else "yueboard"
-            self.assertEqual(scalar(step(name), "if"), f"matrix.validation == '{expected}'")
+        self.assertEqual(scalar(step("Validate yue-node"), "if"),
+                         "matrix.validation == 'yue-node'")
+        board_roles = {
+            "Validate YueBoard backend quality gates": "quality",
+            "Validate YueBoard protocol compatibility": "quality",
+            "Validate YueBoard PostgreSQL integration": "postgres",
+            "Validate YueBoard clean PostgreSQL lifecycle": "postgres",
+            "Validate YueBoard PostgreSQL module and migration integration": "migration",
+            "Validate YueBoard frontend lint": "frontends",
+            "Validate YueBoard component tests": "components",
+            "Validate YueBoard end-to-end suite": "e2e",
+            "Validate YueBoard responsive and design contracts": "frontends",
+        }
+        workspace_steps = {
+            "Validate YueBoard frontend lint",
+            "Validate YueBoard component tests",
+            "Validate YueBoard end-to-end suite",
+        }
+        for name, role in board_roles.items():
+            expected = f"matrix.validation == 'yueboard' && matrix.board_role == '{role}'"
+            if name in workspace_steps:
+                expected += " && steps.board_frontend.outputs.layout == 'workspace'"
+            self.assertEqual(scalar(step(name), "if"), expected)
         workflow = WORKFLOW.read_text()
         self.assertLess(workflow.index("- name: Restore and refresh Go compiler cache"),
                         workflow.index("- name: Keep Go test execution independent"))

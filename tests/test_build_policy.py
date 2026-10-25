@@ -1837,6 +1837,12 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertEqual(len(authorized["matrix"]), 1)
         self.assertIn("1|6)", self.workflow)
+        buf_setup = self.workflow[
+            self.workflow.index("- name: Set up Buf for YueBoard protocol compatibility"):
+            self.workflow.index("- name: Restore npm cache (yueops frontends)")
+        ]
+        self.assertIn("matrix.validation == 'yueboard'", buf_setup)
+        self.assertNotIn("matrix.board_role == 'quality'", buf_setup)
         quality = self.workflow[
             self.workflow.index("- name: Validate YueBoard backend quality gates"):
             self.workflow.index("- name: Validate YueBoard protocol compatibility")
