@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import itertools
 import json
@@ -594,16 +595,62 @@ class OpsShardWorkflow(unittest.TestCase):
         self.artifacts.rename(runner / "ops-shard-evidence")
         self.artifacts = runner / "ops-shard-evidence"
         _, script = yaml_consumer.step("Require complete selected validation and corpus")
+        report = runner / f"ops-validation-evidence-{self.env['GITHUB_RUN_ID']}-{self.env['GITHUB_RUN_ATTEMPT']}.json"
         for status in ("success", "failure", "cancelled", "skipped"):
+            report.unlink(missing_ok=True)
             env = self.env | {"RUNNER_TEMP": str(runner), "VALIDATION_RESULT": status,
                               "ADMISSION_SHA256": self.admission["admission_sha256"]}
             executed = subprocess.run(["bash", "-c", script], cwd=self.policy, env=env,
                                       capture_output=True, text=True, timeout=15, check=False)
             if status == "success":
                 self.assertEqual(executed.returncode, 0, executed.stdout + executed.stderr)
-                self.assertEqual(json.loads(executed.stdout)["status"], "VALIDATION_MATRIX_COMPLETE")
+                summary = json.loads(executed.stdout)
+                full = report.read_bytes()
+                self.assertEqual(json.loads(full), result)
+                self.assertEqual(summary["status"], "VALIDATION_MATRIX_COMPLETE")
+                self.assertEqual(summary["identity"], self.admission["identity"])
+                self.assertEqual(summary["admission_sha256"], self.admission["admission_sha256"])
+                self.assertEqual(summary["case_count"], 8)
+                self.assertEqual(summary["report_sha256"], hashlib.sha256(full).hexdigest())
+                self.assertEqual(summary["report_bytes"], len(full))
+                self.assertLessEqual(len(executed.stdout.encode()), 8192)
+                self.assertNotIn("tests/test_a.py", executed.stdout)
             else:
                 self.assertNotEqual(executed.returncode, 0, executed.stdout + executed.stderr)
+                self.assertEqual(executed.stdout, "")
+                self.assertIn("selected validation matrix did not succeed", executed.stderr)
+        report.write_text("retained prior verdict")
+        executed = subprocess.run(["bash", "-c", script], cwd=self.policy,
+                                  env=env | {"VALIDATION_RESULT": "success"},
+                                  capture_output=True, text=True, timeout=15, check=False)
+        self.assertNotEqual(executed.returncode, 0)
+        self.assertEqual(executed.stdout, "")
+        self.assertEqual(report.read_text(), "retained prior verdict")
+
+    def test_complete_verdict_artifact_cannot_fail_open_or_replace_an_attempt(self):
+        body, _ = yaml_consumer.step("Retain complete validation verdict")
+        def required_artifact(contract):
+            self.assertIn("uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", contract)
+            self.assertIn("name: ops-validation-evidence-${{ github.run_id }}-${{ github.run_attempt }}", contract)
+            self.assertIn("path: ${{ runner.temp }}/ops-validation-evidence-${{ github.run_id }}-${{ github.run_attempt }}.json", contract)
+            self.assertIn("if-no-files-found: error", contract)
+            self.assertIn("overwrite: false", contract)
+            self.assertNotIn("continue-on-error", contract)
+            self.assertNotIn("if:", contract)
+        required_artifact(body)
+        for broken in (body.replace("if-no-files-found: error", "if-no-files-found: warn"),
+                       body.replace("overwrite: false", "overwrite: true"),
+                       body + "        continue-on-error: true\n",
+                       body + "        if: false\n"):
+            with self.subTest(contract=broken), self.assertRaises(AssertionError):
+                required_artifact(broken)
+        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        join_job = workflow.split("  validation-evidence:\n", 1)[1].split("  build:\n", 1)[0]
+        self.assertNotIn("continue-on-error", join_job)
+        self.assertIn("timeout-minutes: 10", join_job)
+        self.assertIn("needs: [plan, validate, validation-evidence]", workflow)
+        self.assertLess(workflow.index("- name: Require complete selected validation and corpus"),
+                        workflow.index("- name: Retain complete validation verdict"))
 
     def test_actual_selection_rejects_wrong_interpreter_identity(self):
         ran = self.run_role("reference")

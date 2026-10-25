@@ -1596,11 +1596,47 @@ jobs:
           ADMISSION_SHA256: ${{ needs.plan.outputs.admission_sha256 }}
         run: |
           set -euo pipefail
+          report="${RUNNER_TEMP:?}/ops-validation-evidence-${GITHUB_RUN_ID:?}-${GITHUB_RUN_ATTEMPT:?}.json"
+          # Keep the complete native verdict off the runner's console transport.
+          # An existing report must never be replaced within the same attempt.
+          set -o noclobber
           python3 scripts/pytest-shards.py join \
             --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
             --expected-sha "$ADMISSION_SHA256" \
             --evidence "$RUNNER_TEMP/ops-shard-evidence" \
-            --validation-result "$VALIDATION_RESULT"
+            --validation-result "$VALIDATION_RESULT" > "$report"
+          python3 - "$report" "$RUNNER_TEMP/ops-admission/ops-admission.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          raw = Path(sys.argv[1]).read_bytes()
+          verdict = json.loads(raw)
+          admission = json.loads(Path(sys.argv[2]).read_bytes())
+          summary = {
+              "event": "ops_validation_join",
+              "entry_point": "validation-evidence.join",
+              "status": verdict["status"], "mode": verdict["mode"],
+              "identity": admission["identity"],
+              "source_revision": admission.get("source_revision"),
+              "board_revision": admission.get("board_revision"),
+              "admission_sha256": verdict["admission_sha256"],
+              "case_count": verdict.get("ordinary", {}).get("case_count"),
+              "skip_dispositions": verdict.get("skip_admission", {}).get("disposition_counts"),
+              "report_sha256": hashlib.sha256(raw).hexdigest(), "report_bytes": len(raw),
+          }
+          line = json.dumps(summary, sort_keys=True, separators=(",", ":"))
+          if len(line.encode()) + 1 > 8192:
+              raise SystemExit("validation summary exceeds the 8 KiB console bound")
+          print(line)
+          PY
+
+      - name: Retain complete validation verdict
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ops-validation-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ops-validation-evidence-${{ github.run_id }}-${{ github.run_attempt }}.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 14
 
   build:
     needs: [plan, validate, validation-evidence]
