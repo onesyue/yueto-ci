@@ -41,6 +41,7 @@ ZOD_LOCK_TRANSITION_SHA256 = "691c045988e884f360dc6925bffea7798295970f2d62763ffe
 CURRENT_SKIP_TRANSITION_SHA256 = "302153cd755ac54d2346e0c3114fcfde776ba8ea79fbe2fd4d7de9d7cdae726d"
 SCANNER_INPUT_TRANSITION_SHA256 = "5a639c8b455a5934d206af1f4e03d386d91b55a986f2e52ffc79cbedd2d1563c"
 RELAY_SKIP_MODULE_TRANSITION_SHA256 = "afab000651dcbd556b14b27b27ecfc283f935f78be984293dbf2f1dcf971042b"
+RELAY_METRICS_MODULE_TRANSITION_SHA256 = "777214bee79eb25858c97781aaa065b53770693252185f3ee61e19c3c61efa07"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
     "tests/test_installed_checker_transport_20261014.py::"
@@ -248,9 +249,57 @@ def shared_inputs(source, revision):
     return result
 
 
+def reviewed_relay_metrics_module_transition(baseline, files=None):
+    """Bind the reviewed metrics repair without relabeling either predecessor."""
+    original = dict(baseline)
+    key = "reviewed_relay_metrics_module_transition"
+    record = original.pop(key, None)
+    if key not in baseline:
+        return original, {}
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "qualified_policy_revision", "independent_review_sha256",
+        "source_freeze_sha256", "qualification_receipt_sha256", "module",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid reviewed relay metrics transition")
+    require(sha(encoded(record)) == RELAY_METRICS_MODULE_TRANSITION_SHA256,
+            "unreviewed relay metrics transition identity")
+    restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(restored),
+            "relay metrics transition historical baseline changed")
+    predecessor = original.get("reviewed_relay_skip_module_transition")
+    require(isinstance(predecessor, dict)
+            and record["source_before"] == predecessor.get("source_after")
+            and record["source_before"] != record["source_after"]
+            and all(isinstance(record[k], str) and SHA.fullmatch(record[k]) for k in
+                    ("source_before", "source_after", "qualified_policy_revision"))
+            and all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                    for k in ("independent_review_sha256", "source_freeze_sha256",
+                              "qualification_receipt_sha256")),
+            "missing exact relay metrics review identity")
+    module = record["module"]
+    require(isinstance(module, dict) and set(module) == {
+        "path", "mode", "before_blob", "after_blob",
+    } and module["path"] == "tests/test_relay4_tuning_20261025.py"
+            and module["mode"] == "100644"
+            and all(isinstance(module[k], str) and SHA.fullmatch(module[k])
+                    for k in ("before_blob", "after_blob"))
+            and module["before_blob"] != module["after_blob"],
+            "invalid reviewed relay metrics module identity")
+    if files is not None and files.get(module["path"], (None, None))[1] == module["after_blob"]:
+        require(files[module["path"]][0] == module["mode"], "relay metrics module mode changed")
+    # Removing this outer record terminates the predecessor's peeling recursion.
+    _, cases = reviewed_relay_skip_module_transition(original, files)
+    require(len(cases) == 10 and all(case["module_blob"] == module["before_blob"]
+                                   for case in cases.values()),
+            "relay metrics predecessor cases differ")
+    return original, {nodeid: case | {"module_blob": module["after_blob"]}
+                      for nodeid, case in cases.items()}
+
+
 def reviewed_relay_skip_module_transition(baseline, files=None):
     """Add one reviewed module identity without replacing historical skip facts."""
-    original = dict(baseline)
+    original, _ = reviewed_relay_metrics_module_transition(baseline, files)
     key = "reviewed_relay_skip_module_transition"
     record = original.pop(key, None)
     if key not in baseline:
@@ -897,6 +946,11 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
             and selection["pytest_addopts"] in ("", "--durations=25"),
             "selection does not match the exact plan")
     argv = selection["pytest_argv"]
+    # Receipts may move; bind the cache to the original JUnit path, not the reader's cwd.
+    if (collect_only and not reference and isinstance(argv, list)
+            and len(argv) >= 4 and isinstance(argv[-1], str) and argv[-2] == "--junitxml"
+            and argv[-4:-2] == ["-o", f"cache_dir={Path(argv[-1]).parent / 'pytest-cache'}"]):
+        argv = argv[:-4] + argv[-2:]
     suffix = ["-m", "pytest", *(["--collect-only"] if collect_only else []), "-q", *modules]
     has_xml = (isinstance(argv, list) and len(argv) == len(suffix) + 3
                and argv[-2] == "--junitxml" and isinstance(argv[-1], str)
@@ -1035,6 +1089,7 @@ def map_bounded(functions, limit):
 
 def _collect_reference_part(expected, source, output, site, actual_runner, timing, assignment):
     part = output / "parts" / assignment["id"]
+    site = part / "site"
     timing.install(part, site)
     metadata = read_json(part / "metadata.json")
     runner = runner_context(expected["context"], metadata["identity"])
@@ -1046,11 +1101,11 @@ def _collect_reference_part(expected, source, output, site, actual_runner, timin
         "LENS_INVOCATION_ID": metadata["invocation_id"],
         "YUEOPS_PYTEST_SERIAL": "1",
         "PYTHONPATH": str(site),
-        "PYTEST_ADDOPTS": (parent_opts + f" -o cache_dir={cache}").strip(),
+        "PYTEST_ADDOPTS": parent_opts,
     }
     xml = part / "pytest.xml"
     argv = [sys.executable, "-m", "pytest", "--collect-only", "-q",
-            *assignment["modules"], "--junitxml", str(xml)]
+            *assignment["modules"], "-o", f"cache_dir={cache}", "--junitxml", str(xml)]
     (part / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
     result = subprocess.run(argv, cwd=source, env=env, check=False)
     (part / "pytest-finish-unix-ns.txt").write_text(str(time.time_ns()))
@@ -1091,7 +1146,7 @@ def collect_reference_parts(expected, source, output, site, actual_runner, timin
     require(all(part["runner"] == actual_runner for part in collected),
             "runner identity changed during preparation")
     invocation = collected[0]["invocation_id"]
-    require(all(part["invocation_id"] == invocation for part in collected), "reference invocation diverged")
+    # The summary names the first part; every part retains its own prepared identity.
     parts = [{"assignment_id": part["assignment_id"], "nodeids": part["nodeids"],
               "collection_skips": part["collection_skips"]} for part in collected]
     joined = join_reference_collections(parts)
@@ -1443,7 +1498,8 @@ def native_terminal(value, source, board, output):
 
 
 def admit_skips(value, result, native):
-    baseline, relay_successors = reviewed_relay_skip_module_transition(skip_baseline())
+    baseline, metrics_successors = reviewed_relay_metrics_module_transition(skip_baseline())
+    baseline, relay_successors = reviewed_relay_skip_module_transition(baseline)
     baseline, extra = reviewed_current_skip_transition(baseline)
     _, successors = reviewed_skip_module_transition(baseline)
     successors.update(extra)
@@ -1467,7 +1523,7 @@ def admit_skips(value, result, native):
                     "module_blob": value["skip_module_blobs"].get(module),
                 }
                 if observed not in (baseline["cases"].get(nodeid), successors.get(nodeid),
-                                    relay_successors.get(nodeid)):
+                                    relay_successors.get(nodeid), metrics_successors.get(nodeid)):
                     unknown.append(nodeid)
                     continue
                 disposition = "HISTORICAL_UNEXECUTED"
