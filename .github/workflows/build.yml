@@ -324,9 +324,12 @@ jobs:
         env:
           OPS_RUNNER: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}
           OPS_BOARD: ${{ steps.plan.outputs.yueboard_contract_ref }}
-          # Four groups are this batch's bounded resource choice, not a fixed architecture.
-          OPS_SHARDS: ${{ vars.YUEOPS_PYTEST_SHARDS || '4' }}
-          OPS_CAPACITY: ${{ vars.YUEOPS_VALIDATION_PARALLELISM || '4' }}
+          # Public yueto-ci can run the whole validation matrix at once.
+          # Sixteen ordinary groups plus native, reference and serial stay
+          # under the hosted concurrency ceiling. A repo variable can still
+          # lower either number.
+          OPS_SHARDS: ${{ vars.YUEOPS_PYTEST_SHARDS || '16' }}
+          OPS_CAPACITY: ${{ vars.YUEOPS_VALIDATION_PARALLELISM || '20' }}
         run: |
           set -euo pipefail
           python3 scripts/pytest-shards.py expand \
