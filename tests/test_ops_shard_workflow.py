@@ -1875,6 +1875,7 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
                     self.consumer.admit_shared_inputs(changed, common)
         omitted = dict(self.baseline)
         del omitted[self.key]
+        omitted.pop("reviewed_relay_meter_module_transition", None)
         omitted.pop("reviewed_relay_metrics_module_transition", None)
         omitted.pop("reviewed_relay_skip_module_transition", None)
         omitted.pop("reviewed_audit_dependency_transition", None)
@@ -2240,7 +2241,8 @@ class RelaySkipModuleSuccessorPolicy(unittest.TestCase):
 class RelayMetricsModuleSuccessorPolicy(unittest.TestCase):
     def setUp(self):
         self.consumer = fixture.SHARDS
-        self.baseline = self.consumer.skip_baseline()
+        self.baseline, _ = self.consumer.reviewed_relay_meter_module_transition(
+            self.consumer.skip_baseline())
         self.key = "reviewed_relay_metrics_module_transition"
         self.record = self.baseline[self.key]
         self.original, self.successors = self.consumer.reviewed_relay_metrics_module_transition(
@@ -2331,6 +2333,103 @@ class RelayMetricsModuleSuccessorPolicy(unittest.TestCase):
         changed["reviewed_relay_skip_module_transition"]["source_after"] = "f" * 40
         with self.assertRaisesRegex(ValueError, "historical baseline changed"):
             self.consumer.reviewed_relay_metrics_module_transition(changed)
+
+
+class RelayMeterModuleSuccessorPolicy(unittest.TestCase):
+    def setUp(self):
+        self.consumer = fixture.SHARDS
+        self.baseline = self.consumer.skip_baseline()
+        self.key = "reviewed_relay_meter_module_transition"
+        self.record = self.baseline[self.key]
+        self.original, self.successors = self.consumer.reviewed_relay_meter_module_transition(
+            self.baseline)
+        self.module = "tests/test_relay4_tuning_20261025.py"
+        self.new_blob = "ab59ceb3deb7df97fd570d5b589e7c07b5012474"
+        session = {"execution_context": self.baseline["context"], "collection_skips": {},
+                   "junit_sha256": "b" * 64,
+                   "nonpassing_outcomes": [
+                       {"nodeid": nodeid, "outcome": case["outcome"], "when": "setup",
+                        "reason": case["reason"]} for nodeid, case in self.successors.items()]}
+        self.result = {"reference": session | {"assignment_id": "reference"},
+                       "shards": [copy.deepcopy(session) | {"assignment_id": "ordinary-000"}]}
+
+    def value(self, blob):
+        return {"skip_module_blobs": {self.module: blob},
+                "skip_baseline_sha256": self.consumer.sha(
+                    (ROOT / self.consumer.SKIP_BASELINE).read_bytes())}
+
+    def test_meter_binding_preserves_all_predecessors_and_exact_skip_facts(self):
+        restored = (json.dumps(self.original, indent=2, ensure_ascii=False) + "\n").encode()
+        self.assertEqual(self.consumer.sha(restored),
+                         "05c6e69bdfa3365dcaeb9e31c4c503749145e20cd2219a0c2918679ca28d2bf8")
+        self.assertEqual(self.record["source_before"], "13e257b70cb5ea3083145d10bc4da6b197734f0f")
+        self.assertEqual(self.record["source_after"], "30bd3e47a259d5057a0c7d25a917b267c2ed8a5d")
+        prior, cases = self.consumer.reviewed_relay_metrics_module_transition(self.original)
+        self.assertEqual(len(cases), 10)
+        self.assertEqual(self.successors, {
+            nodeid: case | {"module_blob": self.new_blob} for nodeid, case in cases.items()})
+        self.assertEqual(self.original["reviewed_relay_metrics_module_transition"],
+                         self.baseline["reviewed_relay_metrics_module_transition"])
+        current = prior["reviewed_current_skip_transition"]
+        self.assertEqual((len(current["additions"]), len(current["updates"])), (34, 59))
+        self.assertEqual(self.original["reviewed_hosted"], self.baseline["reviewed_hosted"])
+
+    def test_actual_skip_consumer_accepts_current_and_preserves_old_module_identities(self):
+        for blob in ("0596e8a63a8c68a290033d6d1ca495a4f666f5ba",
+                     "6db5102e988bb2fc71acf1fa7ff0c786ad7e09fc",
+                     "8053af6952c5ac8dddaece3f1a25a6958f7dfeb8", self.new_blob):
+            with self.subTest(blob=blob):
+                result = self.consumer.admit_skips(self.value(blob), self.result, {"obligations": {}})
+                self.assertEqual(result["status"], "NO_NEW_SKIPS")
+                self.assertIs(result["skips_are_passes"], False)
+                self.assertEqual(result["disposition_counts"], {
+                    "HISTORICAL_UNEXECUTED": 20, "OWNER_CANCELED": 0,
+                    "SAME_RUN_NATIVE_REQUIRED": 0})
+        with (patch.object(self.consumer, "skip_baseline", return_value=self.original),
+              self.assertRaisesRegex(ValueError, "new or changed case")):
+            self.consumer.admit_skips(self.value(self.new_blob), self.result, {"obligations": {}})
+
+    def test_current_module_requires_actual_regular_file_mode(self):
+        common = self.baseline["common_inputs"]
+        modes = self.baseline["reviewed_shared_input_transition"]["common_input_modes"]
+        files = {path: (modes[path], blob) for path, blob in common.items()}
+        self.consumer.admit_shared_inputs(
+            self.baseline, common, files | {self.module: ("100644", self.new_blob)})
+        for mode in ("100755", "120000"):
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, "module mode changed"):
+                self.consumer.admit_shared_inputs(
+                    self.baseline, common, files | {self.module: (mode, self.new_blob)})
+
+    def test_actual_consumer_rejects_unknown_blob_new_case_reason_and_outcome(self):
+        with self.assertRaisesRegex(ValueError, "new or changed case"):
+            self.consumer.admit_skips(self.value("f" * 40), self.result, {"obligations": {}})
+        for field, replacement in (("nodeid", self.module + "::test_unreviewed"),
+                                   ("reason", "Skipped: changed reason"), ("outcome", "xfailed")):
+            changed = copy.deepcopy(self.result)
+            changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
+                self.consumer.admit_skips(self.value(self.new_blob), changed, {"obligations": {}})
+
+    def test_stale_source_native_qualification_or_predecessor_cannot_relabel_evidence(self):
+        for field in ("source_before", "source_after", "qualified_policy_revision",
+                      "independent_review_sha256", "source_freeze_sha256",
+                      "qualification_receipt_sha256"):
+            changed = copy.deepcopy(self.baseline)
+            changed[self.key][field] = "f" * len(self.record[field])
+            with (self.subTest(field=field),
+                  patch.object(self.consumer, "skip_baseline", return_value=changed),
+                  self.assertRaisesRegex(ValueError, "transition identity")):
+                self.consumer.admit_skips(self.value(self.new_blob), self.result, {"obligations": {}})
+        for field, replacement in (("mode", "100755"), ("after_blob", "f" * 40),
+                                   ("before_blob", "f" * 40), ("path", "tests/test_other.py")):
+            changed = copy.deepcopy(self.baseline)
+            changed[self.key]["module"][field] = replacement
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "transition identity"):
+                self.consumer.reviewed_relay_meter_module_transition(changed)
+        changed = copy.deepcopy(self.baseline)
+        changed["reviewed_relay_metrics_module_transition"]["source_after"] = "f" * 40
+        with self.assertRaisesRegex(ValueError, "historical baseline changed"):
+            self.consumer.reviewed_relay_meter_module_transition(changed)
 
 
 if __name__ == "__main__":
