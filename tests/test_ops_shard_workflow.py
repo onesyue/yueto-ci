@@ -647,7 +647,8 @@ class OpsShardWorkflow(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/build.yml").read_text()
         join_job = workflow.split("  validation-evidence:\n", 1)[1].split("  build:\n", 1)[0]
         self.assertNotIn("continue-on-error", join_job)
-        self.assertIn("timeout-minutes: 10", join_job)
+        self.assertIn("timeout-minutes: 30", join_job)
+        self.assertNotIn("timeout-minutes: 10", join_job)
         self.assertIn("needs: [plan, validate, validation-evidence]", workflow)
         self.assertLess(workflow.index("- name: Require complete selected validation and corpus"),
                         workflow.index("- name: Retain complete validation verdict"))

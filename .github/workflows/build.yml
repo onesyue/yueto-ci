@@ -1570,7 +1570,9 @@ jobs:
     needs: [plan, validate]
     if: always() && needs.plan.result == 'success'
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
-    timeout-minutes: 10
+    # Ops downloads seven shard corpora and then joins them. A 10-minute
+    # ceiling cancelled that join after every shard had already passed.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
