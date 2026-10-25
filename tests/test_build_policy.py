@@ -1825,6 +1825,18 @@ class BuildPolicyTest(unittest.TestCase):
              for entry in plan["validation_matrix"]],
             [("yueboard", role, exact_ref) for role in roles],
         )
+        promoted = subprocess.run(
+            ["bash", str(YUEBOARD_PLAN_AUTHORIZER), exact_ref, exact_ref, "true"],
+            cwd=ROOT, input=result.stdout, check=False, capture_output=True, text=True,
+        )
+        self.assertEqual(promoted.returncode, 0, promoted.stderr)
+        authorized = json.loads(promoted.stdout)
+        self.assertEqual(
+            [(entry["board_role"], entry["ref"]) for entry in authorized["validation_matrix"]],
+            [(role, exact_ref) for role in roles],
+        )
+        self.assertEqual(len(authorized["matrix"]), 1)
+        self.assertIn("1|6)", self.workflow)
         quality = self.workflow[
             self.workflow.index("- name: Validate YueBoard backend quality gates"):
             self.workflow.index("- name: Validate YueBoard protocol compatibility")

@@ -39,10 +39,20 @@ plan="$(jq -ce '
 
 board_validators="$(jq '[.validation_matrix[] | select(.validation == "yueboard")] | length' <<<"$plan")"
 board_builds="$(jq '[.matrix[] | select(.validation == "yueboard")] | length' <<<"$plan")"
-[ "$board_validators" -eq 1 ] && [ "$board_builds" -eq 1 ] || {
-  echo "::error::selected YueBoard plan must contain exactly one validator and one prospective build" >&2
+board_refs="$(jq '[.validation_matrix[] | select(.validation == "yueboard") | .ref] | unique | length' <<<"$plan")"
+board_repos="$(jq '[.validation_matrix[] | select(.validation == "yueboard") | .repo] | unique | length' <<<"$plan")"
+board_roles="$(jq -c '[.validation_matrix[] | select(.validation == "yueboard") | .board_role] | sort' <<<"$plan")"
+reviewed_roles='["components","e2e","frontends","migration","postgres","quality"]'
+if [ "$board_builds" -eq 1 ] && [ "$board_refs" -eq 1 ] && [ "$board_repos" -eq 1 ] && {
+  [ "$board_validators" -eq 1 ] || {
+    [ "$board_validators" -eq 6 ] && [ "$board_roles" = "$reviewed_roles" ]
+  }
+}; then
+  :
+else
+  echo "::error::selected YueBoard plan must contain one build and either one validator or the six reviewed roles" >&2
   exit 2
-}
+fi
 
 if [ "$source_sha" != "$contract_pin" ] && [ "$promote" = true ]; then
   echo "::error::refusing YueBoard promotion: resolved source ${source_sha} is not the exact reviewed native contract pin ${contract_pin}" >&2

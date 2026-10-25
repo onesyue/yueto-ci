@@ -217,15 +217,23 @@ jobs:
           )"
           case "$board_selection_count" in
             0) ;;
-            1)
+            1|6)
               board_repo="$(
-                jq -er '.validation_matrix[] | select(.validation == "yueboard") | .repo' \
+                jq -er '[.validation_matrix[] | select(.validation == "yueboard") | .repo] | unique | if length == 1 then .[0] else error("mixed") end' \
                   <<<"$target_plan"
               )"
               board_ref="$(
-                jq -er '.validation_matrix[] | select(.validation == "yueboard") | .ref' \
+                jq -er '[.validation_matrix[] | select(.validation == "yueboard") | .ref] | unique | if length == 1 then .[0] else error("mixed") end' \
                   <<<"$target_plan"
               )"
+              if [ "$board_selection_count" = 6 ]; then
+                expected_roles='["components","e2e","frontends","migration","postgres","quality"]'
+                actual_roles="$(jq -c '[.validation_matrix[] | select(.validation == "yueboard") | .board_role] | sort' <<<"$target_plan")"
+                [ "$actual_roles" = "$expected_roles" ] || {
+                  echo "::error::YueBoard validation roles are not the six reviewed jobs" >&2
+                  exit 1
+                }
+              fi
               [[ "$board_repo" =~ ^onesyue/[A-Za-z0-9._-]+$ ]] || {
                 echo "::error::invalid YueBoard source repository in build plan" >&2
                 exit 1
