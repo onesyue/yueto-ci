@@ -658,7 +658,83 @@ def reviewed_skip_module_transition(baseline, files=None):
     return original, successors
 
 
-def admit_shared_inputs(baseline, common, files=None):
+ESTATE_INPUT_PATHS = {
+    "qa/package.json", "qa/package-lock.json", "telegram-bot/yue/pyproject.toml",
+    "tests/node_resource_fixture.py", "tests/native/subscribe_template_baseline_cas_pg.py",
+}
+ESTATE_ADDED_INPUT = "tests/native/subscribe_template_baseline_cas_pg.py"
+
+
+def admit_shared_inputs(baseline, common, files=None, *, source_revision=None):
+    """Admit a sealed estate successor without rewriting historical skip evidence."""
+    key = "reviewed_estate_input_transition"
+    if key not in baseline:
+        return _admit_existing_shared_inputs(baseline, common, files)
+    original = dict(baseline)
+    record = original.pop(key)
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "source_freeze_sha256",
+        "qualification_receipt_sha256", "changes",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid estate shared-input transition")
+    prior = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(prior),
+            "estate transition changed historical baseline")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                for k in ("source_before", "source_after"))
+            and record["source_before"] == original[
+                "reviewed_scanner_input_transition"]["source_after"]
+            and record["source_before"] != record["source_after"],
+            "estate transition source identity missing")
+    require(all(isinstance(record[k], str)
+                and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                and record[k] != "0" * 64 for k in (
+                    "independent_review_sha256", "source_freeze_sha256",
+                    "qualification_receipt_sha256")),
+            "estate transition review or qualification missing")
+    changes = record["changes"]
+    require(isinstance(changes, dict) and set(changes) == ESTATE_INPUT_PATHS,
+            "unreviewed estate shared-input paths")
+    for path, change in changes.items():
+        require(isinstance(change, dict) and set(change) == {
+            "before_blob", "after_blob", "mode",
+        } and isinstance(change["after_blob"], str)
+                and SHA.fullmatch(change["after_blob"])
+                and change["mode"] == "100644"
+                and change["before_blob"] != change["after_blob"]
+                and (change["before_blob"] is None if path == ESTATE_ADDED_INPUT
+                     else isinstance(change["before_blob"], str)
+                     and SHA.fullmatch(change["before_blob"])),
+                "invalid estate shared-input blob or mode")
+    require(isinstance(common, dict), "estate shared inputs must be a mapping")
+    if ESTATE_ADDED_INPUT not in common:
+        return _admit_existing_shared_inputs(original, common, files)
+    require(source_revision == record["source_after"],
+            "estate successor source revision differs")
+    predecessor = dict(common)
+    predecessor_files = dict(files) if files is not None else None
+    for path, change in changes.items():
+        require(common.get(path) == change["after_blob"],
+                "estate successor input blob changed: " + path)
+        if files is not None:
+            require(files.get(path) == (change["mode"], change["after_blob"]),
+                    "estate successor input mode or tree changed: " + path)
+        if path == ESTATE_ADDED_INPUT:
+            predecessor.pop(path)
+            if predecessor_files is not None:
+                predecessor_files.pop(path)
+        else:
+            predecessor[path] = change["before_blob"]
+            if predecessor_files is not None:
+                predecessor_files[path] = (change["mode"], change["before_blob"])
+    # The original admission still checks every unchanged input and the exact
+    # preimages. Extra helpers, changed dependencies and weakened historical
+    # records cannot become accepted by adding this transition.
+    return _admit_existing_shared_inputs(original, predecessor, predecessor_files)
+
+
+def _admit_existing_shared_inputs(baseline, common, files=None):
     """Admit complete historical maps and each exact reviewed input successor.
 
     The historical skip/collection evidence is never relabeled as a new run.
@@ -1373,7 +1449,8 @@ def envelope(value):
             require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
                     and isinstance(value.get("skip_module_blobs"), dict),
                     "skip baseline or shared collection inputs differ")
-            admit_shared_inputs(baseline, value.get("common_inputs"))
+            admit_shared_inputs(baseline, value.get("common_inputs"),
+                                source_revision=value["source_revision"])
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -1428,7 +1505,7 @@ def expand(targets, source, board, runner, capacity, shards):
             baseline = skip_baseline()
             common = shared_inputs(source, ops["ref"])
             files = tree_inputs(source, ops["ref"])
-            admit_shared_inputs(baseline, common, files)
+            admit_shared_inputs(baseline, common, files, source_revision=ops["ref"])
             value.update(mode="sharded", ops_plan=expected, common_inputs=common,
                          skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
                          skip_module_blobs={p: files[p][1] for p in expected["modules"]})
