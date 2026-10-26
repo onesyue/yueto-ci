@@ -1968,6 +1968,9 @@ class ReviewedW85ObservabilityPolicy(unittest.TestCase):
 
 
 class CurrentNavigationSkipPolicy(unittest.TestCase):
+    def setUp(self):
+        use_historical_estate_predecessor(self)
+
     def test_reviewed_navigation_cases_remain_unexecuted_and_exact(self):
         consumer = fixture.SHARDS
         baseline = consumer.skip_baseline()
@@ -2018,6 +2021,9 @@ class CurrentNavigationSkipPolicy(unittest.TestCase):
 
 
 class CurrentRelaySkipPolicy(unittest.TestCase):
+    def setUp(self):
+        use_historical_estate_predecessor(self)
+
     def test_exact_relay_native_cases_remain_ordinary_skips(self):
         consumer = fixture.SHARDS
         baseline = consumer.skip_baseline()
