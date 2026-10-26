@@ -1068,6 +1068,7 @@ class OpsShardWorkflow(unittest.TestCase):
                 self.assertFalse((directory / "native.json").exists())
         # Conditional ACL closure is identity-based, never a six-count substitute.
         baseline = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
+        baseline, _ = self.consumer.reviewed_estate_input_transition(baseline)
         compatible = baseline["reviewed_hosted"]["cases"]
         rows = [{"nodeid": n, "outcome": r["outcome"], **r["variants"][0]}
                 for n, r in compatible.items() if r["disposition"] == "SAME_RUN_NATIVE_REQUIRED"]
@@ -1113,8 +1114,18 @@ class OpsShardWorkflow(unittest.TestCase):
             self.join()
 
 
+def use_historical_estate_predecessor(case):
+    """Scope old policy tests to their validated historical fixture."""
+    consumer = fixture.SHARDS
+    predecessor, _ = consumer.reviewed_estate_input_transition(consumer.skip_baseline())
+    scoped = patch.object(consumer, "skip_baseline", return_value=predecessor)
+    scoped.start()
+    case.addCleanup(scoped.stop)
+
+
 class ReviewedW85InputPolicy(unittest.TestCase):
     def setUp(self):
+        use_historical_estate_predecessor(self)
         self.consumer = fixture.SHARDS
         full = self.consumer.skip_baseline()
         full, _ = self.consumer.reviewed_audit_dependency_transition(full)
@@ -1272,6 +1283,7 @@ class ReviewedW85InputPolicy(unittest.TestCase):
 
 class ReviewedHostedSkipPolicy(unittest.TestCase):
     def setUp(self):
+        use_historical_estate_predecessor(self)
         self.consumer = fixture.SHARDS
         full = self.consumer.skip_baseline()
         full, _ = self.consumer.reviewed_audit_dependency_transition(full)
@@ -1719,6 +1731,7 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
 
 class ReviewedW85ObservabilityPolicy(unittest.TestCase):
     def setUp(self):
+        use_historical_estate_predecessor(self)
         self.consumer = fixture.SHARDS
         self.baseline = self.consumer.skip_baseline()
         self.key = "reviewed_w85_observability_transition"
@@ -2066,6 +2079,7 @@ class CurrentRelaySkipPolicy(unittest.TestCase):
 
 class ScannerInputSuccessorPolicy(unittest.TestCase):
     def setUp(self):
+        use_historical_estate_predecessor(self)
         self.consumer = fixture.SHARDS
         self.baseline, _ = self.consumer.reviewed_relay_skip_module_transition(
             self.consumer.skip_baseline())
@@ -2140,6 +2154,7 @@ class ScannerInputSuccessorPolicy(unittest.TestCase):
 
 class RelaySkipModuleSuccessorPolicy(unittest.TestCase):
     def setUp(self):
+        use_historical_estate_predecessor(self)
         self.consumer = fixture.SHARDS
         self.baseline = self.consumer.skip_baseline()
         self.key = "reviewed_relay_skip_module_transition"
@@ -2249,6 +2264,7 @@ class RelaySkipModuleSuccessorPolicy(unittest.TestCase):
 
 class RelayMetricsModuleSuccessorPolicy(unittest.TestCase):
     def setUp(self):
+        use_historical_estate_predecessor(self)
         self.consumer = fixture.SHARDS
         self.baseline, _ = self.consumer.reviewed_relay_meter_module_transition(
             self.consumer.skip_baseline())
@@ -2346,6 +2362,7 @@ class RelayMetricsModuleSuccessorPolicy(unittest.TestCase):
 
 class RelayMeterModuleSuccessorPolicy(unittest.TestCase):
     def setUp(self):
+        use_historical_estate_predecessor(self)
         self.consumer = fixture.SHARDS
         self.baseline, _ = self.consumer.reviewed_relay_preservation_module_transition(
             self.consumer.skip_baseline())
@@ -2444,6 +2461,7 @@ class RelayMeterModuleSuccessorPolicy(unittest.TestCase):
 
 class RelayPreservationModuleSuccessorPolicy(unittest.TestCase):
     def setUp(self):
+        use_historical_estate_predecessor(self)
         self.consumer = fixture.SHARDS
         self.baseline = self.consumer.skip_baseline()
         self.key = "reviewed_relay_preservation_module_transition"

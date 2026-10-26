@@ -665,11 +665,11 @@ ESTATE_INPUT_PATHS = {
 ESTATE_ADDED_INPUT = "tests/native/subscribe_template_baseline_cas_pg.py"
 
 
-def admit_shared_inputs(baseline, common, files=None, *, source_revision=None):
-    """Admit a sealed estate successor without rewriting historical skip evidence."""
+def reviewed_estate_input_transition(baseline):
+    """Validate the complete seal before exposing its historical predecessor."""
     key = "reviewed_estate_input_transition"
     if key not in baseline:
-        return _admit_existing_shared_inputs(baseline, common, files)
+        return baseline, None
     original = dict(baseline)
     record = original.pop(key)
     require(isinstance(record, dict) and set(record) == {
@@ -707,6 +707,15 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None):
                      else isinstance(change["before_blob"], str)
                      and SHA.fullmatch(change["before_blob"])),
                 "invalid estate shared-input blob or mode")
+    return original, record
+
+
+def admit_shared_inputs(baseline, common, files=None, *, source_revision=None):
+    """Admit a sealed estate successor without rewriting historical skip evidence."""
+    original, record = reviewed_estate_input_transition(baseline)
+    if record is None:
+        return _admit_existing_shared_inputs(original, common, files)
+    changes = record["changes"]
     require(isinstance(common, dict), "estate shared inputs must be a mapping")
     if ESTATE_ADDED_INPUT not in common:
         return _admit_existing_shared_inputs(original, common, files)
@@ -1673,7 +1682,12 @@ def native_terminal(value, source, board, output):
 
 
 def admit_skips(value, result, native):
-    baseline, preservation_successors = reviewed_relay_preservation_module_transition(skip_baseline())
+    sealed_baseline = skip_baseline()
+    baseline, estate = reviewed_estate_input_transition(sealed_baseline)
+    if estate is not None:
+        admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
+                            source_revision=value.get("source_revision"))
+    baseline, preservation_successors = reviewed_relay_preservation_module_transition(baseline)
     baseline, meter_successors = reviewed_relay_meter_module_transition(baseline)
     baseline, metrics_successors = reviewed_relay_metrics_module_transition(baseline)
     baseline, relay_successors = reviewed_relay_skip_module_transition(baseline)
