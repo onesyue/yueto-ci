@@ -10,6 +10,23 @@ separately defines source-only targets, including YueLink and
 workflow is [build.yml](.github/workflows/build.yml): validate, build, sign,
 attest, then explicitly promote.
 
+## Recover interrupted server delivery
+
+Image promotion is not deployment. Use the workspace's
+[release and recovery procedure](../docs/release-chain-runbook.md) and
+[native ship driver](../scripts/ship.sh), preserving the original receipt and
+release owner. Once all exact selected Ops images are promoted, resume from the
+workspace root without starting another build:
+
+```sh
+scripts/ship.sh yueops --from-promoted --detach
+```
+
+Use `yueboard` for the panel. `yue-node` verifies and records image publication;
+fleet rollout remains a separate operation. These paths retain signed desired-state
+and applicable deployment verification. An incomplete promotion or changed source
+is not permission to substitute another revision into the interrupted release.
+
 ## Run validation or promotion
 
 ```sh
