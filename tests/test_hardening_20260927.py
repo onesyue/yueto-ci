@@ -151,7 +151,7 @@ def plan_script() -> str:
 class PlanPromotionGateTest(unittest.TestCase):
     """C3 + C2: execute the real plan step shell."""
 
-    def run_plan(self, **overrides: str) -> subprocess.CompletedProcess:
+    def run_plan(self, resolve_branch: bool = False, **overrides: str) -> subprocess.CompletedProcess:
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "out"
             output.touch()
@@ -159,10 +159,16 @@ class PlanPromotionGateTest(unittest.TestCase):
             bin_dir.mkdir()
             curl = bin_dir / "curl"
             curl.write_text("#!/bin/sh\necho 'unexpected fixture network request' >&2\nexit 97\n")
+            if resolve_branch:
+                curl.write_text(
+                    '#!/bin/bash\nset -eu\n'
+                    '[ "${!#}" = "https://api.github.com/repos/onesyue/yue-node/commits/master" ]\n'
+                    "printf '%s\\n' '{\"sha\":\"" + "b" * 40 + "\"}'\n"
+                )
             curl.chmod(0o755)
             env = {
                 "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"],
-                "GH_API_TOKEN": "",
+                "GH_API_TOKEN": "test-fixture-token",
                 "SERVICE": "yue-node",
                 "REF_OVERRIDE": "",
                 "MIGRATION_BASE": "a" * 40,
@@ -189,9 +195,17 @@ class PlanPromotionGateTest(unittest.TestCase):
 
     def test_candidate_builds_still_accept_branch_refs(self) -> None:
         for ref in ("", "master"):
-            result = self.run_plan(REF_OVERRIDE=ref)
+            result = self.run_plan(resolve_branch=True, REF_OVERRIDE=ref)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("promote=false", result.outputs)
+            for matrix in ("matrix", "validation_matrix"):
+                self.assertEqual({entry["ref"] for entry in getattr(result, "target_plan")[matrix]}, {"b" * 40})
+
+    def test_unresolved_candidate_branch_cannot_publish_plan_outputs(self) -> None:
+        result = self.run_plan(REF_OVERRIDE="master")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(getattr(result, "outputs"), "")
+        self.assertIsNone(getattr(result, "target_plan"))
 
     def test_ops_and_all_require_explicit_sql_baseline_even_without_promotion(self) -> None:
         for service in ("yueops", "yue-bot", "checkin-api", "yueops-web", "all"):
@@ -232,7 +246,7 @@ class PlanPromotionGateTest(unittest.TestCase):
         self.assertEqual(result.target_plan["matrix"], [])
 
     def test_real_plan_requires_authoritative_runner_temp(self) -> None:
-        result = self.run_plan(RUNNER_TEMP="")
+        result = self.run_plan(RUNNER_TEMP="", REF_OVERRIDE="b" * 40)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("RUNNER_TEMP", result.stderr)
         self.assertIsNone(result.target_plan)

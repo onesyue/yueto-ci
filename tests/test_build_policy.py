@@ -649,6 +649,7 @@ class VerifiedBuildxTest(unittest.TestCase):
                     )
         self.assertEqual(set(consumers), {
             ("build.yml", "build:"),
+            ("build.yml", "publish:"),
             ("poll-sources.yml", "poll:"),
             ("image-rescan.yml", "scan:"),
         })
@@ -943,7 +944,8 @@ class BuildPolicyTest(unittest.TestCase):
             "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
             "'[\"ubuntu-24.04\"]')"
         )
-        self.assertEqual(self.workflow.count(selector), 4)
+        # plan, validate, validation-evidence, candidate build, and publish.
+        self.assertEqual(self.workflow.count(selector), 5)
         self.assertIn(
             "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,
@@ -1882,7 +1884,7 @@ class BuildPolicyTest(unittest.TestCase):
         that a locally green gauntlet is evidence for the central gate.
         """
 
-        for job in ("plan", "validate", "validation-evidence", "build"):
+        for job in ("plan", "validate", "validation-evidence", "build", "publish"):
             header = re.search(
                 rf"(?ms)^  {job}:\n(?P<body>.*?)^    steps:\n", workflow
             )
@@ -1913,7 +1915,7 @@ class BuildPolicyTest(unittest.TestCase):
     def test_unbounded_release_job_is_rejected(self) -> None:
         """Deletion mutation: removing any single bound must turn the guard red."""
 
-        for job in ("plan", "validate", "validation-evidence", "build"):
+        for job in ("plan", "validate", "validation-evidence", "build", "publish"):
             with self.subTest(job=job):
                 mutated = re.sub(
                     rf"(?ms)(^  {job}:\n.*?)^    timeout-minutes: [0-9]+\n",

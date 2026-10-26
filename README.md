@@ -144,8 +144,21 @@ facts; changing a source pin does not establish deployment.
 
 Keep public logs concise and free of sensitive values or environment dumps.
 Private source and images are never uploaded as artifacts. Only explicitly
-allowlisted diagnostic evidence, such as the timing metadata below, may be
-published. Product outputs go to GHCR.
+allowlisted diagnostic evidence and candidate identity metadata may be published.
+Product outputs go to GHCR.
+
+The plan freezes every selected source ref before validation and candidate image
+preparation start in parallel. Candidate preparation retains all vulnerability,
+SBOM, signature and provenance gates. Its write-once artifact contains only the
+verified digest and service, source, workflow, run and attempt identities. The
+publication job requires successful candidate builds, validators and the complete
+validation-evidence join; it checks that receipt against the frozen plan and
+uses the exact digest without resolving a mutable candidate tag. Only then may
+it write `built-<sha>` or perform the existing authorized promotion. Failed,
+canceled or skipped required jobs block publication. Source-only plans keep an
+empty image matrix and skip both candidate build and publication.
+Receipts belong to one run attempt; retry the complete workflow when a failed
+publication needs a fresh attempt, rather than reusing a prior candidate receipt.
 
 ## Validation and diagnostic evidence
 
