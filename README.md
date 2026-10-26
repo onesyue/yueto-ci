@@ -1,398 +1,272 @@
-# yueto-ci
+# Yue.to server CI
 
-Unified build and external-control repository for Yue.to server components.
-This public repository contains no business source. Private source repositories
-are checked out with scoped credentials, and outputs go only to
-`ghcr.io/onesyue/*`. Diagnostic artifacts are limited to the explicitly declared
-test evidence below; private source and images are not uploaded as artifacts. Public Actions avoids the private
-repository billing dependency. This repository also hosts an alert-chain deadman
-observer outside production hosts.
+Public build and release control for Yue.to server components. Private source
+is checked out with scoped credentials; images publish only to `ghcr.io/onesyue/*`.
+Client packages use [yuelink-ci](https://github.com/onesyue/yuelink-ci).
 
-Client builds run in [yuelink-ci](https://github.com/onesyue/yuelink-ci). These are
-the two build repositories.
+[services.json](services.json) defines image targets. [validation-targets.json](validation-targets.json)
+separately defines source-only targets, including YueLink and
+`yue-node-validation`; these never enter the image matrix. The only release
+workflow is [build.yml](.github/workflows/build.yml): validate, build, sign,
+attest, then explicitly promote.
 
-### Passive Ops timing evidence
+## Recover interrupted server delivery
 
-The formal serial Ops pytest entry records collection, selected corpus identity,
-and every setup/call/teardown phase. The existing root-owned Linux lens recorder
-is projected into `scripts/lens_report.py`; do not edit that generated file.
-Regenerate/check it from the workspace with
-`python3 scripts/sync-lens-report.py --apply|--check --ci-root <central-checkout>`.
-The central installer checks the projection's canonical-path/hash manifest;
-the workspace contract additionally checks it against the actual canonical bytes.
-
-The run/attempt-specific `yueops-pytest-timing-*` artifact retains event records,
-source/policy/recorder/entry identities, tool versions, the original pytest exit
-code and a summary for 14 days, including failed validation. It contains test
-identifiers and phase/outcome metadata, not source files or environment dumps.
-Missing starts, interrupted sessions, incomplete case phases, lost records and
-absent process-exit receipts remain MISSING/PARTIAL. A COMPLETE timing artifact
-can describe failed tests and never constitutes release acceptance.
-
-Nested pytest subprocesses do not claim the parent stream. Subtest durations
-are retained but excluded from parent-phase totals. The summary is scoped to
-the existing serial entry; native nginx/PostgreSQL/systemd obligations retain
-their separate execution and gates. Aggregate CPU and process-tree peak memory
-are UNKNOWN; no single-process high-water mark substitutes for them. Collect
-the next required run, rather than dispatching a profiling-only full suite.
-The central policy self-tests use the five hash-locked wheels in
-`requirements-policy.txt` to exercise real pytest subprocesses. Install that
-file before the existing unittest discovery command when running policy tests
-outside the Ops dependency environment.
-
-The native Ops PostgreSQL 18 bootstrap admits Ubuntu 24.04 amd64 and uses
-temporary APT sources and index state containing only HTTPS Ubuntu archive and
-security repositories plus fingerprint-verified PGDG. Explicit Signed-By keys
-and fatal update errors preserve repository authentication while excluding
-unrelated runner repositories. Existing PG18 installations still pass all tool,
-major-version and non-root checks. `tests/test_native_postgres_toolchain.py`
-executes the workflow shell with controlled command fixtures, covering the
-unrelated Microsoft-source failure and fail-closed OS, trust, fetch, APT and
-toolchain cases; it does not substitute for native public release validation.
-
-Shared test/dependency inputs remain exact complete maps. A reviewed frontend
-security lock update appends its own transition after the original frontend and
-Python transitions, binding their history, the previous lock blob and its regular
-file mode. Both source admission and sealed-envelope validation consume that
-transition; mixed dependency generations and unrelated changes still fail.
-The MiniApp security lock successor adds one complete map after those four
-historical maps. Its separate transition binds all three earlier records, the
-frontend security source as its exact parent, and only the regular MiniApp lock
-blob. Missing predecessor records, mixed Python/frontend/MiniApp generations,
-changed shared inputs and resealed inconsistent envelopes are rejected.
-The W8.5 observability successor adds one seventh complete map after the
-reviewed W8.5 pyproject/uv.lock map. Its separate transition binds Ops
-1d8ae9784b709ebb220f064c52a33ef42d3a5145 to
-8e1a9c514ef61a423540ad7de4951867ab6b9b89, qualified policy
-bff07d53690d007dcc303c83e5319ff8820eb57b, and only the regular
-requirements-observability.txt blob. Record hashes name already accepted
-private review, freeze, and qualification evidence. This source-neutral map
-does not waive same-run native, reference, serial, or ordinary evidence and
-does not complete the corpus join or constitute native or public release
-acceptance.
-The audit dependency successor adds one eighth complete map after that
-observability map. Its separate transition binds Ops
-8e1a9c514ef61a423540ad7de4951867ab6b9b89 to
-36a37ac2e54096ea59af22f5afca73afd6b7c71c, qualified policy
-2751f9c9d3c1d79fff1b8e996a6e82c4a88b7c9b, and only pyproject.toml and
-uv.lock. The admitted blobs are setuptools 84.1.0 and filelock 4.2.4.
-Record hashes name the local audit and freeze evidence for that commit.
-This map does not waive same-run native, reference, serial, or ordinary
-evidence and does not constitute public release acceptance.
-The zod lock successor adds one ninth complete map after the audit map.
-It binds Ops 36a37ac2e54096ea59af22f5afca73afd6b7c71c to
-b18aa7f2163c0b22544d780287eb4dc7f88fcf7f and only the console and Mini App
-package manifests and lockfiles, pinning transitive zod at 4.6.7.
-A rejected map names the drifted paths. This map does not waive native,
-reference, serial, or ordinary evidence and is not public release acceptance.
-The current skip successor preserves the 22 additions and 38 module-blob
-updates recorded at Ops b18aa7f2163c0b22544d780287eb4dc7f88fcf7f.
-It adds two panel-navigation skips and refreshes 21 module blobs for Ops
-4a128845e3039a5687b3cf71c6c973438650a440, producing 24 additions and
-59 updates. The prior current-record SHA256 is
-d58aa5e3d715836b04e1939f8af6f3b4ed9f34570f7b3d3ff411948cf2d66e32.
-The final Ops successor 3b981eaeb042ed03762489e5360f61d4d0f9f16a preserves
-those 24 additions and 59 updates and adds ten exact relay-package native
-cases, producing 34 additions and 59 updates. Its prior current-record SHA256 is
-1ab7d4d2e31107b0f1355c65e40648923626f10be80690fdcc6efc2c4085859e.
-Actual ordinary Linux UID1001 execution reports 50 passes and ten skips for
-that module. Independent native qualification provides 56 fresh passes plus
-four retained unchanged journal cases; these are not same-run native receipts.
-Shared inputs, historical collection evidence, and reviewed hosted obligations
-are unchanged. Host and root skips remain non-acceptance. Unknown cases still
-fail the join.
-The scanner-helper successor adds a tenth complete shared-input map for Ops
-4214a4c6cb36ce8ee46e7901174586db81ab75f7 after reviewed source3b981eae.
-Only tests/_shell_early_exit_pipes.py changes, with exact before/after blobs and
-mode100644; accepted source freeze,131-host/131-Linux qualification and independent
-review hashes bind the record. All nine historical maps and the34/59 skip
-transition remain unchanged. Unknown paths, blobs, modes and mixed maps fail.
-Existing native receipts retain their original source/run identity; they cannot
-be transplanted to4214 or used as a new same-run native result.
-The relay observer fixture successor binds Ops4214 to Ops943a7a12 without
-rewriting that historical baseline. Its appended, independently pinned record
-admits only the reviewed relay test module blob0596e8a6 to6db5102e transition.
-The same ten ordinary skip facts retain their reasons and outcomes; all34
-additions,59 updates,55 shared inputs and native obligations remain unchanged.
-The predecessor blob remains historical input, while unknown module blobs or
-changed review/history records are rejected. Fixture qualification does not
-replace the new release's complete same-run native and ordinary evidence.
-The release coordinator verifies the actual signed source, independent review and
-freeze artifacts before recording their identities. Hash syntax alone does not
-authenticate those artifacts. Historical skip/collection evidence stays dated;
-an admitted input map does not reuse successful jobs from an earlier release.
-
-## Covered services
-
-`services.json` lists image targets: yue-node, yueops-web, checkin-api, yue-bot and
-yueboard. `validation-targets.json` separately lists source-contract-only targets,
-currently YueLink and the explicit `yue-node-validation` target. Keep these lists
-separate: source-only targets never enter the Docker build matrix. The Node
-target runs the existing complete HY2 and VLESS validators without building or
-publishing an image; ordinary `service=yue-node` retains its image build.
-
-## Triggers
-
-`.github/workflows/build.yml` is the only release workflow. Promotion is its final
-controlled step after validation, build, signing and attestation.
-
-`.github/workflows/alert-chain-deadman.yml` is a read-only operations probe. It
-reads the bastion heartbeat and uses the canonical YueOps evaluator. Failures open
-incident issues only in the private YueOps repository; production credentials are
-not recorded here. This supplies **additional evidence from another failure
-domain, not the alert SLA**. See the measured deadman SLO below.
-
-`.github/workflows/image-rescan.yml` scans potentially running images daily:
-`:latest` for each service plus the three most recent
-`promoted-<rev>-<digest>` digests, covering current and rollback predecessors while
-deployment trails `:latest` (`scripts/plan-rescan-targets.py`). It scans every
-declared production platform with SHA-256-verified Trivy 0.74.0. Root
-`release.yaml` desired state is authoritative, but this public repository
-intentionally has no credential for that private repository; registry promotion
-markers provide the bounded substitute. Enumeration fails closed. Failed or
-cancelled plans/scans open or update one deduplicated private YueOps image-rescan
-incident, using the same App-token/PAT-fallback path as deadman. No private source
-checkout, registry writes or public artifacts are involved.
-
-Enumeration follows [GitHub REST pagination](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api),
-100 versions per page, before selecting recent promotion markers. Requests stay
-on the reviewed owner/package rather than following credential-bearing Link URLs.
-The limit is 100 pages. Even without a Link header, a full page requires another
-request to establish the end. Duplicate versions, malformed pagination, HTTP
-errors or an unproven complete listing at the limit fail explicitly. The first
-100 entries must never be treated as all versions, which would omit rollback
-images. For an exact multiple of the page size, GitHub may return an extra empty
-page whose `last` points to the immediately preceding page. Accept that only when
-the current page is empty and has no `next`; nonempty or multi-page backward jumps
-remain invalid.
+Image promotion is not deployment. Use the workspace's
+[release and recovery procedure](../docs/release-chain-runbook.md) and
+[native ship driver](../scripts/ship.sh), preserving the original receipt and
+release owner. Once all exact selected Ops images are promoted, resume from the
+workspace root without starting another build:
 
 ```sh
-# Unpinned YueBoard HEAD: validation only, no registry writes. Exact reviewed pin: candidate build.
+scripts/ship.sh yueops --from-promoted --detach
+```
+
+Use `yueboard` for the panel. `yue-node` verifies and records image publication;
+fleet rollout remains a separate operation. These paths retain signed desired-state
+and applicable deployment verification. An incomplete promotion or changed source
+is not permission to substitute another revision into the interrupted release.
+
+## Run validation or promotion
+
+```sh
+# Exact reviewed Board pin: validate and build a candidate.
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yueboard -f ref=<40-hex-reviewed-contract-pin>
+
+# Validate all targets with the trusted predecessor required by Ops SQL lint.
 gh workflow run build.yml -R onesyue/yueto-ci -f service=all \
   -f migration_base=<40-hex-trusted-yueops-previous-revision>
 
-# Validate the exact remote YueLink source revision without building an image.
+# Source-only validation: no image or registry writes.
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yuelink -f ref=<40-hex-yuelink-sha>
-
-# Validate an exact Node test-only successor through both native profiles.
-# This target refuses promote=true and performs no registry writes.
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yue-node-validation -f ref=<40-hex-yue-node-sha> -f promote=false
 
-# Promotion additionally requires explicit promote=true, default-branch ancestry,
-# image inputs identical to HEAD, no regression behind :latest, and YueBoard's
-# exact reviewed yueboard_contract_pin in native-node-contract.json.
+# Promotion additionally requires the conditions below.
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yueboard -f ref=<40-hex-reviewed-contract-pin> -f promote=true
-
-# poll-sources.yml checks private default branches. Its nominal cron is 20 minutes;
-# measured scheduling is documented below. Missing exact built-<40-hex> artifacts
-# trigger candidate builds only, never automatic latest promotion.
 ```
 
-`ref` may be a full branch or tag for validation; commit refs must contain all
-40 SHA characters. Checkout does not treat 7–39-character SHAs as reproducible
-commit references, and planning rejects them. **With `promote=true`, ref must be
-a full 40-character SHA for every event type** (2026-09-27 C3). Validate and build
-check out independently, minutes apart. Branches, tags and an empty ref
-(defaulting to registered `master`) can move between jobs, producing unvalidated
-bytes. `ship.sh` already supplies `git rev-parse HEAD`. Promotion must also run
-from this repository's `refs/heads/master`, the sole production signing identity.
+Validation accepts full branch/tag names or full 40-character commit SHAs;
+7–39-character commit abbreviations are rejected. `promote=true` requires a
+full 40-character source SHA and this workflow's `refs/heads/master`. Validation
+and build check out independently, so movable refs cannot authorize promotion.
 
-An unpinned YueBoard default-branch HEAD can still receive full validation with
-`promote=false`. It is explicitly `non-promotable` and removed from the build
-matrix: no registry login, image build, candidate, `built-*`, `sha-*` or `latest`
-writes. Candidate build and promotion require signed cross-repository convergence
-of `yueboard_contract_pin` to that exact SHA first. `service=all` validates both
-image services and source-only targets; the latter never enter the build matrix
-and cannot use `promote=true`. `scripts/promote-source-gate.py` repeats the source
-and input checks immediately before tags change (P2 #11, 2026-09-24).
+Promotion also requires source default-branch ancestry, build inputs identical
+to HEAD, no regression behind `:latest`, and Board's exact signed
+`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
+[promote-source-gate.py](scripts/promote-source-gate.py) repeats these checks
+immediately before changing tags. Unpinned Board HEAD receives full validation
+but is `non-promotable`: no registry login, image, candidate or tag writes.
+Source-only targets reject promotion; ordinary `service=yue-node` still builds
+an image, while `yue-node-validation` runs both complete native profiles only.
 
-YueOps builds, including single images and `all`, require explicit
-`migration_base=<full40-characterSHA>`. SQL lint covers the entire baseline-to-
-candidate change; the baseline must exist and be an ancestor. SQL deletion and
-rename are rejected. There is no `HEAD^` or full-history fallback. Workspace
-`scripts/ship.sh yueops` reads the predecessor from verified signed `release.yaml`
-desired state. Manual validation must use that same trusted basis, never the
-candidate itself to suppress an error. Poll derives the published ancestor from
-verified master provenance and OCI revision, using the earliest group member
-when versions differ; absence fails explicitly for retry on the next poll.
-Squawk 2.60.0, its fixed SHA-256, PG15 and existing rule exclusions remain pinned.
+Ops builds require `migration_base=<full40-characterSHA>`, an existing ancestor.
+SQL lint covers baseline through candidate and rejects deleted/renamed SQL;
+there is no `HEAD^` or full-history fallback. Workspace `scripts/ship.sh yueops`
+derives the predecessor from verified signed `release.yaml`. Manual validation
+must use the same trusted basis, never the candidate itself. Poll derives a
+published ancestor from verified master provenance and OCI revision, choosing
+the earliest group member when versions differ; missing evidence fails. Squawk
+version/digest, PG15 and rule exclusions remain pinned in the workflow.
 
-### Measured poll cadence and optional rearming (2026-09-28)
+## Polling and cache reuse
 
-Recorded schedule delays/loss began broadly on 2026-08-26 (community discussions
-orgs/community#206019 and #207346; no official fix recorded then). Natural
-poll-sources runs numbered28 on08-24 and34 on08-25, falling to2–6 daily from08-27.
-Intervals during09-18→09-28 were2.5–6hours. Off-hour deadman (`17,47`) and
-image-rescan (`17 2`, roughly5.5hours late daily) were delayed too; changing the
-minute did not resolve it.
+[poll-sources.yml](.github/workflows/poll-sources.yml) checks private default
+branches on a nominal 20-minute schedule and dispatches candidate builds only.
+GitHub scheduling is not a delivery guarantee. Root `scripts/kick-builds.sh`
+provides an immediate authorized poll after a source push.
 
-Two independent remedies:
+The `rearm` job is disabled by default. Enabling it requires `poll-rearm` with
+a 20-minute wait and master-only deployment branches, plus repository variable
+`YUETO_CI_POLL_REARM=true`; remove that variable to disable it. The script rejects
+dispatch before 900 seconds and permits only the newest noncancelled poll to
+rearm. It dispatches only poll-sources with `promote=false`, preventing duplicate
+chains. The environment wait does not occupy a runner.
 
-- Run root `scripts/kick-builds.sh` after pushing private source to dispatch an
-  immediate round using the workstation's `gh` identity.
-- **Rearming is disabled by default.** poll-sources.yml's `rearm` job waits in the
-  `poll-rearm` environment, without occupying a runner, then
-  `scripts/poll-rearm.sh` uses this repository's `GITHUB_TOKEN` to dispatch only
-  poll-sources, always with `promote=false`. An administrator must create
-  `poll-rearm` with a20-minute wait and deployment branches restricted to`master`,
-  then set repository variable `YUETO_CI_POLL_REARM=true`. Remove the variable to
-  disable it. Two fail-closed gates apply: reject dispatch less than900seconds
-  after poll start (GitHub otherwise auto-creates a missing empty environment and
-  releases immediately), and allow only the newest noncancelled poll to rearm.
-  Older chains stop, so manual kicks and schedules cannot multiply chains.
-  `tests/test_poll_rearm_policy.py` executes the real script with fake `gh`.
+The poller groups images from `services.json` and verifies every group member.
+Markers use full source SHAs; transitional seven-character markers require an
+exact OCI revision match. Registry/network failures cannot masquerade as missing
+images. A missing marker avoids a build only when promoted `:latest` has identical
+inputs, verified GitHub provenance, the same service/build-job recipe, an ancestral
+revision and no floating Dockerfile frontend. Unknown facts cause a normal build,
+subject to the SQL baseline. A skip creates no marker or new artifact identity.
+See [poll-skip-decision.py](scripts/poll-skip-decision.py).
 
-Poll derives repository/image groups from `services.json` and verifies every
-image in each group. New markers use full40-character source SHAs. Transitional
-seven-character markers count only if OCI `org.opencontainers.image.revision`
-exactly equals current HEAD. Registry authorization/network failures fail closed,
-never masquerading as a missing image and causing redundant builds.
+Go installs use pinned compilers with `setup-go`'s combined cache disabled.
+Explicit module/compiler caches are available only to hosted master runs whose
+source is reachable from registered `origin/master`. Missing trust, runner or
+toolchain facts use cold validation. Compiler restore retains exact repository,
+profile, workflow, dependencies, Go/C compilers and runner image; keys also name
+the actual source SHA. There is no broad fallback, run-ID key or cache-based gate
+skip. `go clean -testcache` expires results, not compiled objects. Local runners
+keep local caches and never upload hosted caches; cache download failure is
+nonfatal. Configuration alone does not establish a pipeline speedup.
 
-P3 (2026-09-24): a missing marker can avoid a build only if promoted `:latest` has
-**identical build inputs**, verified GitHub build provenance, unchanged recipe
-(services.json entry and build-job text), a promoted revision ancestral to HEAD,
-and no floating Dockerfile `# syntax=` frontend. `scripts/poll-skip-decision.py`
-implements this. Unknown facts cause a normal build, subject to YueOps's SQL
-baseline prerequisite. A skipped build creates no `built-*` marker: the existing
-artifact retains its original source identity, and the next poll checks again.
+## Credentials and publication boundaries
 
-## Go validation cache ownership
+| Credential or switch | Purpose and boundary |
+|---|---|
+| `YUETO_CI_PAT` | Legacy `repo`/`write:packages` fallback while App/registry switches are absent. |
+| `YUETO_CI_APP_CLIENT_ID` + secret `YUETO_CI_APP_PRIVATE_KEY` | App tokens for private source reads. Issuance failure aborts; no silent PAT fallback. |
+| `YUETO_CI_GHCR_VIA_GITHUB_TOKEN=true` | GHCR login with this repository's GITHUB_TOKEN. App tokens cannot authenticate GHCR. |
+| `DEADMAN_SSH_KEY_B64` | Dedicated read-only key forced to `command="/bin/cat /var/lib/yue-alert-heartbeat/heartbeat.json",restrict`; never a deployment key. |
 
-`setup-go` installs the pinned compiler with its combined cache disabled. Explicit
-module and compiler caches use the existing pinned `actions/cache`; only hosted
-`master` workflow runs with source commits reachable from the registered source
-`origin/master` can read/write them. Missing trust/runner/toolchain metadata runs
-without remote cache. The local release runner keeps its local caches and never
-uploads these remote caches.
+Grant `onesyue/yueto-ci` access under each package's **Manage Actions access**:
+Write for push/sign/provenance and at least Read for poll/rescan. App tokens need
+contents:read only on the source repositories each job consumes. The fork-tag
+verification step also reads quic-go; Node validation itself has no credentials
+and uses vendored dependencies with `GOFLAGS=-mod=vendor`. Promotion obtains a
+fresh token because a build may outlast token expiry. Deadman uses a separate
+YueOps issues:write token for incidents. Poll dispatch uses GITHUB_TOKEN with
+actions:write. Configure switches under repository Actions Variables.
 
-The module key covers dependencies and workload/toolchain identity. The compiler
-key additionally names the actual checked-out source SHA; its single restore
-prefix retains the exact repository, profile, workflow, dependencies, compiler,
-C compiler and runner image. Changed source can reuse compatible objects then
-save its newly compiled objects after successful validation; an exact hit never
-creates a redundant entry. There is no run-ID key, broad fallback or cache-based
-gate skip. `go clean -testcache` expires test results while retaining compiled
-objects. Cache download failures remain optional and cold validation remains
-valid. Measure changed-source reuse in the next required central run; this change
-alone does not establish a whole-pipeline speedup.
+After both switches and successful poll/build/promotion/rescan/deadman drills,
+remove and revoke the legacy PAT. Source repositories no longer need
+`YUETO_CI_DISPATCH_PAT`; controlled compatibility dispatch still requires a trusted
+actor, full SHA and default-branch HEAD. [Credential tests](tests/test_credential_policy.py)
+protect these boundaries.
 
-## Required secrets (Settings → Secrets → Actions)
+Production accepts only this signing workflow and provenance source ref:
 
-- `YUETO_CI_PAT`: classic PAT with `repo` and `write:packages` for private checkout
-  and GHCR push. Existing packages belong to source repositories, so this
-  repository's GITHUB_TOKEN needs explicit package access before replacing it.
-- `DEADMAN_SSH_KEY_B64`: base64 of a dedicated read-only SSH private key. The
-  bastion public key must enforce
-  `command="/bin/cat /var/lib/yue-alert-heartbeat/heartbeat.json",restrict`.
-  Never reuse a root deployment/rotation key.
+```text
+^https://github.com/onesyue/yueto-ci/\.github/workflows/build\.yml@refs/heads/master$
+```
 
-### Credential migration: classic PAT → GitHub App + GITHUB_TOKEN
+`release.yaml` in the private workspace is the signed desired-state authority.
+`scripts/ship.sh` verifies the promoted digest, signature, SBOM and provenance,
+then writes, signs and pushes that record. This public CI never writes root Git
+state. Promotion's `DIGEST`, `SOURCE_SHA` and `IMAGE` anchors remain inputs to
+that workstation chain. Builds, promotion and installed production are separate
+facts; changing a source pin does not establish deployment.
 
-Since2026-09-23, workflows support a configuration switch with PAT fallback when
-the switch is absent. A classic `YUETO_CI_PAT` with full `repo` scope can write all
-private repositories if a workflow is compromised. The owner can configure the
-following without changing workflow code:
+Keep public logs concise and free of sensitive values or environment dumps.
+Private source and images are never uploaded as artifacts. Only explicitly
+allowlisted diagnostic evidence, such as the timing metadata below, may be
+published. Product outputs go to GHCR.
 
-| Purpose | Consumer | Replacement | Minimum privilege |
-|---|---|---|---|
-| Read YueBoard SHA | build.yml plan | App token | yueboard contents:read |
-| Checkout source and Board contract | validate/build | App token | yueboard/yue-node/yueops/yuelink contents:read |
-| Verify Node private fork tags | Verify yue-node signed fork tags only | App token | quic-go contents:read; Validate yue-node has no credentials and uses vendored dependencies, GOFLAGS=-mod=vendor |
-| Recheck default HEAD before promotion | promote | Fresh App token | Three service source repositories, contents:read; a build may last two hours, beyond a token's one-hour lifetime |
-| GHCR push/sign/provenance | Login to GHCR | GITHUB_TOKEN, packages:write | Grant yueto-ci Write on each package |
-| GHCR reads | poll-sources/image-rescan | GITHUB_TOKEN, packages:read | Grant yueto-ci at least Read |
-| Read three source HEADs | poll scan | App token | contents:read |
-| Dispatch local build.yml | poll Trigger builds | GITHUB_TOKEN, actions:write | workflow_dispatch is an allowed new-run exception |
-| Read YueOps evaluator | deadman | App token | yueops contents:read |
-| Open incident issue | deadman | Separate App token | yueops issues:write |
+## Validation and diagnostic evidence
 
-GitHub App tokens cannot authenticate GHCR. The registry path uses this
-repository's GITHUB_TOKEN after adding `onesyue/yueto-ci` under each package's
-**Package settings → Manage Actions access**.
+### Ops corpus and timing
 
-Switches under Settings → Secrets and variables → Actions → **Variables**:
+[ops-pytest-skip-baseline.json](ops-pytest-skip-baseline.json) and
+[pytest-shards.py](scripts/pytest-shards.py) own exact collection, skip and shared-
+input contracts. Reviewed successor records are append-only: they bind specific
+source parents, before/after blobs and modes, and prior accepted review/freeze
+identities. Unknown paths/blobs, mixed dependency generations, missing history
+or resealed inconsistent envelopes fail. Hash syntax does not authenticate a
+review; the coordinator verifies its signed source and actual artifacts first.
+Historical skips retain their source/run identity. Admission never reuses prior
+successful jobs or replaces same-run native, reference, serial and ordinary
+execution. Host/root skips are not Linux acceptance.
 
-- Nonempty `YUETO_CI_APP_CLIENT_ID`, with secret `YUETO_CI_APP_PRIVATE_KEY`, moves
-  all source reads to App tokens. Token issuance failure fails the job, **without
-  silently falling back to PAT**.
-- `YUETO_CI_GHCR_VIA_GITHUB_TOKEN=true` changes GHCR login to GITHUB_TOKEN.
+The serial pytest entry records collection and every setup/call/teardown phase.
+[lens_report.py](scripts/lens_report.py) is a generated projection; use root
+`python3 scripts/sync-lens-report.py --apply|--check --ci-root <central-checkout>`.
+The installer validates its canonical-path/hash manifest; the workspace also
+compares actual canonical bytes.
 
-After both switches and a successful poll/candidate build/promotion/rescan/deadman
-drill, delete `YUETO_CI_PAT` and revoke the classic PAT in GitHub.
-`tests/test_credential_policy.py` rejects unguarded PAT use. App setup is documented
-in root `docs/2026-09-23-ci-credential-migration.md`.
+The run/attempt-specific `yueops-pytest-timing-*` artifact retains test identities,
+phase/outcome metadata, source/policy/recorder/entry identities, tool versions and
+the original pytest exit for 14 days, including failures. Missing starts, phases,
+records or exit receipts remain MISSING/PARTIAL. COMPLETE timing can describe
+failed tests and is not release acceptance. Nested pytest does not claim the
+parent stream; subtest durations are excluded from parent-phase totals. CPU and
+process-tree peak memory remain UNKNOWN. Nginx/PostgreSQL/systemd keep their
+separate gates. Gather timing on the next required run, not a profiling-only
+full-suite dispatch.
 
-Private source repositories no longer need `YUETO_CI_DISPATCH_PAT`; pull-based
-polling uses the central credentials above. `repository_dispatch` remains only
-for controlled compatibility calls, gated by trusted actor, full SHA and default
-branch HEAD.
+Native Ops PG18 admission uses Ubuntu 24.04 amd64, isolated temporary APT
+sources/indexes, HTTPS Ubuntu/security/PGDG repositories and fingerprint-verified
+Signed-By keys. Fetch, update, tool, major-version and non-root checks remain
+mandatory even for an existing installation. Shell-fixture tests do not replace
+native public validation.
 
-## Promotion records: this repository does not write root release.yaml
+### Board PostgreSQL integration
 
-Since2026-09-14, workspace `onesyue/yueto`'s `release.yaml` is the canonical record
-of promoted revisions/digests. Workstation `scripts/ship.sh` obtains the promotion
-digest, passes signature/SBOM/provenance verification, writes it, signs the commit
-and pushes. `scripts/release-yaml.py verify` compares the record to GHCR
-`sha-<revision>` and `latest`.
+Run domain fixtures against fresh PostgreSQL first, then `clean-pg-gate.sh` in
+a separate fresh database in that cluster, serial module suites, and full
+DB/nativeproto migration and production-scale suites. Earlier migrations can
+mask fixture-role bugs; early deviceidentity/nodesync can clear needed schema.
 
-Promotion intentionally writes no repository: the private free-tier root has no
-ruleset enforcing signatures; a CI bot cannot produce the owner's signed commit;
-introducing PAT-based private writes expands the impact to all private
-repositories; and three parallel YueOps matrix jobs would race over root commits.
-`tests/test_build_policy.py::test_promotion_records_nothing_in_the_workspace_root_repo`
-rejects workflow git commit/push, root contents-write APIs and `release.yaml`.
-Promotion `DIGEST`, `SOURCE_SHA` and `IMAGE` environment anchors must remain because
-ship.sh consumes them.
+[validate-yueboard-postgres.py](scripts/validate-yueboard-postgres.py) discovers
+Go-selected suites through AST and reconciles actual run/pass/package events.
+Commands use `-count=1 -p 1 -tags integration -json -v` with full logs. Any top-level
+or subtest SKIP, missing execution, nonzero exit or unscheduled discovered package
+fails. Run/attempt receipts bind all stages to the same source manifest. All four
+DSNs must match loopback `yueboard_test`; reset confirmation and production-scale
+switch remain required. Floor130 requires all ten current packages; lower floors
+may lack only the historical user/referencelock/nativeproto packages, with no
+SKIP exemption. Review schema-reset behavior before changing execution order.
 
-## Input shadow analysis: reports only, never skips (since2026-09-24)
+### Input shadow analysis
 
-build.yml's `input-shadow` runs alongside validation. No job depends on it;
-`continue-on-error: true`, read-only permissions. It writes annotations and step
-summaries for two analyses:
+`input-shadow` is read-only and `continue-on-error`; no job depends on it.
+[input-fingerprint.py](scripts/input-fingerprint.py) derives actual COPY/ADD/bind
+inputs using `<Dockerfile>.dockerignore` or context-root `.dockerignore`, not
+arbitrary adjacent ignore files. It compares latest provenance, recipe and inputs
+and reports would-skip/build/unknown. All builds still run. The evidence probe
+checks matching service/source/central/hosted-runner identities within 24 hours,
+but verification reuse remains disabled: vulnerability findings change over
+time. Removing this optional reporting job requires no consumer migration.
 
-1. `scripts/input-fingerprint.py shadow-ci` derives image inputs from actual
-   Dockerfile COPY/ADD/bind sources and the **effective** ignore file:
-   `<Dockerfile>.dockerignore`, otherwise context-root `.dockerignore`.
-   BuildKit does not read arbitrary adjacent `services/*/.dockerignore` files.
-   Compare with GHCR latest's revision and the build-job recipe at the central
-   commit in that digest's provenance. Output is `would-skip`, `would-build` or
-   `would-build (unknown)`. **All builds still run.** Local equivalent:
-   `python3 scripts/input-fingerprint.py compare|history --repo ../yueops ...`.
-2. `scripts/verification-evidence.py probe`, promotion runs only, looks for
-   successful validation with the same central commit, service, full source SHA
-   and hosted-runner image version within24hours. **Reuse is disabled and remains
-   disabled**: pip-audit/npm audit/pnpm audit findings vary over time, so matching
-   identities do not prove safety at promotion time.
+## Observers outside production
 
-Rollback removes the input-shadow job; it has no consumers.
+[alert-chain-deadman.yml](.github/workflows/alert-chain-deadman.yml) reads the
+bastion heartbeat with the canonical evaluator and opens failures only as private
+YueOps incidents. Its nominal 30-minute GitHub cron is supplementary evidence,
+not the alert SLA. The dated 100-run September11–26 sample had 1.72–6.93-hour
+gaps (median3.53h, P90 5.36h); it is not a current measurement. The panel's native
+`panel-alert-chain-deadman.timer`, every ten minutes with direct Telegram and
+VERSION3 issue-code-set deduplication, owns the ≤45min +10min detection target.
+`--max-age-seconds 2700` is freshness, not cadence; the bastion emits every five
+minutes. Keep the 30-minute cron and freshness threshold; scheduling delay is
+not a reason to weaken stale-heartbeat detection. The maintained runbook is
+`docs/runbook/panel-alert-chain-deadman.md` in YueOps.
 
-## Buildx tool version
+[image-rescan.yml](.github/workflows/image-rescan.yml) scans every declared platform
+of each latest image plus the three most recent promoted revision/digest markers.
+Those markers bound current/rollback coverage because this public repository has
+no credential for private `release.yaml`. Enumeration fails closed; scan/plan
+failure or cancellation creates one deduplicated private incident through the
+same App/PAT policy. There is no private checkout, registry write or public artifact.
 
-Build, source poll and image rescan share `scripts/install-verified-buildx.sh`.
-Linux x86_64 is pinned to v0.37.1 with HTTPS-only download, hardcoded SHA-256
-verification before execution and actual `docker buildx version` path verification.
-The digest was independently compared with the [official release asset](https://github.com/docker/buildx/releases/tag/v0.37.1)
-and same-version checksums.txt. Reuse correct bytes; an old version, failed download
-or mismatched digest cannot proceed. Review version/digest changes together;
-environment variables cannot override them.
+[plan-rescan-targets.py](scripts/plan-rescan-targets.py) paginates 100 versions per
+page, at most100 pages, using only the reviewed owner/package. A full page requires
+another request even without a Link header. Malformed/duplicate/error/truncated
+listings fail. An extra empty final page may point `last` to the immediately
+preceding page only when it has no `next`; other backward jumps fail.
 
-setup-buildx-action normally reuses a preinstalled version; that does not mean it
-selects the newest release. After verified installation, the pinned action creates
-the pinned OCI BuildKit builder. Poll/rescan need only CLI imagetools and do not
-create builders. This build/push reliability change does not require republishing
-accepted application images or changing production node APT packages.
+## Toolchains and runner boundaries
+
+Hosted jobs pin `ubuntu-24.04`; implicit `ubuntu-latest` drift is rejected.
+Review runner major, Python/toolchains and evidence identity together.
+[Verified Buildx](scripts/install-verified-buildx.sh) and
+[verified Trivy](scripts/install-verified-trivy.sh) installers own exact versions
+and independently anchored SHA-256 pins. HTTPS download, hash verification before
+execution and actual command resolution are mandatory; environment overrides
+cannot replace these pins. Buildx creates the pinned OCI BuildKit builder only
+for builds. Poll/rescan need CLI imagetools only. Trivy actions use the verified
+installation with `skip-setup-trivy: true`; SBOM keeps its own Syft path.
+
+While this repository is public, do not register a persistent self-hosted runner.
+Never attach production hosts. Before using a local release runner, make the
+control repository private, protect branches and establish the Actions allowlist.
+Only then use a dedicated disposable Debian13 x86_64 VM without production
+credentials or network access and an `--ephemeral --disableupdate` runner.
+Registration must retain `self-hosted`, `Linux`, `X64` and add `yue-local-release`.
+All four labels must match. It takes one job; export permitted diagnostics and
+destroy the VM/Docker state. Only an authorized manual dispatch can select it;
+default manual runs and repository_dispatch use hosted runners. Bootstrap GNU make,
+required Go/C toolchains and gettext-base; Debian13 verifies system Python3.13,
+while hosted jobs use setup-python. Manual runner state is not validation evidence.
 
 ## Actions allowlist closure
 
-Settings → Actions → selected-actions must permit direct workflow actions **and
-third-party actions invoked inside composite actions**. trivy-action v0.36.0 calls
-`aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514`. Allowing only the
-parent fails at Set up job before scanning. The closure is:
+Selected-actions covers direct actions and nested composite dependencies.
+The exact external closure is:
 
 - `anchore/sbom-action@*`
 - `aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514`
@@ -405,143 +279,19 @@ parent fails at Set up job before scanning. The closure is:
 - `docker/setup-qemu-action@*`
 - `sigstore/cosign-installer@*`
 
-On2026-09-27, archived node20 `bufbuild/buf-setup-action` was replaced by
-`bufbuild/buf-action` v1.6.0 with `setup_only` and pinned `checksum`. **Before
-merging**, add `bufbuild/buf-action@*` to selected-actions or validate-yueboard stops
-at Set up job. Remove the old entry only after merging and a passing run:
+Retain `github_owned_allowed=true` and `verified_allowed=false`. Source references
+must still use full 40-character SHAs; `@*` permissions never authorize mutable
+tags in workflow source. Review permission changes before adding a new action.
+
+## Local policy checks
+
+Install [requirements-policy.txt](requirements-policy.txt) in the test environment
+for real-pytest recorder controls, then run:
 
 ```sh
-gh api -X PUT repos/onesyue/yueto-ci/actions/permissions/selected-actions --input - <<'JSON'
-{"github_owned_allowed":true,"verified_allowed":false,"patterns_allowed":[
- "anchore/sbom-action@*","aquasecurity/trivy-action@*","astral-sh/setup-uv@*",
- "docker/build-push-action@*","docker/login-action@*","docker/setup-buildx-action@*",
- "docker/setup-qemu-action@*","sigstore/cosign-installer@*",
- "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
- "bufbuild/buf-setup-action@*","bufbuild/buf-action@*"]}
-JSON
+python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-Retain `github_owned_allowed=true` and `verified_allowed=false`. Workflow source
-must still pin every third-party action to a full40-character commit; allowlist
-`@*` entries do not authorize mutable tags in source.
-
-## Runner image: ubuntu-24.04 (2026-09-27)
-
-The recorded GitHub migration of ubuntu-latest to Ubuntu26 starts2026-10-19
-(actions/runner-images#14748). All GitHub-hosted jobs here, including build/sign,
-pin `ubuntu-24.04`; `tests/test_hardening_20260927.py` rejects ubuntu-latest.
-A runner-major upgrade requires review of build environment, Python/toolchains
-and verification-evidence.py's runner identity together, not implicit label drift.
-
-## Trivy tool version (2026-09-27 C6)
-
-Build jobs hold `id-token: write` for Sigstore and `packages: write`. Runtime
-setup-trivy downloads checked only against checksums from the same release lack
-an independent anchor. `scripts/install-verified-trivy.sh` pins v0.74.0 and the
-Linux-64bit.tar.gz SHA-256, independently compared with the GitHub asset digest and
-trivy_0.74.0_checksums.txt. Download is HTTPS-only, verified before execution, added
-through `$GITHUB_PATH`, and checked for actual command resolution. All trivy-action
-calls (both build platforms and image-rescan) use `skip-setup-trivy: true`. SBOM
-still uses anchore/sbom-action's syft; its separate installation path was not
-changed in that round.
-
-## Signing identity: master only (2026-09-27 C2)
-
-Production `yueops/scripts/verify-image-signature.sh` accepts only this cosign
-identity and SLSA provenance source ref:
-
-```text
-^https://github.com/onesyue/yueto-ci/\.github/workflows/build\.yml@refs/heads/master$
-```
-
-The former main/master alternative, retained for the2026-08-31 branch rename,
-was unsafe when this repository had no main branch or branch protection: anyone
-able to create main could sign unreviewed workflow bytes with an accepted identity.
-Before tightening, every digest in root release.yaml history, including rollback
-predecessors, passed actual signature, two-platform SBOM and provenance checks
-under master-only verification. Source refs in services.json and
-validation-targets.json likewise allow only master.
-
-## Historical migration note: cosign identity change
-
-Moving builds here changed keyless identity from the source repository's workflow
-to `https://github.com/onesyue/yueto-ci/...`. The initial node verifier migration
-used this prefix:
-
-```text
-^https://github.com/onesyue/yueto-ci/
-```
-
-This is historical. Use the exact master-only identity above today. Per-service
-migration order was successful central build → update/deploy verifier regexp →
-move deployment pin to the central artifact → remove source docker-publish workflow.
-
-## Public repository rules
-
-- Keep logs concise; never echo sensitive configuration/path details. Values
-  belong in secrets with Actions masking.
-- Upload no public artifacts. Outputs go only to GHCR.
-- A writer may manually select `yue-local-release` through workflow_dispatch.
-  repository_dispatch and default manual runs use GitHub-hosted runners. The
-  workflow bootstraps GNU make and fails closed on actual toolchains before
-  validation/build/promotion. Node race tests bootstrap build-essential and enable
-  CGO. Signing also needs Debian gettext-base for envsubst. Hosted runners use
-  setup-python; Debian13 yue-local-release uses system Python3.13 and verifies its
-  exact major/minor before any Python policy. Manual runner state is not evidence
-  of a passing bootstrap. Registration must retain the default labels
-  `self-hosted`, `Linux`, `X64` and add `yue-local-release`.
-  All four must match; the custom label alone must not admit non-Linux/non-x86_64
-  hosts into release jobs.
-- While this repository is public, do not register a persistent self-hosted runner.
-  Never attach a bastion, panel, database or user-traffic node. First make the
-  control repository private and establish protected branches and the Actions
-  allowlist. Only then use a dedicated Debian13 x86_64 disposable VM, without
-  production credentials or production network access, with an
-  `--ephemeral --disableupdate` runner. Each runner takes one job; export diagnostic
-  logs, then destroy the entire VM and Docker state.
-
-## Measured alert-chain deadman SLO (2026-09-27 C4)
-
-Its cron is `17,47 * * * *`, nominally30minutes, but actual GitHub scheduling does
-not guarantee that. Across100 natural schedule runs from2026-09-11 to09-26,
-intervals were minimum1.72h, median3.53h, P90 5.36h, maximum6.93h.
-
-- Detection delay is the measured2–7hour schedule gap (median~3.5h), plus the
-  45-minute heartbeat threshold. This is supplementary evidence outside the
-  panel/bastion failure domain, **not the alert SLA**.
-- The SLA authority is the panel's YueOps `panel-alert-chain-deadman.timer`, every
-  ten minutes, direct Telegram, VERSION3 issue-code-set deduplication: detection
-  ≤45min +10min. See `docs/runbook/panel-alert-chain-deadman.md` in YueOps.
-- `--max-age-seconds 2700` is heartbeat freshness, not scheduling frequency.
-  The bastion emitter writes every five minutes. Both deadmen use the canonical
-  evaluator and contract. Do not relax freshness because GitHub throttles: that
-  makes samples less sensitive without making them more frequent.
-- Retain the30-minute cron; making it sparser can only increase intervals.
-
-## YueBoard PostgreSQL integration coverage
-
-Central validation runs domain fixtures first against fresh PostgreSQL, then
-`clean-pg-gate.sh` in a **separate fresh database in that cluster**, then module
-suites serially, then full db/nativeproto migration and production-scale suites.
-Migrations first would precreate cluster roles and mask fixture initialization
-bugs. Early deviceidentity/nodesync runs would clear public schema needed by
-other suites.
-
-`validate-yueboard-postgres.py` discovers integration files/tests using Go build
-selection and AST, then reconciles source packages with actual run/pass and
-package completion events. Every go test uses
-`-count=1 -p 1 -tags integration -json -v` with full job logs. Top-level or subtest
-SKIP, missing execution, nonzero exit and newly discovered unscheduled packages
-all fail. A run/attempt-specific receipt binds domain and later stages to the
-same source manifest. All four DSNs must match and target only loopback
-`yueboard_test`; migration-reset confirmation and the production-scale switch
-remain mandatory.
-
-Schema floor130 requires all ten current packages. Candidates below130 may
-explicitly lack only the historically later user/referencelock/nativeproto
-packages. Every discovered suite still runs, with no SKIP exemption. Review
-whether new packages rebuild public schema before adding their execution order;
-never automatically parallelize or silently omit them. Policy regressions run
-real Go test processes covering missing DSNs, real subtest SKIP, early TestMain
-exit, empty selectors, unit-only passes, missing packages, changed-source reuse
-of stale receipts and failure-log retention, without fabricated Go output.
+Discovery rejects unreachable test cases and import failures. Policy CI also
+compiles Python, checks shell syntax, runs pinned actionlint and ShellCheck.
+See [policy-ci.yml](.github/workflows/policy-ci.yml) for exact commands and pins.
