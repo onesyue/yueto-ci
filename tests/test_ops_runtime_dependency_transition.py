@@ -26,7 +26,7 @@ class RuntimeDependencyTransition(unittest.TestCase):
         self.changes = self.record["changes"]
 
     def test_sealed_record_is_exact_and_chained_on_each_reviewing_seal(self):
-        self.assertEqual(list(self.sealed)[-1], KEY)
+        self.assertEqual(list(self.sealed)[-2:], [KEY, "reviewed_skip_blob_successor_transition"])
         prior, record = SHARDS.reviewed_runtime_dependency_transition(self.sealed)
         self.assertEqual(record, self.record)
         self.assertNotIn(KEY, prior)
@@ -130,6 +130,7 @@ class RuntimeDependencyTransition(unittest.TestCase):
                                        estate_successor_of=proof)
             self.assertEqual(calls[-1][LOCK], self.lock["changes"][LOCK]["before_blob"])
             unsealed = copy.deepcopy(self.sealed)
+            unsealed.pop("reviewed_skip_blob_successor_transition")
             unsealed.pop(KEY)
             calls.clear()
             SHARDS.admit_shared_inputs(unsealed, runtime_common, source_revision=later,
