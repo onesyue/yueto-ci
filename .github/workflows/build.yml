@@ -53,8 +53,13 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# One queue per (target, source ref). A duplicate dispatch for the same ref
+# waits behind the running one (a newer pending duplicate replaces an older
+# pending one) and never interrupts a run mid-flight; different refs of the
+# same target no longer evict each other's pending runs. Image publication is
+# still serialized per service by the job-level verified-image-* groups.
 concurrency:
-  group: build-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
+  group: build-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}-${{ github.event.inputs.ref || 'registry-default' }}
   cancel-in-progress: false
 
 jobs:
@@ -447,7 +452,9 @@ jobs:
     env:
       TZ: UTC
     strategy:
-      fail-fast: false
+      # The first red shard already decides the release; stop the siblings
+      # instead of burning up to 120 runner-minutes each on a doomed run.
+      fail-fast: true
       max-parallel: ${{ fromJSON(needs.plan.outputs.validation_parallelism) }}
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.validation_matrix) }}
@@ -1662,7 +1669,9 @@ jobs:
       id-token: write
       attestations: write
     strategy:
-      fail-fast: false
+      # Candidates are all-or-nothing for one release; a failed image stops
+      # the other candidate builds.
+      fail-fast: true
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     concurrency:
@@ -2163,6 +2172,10 @@ jobs:
       contents: read
       packages: write
     strategy:
+      # Deliberately not fail-fast: publish only starts after every gate is
+      # green, and interrupting a sibling mid-retag would leave sha-*/latest
+      # half-moved. Failures before this point are cut short by the abort-*
+      # jobs below instead.
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.matrix) }}
@@ -2557,3 +2570,47 @@ jobs:
           docker buildx imagetools create \
             "${promotion_tag_args[@]}" \
             "${IMAGE}@${DIGEST}"
+
+  abort-on-validate-failure:
+    # Fail fast across jobs: as soon as any validation shard fails, cancel the
+    # whole run (other matrix rows, candidate builds, evidence) instead of
+    # letting a doomed release keep running. Runs no source code; its only
+    # privilege is cancelling this very run. Never runs on success.
+    needs: [plan, validate]
+    if: failure()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Cancel this run after a failed required job
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          echo "::error::a required job failed; cancelling run $RUN_ID so nothing keeps running on a failed release"
+          gh run cancel "$RUN_ID"
+
+  abort-on-build-failure:
+    # Fail fast across jobs: as soon as any candidate image build fails, cancel the
+    # whole run (other matrix rows, candidate builds, evidence) instead of
+    # letting a doomed release keep running. Runs no source code; its only
+    # privilege is cancelling this very run. Never runs on success.
+    needs: [plan, build]
+    if: failure()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Cancel this run after a failed required job
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          echo "::error::a required job failed; cancelling run $RUN_ID so nothing keeps running on a failed release"
+          gh run cancel "$RUN_ID"
