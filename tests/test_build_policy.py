@@ -1214,7 +1214,8 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertIn("permissions:\n  contents: read", capture_code)
         self.assertIn("['yueboard_contract_pin']", capture_code)
-        self.assertIn("specs/plan-change-confirm.spec.ts --update-snapshots=changed", capture_code)
+        self.assertIn('playwright test "specs/${VISUAL_SPEC}.spec.ts" --update-snapshots=changed', capture_code)
+        self.assertIn("case \"$VISUAL_SPEC\" in plan-change-confirm|gift-ledger) ;; *) exit 1 ;; esac", capture_code)
         self.assertIn("assert len(files) == 4", capture_code)
         for forbidden in ("build-push-action", "imagetools create", "cosign", "promote=true", "packages: write"):
             self.assertNotIn(forbidden, capture_code)

@@ -1,15 +1,23 @@
-name: Capture reviewed Board plan-change visuals
+name: Capture reviewed Board native visuals
 
 # This produces review evidence only. Normal release validation still compares
 # committed baselines and this workflow cannot build or promote release images.
 on:
   workflow_dispatch:
+    inputs:
+      spec:
+        description: Reviewed four-view visual spec to capture at the pinned Board revision
+        type: choice
+        default: plan-change-confirm
+        options:
+          - plan-change-confirm
+          - gift-ledger
 
 permissions:
   contents: read
 
 concurrency:
-  group: board-plan-change-visual-capture
+  group: board-visual-capture
   cancel-in-progress: false
 
 jobs:
@@ -77,8 +85,10 @@ jobs:
         working-directory: source
         env:
           EXPECTED_SOURCE: ${{ steps.source.outputs.revision }}
+          VISUAL_SPEC: ${{ inputs.spec }}
         run: |
           set -euo pipefail
+          case "$VISUAL_SPEC" in plan-change-confirm|gift-ledger) ;; *) exit 1 ;; esac
           test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE"
           command -v psql
           corepack enable
@@ -86,22 +96,23 @@ jobs:
           pnpm install --frozen-lockfile --ignore-scripts
           pnpm run build
           pnpm --dir test/e2e exec playwright install --with-deps chromium
-          pnpm --dir test/e2e exec playwright test specs/plan-change-confirm.spec.ts --update-snapshots=changed
+          pnpm --dir test/e2e exec playwright test "specs/${VISUAL_SPEC}.spec.ts" --update-snapshots=changed
           python3 - <<'PY'
           import hashlib, json, os
           from pathlib import Path
-          files = sorted(Path('test/e2e/specs/__screenshots__/plan-change-confirm.spec.ts').glob('*-linux.png'))
+          spec = os.environ['VISUAL_SPEC']
+          files = sorted(Path(f'test/e2e/specs/__screenshots__/{spec}.spec.ts').glob('*-linux.png'))
           assert len(files) == 4
           receipt = {'source': os.environ['EXPECTED_SOURCE'], 'workflow': os.environ['GITHUB_SHA'],
-                     'run': os.environ['GITHUB_RUN_ID'], 'scope': 'plan-change-confirm only; capture, not release acceptance',
+                     'run': os.environ['GITHUB_RUN_ID'], 'scope': f'{spec} only; capture, not release acceptance',
                      'files': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}
           Path('visual-capture.json').write_text(json.dumps(receipt, indent=2) + '\n')
           PY
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: board-plan-change-native-visuals
+          name: board-${{ inputs.spec }}-native-visuals
           path: |
-            source/test/e2e/specs/__screenshots__/plan-change-confirm.spec.ts/*-linux.png
+            source/test/e2e/specs/__screenshots__/${{ inputs.spec }}.spec.ts/*-linux.png
             source/visual-capture.json
           if-no-files-found: error
           retention-days: 7
