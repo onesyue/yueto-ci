@@ -6436,5 +6436,21 @@
         "after_blob": "eb0db35082ea0e4876cd451af8ae3000242e92b0"
       }
     }
+  },
+  "reviewed_bot_packaging_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "ef32177a1b2ee8f822e03ed646cbc3860cbc6c3eabba5d3ad12a6eb65212921f",
+    "source_before": "a697c49861f91c0b4a1cfa660c34fb22c9ef1d0a",
+    "source_after": "60b811fef503228361406f3db9d2dec830796eaf",
+    "independent_review_sha256": "a71e1d90e4ca0b74e80a8b2bf12c530c490b2879d81b5249aa1b0d7c6c831587",
+    "source_freeze_sha256": "459e623e5e2bcd07b82626a65f285825b672984fd05a182d9caa8af6cea2a43e",
+    "qualification_receipt_sha256": "1ad3c8b5e5784ebbb9e377c14628204ce982e0fb59cefe0a6ed0d21d349e507e",
+    "changes": {
+      "telegram-bot/yue/pyproject.toml": {
+        "before_blob": "b3d3a6b7b52e23ea74f884b992b69c6b245eaa3c",
+        "after_blob": "c25f1334b471ce28e6f181d387525cec29909094",
+        "mode": "100644"
+      }
+    }
   }
 }
