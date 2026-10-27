@@ -710,7 +710,26 @@ def reviewed_estate_input_transition(baseline):
     return original, record
 
 
-def admit_shared_inputs(baseline, common, files=None, *, source_revision=None):
+def estate_successor_proof(baseline, source, revision):
+    """Prove a later Ops revision descends from the sealed estate successor.
+
+    Only the planner has the full source history. It records the proven
+    predecessor inside the sealed admission; validators and the join re-admit
+    against that sealed value and still compare every estate input blob.
+    """
+    _, record = reviewed_estate_input_transition(baseline)
+    if record is None or revision == record["source_after"]:
+        return None
+    after = record["source_after"]
+    try:
+        git(source, "merge-base", "--is-ancestor", after, revision)
+    except subprocess.CalledProcessError:
+        raise ValueError("estate successor source revision differs") from None
+    return after
+
+
+def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
+                        estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
     original, record = reviewed_estate_input_transition(baseline)
     if record is None:
@@ -719,7 +738,12 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None):
     require(isinstance(common, dict), "estate shared inputs must be a mapping")
     if ESTATE_ADDED_INPUT not in common:
         return _admit_existing_shared_inputs(original, common, files)
-    require(source_revision == record["source_after"],
+    # The exact sealed revision, or a later revision whose ancestry from it was
+    # proven by the planner. Either way every estate input below must still be
+    # byte-identical to the reviewed successor blobs.
+    require(isinstance(source_revision, str) and SHA.fullmatch(source_revision) is not None
+            and (source_revision == record["source_after"]
+                 or estate_successor_of == record["source_after"]),
             "estate successor source revision differs")
     predecessor = dict(common)
     predecessor_files = dict(files) if files is not None else None
@@ -1459,7 +1483,8 @@ def envelope(value):
                     and isinstance(value.get("skip_module_blobs"), dict),
                     "skip baseline or shared collection inputs differ")
             admit_shared_inputs(baseline, value.get("common_inputs"),
-                                source_revision=value["source_revision"])
+                                source_revision=value["source_revision"],
+                                estate_successor_of=value.get("estate_successor_of"))
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -1514,7 +1539,11 @@ def expand(targets, source, board, runner, capacity, shards):
             baseline = skip_baseline()
             common = shared_inputs(source, ops["ref"])
             files = tree_inputs(source, ops["ref"])
-            admit_shared_inputs(baseline, common, files, source_revision=ops["ref"])
+            successor_of = estate_successor_proof(baseline, source, ops["ref"])
+            admit_shared_inputs(baseline, common, files, source_revision=ops["ref"],
+                                estate_successor_of=successor_of)
+            if successor_of is not None:
+                value["estate_successor_of"] = successor_of
             value.update(mode="sharded", ops_plan=expected, common_inputs=common,
                          skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
                          skip_module_blobs={p: files[p][1] for p in expected["modules"]})
@@ -1686,7 +1715,8 @@ def admit_skips(value, result, native):
     baseline, estate = reviewed_estate_input_transition(sealed_baseline)
     if estate is not None:
         admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
-                            source_revision=value.get("source_revision"))
+                            source_revision=value.get("source_revision"),
+                            estate_successor_of=value.get("estate_successor_of"))
     baseline, preservation_successors = reviewed_relay_preservation_module_transition(baseline)
     baseline, meter_successors = reviewed_relay_meter_module_transition(baseline)
     baseline, metrics_successors = reviewed_relay_metrics_module_transition(baseline)

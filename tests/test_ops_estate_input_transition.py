@@ -162,5 +162,48 @@ class EstateInputTransition(unittest.TestCase):
                 self.admit(baseline=baseline)
 
 
+    def test_later_revision_requires_sealed_ancestry_proof(self):
+        later = "c" * 40
+        with self.assertRaisesRegex(ValueError, "source revision differs"):
+            self.admit(source=later)
+        with self.assertRaisesRegex(ValueError, "source revision differs"):
+            self.admit(source=None)
+        with self.assertRaisesRegex(ValueError, "source revision differs"):
+            SHARDS.admit_shared_inputs(self.sealed, self.successor, self.successor_files,
+                                       source_revision=later, estate_successor_of="d" * 40)
+        SHARDS.admit_shared_inputs(self.sealed, self.successor, self.successor_files,
+                                   source_revision=later, estate_successor_of="b" * 40)
+        # Ancestry never admits changed estate inputs.
+        changed = dict(self.successor)
+        changed["qa/package.json"] = "e" * 40
+        with self.assertRaises(ValueError):
+            SHARDS.admit_shared_inputs(self.sealed, changed, source_revision=later,
+                                       estate_successor_of="b" * 40)
+
+    def test_planner_proves_ancestry_from_real_history(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
+                   "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@e", "GIT_COMMITTER_NAME": "t",
+                   "GIT_COMMITTER_EMAIL": "t@e"}
+            run = lambda *a: subprocess.check_output(["git", "-C", tmp, *a], env=env).decode().strip()
+            run("init", "-q")
+            run("commit", "-q", "--allow-empty", "-m", "sealed")
+            sealed = run("rev-parse", "HEAD")
+            run("commit", "-q", "--allow-empty", "-m", "later")
+            later = run("rev-parse", "HEAD")
+            run("checkout", "-q", "--orphan", "other")
+            run("commit", "-q", "--allow-empty", "-m", "unrelated")
+            unrelated = run("rev-parse", "HEAD")
+            record = dict(self.record, source_after=sealed)
+            baseline = self.baseline | {"reviewed_estate_input_transition": record}
+            with patch.object(SHARDS, "git", lambda src, *a: subprocess.check_output(
+                    ["git", "-C", str(src), *a], env=env, stderr=subprocess.PIPE)):
+                self.assertIsNone(SHARDS.estate_successor_proof(baseline, tmp, sealed))
+                self.assertEqual(SHARDS.estate_successor_proof(baseline, tmp, later), sealed)
+                with self.assertRaisesRegex(ValueError, "source revision differs"):
+                    SHARDS.estate_successor_proof(baseline, tmp, unrelated)
+            self.assertIsNone(SHARDS.estate_successor_proof(self.baseline, tmp, later))
+
 if __name__ == "__main__":
     unittest.main()

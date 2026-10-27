@@ -319,7 +319,9 @@ jobs:
           ref: ${{ steps.plan.outputs.ops_source }}
           token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           path: .ops-shard-source
-          fetch-depth: 1
+          # Full history only so the planner can prove a later Ops revision
+          # descends from the sealed estate successor. Never uploaded.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Plan complete Ops jobs before collection
