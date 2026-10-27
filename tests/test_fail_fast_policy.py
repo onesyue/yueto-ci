@@ -1,53 +1,60 @@
-"""Fail-fast contract for build.yml: a failed release must stop, not keep running."""
+"""Fail-fast contract for build.yml: a failed release must stop, not keep running.
+
+Standard library only: policy CI runs without third-party YAML parsers.
+"""
 
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
-
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
 
+def _jobs(text: str) -> dict[str, str]:
+    body = text.split("\njobs:\n", 1)[1]
+    parts = re.split(r"(?m)^  ([A-Za-z0-9_-]+):\s*$", body)
+    return {parts[i]: parts[i + 1] for i in range(1, len(parts), 2)}
+
+
 class FailFastPolicyTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.doc = yaml.safe_load(WORKFLOW.read_text())
-        self.jobs = self.doc["jobs"]
+        self.text = WORKFLOW.read_text(encoding="utf-8")
+        self.jobs = _jobs(self.text)
 
     def test_every_job_has_a_timeout(self) -> None:
+        self.assertGreaterEqual(len(self.jobs), 8)
         for name, job in self.jobs.items():
-            self.assertIn("timeout-minutes", job, name)
+            self.assertRegex(job, r"(?m)^    timeout-minutes: \d+", name)
 
     def test_gating_matrices_fail_fast(self) -> None:
         for name in ("validate", "build"):
-            self.assertIs(self.jobs[name]["strategy"]["fail-fast"], True, name)
+            self.assertRegex(self.jobs[name], r"(?m)^      fail-fast: true$", name)
         # Publication must never be interrupted half-way through a retag.
-        self.assertIs(self.jobs["publish"]["strategy"]["fail-fast"], False)
+        self.assertRegex(self.jobs["publish"], r"(?m)^      fail-fast: false$")
 
     def test_concurrency_is_per_target_ref_and_never_interrupts(self) -> None:
-        conc = self.doc["concurrency"]
-        self.assertIn("github.event.inputs.ref", conc["group"])
-        self.assertIs(conc["cancel-in-progress"], False)
+        header = self.text.split("\njobs:\n", 1)[0]
+        block = header.split("\nconcurrency:\n", 1)[1].split("\n\n", 1)[0]
+        self.assertIn("github.event.inputs.ref", block)
+        self.assertIn("cancel-in-progress: false", block)
 
     def test_abort_jobs_cancel_the_run_with_minimal_privilege(self) -> None:
         for gate in ("validate", "build"):
             job = self.jobs[f"abort-on-{gate}-failure"]
-            self.assertEqual(job["if"], "failure()")
-            self.assertIn(gate, job["needs"])
-            self.assertEqual(job["permissions"], {"actions": "write"})
-            self.assertLessEqual(job["timeout-minutes"], 5)
-            steps = job["steps"]
-            self.assertEqual(len(steps), 1)
-            self.assertNotIn("uses", steps[0])
-            self.assertIn('gh run cancel "$RUN_ID"', steps[0]["run"])
-            self.assertEqual(steps[0]["env"]["RUN_ID"], "${{ github.run_id }}")
-        # Nothing downstream may wait on an abort job.
-        for name, job in self.jobs.items():
-            needs = job.get("needs", [])
-            needs = [needs] if isinstance(needs, str) else needs
-            self.assertFalse(any(n.startswith("abort-") for n in needs), name)
+            self.assertIn(f"    needs: [plan, {gate}]\n", job)
+            self.assertIn("    if: failure()\n", job)
+            self.assertIn("    permissions:\n      actions: write\n    steps:\n", job)
+            self.assertRegex(job, r"(?m)^    timeout-minutes: [1-5]$")
+            self.assertEqual(job.count("      - name:"), 1)
+            self.assertNotIn("uses:", job)
+            self.assertIn('gh run cancel "$RUN_ID"', job)
+            self.assertIn("RUN_ID: ${{ github.run_id }}", job)
+        # Nothing may wait on an abort job.
+        for needs in re.findall(r"(?m)^    needs: (.+)$", self.text):
+            self.assertNotIn("abort-", needs)
 
 
 if __name__ == "__main__":
