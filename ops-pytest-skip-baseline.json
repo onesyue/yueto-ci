@@ -6271,5 +6271,21 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_site_lock_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "46982298b96c329ed2b0fb1fe33694c3942a9d1b605490375f8b95d81409a751",
+    "source_before": "a697c49861f91c0b4a1cfa660c34fb22c9ef1d0a",
+    "source_after": "a9bcfb391a8d92fb4d442da0b1215401c34297a9",
+    "independent_review_sha256": "2fe45c9e5b0b51d360dc9059271f51cde206614057105a06bdc4fa044d839f95",
+    "source_freeze_sha256": "b83bf21aa10dda4c69c8811d3c36694a80de36f078e087f6a5f8cc7673663cc9",
+    "qualification_receipt_sha256": "7dd9e205185f188cdfb7641ccf76c0138df3a37fc2ebc393f6e1168b2486098e",
+    "changes": {
+      "site/pnpm-lock.yaml": {
+        "before_blob": "7aad791c05fb1bfe50c0d37a7e52ff64514428dd",
+        "after_blob": "c9c258f64244c7c83820119dcfa3cf6fe5950617",
+        "mode": "100644"
+      }
+    }
   }
 }
