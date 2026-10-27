@@ -6494,5 +6494,74 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_skip_blob_successor_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "a9d7ed8f1c78a6d40684afc512b96ab219b5c73e028d72f4fb517a0e0dbb3eac",
+    "source_before": "bef6b202d896715df1801d94b163375b6d3b3c33",
+    "source_after": "ae6856f0bcc5579198c6e4b4c4d1ee4df107906e",
+    "independent_review_sha256": "255102ce10b833a052c7531937c61cfb234cb098746858f5ceb606a09f65133e",
+    "updates": {
+      "tests/test_panel_subscribe_delivery_alert_20261012.py::test_every_board_fail_delivery_event_is_watched": {
+        "before_blob": "9bb30b5940580d405ad0065b3a93e055c00c0285",
+        "after_blob": "284a2914a0ce4aa2ffb89224fbe95cf1650f56ab"
+      },
+      "tests/test_sshd_boundary_scope_native_20261008.py::test_actual_trust_collection_refuses_unknown_or_changed_identity[ambiguous_pin]": {
+        "before_blob": "d95bd432b2d28827153feae9d87db19262b9b64e",
+        "after_blob": "31195dbde1b4d61e1985a4877097d76266ff24f2"
+      },
+      "tests/test_sshd_boundary_scope_native_20261008.py::test_actual_trust_collection_refuses_unknown_or_changed_identity[changed_role]": {
+        "before_blob": "d95bd432b2d28827153feae9d87db19262b9b64e",
+        "after_blob": "31195dbde1b4d61e1985a4877097d76266ff24f2"
+      },
+      "tests/test_sshd_boundary_scope_native_20261008.py::test_actual_trust_collection_refuses_unknown_or_changed_identity[duplicate_host_identity]": {
+        "before_blob": "d95bd432b2d28827153feae9d87db19262b9b64e",
+        "after_blob": "31195dbde1b4d61e1985a4877097d76266ff24f2"
+      },
+      "tests/test_sshd_boundary_scope_native_20261008.py::test_actual_trust_collection_refuses_unknown_or_changed_identity[missing_pin]": {
+        "before_blob": "d95bd432b2d28827153feae9d87db19262b9b64e",
+        "after_blob": "31195dbde1b4d61e1985a4877097d76266ff24f2"
+      },
+      "tests/test_sshd_boundary_scope_native_20261008.py::test_actual_trust_collection_refuses_unknown_or_changed_identity[retired_address]": {
+        "before_blob": "d95bd432b2d28827153feae9d87db19262b9b64e",
+        "after_blob": "31195dbde1b4d61e1985a4877097d76266ff24f2"
+      },
+      "tests/test_sshd_boundary_scope_native_20261008.py::test_actual_trust_collection_refuses_unknown_or_changed_identity[retired_host]": {
+        "before_blob": "d95bd432b2d28827153feae9d87db19262b9b64e",
+        "after_blob": "31195dbde1b4d61e1985a4877097d76266ff24f2"
+      },
+      "tests/test_sshd_boundary_scope_native_20261008.py::test_actual_trust_collection_refuses_unknown_or_changed_identity[retired_static]": {
+        "before_blob": "d95bd432b2d28827153feae9d87db19262b9b64e",
+        "after_blob": "31195dbde1b4d61e1985a4877097d76266ff24f2"
+      },
+      "tests/test_sshd_boundary_scope_native_20261008.py::test_real_native_selector_and_existing_pins_define_exact_live_set": {
+        "before_blob": "d95bd432b2d28827153feae9d87db19262b9b64e",
+        "after_blob": "31195dbde1b4d61e1985a4877097d76266ff24f2"
+      },
+      "tests/test_sshd_operator_native_20261009.py::test_bastion_repair_rejects_same_session_then_commits_fresh_and_attests": {
+        "before_blob": "eeb7b12d5594cfc951c26d3f039ced3fece2caef",
+        "after_blob": "3f16a931133da90e3922da0aad1b1798af559448"
+      },
+      "tests/test_sshd_operator_native_20261009.py::test_duplicate_host_key_wrong_key_and_ambient_extra_identity_refused": {
+        "before_blob": "eeb7b12d5594cfc951c26d3f039ced3fece2caef",
+        "after_blob": "3f16a931133da90e3922da0aad1b1798af559448"
+      },
+      "tests/test_sshd_operator_native_20261009.py::test_no_sshd_parent_and_forged_environment_are_refused": {
+        "before_blob": "eeb7b12d5594cfc951c26d3f039ced3fece2caef",
+        "after_blob": "3f16a931133da90e3922da0aad1b1798af559448"
+      },
+      "tests/test_sshd_operator_native_20261009.py::test_real_external_operator_survives_thread_pool_clean_env_and_new_session": {
+        "before_blob": "eeb7b12d5594cfc951c26d3f039ced3fece2caef",
+        "after_blob": "3f16a931133da90e3922da0aad1b1798af559448"
+      },
+      "tests/test_sshd_operator_native_20261009.py::test_real_forwarded_second_socket_is_not_a_unique_operator_session": {
+        "before_blob": "eeb7b12d5594cfc951c26d3f039ced3fece2caef",
+        "after_blob": "3f16a931133da90e3922da0aad1b1798af559448"
+      },
+      "tests/test_sshd_operator_native_20261009.py::test_real_self_ssh_is_refused": {
+        "before_blob": "eeb7b12d5594cfc951c26d3f039ced3fece2caef",
+        "after_blob": "3f16a931133da90e3922da0aad1b1798af559448"
+      }
+    }
   }
 }

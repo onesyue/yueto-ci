@@ -26,7 +26,8 @@ class AuditLockTransition(unittest.TestCase):
         self.change = self.record["changes"][PATH]
 
     def test_sealed_record_is_exact_and_chained_on_the_audit_seal(self):
-        self.assertEqual(list(self.sealed)[-2:], [KEY, "reviewed_runtime_dependency_transition"])
+        self.assertEqual(list(self.sealed)[-3:], [KEY, "reviewed_runtime_dependency_transition",
+                                                 "reviewed_skip_blob_successor_transition"])
         prior, record = SHARDS.reviewed_audit_lock_transition(self.sealed)
         self.assertEqual(record, self.record)
         self.assertNotIn(KEY, prior)
@@ -115,6 +116,7 @@ class AuditLockTransition(unittest.TestCase):
             self.assertEqual(calls[-1][PATH], self.change["before_blob"])
             # Without the lock seal the same successor blob is refused as before.
             unsealed = copy.deepcopy(self.sealed)
+            unsealed.pop("reviewed_skip_blob_successor_transition")
             unsealed.pop("reviewed_runtime_dependency_transition")
             unsealed.pop(KEY)
             calls.clear()
