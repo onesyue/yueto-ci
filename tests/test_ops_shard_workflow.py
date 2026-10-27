@@ -658,9 +658,11 @@ class OpsShardWorkflow(unittest.TestCase):
         ran = self.run_role("reference")
         self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
         root = self.artifacts / (self.prefix + "reference")
-        directory = next(path for path in (root / "parts").iterdir() if path.is_dir())
+        # Pick a non-empty shard explicitly: directory order is filesystem dependent and
+        # the empty skip-module shard legitimately exits 5, which is not what this test probes.
         assignment = next(item for item in self.admission["ops_plan"]["assignments"]
-                          if item["id"] == directory.name)
+                          if "tests/test_a.py" in item["modules"])
+        directory = root / "parts" / assignment["id"]
         marked = assignment | {"collect_only": True}
         self.consumer.inspect_session(directory, self.admission["ops_plan"], marked)
         path = directory / "selection.json"
