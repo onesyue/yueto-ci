@@ -131,6 +131,9 @@ class CaseFileTransition(unittest.TestCase):
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
                 SHARDS.admit_skips(self.value(self.blobs), changed, {})
         stripped = copy.deepcopy(self.sealed)
+        # The bot packaging seal sits outside the case-file seal; strip it too so this
+        # asserts the case refusal itself rather than the outer seal's prior hash.
+        stripped.pop("reviewed_bot_packaging_transition")
         stripped.pop("reviewed_case_file_transition")
         with (patch.object(SHARDS, "skip_baseline", return_value=stripped),
               self.assertRaisesRegex(ValueError, "new or changed case")):
