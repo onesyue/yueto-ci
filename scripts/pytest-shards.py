@@ -44,6 +44,7 @@ RELAY_SKIP_MODULE_TRANSITION_SHA256 = "afab000651dcbd556b14b27b27ecfc283f935f78b
 RELAY_METER_MODULE_TRANSITION_SHA256 = "99945322ac036c84b3a4a87e6f9378156e14e5cc1ec6d04680d69c54d44ad2df"
 RELAY_PRESERVATION_MODULE_TRANSITION_SHA256 = "f5d43ba785159b00ab42f7034d29c77d78d8d9164f89b46b76d88a093c81407b"
 RELAY_METRICS_MODULE_TRANSITION_SHA256 = "777214bee79eb25858c97781aaa065b53770693252185f3ee61e19c3c61efa07"
+CASE_FILE_TRANSITION_SHA256 = "75190b489a8b271e693c52e78c183894f47e34e930183b9f433e538045afb9c7"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
     "tests/test_installed_checker_transport_20261014.py::"
@@ -668,8 +669,92 @@ ESTATE_ADDED_INPUT = "tests/native/subscribe_template_baseline_cas_pg.py"
 SITE_LOCK_INPUT = "site/pnpm-lock.yaml"
 
 
-def reviewed_site_lock_transition(baseline):
+def reviewed_case_file_transition(baseline, files=None):
+    """Admit reviewed file versions of existing environmental skips.
+
+    The historical reason and outcome stay on the predecessor record. A later
+    test-module blob is accepted only when this exact review names that blob.
+    New cases are limited to the pinned additions and never replace a case
+    that already has an admitted skip.
+    """
+    original = dict(baseline)
+    key = "reviewed_case_file_transition"
+    record = original.pop(key, None)
+    if key not in baseline:
+        return original, {}
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_revision",
+        "independent_review_sha256", "additions", "updates",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid reviewed case file transition")
+    require(sha(encoded(record)) == CASE_FILE_TRANSITION_SHA256,
+            "unreviewed case file transition identity")
+    restored = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(restored),
+            "case file transition historical baseline changed")
+    require(isinstance(record["source_revision"], str)
+            and SHA.fullmatch(record["source_revision"])
+            and isinstance(record["independent_review_sha256"], str)
+            and re.fullmatch(r"[0-9a-f]{64}", record["independent_review_sha256"])
+            and record["independent_review_sha256"] != "0" * 64,
+            "missing exact case file review identity")
+    peeled, _ = reviewed_estate_input_transition(original)
+    peeled, preservation = reviewed_relay_preservation_module_transition(peeled)
+    peeled, meter = reviewed_relay_meter_module_transition(peeled)
+    peeled, metrics = reviewed_relay_metrics_module_transition(peeled)
+    peeled, relay = reviewed_relay_skip_module_transition(peeled)
+    peeled, extra = reviewed_current_skip_transition(peeled)
+    _, ssh = reviewed_skip_module_transition(peeled)
+    effective = {nodeid: dict(case) for nodeid, case in original["cases"].items()}
+    for mapping in (ssh, extra, relay, metrics, meter, preservation):
+        for nodeid, case in mapping.items():
+            effective[nodeid] = case
+    additions = record["additions"]
+    updates = record["updates"]
+    require(isinstance(additions, dict) and isinstance(updates, dict)
+            and not (set(additions) & set(updates) or set(additions) & set(effective)),
+            "case file transition cases overlap history")
+    module_blob = {}
+    successors = {}
+    for nodeid, change in updates.items():
+        historical = effective.get(nodeid)
+        require(isinstance(nodeid, str) and "::" in nodeid
+                and isinstance(historical, dict) and historical.get("outcome") == "skipped"
+                and isinstance(historical.get("reason"), str) and historical["reason"]
+                and isinstance(change, dict) and set(change) == {"before_blob", "after_blob"}
+                and change["before_blob"] == historical.get("module_blob")
+                and change["before_blob"] != change["after_blob"]
+                and SHA.fullmatch(change["after_blob"]),
+                "unreviewed case file blob update: " + str(nodeid))
+        module = nodeid.split("::", 1)[0]
+        require(safe_module(module), "unreviewed case file module: " + str(nodeid))
+        require(module_blob.setdefault(module, change["after_blob"]) == change["after_blob"],
+                "case file module blob diverges: " + module)
+        if files is not None and files.get(module, (None, None))[1] == change["after_blob"]:
+            require(files[module][0] == "100644", "case file module mode changed")
+        successors[nodeid] = {
+            "outcome": "skipped", "reason": historical["reason"],
+            "module_blob": change["after_blob"],
+        }
+    for nodeid, case in additions.items():
+        require(isinstance(nodeid, str) and "::" in nodeid
+                and isinstance(case, dict) and set(case) == {"outcome", "reason", "module_blob"}
+                and case["outcome"] == "skipped" and isinstance(case["reason"], str)
+                and case["reason"] and SHA.fullmatch(case["module_blob"]),
+                "unreviewed case file addition: " + str(nodeid))
+        module = nodeid.split("::", 1)[0]
+        require(safe_module(module), "unreviewed case file module: " + str(nodeid))
+        require(module_blob.setdefault(module, case["module_blob"]) == case["module_blob"],
+                "case file module blob diverges: " + module)
+        if files is not None and files.get(module, (None, None))[1] == case["module_blob"]:
+            require(files[module][0] == "100644", "case file module mode changed")
+        successors[nodeid] = dict(case)
+    return original, successors
+
+
+def reviewed_site_lock_transition(baseline, files=None):
     """Peel the reviewed static-site lock successor sealed on top of the estate seal."""
+    baseline, _ = reviewed_case_file_transition(baseline, files)
     key = "reviewed_site_lock_transition"
     if key not in baseline:
         return baseline, None
@@ -789,7 +874,7 @@ def estate_successor_proof(baseline, source, revision):
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
-    _, site = reviewed_site_lock_transition(baseline)
+    _, site = reviewed_site_lock_transition(baseline, files)
     original, record = reviewed_estate_input_transition(baseline)
     if record is None:
         return _admit_existing_shared_inputs(original, common, files)
@@ -1784,6 +1869,7 @@ def native_terminal(value, source, board, output):
 
 def admit_skips(value, result, native):
     sealed_baseline = skip_baseline()
+    _, case_successors = reviewed_case_file_transition(sealed_baseline)
     baseline, estate = reviewed_estate_input_transition(sealed_baseline)
     if estate is not None:
         admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
@@ -1817,7 +1903,8 @@ def admit_skips(value, result, native):
                 }
                 if observed not in (baseline["cases"].get(nodeid), successors.get(nodeid),
                                     relay_successors.get(nodeid), metrics_successors.get(nodeid),
-                                    meter_successors.get(nodeid), preservation_successors.get(nodeid)):
+                                    meter_successors.get(nodeid), preservation_successors.get(nodeid),
+                                    case_successors.get(nodeid)):
                     unknown.append(nodeid)
                     continue
                 disposition = "HISTORICAL_UNEXECUTED"
