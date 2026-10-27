@@ -6287,5 +6287,154 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_case_file_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "2daf46b92038f88071c97bffbf63aed1d7c022798fb4e261481366051a59563d",
+    "source_revision": "913b251b39e8b3966c5590b40120e934b70b24eb",
+    "independent_review_sha256": "0ee3de74be00b5c08ad7fd7d80cfb1c259c92700f62dac458e3c368ac562d52b",
+    "additions": {
+      "tests/test_alert_watch_runtime_systemd_20261009.py::NativeWatchRuntime::test_benign_dropin_and_disabled_legacy_schedule_remain_unchanged": {
+        "outcome": "skipped",
+        "reason": "Skipped: dedicated network-none systemd container required",
+        "module_blob": "b6ecf8a80ba08a3da8ed829a9d0995ba2b9165e9"
+      },
+      "tests/test_alert_watch_runtime_systemd_20261009.py::NativeWatchRuntime::test_real_effective_service_remappings_and_remain_are_refused": {
+        "outcome": "skipped",
+        "reason": "Skipped: dedicated network-none systemd container required",
+        "module_blob": "b6ecf8a80ba08a3da8ed829a9d0995ba2b9165e9"
+      },
+      "tests/test_alert_watch_runtime_systemd_20261009.py::NativeWatchRuntime::test_real_effective_timer_redirection_and_interval_are_refused": {
+        "outcome": "skipped",
+        "reason": "Skipped: dedicated network-none systemd container required",
+        "module_blob": "b6ecf8a80ba08a3da8ed829a9d0995ba2b9165e9"
+      }
+    },
+    "updates": {
+      "tests/test_node_control_credentials.py::test_recreate_preflight_allows_durable_bind_mounted_reports": {
+        "before_blob": "8df9b347d0b5e14a265155a9c6179321f832c12c",
+        "after_blob": "2c98507732cf6c171f59a9af218e42bcda386386"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-full-audit.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-rebuild-node-runtime.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-rollout-yue-node-image.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-verify-yue-node-rollout-runtime.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-full-audit.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-rebuild-node-runtime.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-rollout-yue-node-image.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-verify-yue-node-rollout-runtime.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-full-audit.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-rebuild-node-runtime.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-rollout-yue-node-image.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-verify-yue-node-rollout-runtime.sh]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_python_ssh_reader_to_both_compose_slots[False]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_python_ssh_reader_to_both_compose_slots[True]": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_remote_reader_rejects_wrong_inventory_sid_without_exposing_auth": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_node_resource_consumers.py::test_rebuild_actual_renderer_keeps_proof_budget_and_outbox_fence": {
+        "before_blob": "97b371bfb2d696865bf592202a23f8e8bd1878b4",
+        "after_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8"
+      },
+      "tests/test_privacy_promise_no_source_ip_20260817.py::test_ip_fingerprint_table_structurally_rejects_plaintext_addresses": {
+        "before_blob": "106145e1bc0f9f8c82639ad6c196379535948b68",
+        "after_blob": "cf9cef797d26aed871a8b799691dccb8b04bed7e"
+      },
+      "tests/test_privacy_promise_no_source_ip_20260817.py::test_no_yueboard_code_records_a_source_ip": {
+        "before_blob": "106145e1bc0f9f8c82639ad6c196379535948b68",
+        "after_blob": "cf9cef797d26aed871a8b799691dccb8b04bed7e"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_actual_journal_unit_boundary_and_independent_recovery[budget_recovery]": {
+        "before_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1",
+        "after_blob": "3f82108b49731c8a0297c3f2af02548b2c22b8f0"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_actual_journal_unit_boundary_and_independent_recovery[commit]": {
+        "before_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1",
+        "after_blob": "3f82108b49731c8a0297c3f2af02548b2c22b8f0"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_actual_journal_unit_boundary_and_independent_recovery[lost_history]": {
+        "before_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1",
+        "after_blob": "3f82108b49731c8a0297c3f2af02548b2c22b8f0"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_actual_journal_unit_boundary_and_independent_recovery[missing_floor]": {
+        "before_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1",
+        "after_blob": "3f82108b49731c8a0297c3f2af02548b2c22b8f0"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_actual_journal_unit_boundary_and_independent_recovery[owner_exit_before_package]": {
+        "before_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1",
+        "after_blob": "3f82108b49731c8a0297c3f2af02548b2c22b8f0"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_real_dpkg_leader_death_retains_custody_until_maintainer_exit[False]": {
+        "before_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1",
+        "after_blob": "3f82108b49731c8a0297c3f2af02548b2c22b8f0"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_real_dpkg_leader_death_retains_custody_until_maintainer_exit[True]": {
+        "before_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1",
+        "after_blob": "3f82108b49731c8a0297c3f2af02548b2c22b8f0"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_real_dpkg_transaction_has_a_finite_package_deadline[False]": {
+        "before_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1",
+        "after_blob": "3f82108b49731c8a0297c3f2af02548b2c22b8f0"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_real_dpkg_transaction_has_a_finite_package_deadline[True]": {
+        "before_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1",
+        "after_blob": "3f82108b49731c8a0297c3f2af02548b2c22b8f0"
+      },
+      "tests/test_relay4_tuning_20261025.py::test_systemd_custody_drains_a_maintainer_that_escapes_its_original_session": {
+        "before_blob": "8a9fb90e32d6225963d4a328a7ef388ad39428e1",
+        "after_blob": "3f82108b49731c8a0297c3f2af02548b2c22b8f0"
+      },
+      "tests/test_tuning_release_20261018.py::test_actual_independent_packages_include_every_declared_runtime_and_alert_byte": {
+        "before_blob": "f6676cf9f142a29f10d21c7fe8300882b41c397a",
+        "after_blob": "219e05a41b472db5ffe5f2fd054dca7462fb8c47"
+      },
+      "tests/test_users_secret_columns_least_privilege_20260923.py::test_users_column_universe_matches_yueboard_schema": {
+        "before_blob": "2bd62c17f4cc8e3a6630afe8bb0db2edea816cf3",
+        "after_blob": "eb0db35082ea0e4876cd451af8ae3000242e92b0"
+      }
+    }
   }
 }
