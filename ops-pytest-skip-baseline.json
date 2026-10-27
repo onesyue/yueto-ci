@@ -6452,5 +6452,21 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_audit_lock_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "0aa79f89d54d571e76217f143cacd0900061eacf8774c01b0976d9ad85b84574",
+    "source_before": "82d2103004528d073bb854289aae47b172744b7f",
+    "source_after": "a5e39c0eddce76e7dac582756dc47e5d43f895c2",
+    "independent_review_sha256": "30cf76b703f50dc11a6e6397bf4d7771dcd91b0274df56c21073d145dc2ef10b",
+    "source_freeze_sha256": "82351efe57764e53e3dcfcd3391a59ef0ddc3887aef8d1b45ac8596d4a491486",
+    "qualification_receipt_sha256": "bccd6b89e0b744b887c9e029f0571f0a137004864a7c7e346a4b5411e143f0dd",
+    "changes": {
+      "uv.lock": {
+        "before_blob": "49ca07ef18c07c43ef2396b739c437a8e7808aa0",
+        "after_blob": "1615c4052b6475eec22e388b06d0f1eedf74946a",
+        "mode": "100644"
+      }
+    }
   }
 }
