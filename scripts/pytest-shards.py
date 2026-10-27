@@ -670,6 +670,60 @@ SITE_LOCK_INPUT = "site/pnpm-lock.yaml"
 BOT_PACKAGING_INPUT = "telegram-bot/yue/pyproject.toml"
 
 
+AUDIT_LOCK_INPUT = "uv.lock"
+
+
+def reviewed_audit_lock_transition(baseline):
+    """Peel the reviewed audit-group lock successor sealed on top of every other seal.
+
+    Exactly one shared input (uv.lock) may move from the audit dependency seal's
+    reviewed after-blob to this review's after-blob; nothing else is admitted.
+    """
+    key = "reviewed_audit_lock_transition"
+    if key not in baseline:
+        return baseline, None
+    original = dict(baseline)
+    record = original.pop(key)
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "source_freeze_sha256",
+        "qualification_receipt_sha256", "changes",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid audit lock transition")
+    prior = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(prior),
+            "audit lock transition changed historical baseline")
+    bot = original.get("reviewed_bot_packaging_transition")
+    audit = original.get("reviewed_audit_dependency_transition")
+    require(isinstance(bot, dict) and isinstance(audit, dict)
+            and all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                    for k in ("source_before", "source_after"))
+            and record["source_before"] != record["source_after"]
+            and record["source_after"] != bot.get("source_after"),
+            "audit lock transition source identity missing")
+    require(all(isinstance(record[k], str)
+                and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                and record[k] != "0" * 64 for k in (
+                    "independent_review_sha256", "source_freeze_sha256",
+                    "qualification_receipt_sha256")),
+            "audit lock transition review or qualification missing")
+    changes = record["changes"]
+    require(isinstance(changes, dict) and set(changes) == {AUDIT_LOCK_INPUT},
+            "unreviewed audit lock paths")
+    change = changes[AUDIT_LOCK_INPUT]
+    audit_change = audit.get("changes", {}).get(AUDIT_LOCK_INPUT)
+    require(isinstance(change, dict) and set(change) == {"before_blob", "after_blob", "mode"}
+            and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                    for k in ("before_blob", "after_blob"))
+            and change["before_blob"] != change["after_blob"]
+            and change["mode"] == "100644"
+            and isinstance(audit_change, dict)
+            and change["before_blob"] == audit_change.get("after_blob")
+            and change["mode"] == audit_change.get("mode"),
+            "invalid audit lock blob or mode")
+    return original, record
+
+
 def reviewed_bot_packaging_transition(baseline):
     """Peel the reviewed bot packaging successor sealed on top of every other seal.
 
@@ -677,6 +731,7 @@ def reviewed_bot_packaging_transition(baseline):
     reviewed after-blob to this review's after-blob; nothing else is admitted.
     """
     key = "reviewed_bot_packaging_transition"
+    baseline, _ = reviewed_audit_lock_transition(baseline)
     if key not in baseline:
         return baseline, None
     original = dict(baseline)
@@ -901,6 +956,7 @@ def estate_successor_proof(baseline, source, revision):
     predecessor inside the sealed admission; validators and the join re-admit
     against that sealed value and still compare every estate input blob.
     """
+    _, lock = reviewed_audit_lock_transition(baseline)
     _, bot = reviewed_bot_packaging_transition(baseline)
     _, site = reviewed_site_lock_transition(baseline)
     _, record = reviewed_estate_input_transition(baseline)
@@ -931,12 +987,23 @@ def estate_successor_proof(baseline, source, revision):
                 git(source, "merge-base", "--is-ancestor", bot["source_after"], revision)
             except subprocess.CalledProcessError:
                 raise ValueError("bot packaging successor source revision differs") from None
+    if lock is not None:
+        try:
+            blob = git(source, "rev-parse", f"{revision}:{AUDIT_LOCK_INPUT}").decode().strip()
+        except subprocess.CalledProcessError:
+            blob = None
+        if blob == lock["changes"][AUDIT_LOCK_INPUT]["after_blob"]:
+            try:
+                git(source, "merge-base", "--is-ancestor", lock["source_after"], revision)
+            except subprocess.CalledProcessError:
+                raise ValueError("audit lock successor source revision differs") from None
     return after
 
 
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    _, lock = reviewed_audit_lock_transition(baseline)
     _, bot = reviewed_bot_packaging_transition(baseline)
     _, site = reviewed_site_lock_transition(baseline, files)
     original, record = reviewed_estate_input_transition(baseline)
@@ -970,6 +1037,19 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                     "bot packaging successor mode or tree changed")
             files = dict(files) | {BOT_PACKAGING_INPUT: (change["mode"], change["before_blob"])}
         common = dict(common) | {BOT_PACKAGING_INPUT: change["before_blob"]}
+    if lock is not None and common.get(AUDIT_LOCK_INPUT) == lock["changes"][AUDIT_LOCK_INPUT]["after_blob"]:
+        # Same rule as the site lock and bot packaging: only a proven estate successor
+        # may carry the reviewed lock blob; the audit seal's after-blob is re-admitted below.
+        change = lock["changes"][AUDIT_LOCK_INPUT]
+        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+                and source_revision != record["source_after"]
+                and estate_successor_of == record["source_after"],
+                "audit lock successor requires a proven estate successor")
+        if files is not None:
+            require(files.get(AUDIT_LOCK_INPUT) == (change["mode"], change["after_blob"]),
+                    "audit lock successor mode or tree changed")
+            files = dict(files) | {AUDIT_LOCK_INPUT: (change["mode"], change["before_blob"])}
+        common = dict(common) | {AUDIT_LOCK_INPUT: change["before_blob"]}
     if ESTATE_ADDED_INPUT not in common:
         return _admit_existing_shared_inputs(original, common, files)
     # The exact sealed revision, or a later revision whose ancestry from it was

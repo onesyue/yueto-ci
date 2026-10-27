@@ -23,7 +23,8 @@ class BotPackagingTransition(unittest.TestCase):
         self.change = self.record["changes"][PATH]
 
     def test_sealed_record_is_exact_and_chained_on_the_estate_seal(self):
-        self.assertEqual(list(self.sealed)[-1], KEY)
+        # Only the audit lock seal may sit outside this one.
+        self.assertEqual(list(self.sealed)[-2:], [KEY, "reviewed_audit_lock_transition"])
         prior, record = SHARDS.reviewed_bot_packaging_transition(self.sealed)
         self.assertEqual(record, self.record)
         self.assertNotIn(KEY, prior)
@@ -97,6 +98,7 @@ class BotPackagingTransition(unittest.TestCase):
                                            estate_successor_of=self.estate["source_after"])
             # Without the bot seal the same successor blob is refused as before.
             unsealed = copy.deepcopy(self.sealed)
+            unsealed.pop("reviewed_audit_lock_transition")
             unsealed.pop(KEY)
             with self.assertRaises(ValueError):
                 SHARDS.admit_shared_inputs(unsealed, bot_common, source_revision=later,
