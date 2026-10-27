@@ -6468,5 +6468,31 @@
         "mode": "100644"
       }
     }
+  },
+  "reviewed_runtime_dependency_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "d9e50388a3c79fd4781d3c587c58eddfa8c3e4dbd27ec6f2f8a4ae6d455bb500",
+    "source_before": "5d58e2e8ac83b0eee596615ff06c093569145758",
+    "source_after": "018e34937868144b3e8a82108e86301c9f1c4e3d",
+    "independent_review_sha256": "7713d504f73c49f5d983ae7dedea9227c26e9109da4d08d8bfbc110604ae3f4c",
+    "source_freeze_sha256": "4ad378063415d5f0449086acd966b201ed5b285d0cc5bae117ae3aee954a7f29",
+    "qualification_receipt_sha256": "46820a1c962d86432829da24a730101be3092ee05b9cfb000453a75b941eb7c8",
+    "changes": {
+      "pyproject.toml": {
+        "before_blob": "5714acdf3161ccc0d9a8db0e24e0787ae19647bf",
+        "after_blob": "1e223f82f229773528fc0a98e7a2f849d2ba3940",
+        "mode": "100644"
+      },
+      "telegram-bot/yue/requirements.txt": {
+        "before_blob": "23e3085c4e63592103eee8bbee3446fe41441caa",
+        "after_blob": "de417a3cc221baefeee5289e4c29f2351731e025",
+        "mode": "100644"
+      },
+      "uv.lock": {
+        "before_blob": "1615c4052b6475eec22e388b06d0f1eedf74946a",
+        "after_blob": "1d7c733424ad14b27fac43ddd924a2e7468c7c15",
+        "mode": "100644"
+      }
+    }
   }
 }

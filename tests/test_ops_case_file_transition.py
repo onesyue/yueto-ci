@@ -133,6 +133,7 @@ class CaseFileTransition(unittest.TestCase):
         stripped = copy.deepcopy(self.sealed)
         # The bot packaging seal sits outside the case-file seal; strip it too so this
         # asserts the case refusal itself rather than the outer seal's prior hash.
+        stripped.pop("reviewed_runtime_dependency_transition")
         stripped.pop("reviewed_audit_lock_transition")
         stripped.pop("reviewed_bot_packaging_transition")
         stripped.pop("reviewed_case_file_transition")
