@@ -14,7 +14,9 @@ name: Poll sources for unbuilt commits
 # 去问「默认分支 HEAD 是多少 / 有没有对应的镜像」，比让三个仓往外推少一个
 # 必须有人去签发、去轮换、去记得补的凭据。
 #
-# 🚨 只构建，绝不 promote。promote 有 pin 对齐门禁，发版必须是有意为之的动作。
+# 产品镜像只构建，绝不 promote。promote 有 pin 对齐门禁，发版必须是有意为之的动作。
+# 静态 UI 单元（ui-*）是唯一例外：默认分支上单元路径或单元 Dockerfile 变了，
+# 才派发该单元且 promote=true。那只给 scratch 镜像打标签，不调用 ship.sh，不部署。
 #
 # P3（2026-09-24）：缺 built- 标签的镜像若构建输入与已 promote 镜像完全相同（provenance 先由
 # gh attestation verify 验过、recipe 未变、promoted 是 HEAD 的祖先），就不派发它的构建；
@@ -124,11 +126,16 @@ jobs:
           #
           # 组表不再手写：直接从 services.json 派生，schema 变了这里自动跟上。
           # （手写表时代的注释声称有测试钉住对应关系——那条测试从未存在过。）
-          groups=$(jq -c 'group_by(.group) | map({
-            group: .[0].group,
-            repos: (map(.repo) | unique),
-            probes: map(.service)
-          })' services.json)
+          # Static UI units are not product groups. They are dispatched below
+          # only when their own path changed, and they do not need a SQL baseline.
+          groups=$(jq -c '
+            [.[] | select(.group | startswith("ui-") | not)]
+            | group_by(.group)
+            | map({
+              group: .[0].group,
+              repos: (map(.repo) | unique),
+              probes: map(.service)
+            })' services.json)
 
           pending='[]'
           while read -r row; do
@@ -238,6 +245,12 @@ jobs:
               '. + [{group:$g, sha:$s, repo:$r, migration_base:$b}]' <<<"$pending")
           done < <(jq -c '.[]' <<<"$groups")
 
+          if ui_extra=$(python3 scripts/ui_static_units.py poll); then
+            pending=$(jq -c --argjson extra "$ui_extra" '. + $extra' <<<"$pending")
+          else
+            echo "::warning::UI static unit poll failed — not auto-promoting scratch images"
+          fi
+
           echo "pending=$(jq -c . <<<"$pending")" >> "$GITHUB_OUTPUT"
           {
             echo "## Source poll"
@@ -249,7 +262,7 @@ jobs:
               echo '|---|---|---|'
               jq -r '.[] | "| \(.group) | \(.repo) | `\(.sha[0:7])` |"' <<<"$pending"
               echo
-              echo '_Builds only — promotion stays a deliberate, manual step._'
+              echo '_Product images build only — promotion stays a deliberate manual step. A UI static unit is promoted only when its unit path changed, and it is not deployed._'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -280,19 +293,29 @@ jobs:
           while read -r row; do
             grp=$(jq -r '.group' <<<"$row")
             sha=$(jq -r '.sha' <<<"$row")
-            migration_args=()
-            if [ "$(jq -r '.repo // empty' <<<"$row")" = onesyue/yueops ]; then
-              migration_base=$(jq -r '.migration_base // empty' <<<"$row")
-              [[ "$migration_base" =~ ^[0-9a-f]{40}$ ]] || {
-                echo "::error::refusing YueOps dispatch without migration_base"
-                exit 1
-              }
-              migration_args=(-f "migration_base=${migration_base}")
-            fi
-            echo "dispatching build: service=${grp} ref=${sha} promote=false"
-            # promote=false 是这条链路的硬约束，不接受输入覆盖。
-            gh workflow run build.yml -R "${GITHUB_REPOSITORY}" \
-              -f "service=${grp}" -f "ref=${sha}" -f promote=false "${migration_args[@]}"
+            case "$grp" in
+              ui-*)
+                # Scratch image promotion only. This branch does not deploy.
+                echo "dispatching static ui unit: service=${grp} ref=${sha} promote=true"
+                gh workflow run build.yml -R "${GITHUB_REPOSITORY}" \
+                  -f "service=${grp}" -f "ref=${sha}" -f promote=true
+                ;;
+              *)
+                migration_args=()
+                if [ "$(jq -r '.repo // empty' <<<"$row")" = onesyue/yueops ]; then
+                  migration_base=$(jq -r '.migration_base // empty' <<<"$row")
+                  [[ "$migration_base" =~ ^[0-9a-f]{40}$ ]] || {
+                    echo "::error::refusing YueOps dispatch without migration_base"
+                    exit 1
+                  }
+                  migration_args=(-f "migration_base=${migration_base}")
+                fi
+                echo "dispatching build: service=${grp} ref=${sha} promote=false"
+                # promote=false stays the product-image constraint.
+                gh workflow run build.yml -R "${GITHUB_REPOSITORY}" \
+                  -f "service=${grp}" -f "ref=${sha}" -f promote=false "${migration_args[@]}"
+                ;;
+            esac
           done < <(jq -c '.[]' <<<"$PENDING")
 
   # 自续链（2026-09-28，默认关闭）：GitHub 的 schedule 已不可靠（见上方 on.schedule）。

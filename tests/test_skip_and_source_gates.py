@@ -4,7 +4,8 @@ Both tools are driven with a fake GitHub API (trees, blobs, compare, branches) o
 real input-fingerprint implementation, and a fake ``gh`` for verified provenance.  Every
 leg that authorizes a skip or a promotion is broken on its own and must refuse; every
 "cannot measure" must build / refuse, never skip / authorize.  The workflow wiring is
-pinned too: poll-sources still only requests ``promote=false`` builds, and the promote
+pinned too: poll-sources still requests ``promote=false`` for product images
+(the only ``promote=true`` is the static UI unit branch), and the promote
 step runs the gate twice — once at authorization and once immediately before the tags move.
 """
 
@@ -244,7 +245,8 @@ class WorkflowWiringTest(unittest.TestCase):
         code = "\n".join(line for line in poll.splitlines() if not line.lstrip().startswith("#"))
         self.assertIn("python3 scripts/poll-skip-decision.py", code)
         self.assertIn("-f promote=false", code)
-        self.assertNotIn("promote=true", code)
+        self.assertEqual(code.count("-f promote=true"), 1)
+        self.assertIn("ui-*)", code[max(0, code.index("-f promote=true") - 600):code.index("-f promote=true")])
         self.assertNotIn("imagetools create", code)
         self.assertIn("attestations: read", poll.split("jobs:", 1)[0])
         # a crashed / malformed decision falls back to building every missing image

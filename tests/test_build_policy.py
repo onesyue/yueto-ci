@@ -1220,9 +1220,9 @@ class BuildPolicyTest(unittest.TestCase):
         for forbidden in ("build-push-action", "imagetools create", "cosign", "promote=true", "packages: write"):
             self.assertNotIn(forbidden, capture_code)
 
-        # poll-sources.yml 只允许**请求**构建，永远不许自己构建或 promote。
-        # 它是定时跑的、无人看着的，所以「它只能做安全的那半」必须由门禁钉住，
-        # 而不是靠写它的人当时的自觉。
+        # poll-sources.yml 只允许**请求**构建。产品镜像永远 promote=false。
+        # 静态 UI 单元是唯一的 promote=true 派发，而且只在 ui-* 分支里。
+        # 它是定时跑的、无人看着的，所以这条边界必须由门禁钉住。
         poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
         # 「不许做」的几条只能看**可执行内容**：注释里解释「为什么这里不签名」
         # 本身是有价值的，不该被自己的门禁判违规。
@@ -1230,7 +1230,11 @@ class BuildPolicyTest(unittest.TestCase):
             line for line in poll.splitlines() if not line.lstrip().startswith("#")
         )
         self.assertIn("-f promote=false", poll_code)
-        self.assertNotIn("promote=true", poll_code)
+        self.assertEqual(poll_code.count("-f promote=true"), 1)
+        ui_promote = poll_code.index("-f promote=true")
+        self.assertIn("ui-*)", poll_code[max(0, ui_promote - 600):ui_promote])
+        product_promote = poll_code.index("-f promote=false")
+        self.assertNotIn("ui-*)", poll_code[max(0, product_promote - 400):product_promote])
         self.assertNotIn("build-push-action", poll_code)
         self.assertNotIn("imagetools create", poll_code)
         self.assertNotIn("cosign", poll_code)
@@ -1965,7 +1969,9 @@ class BuildPolicyTest(unittest.TestCase):
             for service in self.services
             for platform in service["platforms"].split(",")
         }
-        self.assertEqual(len(expected_pairs), 7)
+        # Five product images (yue-node and yueboard are two platforms each)
+        # plus four amd64-only static UI units.
+        self.assertEqual(len(expected_pairs), 11)
 
     def test_yueops_reports_are_unique_runner_temp_files(self) -> None:
         backend_start = self.workflow.index("- name: Validate yueops backend")
@@ -2467,12 +2473,18 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertTrue(plan["has_builds"])
         self.assertEqual(
             {entry["service"] for entry in plan["matrix"]},
-            {"yue-node", "yueops-web", "checkin-api", "yue-bot", "yueboard"},
+            {
+                "yue-node", "yueops-web", "checkin-api", "yue-bot", "yueboard",
+                "ui-console", "ui-miniapp", "ui-site", "ui-board-web",
+            },
         )
         self.assertNotIn("yuelink", {entry["service"] for entry in plan["matrix"]})
         self.assertEqual(
             {entry["validation"] for entry in plan["validation_matrix"]},
-            {"yue-node", "yueops", "yueboard", "yuelink"},
+            {
+                "yue-node", "yueops", "yueboard", "yuelink",
+                "ui-console", "ui-miniapp", "ui-site", "ui-board-web",
+            },
         )
         node_entries = [entry for entry in plan["validation_matrix"]
                         if entry["validation"] == "yue-node"]
@@ -2557,7 +2569,11 @@ class BuildPolicyTest(unittest.TestCase):
     def test_validation_only_registry_is_closed(self) -> None:
         expected_keys = {"service", "group", "repo", "ref", "validation"}
         names = set()
-        for target in self.validation_targets:
+        source_only = [
+            target for target in self.validation_targets
+            if not str(target["service"]).startswith("ui-")
+        ]
+        for target in source_only:
             self.assertEqual(set(target), expected_keys)
             self.assertRegex(target["repo"], r"^onesyue/[A-Za-z0-9._-]+$")
             self.assertEqual(target["ref"], "master")
@@ -2620,7 +2636,10 @@ class BuildPolicyTest(unittest.TestCase):
             names.add(service["service"])
         self.assertEqual(
             names,
-            {"yue-node", "yueops-web", "checkin-api", "yue-bot", "yueboard"},
+            {
+                "yue-node", "yueops-web", "checkin-api", "yue-bot", "yueboard",
+                "ui-console", "ui-miniapp", "ui-site", "ui-board-web",
+            },
         )
 
     def test_promotion_records_nothing_in_the_workspace_root_repo(self) -> None:

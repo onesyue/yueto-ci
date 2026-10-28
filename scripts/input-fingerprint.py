@@ -462,6 +462,29 @@ def load_services(path: Path | None = None) -> dict[str, dict]:
     return {entry["service"]: entry for entry in data}
 
 
+_UI_UNITS = None
+
+
+def _ui_units():
+    """The static-unit catalog. Loaded lazily so non-UI fingerprints stay import-free."""
+    global _UI_UNITS
+    if _UI_UNITS is None:
+        spec = importlib.util.spec_from_file_location(
+            "ui_static_units_for_fingerprint", ROOT / "scripts" / "ui_static_units.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        _UI_UNITS = module
+    return _UI_UNITS
+
+
+def _ui_scope(entry: dict) -> str | None:
+    try:
+        return _ui_units().unit_scope(entry)
+    except _ui_units().ScopeError as exc:
+        raise Unknown(str(exc)) from exc
+
+
 def compute(source, rev: str, entry: dict) -> dict:
     """Return {"fingerprint", "files", ...} or {"unknown": reason, ...}."""
     result: dict = {"schema": SCHEMA, "service": entry["service"], "revision": rev}
@@ -494,6 +517,23 @@ def compute(source, rev: str, entry: dict) -> dict:
             for path in tree
             if selected(path, facts.sources) and not rules.ignored(path)
         )
+        scope = _ui_scope(entry)
+        if scope is not None:
+            def in_unit(path: str) -> bool:
+                return _ui_units().path_in_unit(path, scope, dockerfile)
+            escaped = sorted(
+                src for src in set(facts.sources)
+                if not (src == scope or src.startswith(scope + "/"))
+            )
+            if escaped:
+                raise Unknown(
+                    f"{entry['service']} build inputs escape {scope}: {', '.join(escaped[:6])}"
+                )
+            files = [row for row in files if in_unit(row[0])]
+            attributes = [path for path in attributes if in_unit(path)]
+            dead = [path for path in dead if in_unit(path)]
+            if ignore_path and not in_unit(ignore_path):
+                ignore_path = ""
         if not files:
             raise Unknown("no build-context file selected (scan floor)")
         payload = {
