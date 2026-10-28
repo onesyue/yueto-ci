@@ -40,6 +40,18 @@ UI_TARGET_KEYS = SOURCE_ONLY_KEYS | {
 PACKAGE_NAME = re.compile(r"^(?:@[A-Za-z0-9._-]+/)?[A-Za-z0-9._-]+$")
 DEP_FIELDS = ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies")
 ROOT_MANIFESTS = ("package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml")
+# Board's build runs contract tests against these repository-level inputs.
+# Keep backend and shared-test COPY sources at file granularity.
+BOARD_BUILD_FILES = (
+    "schema-floor.txt",
+    "internal/platform/featureflag/flags.json",
+    "internal/platform/errcode/errcode.go",
+    "internal/platform/ticketcategory/ticketcategory.go",
+    "internal/platform/audit/audit.go",
+    "test/frontend/session-rejection.ts",
+    "test/frontend/reload-guard.ts",
+    "docs/contracts/yueboard-economy.golden.json",
+)
 SERVICE_KEYS = SOURCE_ONLY_KEYS | {"context", "dockerfile", "platforms"}
 
 
@@ -414,16 +426,23 @@ def workspace_plan(read_text, paths: list[str], artifact_paths: list[str], servi
         dest = _workspace_target(spec, ".", name, by_name)
         if dest:
             visit(dest)
+    build_files = []
+    if service == "ui-board-web":
+        for path in BOARD_BUILD_FILES:
+            if read_text(path) is None:
+                raise ScopeError(f"{service} build input is missing: {path}")
+            build_files.append(path)
     return {
         "root_files": root_files,
         "patch_files": patches,
+        "build_files": build_files,
         "package_dirs": sorted(copy_dirs),
         "package_names": names,
     }
 
 
 def workspace_copy_sources(plan: dict) -> list[str]:
-    return [*plan["root_files"], *plan["patch_files"], *plan["package_dirs"]]
+    return [*plan["root_files"], *plan["patch_files"], *plan["build_files"], *plan["package_dirs"]]
 
 
 def _directory_reader(source: Path):
@@ -585,6 +604,7 @@ def _render_package_dockerfile(service: str, unit: str, manager: object) -> str:
 def _render_workspace_dockerfile(plan: dict, unit: str) -> str:
     copies = [f"COPY {' '.join(plan['root_files'])} ./"]
     copies.extend(f"COPY {patch} {patch}" for patch in plan["patch_files"])
+    copies.extend(f"COPY {path} {path}" for path in plan["build_files"])
     copies.extend(f"COPY {directory}/ {directory}/" for directory in plan["package_dirs"])
     filters = " ".join(f"--filter {name}" for name in plan["package_names"])
     artifacts = plan["package_dirs_to_build"]

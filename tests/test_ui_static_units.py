@@ -28,6 +28,16 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 UI_UNITS = ("ui-console", "ui-miniapp", "ui-site", "ui-board-web")
+BOARD_BUILD_INPUTS = (
+    "schema-floor.txt",
+    "internal/platform/featureflag/flags.json",
+    "internal/platform/errcode/errcode.go",
+    "internal/platform/ticketcategory/ticketcategory.go",
+    "internal/platform/audit/audit.go",
+    "test/frontend/session-rejection.ts",
+    "test/frontend/reload-guard.ts",
+    "docs/contracts/yueboard-economy.golden.json",
+)
 CHECKS = ["lint", "tsc", "unit", "a11y", "bundle-budget"]
 GATES = (
     "Validate complete platform SBOM set",
@@ -272,6 +282,10 @@ def board_fixture(
         write_json(root / "patches/left-pad@1.0.0.patch", {"not": "json"})
         (root / "patches/left-pad@1.0.0.patch").write_text("--- a/a\n+++ b/a\n", encoding="utf-8")
     write_json(root / "package.json", root_package)
+    for path in BOARD_BUILD_INPUTS:
+        file = root / path
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text("fixture\n", encoding="utf-8")
     (root / "pnpm-workspace.yaml").write_text(
         "packages:\n  - web\n  - web-admin\n  - packages/*\n",
         encoding="utf-8",
@@ -361,17 +375,19 @@ class DockerfileContractTest(unittest.TestCase):
             text = self._render_board(root)
             facts = FP.parse_dockerfile(text)
             self.assertEqual(facts.problems, [], text)
-            self.assertEqual(sorted(facts.sources), [
+            self.assertEqual(sorted(facts.sources), sorted([
                 "package.json",
                 "packages/ui",
                 "pnpm-lock.yaml",
                 "pnpm-workspace.yaml",
                 "web",
                 "web-admin",
-            ])
+                *BOARD_BUILD_INPUTS,
+            ]))
             copies = [line for line in text.splitlines() if line.startswith("COPY ") and "--from" not in line]
             self.assertEqual(copies, [
                 "COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./",
+                *(f"COPY {path} {path}" for path in BOARD_BUILD_INPUTS),
                 "COPY packages/ui/ packages/ui/",
                 "COPY web/ web/",
                 "COPY web-admin/ web-admin/",
@@ -379,7 +395,8 @@ class DockerfileContractTest(unittest.TestCase):
             self.assertNotIn("packages/unused", text)
             self.assertNotIn("packages/other", text)
             self.assertNotIn("@yueto/unused", text)
-            self.assertNotIn("docs/", text)
+            self.assertNotIn("docs/readme.md", text)
+            self.assertNotIn("COPY docs/ ", text)
             self.assertIn("pnpm install --frozen-lockfile --ignore-scripts", text)
             self.assertIn("pnpm --filter yueboard-web --filter yueboard-web-admin run build", text)
             self.assertNotIn("pnpm run build", text.replace(
@@ -401,6 +418,20 @@ class DockerfileContractTest(unittest.TestCase):
                 sorted(UI.allowed_copy_sources(entry, read_text, list_paths())),
             )
 
+    def test_board_render_refuses_each_missing_build_input(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            board_fixture(root)
+            for path in BOARD_BUILD_INPUTS:
+                with self.subTest(path=path):
+                    file = root / path
+                    content = file.read_bytes()
+                    file.unlink()
+                    with self.assertRaises(UI.ScopeError) as caught:
+                        self._render_board(root)
+                    self.assertIn(path, str(caught.exception))
+                    file.write_bytes(content)
+
     def test_board_closure_follows_dev_file_and_extra_workspace_deps(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -420,7 +451,7 @@ class DockerfileContractTest(unittest.TestCase):
             text = UI.render_dockerfile("ui-board-web", root)
             self.assertIn("COPY packages/unused/ packages/unused/", text)
             self.assertIn("COPY packages/other/ packages/other/", text)
-            self.assertNotIn("docs/", text)
+            self.assertNotIn("docs/readme.md", text)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             board_fixture(root, root_dep="@yueto/other")
@@ -660,6 +691,36 @@ class BoardWorkspaceFingerprintTest(unittest.TestCase):
                 "inputs identical",
                 GATE.gate(tree, FP, entry=entry, source=base, head=unused, latest=None),
             )
+
+    def test_board_build_files_affect_fingerprint_without_widening_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            board_fixture(root)
+            files = board_tree(root, UI.render_dockerfile("ui-board-web", root))
+            base, head = "1" * 40, "2" * 40
+            entry = self.entry()
+            baseline = FP.compute(Tree({base: files}), base, entry)
+            self.assertNotIn("unknown", baseline)
+            for path in BOARD_BUILD_INPUTS:
+                with self.subTest(path=path):
+                    changed = {**files, path: b"changed input\n"}
+                    actual = FP.compute(Tree({head: changed}), head, entry)
+                    self.assertEqual(FP.compare(baseline, actual), "changed")
+            for path in (
+                "internal/platform/errcode/unrelated.go",
+                "test/frontend/unrelated.ts",
+                "docs/contracts/unrelated.json",
+            ):
+                with self.subTest(outside=path):
+                    changed = {**files, path: b"outside\n"}
+                    actual = FP.compute(Tree({head: changed}), head, entry)
+                    self.assertEqual(FP.compare(baseline, actual), "unchanged")
+                    widened = dict(changed)
+                    widened[entry["dockerfile"]] = files[entry["dockerfile"]] + (
+                        f"COPY {path} /extra\n".encode()
+                    )
+                    refused = FP.compute(Tree({head: widened}), head, entry)
+                    self.assertIn("escape", refused.get("unknown", ""))
 
     def test_legacy_board_tree_without_a_workspace_file_stays_on_web(self) -> None:
         only_web = UI.render_dockerfile("ui-site").replace(
