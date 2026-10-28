@@ -11,7 +11,23 @@ UI units `ui-console`, `ui-miniapp`, `ui-site`, and `ui-board-web`.
 frontend fastlane for those UI units (lint, tsc, unit, a11y, bundle budget).
 The only release workflow is [build.yml](.github/workflows/build.yml): validate,
 build, sign, attest, then explicitly promote. UI units use that same promote
-gate and the same SBOM, cosign, and SLSA steps.
+gate and the same SBOM, cosign, and SLSA steps. They are scratch image tags
+only; this repository does not deploy them.
+
+`ui-console`, `ui-miniapp`, and `ui-site` install inside the unit directory
+(`frontend`, `telegram-bot/yue/miniapp`, and `site`). `ui-board-web` is the
+yueboard pnpm workspace: render its Dockerfile from a checkout so the context
+is the root `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, and the
+workspace packages required by `web` and `web-admin`.
+
+```sh
+python3 scripts/ui_static_units.py dockerfile ui-board-web --source /path/to/yueboard
+```
+
+The scratch image is still only `/dist` and `/ui-manifest.json`. With two
+artifact paths, `/dist/web` and `/dist/web-admin` hold the build outputs.
+`requires_backend` still comes from `web/ui-requires.json`. The manifest
+object stays `files`, `source_revision`, and `requires_backend`.
 
 ## Recover interrupted server delivery
 

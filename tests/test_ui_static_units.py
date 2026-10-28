@@ -4,8 +4,9 @@ The four scratch units share one contract:
 
 * services.json and validation-targets.json name the same repo, ref, and
   validation, and each unit runs only lint / tsc / unit / a11y / bundle budget;
-* the fingerprint contains the unit path and the unit Dockerfile, nothing
-  outside that set;
+* the fingerprint contains the unit path and the unit Dockerfile. A pnpm
+  workspace unit also contains the root manifests and the workspace packages
+  required to build its artifact paths; a copy outside that set is unknown;
 * promote-source-gate plus the SBOM, cosign, and SLSA steps apply to ui-*
   with no per-service skip;
 * poll dispatches a unit with promote=true only when those inputs changed.
@@ -104,6 +105,11 @@ class CatalogTest(unittest.TestCase):
         self.assertEqual(targets["ui-miniapp"]["unit_path"], "telegram-bot/yue/miniapp")
         self.assertEqual(targets["ui-site"]["unit_path"], "site")
         self.assertEqual(targets["ui-board-web"]["unit_path"], "web")
+        self.assertEqual(targets["ui-board-web"]["layout"], "pnpm-workspace")
+        self.assertEqual(targets["ui-board-web"]["artifact_paths"], ["web", "web-admin"])
+        for name in ("ui-console", "ui-miniapp", "ui-site"):
+            self.assertEqual(targets[name]["layout"], "package")
+            self.assertEqual(targets[name]["artifact_paths"], [targets[name]["unit_path"]])
         self.assertEqual(targets["ui-console"]["frontend_step"], "Validate yueops frontend")
         self.assertEqual(targets["ui-board-web"]["frontend_step"], "Validate yueboard frontends")
         self.assertEqual(services["ui-console"]["repo"], "onesyue/yueops")
@@ -234,26 +240,257 @@ class CatalogTest(unittest.TestCase):
                 self.assertEqual(log.read_text().splitlines(), expected)
 
 
+def write_json(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value) + "\n", encoding="utf-8")
+
+
+def board_fixture(
+    root: Path,
+    *,
+    extra_dep: str | None = None,
+    ui_field: str = "dependencies",
+    ui_spec: str = "workspace:*",
+    package_manager: str | None = "pnpm@11.27.1",
+    npmrc: bool = False,
+    patch: bool = False,
+    admin_depends: bool = True,
+    root_dep: str | None = None,
+) -> None:
+    """Minimal yueboard-shaped pnpm workspace.
+
+    ``packages/unused`` depends on ``@yueto/other``. Neither is required by
+    web or web-admin unless ``extra_dep`` names one of them.
+    """
+    root_package: dict = {"private": True}
+    if root_dep:
+        root_package["dependencies"] = {root_dep: "workspace:*"}
+    if package_manager is not None:
+        root_package["packageManager"] = package_manager
+    if patch:
+        root_package["pnpm"] = {"patchedDependencies": {"left-pad@1.0.0": "patches/left-pad@1.0.0.patch"}}
+        write_json(root / "patches/left-pad@1.0.0.patch", {"not": "json"})
+        (root / "patches/left-pad@1.0.0.patch").write_text("--- a/a\n+++ b/a\n", encoding="utf-8")
+    write_json(root / "package.json", root_package)
+    (root / "pnpm-workspace.yaml").write_text(
+        "packages:\n  - web\n  - web-admin\n  - packages/*\n",
+        encoding="utf-8",
+    )
+    (root / "pnpm-lock.yaml").write_text("lockfileVersion: '9.0'\n", encoding="utf-8")
+    write_json(root / "packages/ui/package.json", {"name": "@yueto/ui", "version": "0.0.0", "private": True})
+    (root / "packages/ui/index.js").write_text("exports.mark = 'ui'\n", encoding="utf-8")
+    write_json(root / "packages/unused/package.json", {
+        "name": "@yueto/unused",
+        "version": "0.0.0",
+        "private": True,
+        "dependencies": {"@yueto/other": "workspace:*"},
+    })
+    (root / "packages/unused/index.js").write_text("exports.mark = 'unused'\n", encoding="utf-8")
+    write_json(root / "packages/other/package.json", {"name": "@yueto/other", "version": "0.0.0", "private": True})
+    (root / "packages/other/index.js").write_text("exports.mark = 'other'\n", encoding="utf-8")
+    web_deps = {"@yueto/ui": ui_spec}
+    if extra_dep:
+        web_deps[extra_dep] = "workspace:*"
+    web = {"name": "yueboard-web", "private": True, ui_field: web_deps, "scripts": {"build": "node build.js"}}
+    write_json(root / "web/package.json", web)
+    (root / "web/ui-requires.json").write_text('{"requires_backend":["yueboard"]}\n', encoding="utf-8")
+    (root / "web/app.js").write_text("app\n", encoding="utf-8")
+    admin: dict = {
+        "name": "yueboard-web-admin",
+        "private": True,
+        "scripts": {"build": "node build.js"},
+    }
+    if admin_depends:
+        admin["dependencies"] = {"@yueto/ui": ui_spec}
+    write_json(root / "web-admin/package.json", admin)
+    (root / "web-admin/app.js").write_text("admin\n", encoding="utf-8")
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    (root / "docs/readme.md").write_text("outside\n", encoding="utf-8")
+    if npmrc:
+        (root / ".npmrc").write_text("ignore-scripts=true\n", encoding="utf-8")
+
+
+SCRATCH = (
+    "COPY --from=build /src/unit/dist /dist\n"
+    "COPY --from=build /out/ui-manifest.json /ui-manifest.json\n"
+)
+
+
 class DockerfileContractTest(unittest.TestCase):
     def test_scratch_image_contains_only_dist_and_manifest(self) -> None:
         for name in UI_UNITS:
+            target = next(row for row in UI.ui_targets() if row["service"] == name)
+            if target["layout"] != "package":
+                continue
             text = UI.render_dockerfile(name)
             facts = FP.parse_dockerfile(text)
             self.assertEqual(facts.problems, [], text)
-            target = next(row for row in UI.ui_targets() if row["service"] == name)
             self.assertEqual(facts.sources, [target["unit_path"]])
             self.assertTrue(facts.external_images)
-            self.assertTrue(all(image.endswith("@" + "sha256:" + facts.external_images[0].split("@sha256:")[1]) or "@sha256:" in image for image in facts.external_images))
-            final = text.split("FROM scratch\n", 1)[1]
-            self.assertEqual(final, (
-                "COPY --from=build /src/unit/dist /dist\n"
-                "COPY --from=build /out/ui-manifest.json /ui-manifest.json\n"
-            ))
+            self.assertTrue(all("@sha256:" in image for image in facts.external_images))
+            self.assertEqual(text.split("FROM scratch\n", 1)[1], SCRATCH)
             self.assertIn("ui-requires.json", text)
             self.assertIn("requires_backend", text)
             self.assertIn("source_revision", text)
             self.assertIn("sha256", text)
+            self.assertNotIn("pnpm-workspace.yaml", text)
             self.assertNotIn("# syntax=", text)
+
+    def test_console_miniapp_and_site_install_inside_the_unit(self) -> None:
+        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        console = step_body(workflow, "Validate yueops frontend")
+        self.assertIn("working-directory: frontend", console)
+        self.assertIn("npm ci --ignore-scripts", console)
+        self.assertIn("npm --prefix telegram-bot/yue/miniapp ci --ignore-scripts", workflow)
+        self.assertIn('require(\'./site/package.json\').packageManager', workflow)
+        self.assertIn("pnpm --dir site install --frozen-lockfile --ignore-scripts", workflow)
+        self.assertIn("COPY frontend/ /src/unit/", UI.render_dockerfile("ui-console"))
+        self.assertIn("COPY telegram-bot/yue/miniapp/ /src/unit/", UI.render_dockerfile("ui-miniapp"))
+        site = UI.render_dockerfile("ui-site")
+        self.assertIn("COPY site/ /src/unit/", site)
+        self.assertIn("pnpm install --frozen-lockfile --ignore-scripts", site)
+        self.assertIn("WORKDIR /src/unit", site)
+
+    def _render_board(self, root: Path) -> str:
+        return UI.render_dockerfile("ui-board-web", root)
+
+    def test_board_dockerfile_copies_the_workspace_closure_only(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            board_fixture(root)
+            text = self._render_board(root)
+            facts = FP.parse_dockerfile(text)
+            self.assertEqual(facts.problems, [], text)
+            self.assertEqual(sorted(facts.sources), [
+                "package.json",
+                "packages/ui",
+                "pnpm-lock.yaml",
+                "pnpm-workspace.yaml",
+                "web",
+                "web-admin",
+            ])
+            copies = [line for line in text.splitlines() if line.startswith("COPY ") and "--from" not in line]
+            self.assertEqual(copies, [
+                "COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./",
+                "COPY packages/ui/ packages/ui/",
+                "COPY web/ web/",
+                "COPY web-admin/ web-admin/",
+            ])
+            self.assertNotIn("packages/unused", text)
+            self.assertNotIn("packages/other", text)
+            self.assertNotIn("@yueto/unused", text)
+            self.assertNotIn("docs/", text)
+            self.assertIn("pnpm install --frozen-lockfile --ignore-scripts", text)
+            self.assertIn("pnpm --filter yueboard-web --filter yueboard-web-admin run build", text)
+            self.assertNotIn("pnpm run build", text.replace(
+                "pnpm --filter yueboard-web --filter yueboard-web-admin run build",
+                "",
+            ))
+            self.assertIn("cp -a web/dist/. /src/unit/dist/web/", text)
+            self.assertIn("cp -a web-admin/dist/. /src/unit/dist/web-admin/", text)
+            self.assertIn("cp web/ui-requires.json /src/unit/ui-requires.json", text)
+            self.assertNotIn("WORKDIR /src/unit\n", text)
+            self.assertIn("cd /src/unit \\\n", text)
+            self.assertEqual(text.split("FROM scratch\n", 1)[1], SCRATCH)
+            self.assertIn("requires_backend", text)
+            self.assertIn("source_revision", text)
+            read_text, list_paths = UI._directory_reader(root)
+            entry = next(row for row in UI.ui_services() if row["service"] == "ui-board-web")
+            self.assertEqual(
+                sorted(facts.sources),
+                sorted(UI.allowed_copy_sources(entry, read_text, list_paths())),
+            )
+
+    def test_board_closure_follows_dev_file_and_extra_workspace_deps(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            board_fixture(root, ui_field="devDependencies", admin_depends=False)
+            text = UI.render_dockerfile("ui-board-web", root)
+            self.assertIn("COPY packages/ui/ packages/ui/", text)
+            self.assertNotIn("packages/unused", text)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            board_fixture(root, ui_spec="file:../packages/ui")
+            text = UI.render_dockerfile("ui-board-web", root)
+            self.assertIn("COPY packages/ui/ packages/ui/", text)
+            self.assertNotIn("packages/other", text)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            board_fixture(root, extra_dep="@yueto/unused")
+            text = UI.render_dockerfile("ui-board-web", root)
+            self.assertIn("COPY packages/unused/ packages/unused/", text)
+            self.assertIn("COPY packages/other/ packages/other/", text)
+            self.assertNotIn("docs/", text)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            board_fixture(root, root_dep="@yueto/other")
+            text = UI.render_dockerfile("ui-board-web", root)
+            self.assertIn("COPY packages/other/ packages/other/", text)
+            self.assertNotIn("packages/unused", text)
+
+    def test_board_copies_npmrc_and_declared_patches_only_when_present(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            board_fixture(root, npmrc=True, patch=True)
+            text = UI.render_dockerfile("ui-board-web", root)
+            self.assertIn(
+                "COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./",
+                text,
+            )
+            self.assertIn("COPY patches/left-pad@1.0.0.patch patches/left-pad@1.0.0.patch", text)
+
+    def test_board_render_refuses_a_missing_source_or_package_manager(self) -> None:
+        with self.assertRaises(UI.ScopeError) as missing:
+            UI.render_dockerfile("ui-board-web")
+        self.assertIn("--source", str(missing.exception))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            board_fixture(root, package_manager=None)
+            with self.assertRaises(UI.ScopeError) as unpinned:
+                UI.render_dockerfile("ui-board-web", root)
+            self.assertIn("packageManager", str(unpinned.exception))
+        result = subprocess.run(
+            [os.sys.executable, str(ROOT / "scripts/ui_static_units.py"), "dockerfile", "ui-board-web"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("--source", result.stderr)
+
+    def test_package_units_reject_a_workspace_dependency_when_source_is_present(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            frontend = source / "frontend"
+            write_json(frontend / "package.json", {"name": "console", "dependencies": {"react": "^18"}})
+            (frontend / "package-lock.json").write_text("{}\n", encoding="utf-8")
+            self.assertEqual(
+                UI.render_dockerfile("ui-console", source),
+                UI.render_dockerfile("ui-console"),
+            )
+            write_json(frontend / "package.json", {
+                "name": "console",
+                "dependencies": {"@yueto/kit": "file:../packages/yue-web-kit"},
+            })
+            with self.assertRaises(UI.ScopeError) as escaped:
+                UI.render_dockerfile("ui-console", source)
+            self.assertIn("file:../packages/yue-web-kit", str(escaped.exception))
+            write_json(frontend / "package.json", {
+                "name": "console",
+                "dependencies": {"@yueto/ui": "workspace:*"},
+            })
+            with self.assertRaises(UI.ScopeError) as workspace_dep:
+                UI.render_dockerfile("ui-console", source)
+            self.assertIn("workspace:*", str(workspace_dep.exception))
+            write_json(frontend / "package.json", {"name": "console"})
+            (source / "pnpm-workspace.yaml").write_text("packages:\n  - frontend\n", encoding="utf-8")
+            with self.assertRaises(UI.ScopeError) as member:
+                UI.render_dockerfile("ui-console", source)
+            self.assertIn("pnpm workspace", str(member.exception))
+            (source / "pnpm-workspace.yaml").write_text("packages:\n  - packages/*\n", encoding="utf-8")
+            write_json(source / "packages/ui/package.json", {"name": "@yueto/ui", "private": True})
+            self.assertEqual(
+                UI.render_dockerfile("ui-console", source),
+                UI.render_dockerfile("ui-console"),
+            )
 
 
 class Tree:
@@ -355,6 +592,100 @@ class FingerprintAndPromoteTest(unittest.TestCase):
         self.assertFalse(UI.decide_unit("unchanged"))
         self.assertFalse(UI.decide_unit("unknown"))
         self.assertTrue(UI.decide_unit("absent"))
+
+
+def board_tree(root: Path, dockerfile: str) -> dict[str, bytes]:
+    files = {
+        path.relative_to(root).as_posix(): path.read_bytes()
+        for path in root.rglob("*")
+        if path.is_file()
+    }
+    files["services/ui-board-web/Dockerfile"] = dockerfile.encode()
+    return files
+
+
+class BoardWorkspaceFingerprintTest(unittest.TestCase):
+    def entry(self) -> dict:
+        return next(row for row in UI.ui_services() if row["service"] == "ui-board-web")
+
+    def test_fingerprint_tracks_the_ui_package_and_refuses_an_extra_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            board_fixture(root)
+            dockerfile = UI.render_dockerfile("ui-board-web", root)
+            base, head, outside, unused = "1" * 40, "2" * 40, "3" * 40, "4" * 40
+            files = board_tree(root, dockerfile)
+            changed_ui = dict(files)
+            changed_ui["packages/ui/index.js"] = b"exports.mark = 'ui2'\n"
+            changed_docs = dict(files)
+            changed_docs["docs/readme.md"] = b"edited\n"
+            changed_unused = dict(files)
+            changed_unused["packages/unused/index.js"] = b"exports.mark = 'unused2'\n"
+            extra = dockerfile.replace(
+                "COPY packages/ui/ packages/ui/\n",
+                "COPY packages/ui/ packages/ui/\nCOPY docs/readme.md /src/readme.md\n",
+            )
+            tree = Tree({
+                base: files,
+                head: changed_ui,
+                outside: changed_docs,
+                unused: changed_unused,
+                "e" * 40: board_tree(root, extra),
+            })
+            entry = self.entry()
+            base_fp = FP.compute(tree, base, entry)
+            self.assertNotIn("unknown", base_fp, base_fp.get("unknown"))
+            paths = [row[0] for row in base_fp["files"]]
+            self.assertIn("packages/ui/index.js", paths)
+            self.assertIn("web/app.js", paths)
+            self.assertIn("web/ui-requires.json", paths)
+            self.assertIn("pnpm-lock.yaml", paths)
+            self.assertNotIn("packages/unused/index.js", paths)
+            self.assertNotIn("packages/other/index.js", paths)
+            self.assertNotIn("docs/readme.md", paths)
+            self.assertEqual(FP.compare(base_fp, FP.compute(tree, head, entry)), "changed")
+            self.assertEqual(FP.compare(base_fp, FP.compute(tree, outside, entry)), "unchanged")
+            self.assertEqual(FP.compare(base_fp, FP.compute(tree, unused, entry)), "unchanged")
+            escaped = FP.compute(tree, "e" * 40, entry)
+            self.assertIn("escape", escaped.get("unknown", ""))
+            self.assertIn("docs/readme.md", escaped["unknown"])
+            with self.assertRaises(GATE.Refused) as caught:
+                GATE.gate(tree, FP, entry=entry, source=base, head=head, latest=None)
+            self.assertIn("packages/ui/index.js", str(caught.exception))
+            self.assertIn(
+                "inputs identical",
+                GATE.gate(tree, FP, entry=entry, source=base, head=outside, latest=None),
+            )
+            self.assertIn(
+                "inputs identical",
+                GATE.gate(tree, FP, entry=entry, source=base, head=unused, latest=None),
+            )
+
+    def test_legacy_board_tree_without_a_workspace_file_stays_on_web(self) -> None:
+        only_web = UI.render_dockerfile("ui-site").replace(
+            "COPY site/ /src/unit/\n", "COPY web/ /src/unit/\n",
+        )
+        extra = only_web.replace(
+            "COPY web/ /src/unit/\n",
+            "COPY web/ /src/unit/\nCOPY package.json /src/package.json\n",
+        )
+        files = {
+            "web/package.json": b'{"name":"yueboard-web"}\n',
+            "web/app.js": b"v1\n",
+            "package.json": b'{"packageManager":"pnpm@11.27.1"}\n',
+            "services/ui-board-web/Dockerfile": only_web.encode(),
+        }
+        widened = dict(files)
+        widened["services/ui-board-web/Dockerfile"] = extra.encode()
+        tree = Tree({"a" * 40: files, "b" * 40: widened})
+        entry = self.entry()
+        known = FP.compute(tree, "a" * 40, entry)
+        self.assertNotIn("unknown", known, known.get("unknown"))
+        self.assertEqual(known["sources"], ["web"])
+        self.assertEqual([row[0] for row in known["files"]], ["web/app.js", "web/package.json"])
+        unknown = FP.compute(tree, "b" * 40, entry)
+        self.assertIn("escape", unknown.get("unknown", ""))
+        self.assertIn("package.json", unknown["unknown"])
 
 
 class PromoteGatesAreUnconditionalTest(unittest.TestCase):

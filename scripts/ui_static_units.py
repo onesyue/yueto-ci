@@ -4,10 +4,14 @@
 Each unit is an image in services.json and a validation profile in
 validation-targets.json. The image build context stays the source
 repository root (the same context/dockerfile convention as the other
-services). The fingerprint, though, may contain only that unit's path
-and its Dockerfile. Promotion still goes through promote-source-gate.py
-and the SBOM, cosign, and SLSA steps. Poll dispatches a unit with
-promote=true only when those inputs changed; it never deploys.
+services). A package-layout unit's fingerprint contains that unit's path
+and its Dockerfile. A pnpm-workspace unit (ui-board-web) also contains the
+root package.json, pnpm-workspace.yaml, pnpm-lock.yaml, and the workspace
+packages required to install and build its artifact paths. A Dockerfile
+that copies a path outside that set is unknown. Promotion still goes through
+promote-source-gate.py and the SBOM, cosign, and SLSA steps. Poll
+dispatches a unit with promote=true only when those inputs changed; it
+never deploys.
 """
 
 from __future__ import annotations
@@ -16,6 +20,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -30,7 +35,11 @@ NODE_IMAGE = (
 SOURCE_ONLY_KEYS = {"service", "group", "repo", "ref", "validation"}
 UI_TARGET_KEYS = SOURCE_ONLY_KEYS | {
     "unit_path", "checks", "frontend_step", "package_manager",
+    "layout", "artifact_paths",
 }
+PACKAGE_NAME = re.compile(r"^(?:@[A-Za-z0-9._-]+/)?[A-Za-z0-9._-]+$")
+DEP_FIELDS = ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies")
+ROOT_MANIFESTS = ("package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml")
 SERVICE_KEYS = SOURCE_ONLY_KEYS | {"context", "dockerfile", "platforms"}
 
 
@@ -92,6 +101,405 @@ def path_in_unit(path: str, unit_path: str, dockerfile: str) -> bool:
     return path == unit_path or path.startswith(unit_path + "/")
 
 
+def source_covered(src: str, allowed: str) -> bool:
+    """True when a COPY source is exactly an allowed input or a file inside it."""
+    if not src or src == "." or src.startswith("/") or src.startswith("..") or "/../" in src:
+        return False
+    return src == allowed or src.startswith(allowed + "/")
+
+
+def path_in_inputs(path: str, allowed: list[str], dockerfile: str) -> bool:
+    """True for the unit Dockerfile and every file under an allowed COPY source."""
+    if path == dockerfile or path == dockerfile + ".dockerignore":
+        return True
+    return any(source_covered(path, item) for item in allowed)
+
+
+def _target(service: str) -> dict:
+    matches = [row for row in ui_targets() if row.get("service") == service]
+    if len(matches) != 1:
+        raise ScopeError(f"{service} is not a registered static UI unit")
+    return matches[0]
+
+
+def _layout(target: dict) -> str:
+    layout = target.get("layout")
+    if layout not in ("package", "pnpm-workspace"):
+        raise ScopeError(f"{target.get('service')} layout is not package or pnpm-workspace")
+    return layout
+
+
+def _artifact_paths(target: dict) -> list[str]:
+    raw = target.get("artifact_paths")
+    if not isinstance(raw, list) or not raw:
+        raise ScopeError(f"{target.get('service')} artifact_paths is empty")
+    paths = []
+    for item in raw:
+        path = _rel(item) if isinstance(item, str) else ""
+        if not path:
+            raise ScopeError(f"{target.get('service')} artifact path is unsafe")
+        paths.append(path)
+    if len(paths) != len(set(paths)):
+        raise ScopeError(f"{target.get('service')} artifact_paths has a duplicate")
+    unit = _rel(target.get("unit_path"))
+    if unit not in paths:
+        raise ScopeError(f"{target.get('service')} unit_path is not an artifact path")
+    return paths
+
+
+def _strip_yaml_comment(line: str) -> str:
+    out: list[str] = []
+    quote = ""
+    for char in line:
+        if quote:
+            if char == quote:
+                quote = ""
+        elif char in ("'", '"'):
+            quote = char
+        elif char == "#":
+            break
+        out.append(char)
+    return "".join(out).rstrip()
+
+
+def parse_pnpm_workspace_packages(text: str) -> list[str]:
+    """Package globs from a pnpm-workspace.yaml. Other keys are ignored."""
+    packages: list[str] = []
+    in_list = False
+    for raw in text.splitlines():
+        line = _strip_yaml_comment(raw)
+        if not line.strip():
+            continue
+        stripped = line.strip()
+        indented = line[:1] in (" ", "\t") or stripped.startswith("- ")
+        if not indented:
+            in_list = False
+            if stripped == "packages:" or stripped.startswith("packages:"):
+                rest = stripped[len("packages:"):].strip()
+                if rest.startswith("[") and rest.endswith("]"):
+                    for part in rest[1:-1].split(","):
+                        value = part.strip().strip("'\"")
+                        if value:
+                            packages.append(value)
+                elif rest:
+                    packages.append(rest.strip("'\""))
+                else:
+                    in_list = True
+            continue
+        if in_list and stripped.startswith("- "):
+            value = stripped[2:].strip().strip("'\"")
+            if value:
+                packages.append(value)
+    if not packages:
+        raise ScopeError("pnpm-workspace.yaml has no packages")
+    return packages
+
+
+def _glob_regex(pattern: str) -> re.Pattern[str]:
+    body = pattern.strip()
+    if body.startswith("./"):
+        body = body[2:]
+    body = body.rstrip("/")
+    if not body:
+        raise ScopeError("empty pnpm workspace pattern")
+    out: list[str] = []
+    index = 0
+    while index < len(body):
+        if body.startswith("**/", index):
+            out.append("(?:.*/)?")
+            index += 3
+        elif body.startswith("**", index):
+            out.append(".*")
+            index += 2
+        elif body[index] == "*":
+            out.append("[^/]*")
+            index += 1
+        elif body[index] == "?":
+            out.append("[^/]")
+            index += 1
+        else:
+            out.append(re.escape(body[index]))
+            index += 1
+    return re.compile("^" + "".join(out) + "$")
+
+
+def match_workspace_dirs(patterns: list[str], directories: list[str]) -> list[str]:
+    """Last matching pnpm-workspace pattern wins, including `!` exclusions."""
+    compiled = []
+    for pattern in patterns:
+        negate = pattern.startswith("!")
+        compiled.append((negate, _glob_regex(pattern[1:] if negate else pattern)))
+    chosen = []
+    for directory in sorted(set(directories)):
+        matched = False
+        for negate, regex in compiled:
+            if regex.match(directory):
+                matched = not negate
+        if matched:
+            chosen.append(directory)
+    return chosen
+
+
+def _read_json(read_text, path: str) -> dict:
+    text = read_text(path)
+    if text is None:
+        raise ScopeError(f"{path} is missing")
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ScopeError(f"{path} is not JSON") from exc
+    if not isinstance(value, dict):
+        raise ScopeError(f"{path} is not an object")
+    return value
+
+
+def _dep_items(package: dict, path: str) -> list[tuple[str, str]]:
+    items: list[tuple[str, str]] = []
+    for field in DEP_FIELDS:
+        value = package.get(field)
+        if value is None:
+            continue
+        if not isinstance(value, dict):
+            raise ScopeError(f"{path} {field} is not an object")
+        for name, spec in value.items():
+            if not isinstance(name, str) or not isinstance(spec, str):
+                raise ScopeError(f"{path} {field} has a non-string entry")
+            items.append((name, spec))
+    return items
+
+
+def _resolve_rel(from_dir: str, rel: str) -> str:
+    base = [] if from_dir in ("", ".") else from_dir.split("/")
+    for part in rel.split("/"):
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if not base:
+                raise ScopeError(f"workspace path escapes the repository: {rel}")
+            base.pop()
+            continue
+        base.append(part)
+    if not base:
+        raise ScopeError("workspace dependency resolves to the repository root")
+    return "/".join(base)
+
+
+def _workspace_target(spec: str, from_dir: str, name: str, by_name: dict[str, str]) -> str | None:
+    if spec.startswith("workspace:"):
+        rest = spec[len("workspace:"):]
+        if rest.startswith("/") or rest.startswith("..") or rest.startswith("./") or rest.startswith("."):
+            if rest.startswith("/"):
+                raise ScopeError(f"workspace dependency {name} has an absolute path")
+            return _resolve_rel(from_dir, rest)
+        if name not in by_name:
+            raise ScopeError(f"workspace dependency {name} ({spec}) is not in the workspace")
+        return by_name[name]
+    if spec.startswith("file:") or spec.startswith("link:"):
+        rest = spec.split(":", 1)[1]
+        if rest.startswith("/"):
+            raise ScopeError(f"{spec} is outside the build context")
+        if rest.startswith("."):
+            return _resolve_rel(from_dir, rest)
+    return None
+
+
+def _package_dirs(paths: list[str]) -> list[str]:
+    found = []
+    for path in paths:
+        if not path.endswith("/package.json") or path == "package.json":
+            continue
+        parts = path.split("/")
+        if "node_modules" in parts or ".git" in parts:
+            continue
+        found.append(path[: -len("/package.json")])
+    return found
+
+
+def _members(read_text, paths: list[str]) -> dict[str, str]:
+    text = read_text("pnpm-workspace.yaml")
+    if text is None:
+        raise ScopeError("pnpm-workspace.yaml is missing")
+    selected = match_workspace_dirs(parse_pnpm_workspace_packages(text), _package_dirs(paths))
+    by_name: dict[str, str] = {}
+    for directory in selected:
+        package = _read_json(read_text, f"{directory}/package.json")
+        name = package.get("name")
+        if not isinstance(name, str) or not name:
+            raise ScopeError(f"{directory}/package.json has no name")
+        if name in by_name:
+            raise ScopeError(f"duplicate workspace package name {name}")
+        by_name[name] = directory
+    return by_name
+
+
+def _safe_copy_path(path: str) -> str:
+    cleaned = _rel(path)
+    if not cleaned or not re.fullmatch(r"[A-Za-z0-9._@+/-]+", cleaned):
+        raise ScopeError(f"unsafe workspace path {path}")
+    return cleaned
+
+
+def workspace_plan(read_text, paths: list[str], artifact_paths: list[str], service: str) -> dict:
+    """Root manifests plus the workspace packages the artifact builds need.
+
+    `pnpm install --frozen-lockfile` runs at the repository root. Only the
+    artifact packages and their workspace-protocol (and relative file:/link:)
+    dependency closure are copied; other workspace members stay out.
+    """
+    root = _read_json(read_text, "package.json")
+    pin = root.get("packageManager")
+    if not isinstance(pin, str) or not pin.startswith("pnpm@"):
+        raise ScopeError(f"{service} root package.json packageManager must be a pnpm@ pin")
+    root_files = []
+    for name in ROOT_MANIFESTS:
+        if read_text(name) is None:
+            raise ScopeError(f"{service} workspace is missing {name}")
+        root_files.append(name)
+    if read_text(".npmrc") is not None:
+        root_files.append(".npmrc")
+    patches: list[str] = []
+    pnpm_meta = root.get("pnpm")
+    if pnpm_meta is not None:
+        if not isinstance(pnpm_meta, dict):
+            raise ScopeError(f"{service} root package.json pnpm field is not an object")
+        patched = pnpm_meta.get("patchedDependencies") or {}
+        if not isinstance(patched, dict):
+            raise ScopeError(f"{service} pnpm.patchedDependencies is not an object")
+        for key in sorted(patched):
+            rel = patched[key]
+            if not isinstance(rel, str):
+                raise ScopeError(f"{service} patch for {key} is not a path")
+            safe = _safe_copy_path(rel)
+            if read_text(safe) is None:
+                raise ScopeError(f"{service} patched dependency file is missing: {safe}")
+            patches.append(safe)
+    by_name = _members(read_text, paths)
+    member_dirs = set(by_name.values())
+    for directory in artifact_paths:
+        if directory not in member_dirs:
+            raise ScopeError(f"{directory} is not a pnpm workspace package")
+    names: list[str] = []
+    for directory in artifact_paths:
+        package = _read_json(read_text, f"{directory}/package.json")
+        name = package.get("name")
+        if not isinstance(name, str) or PACKAGE_NAME.fullmatch(name) is None:
+            raise ScopeError(f"{directory} package name is unsafe")
+        names.append(name)
+    copy_dirs: list[str] = []
+    walked: set[str] = set()
+
+    def covered(directory: str) -> bool:
+        return any(directory == root_dir or directory.startswith(root_dir + "/") for root_dir in copy_dirs)
+
+    def visit(directory: str) -> None:
+        if directory in walked:
+            return
+        if directory in ("", "."):
+            raise ScopeError(f"{service} workspace dependency resolves to the repository root")
+        walked.add(directory)
+        if not covered(directory):
+            copy_dirs.append(_safe_copy_path(directory))
+        package_path = f"{directory}/package.json"
+        if read_text(package_path) is None:
+            raise ScopeError(f"{service} workspace dependency has no {package_path}")
+        package = _read_json(read_text, package_path)
+        for name, spec in _dep_items(package, package_path):
+            dest = _workspace_target(spec, directory, name, by_name)
+            if dest:
+                visit(dest)
+
+    for directory in artifact_paths:
+        visit(directory)
+    for name, spec in _dep_items(root, "package.json"):
+        dest = _workspace_target(spec, ".", name, by_name)
+        if dest:
+            visit(dest)
+    return {
+        "root_files": root_files,
+        "patch_files": patches,
+        "package_dirs": sorted(copy_dirs),
+        "package_names": names,
+    }
+
+
+def workspace_copy_sources(plan: dict) -> list[str]:
+    return [*plan["root_files"], *plan["patch_files"], *plan["package_dirs"]]
+
+
+def _directory_reader(source: Path):
+    def read_text(path: str) -> str | None:
+        file = source / path
+        if not file.is_file():
+            return None
+        try:
+            return file.read_text(encoding="utf-8")
+        except UnicodeError as exc:
+            raise ScopeError(f"{path} is not utf-8") from exc
+
+    def paths() -> list[str]:
+        found = []
+        for file in source.rglob("*"):
+            if not file.is_file():
+                continue
+            rel = file.relative_to(source).as_posix()
+            parts = rel.split("/")
+            if "node_modules" in parts or ".git" in parts:
+                continue
+            found.append(rel)
+        return found
+
+    return read_text, paths
+
+
+def allowed_copy_sources(entry: dict, read_text, paths: list[str]) -> list[str] | None:
+    """COPY sources a ui-* Dockerfile may use, or None for every other service.
+
+    A pnpm-workspace unit with no pnpm-workspace.yaml in the tree stays on
+    the unit path so an older per-package layout remains measurable.
+    """
+    service = entry.get("service")
+    if not isinstance(service, str) or not service.startswith("ui-"):
+        return None
+    target = _target(service)
+    unit = unit_scope(entry)
+    if unit is None:
+        raise ScopeError(f"{service} has no unit scope")
+    if _layout(target) == "package":
+        return [unit]
+    if read_text("pnpm-workspace.yaml") is None:
+        return [unit]
+    plan = workspace_plan(read_text, paths, _artifact_paths(target), service)
+    return workspace_copy_sources(plan)
+
+
+def _assert_package_is_self_contained(source: Path, unit: str, service: str) -> None:
+    """Refuse a unit-only Dockerfile when the checkout is actually a workspace."""
+    read_text, paths = _directory_reader(source)
+    yaml = read_text("pnpm-workspace.yaml")
+    if yaml is not None:
+        members = match_workspace_dirs(parse_pnpm_workspace_packages(yaml), _package_dirs(paths()))
+        if unit in members:
+            raise ScopeError(
+                f"{service} is a member of the repository pnpm workspace; "
+                "unit-only COPY cannot see the workspace root"
+            )
+    package_path = f"{unit}/package.json"
+    if read_text(package_path) is None:
+        raise ScopeError(f"{service} unit package.json is missing")
+    package = _read_json(read_text, package_path)
+    for name, spec in _dep_items(package, package_path):
+        if spec.startswith("workspace:"):
+            raise ScopeError(f"{service} {package_path} depends on {name} via {spec}")
+        if spec.startswith("file:") or spec.startswith("link:"):
+            rest = spec.split(":", 1)[1]
+            escaped = rest.startswith("/")
+            if rest.startswith("."):
+                dest = _resolve_rel(unit, rest)
+                escaped = not (dest == unit or dest.startswith(unit + "/"))
+            if escaped:
+                raise ScopeError(f"{service} {package_path} depends on {name} via {spec}")
+
+
 def decide_unit(state: str) -> bool:
     """Whether poll may dispatch this unit with promote=true.
 
@@ -139,19 +547,24 @@ fs.writeFileSync('/out/ui-manifest.json', JSON.stringify({
 """
 
 
-def render_dockerfile(service: str) -> str:
-    """Dockerfile text that belongs in the source repo at services/<service>/Dockerfile."""
-    rows = [row for row in ui_targets() if row.get("service") == service]
-    images = [row for row in ui_services() if row.get("service") == service]
-    if len(rows) != 1 or len(images) != 1:
-        raise ScopeError(f"{service} is not a registered static UI unit")
-    target, image = rows[0], images[0]
-    if image.get("dockerfile") != f"services/{service}/Dockerfile":
-        raise ScopeError(f"{service} dockerfile path drifted")
-    if image.get("context") != ".":
-        raise ScopeError(f"{service} context must stay the source repository root")
-    unit = unit_scope(image)
-    manager = target.get("package_manager")
+def _scratch_tail(script: str, run: str) -> str:
+    return (
+        f"FROM {NODE_IMAGE} AS build\n"
+        "ARG COMMIT\n"
+        "ENV COMMIT=${COMMIT}\n"
+        "WORKDIR /src\n"
+        f"{run}"
+        " && node <<'MANIFEST'\n"
+        f"{script}"
+        "MANIFEST\n"
+        "\n"
+        "FROM scratch\n"
+        "COPY --from=build /src/unit/dist /dist\n"
+        "COPY --from=build /out/ui-manifest.json /ui-manifest.json\n"
+    )
+
+
+def _render_package_dockerfile(service: str, unit: str, manager: object) -> str:
     if manager == "npm":
         install = "npm ci --ignore-scripts \\\n && npm run build \\\n"
     elif manager == "pnpm":
@@ -165,23 +578,76 @@ def render_dockerfile(service: str) -> str:
         )
     else:
         raise ScopeError(f"{service} package_manager is not npm or pnpm")
-    script = _manifest_script()
-    return (
-        f"FROM {NODE_IMAGE} AS build\n"
-        "ARG COMMIT\n"
-        "ENV COMMIT=${COMMIT}\n"
-        "WORKDIR /src\n"
-        f"COPY {unit}/ /src/unit/\n"
-        "WORKDIR /src/unit\n"
-        f"RUN {install}"
-        " && node <<'MANIFEST'\n"
-        f"{script}"
-        "MANIFEST\n"
-        "\n"
-        "FROM scratch\n"
-        "COPY --from=build /src/unit/dist /dist\n"
-        "COPY --from=build /out/ui-manifest.json /ui-manifest.json\n"
-    )
+    body = f"COPY {unit}/ /src/unit/\nWORKDIR /src/unit\nRUN {install}"
+    return _scratch_tail(_manifest_script(), body)
+
+
+def _render_workspace_dockerfile(plan: dict, unit: str) -> str:
+    copies = [f"COPY {' '.join(plan['root_files'])} ./"]
+    copies.extend(f"COPY {patch} {patch}" for patch in plan["patch_files"])
+    copies.extend(f"COPY {directory}/ {directory}/" for directory in plan["package_dirs"])
+    filters = " ".join(f"--filter {name}" for name in plan["package_names"])
+    artifacts = plan["package_dirs_to_build"]
+    stage = ["mkdir -p " + " ".join(f"/src/unit/dist/{path}" for path in artifacts)]
+    if len(artifacts) == 1:
+        stage = [
+            "mkdir -p /src/unit/dist",
+            f"cp -a {artifacts[0]}/dist/. /src/unit/dist/",
+        ]
+    else:
+        stage.extend(f"cp -a {path}/dist/. /src/unit/dist/{path}/" for path in artifacts)
+    commands = [
+        "corepack enable",
+        'PM=$(node -p "require(\'./package.json\').packageManager || \'\'")',
+        '[ -n "$PM" ]',
+        'corepack prepare "$PM" --activate',
+        "pnpm install --frozen-lockfile --ignore-scripts",
+        f"pnpm {filters} run build",
+        *stage,
+        f"cp {unit}/ui-requires.json /src/unit/ui-requires.json",
+        "cd /src/unit",
+    ]
+    run = "".join(line + "\n" for line in copies) + "RUN " + " \\\n && ".join(commands) + " \\\n"
+    return _scratch_tail(_manifest_script(), run)
+
+
+def render_dockerfile(service: str, source: Path | None = None) -> str:
+    """Dockerfile text that belongs in the source repo at services/<service>/Dockerfile.
+
+    A pnpm-workspace unit reads the checkout at ``source`` and copies the
+    root manifests plus the workspace packages required by its artifact
+    paths. Package-layout units copy only the unit directory. Pass
+    ``source`` for those too to refuse a checkout that is actually a
+    workspace.
+    """
+    rows = [row for row in ui_targets() if row.get("service") == service]
+    images = [row for row in ui_services() if row.get("service") == service]
+    if len(rows) != 1 or len(images) != 1:
+        raise ScopeError(f"{service} is not a registered static UI unit")
+    target, image = rows[0], images[0]
+    if image.get("dockerfile") != f"services/{service}/Dockerfile":
+        raise ScopeError(f"{service} dockerfile path drifted")
+    if image.get("context") != ".":
+        raise ScopeError(f"{service} context must stay the source repository root")
+    unit = unit_scope(image)
+    if unit is None:
+        raise ScopeError(f"{service} has no unit scope")
+    layout = _layout(target)
+    artifacts = _artifact_paths(target)
+    if layout == "package":
+        if artifacts != [unit]:
+            raise ScopeError(f"{service} package layout builds the unit path only")
+        if source is not None:
+            _assert_package_is_self_contained(source, unit, service)
+        return _render_package_dockerfile(service, unit, target.get("package_manager"))
+    if source is None:
+        raise ScopeError(f"{service} pnpm workspace render needs the source checkout (--source)")
+    read_text, list_paths = _directory_reader(source)
+    if read_text("pnpm-workspace.yaml") is None:
+        raise ScopeError(f"{service} source has no pnpm-workspace.yaml")
+    plan = workspace_plan(read_text, list_paths(), artifacts, service)
+    plan["package_dirs_to_build"] = artifacts
+    return _render_workspace_dockerfile(plan, unit)
 
 
 def _npm_commands() -> list[list[str]]:
@@ -341,6 +807,7 @@ def main(argv: list[str] | None = None) -> int:
     validate.add_argument("--source", default=".")
     docker = sub.add_parser("dockerfile", help="print the source-repo Dockerfile")
     docker.add_argument("service")
+    docker.add_argument("--source", default="", help="source checkout; required for a pnpm workspace unit")
     args = parser.parse_args(argv)
     try:
         if args.cmd == "poll":
@@ -348,7 +815,8 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.write("\n")
             return 0
         if args.cmd == "dockerfile":
-            sys.stdout.write(render_dockerfile(args.service))
+            source = Path(args.source).resolve() if args.source else None
+            sys.stdout.write(render_dockerfile(args.service, source))
             return 0
         if not args.validation:
             print("::error::UI validation name is required", file=sys.stderr)

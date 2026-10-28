@@ -478,9 +478,20 @@ def _ui_units():
     return _UI_UNITS
 
 
-def _ui_scope(entry: dict) -> str | None:
+def _ui_allowed(entry: dict, tree: dict, source) -> list[str] | None:
+    """COPY sources this ui-* image may fingerprint, or None for other images."""
+
+    def read_text(path: str) -> str | None:
+        row = tree.get(path)
+        if not row or row[1] != "blob":
+            return None
+        try:
+            return source.blob(row[2]).decode("utf-8")
+        except UnicodeError as exc:
+            raise Unknown(f"{path} is not utf-8") from exc
+
     try:
-        return _ui_units().unit_scope(entry)
+        return _ui_units().allowed_copy_sources(entry, read_text, list(tree))
     except _ui_units().ScopeError as exc:
         raise Unknown(str(exc)) from exc
 
@@ -517,22 +528,22 @@ def compute(source, rev: str, entry: dict) -> dict:
             for path in tree
             if selected(path, facts.sources) and not rules.ignored(path)
         )
-        scope = _ui_scope(entry)
-        if scope is not None:
-            def in_unit(path: str) -> bool:
-                return _ui_units().path_in_unit(path, scope, dockerfile)
+        allowed = _ui_allowed(entry, tree, source)
+        if allowed is not None:
+            def in_inputs(path: str) -> bool:
+                return _ui_units().path_in_inputs(path, allowed, dockerfile)
             escaped = sorted(
                 src for src in set(facts.sources)
-                if not (src == scope or src.startswith(scope + "/"))
+                if not any(_ui_units().source_covered(src, item) for item in allowed)
             )
             if escaped:
                 raise Unknown(
-                    f"{entry['service']} build inputs escape {scope}: {', '.join(escaped[:6])}"
+                    f"{entry['service']} build inputs escape the unit closure: {', '.join(escaped[:6])}"
                 )
-            files = [row for row in files if in_unit(row[0])]
-            attributes = [path for path in attributes if in_unit(path)]
-            dead = [path for path in dead if in_unit(path)]
-            if ignore_path and not in_unit(ignore_path):
+            files = [row for row in files if in_inputs(row[0])]
+            attributes = [path for path in attributes if in_inputs(path)]
+            dead = [path for path in dead if in_inputs(path)]
+            if ignore_path and not in_inputs(ignore_path):
                 ignore_path = ""
         if not files:
             raise Unknown("no build-context file selected (scan floor)")
