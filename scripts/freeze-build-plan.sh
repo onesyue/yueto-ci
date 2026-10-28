@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Resolve each remaining mutable ref once for both build and validation jobs.
 set -Eeuo pipefail
+# shellcheck source=scripts/ci-retry.sh
+source "$(dirname "${BASH_SOURCE[0]}")/ci-retry.sh"
 plan=$(cat)
 selections=$(jq -ce '[.matrix[], .validation_matrix[]] | unique_by([.repo, .ref])' <<<"$plan")
 while IFS= read -r selection; do
@@ -10,7 +12,7 @@ while IFS= read -r selection; do
     continue
   fi
   encoded_ref=$(jq -rn --arg ref "$ref" '$ref | @uri')
-  sha=$(curl --fail --silent --show-error --retry 3 --max-time 60 \
+  sha=$(ci_download 4 --fail --silent --show-error --max-time 60 \
     -H "Authorization: Bearer ${GH_API_TOKEN:?}" \
     -H "Accept: application/vnd.github+json" \
     -H "X-GitHub-Api-Version: 2022-11-28" \

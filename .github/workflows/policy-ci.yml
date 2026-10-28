@@ -41,8 +41,8 @@ jobs:
           set -euo pipefail
           archive="$RUNNER_TEMP/actionlint.tar.gz"
           destination="$RUNNER_TEMP/actionlint-bin"
-          curl --fail --silent --show-error --location \
-            --retry 4 --retry-all-errors --retry-delay 2 \
+          source scripts/ci-retry.sh
+          ci_download 5 --fail --silent --show-error --location \
             --proto '=https' --tlsv1.2 \
             "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
             --output "$archive"

@@ -2,6 +2,8 @@
 # CI client only: no daemon restart, builder creation or production package change.
 # Published 2026-09-11T15:35:46Z; GitHub release asset digest and checksums.txt agree.
 set -euo pipefail
+# shellcheck source=scripts/ci-retry.sh
+source "$(dirname "${BASH_SOURCE[0]}")/ci-retry.sh"
 umask 077
 readonly BUILDX_VERSION='v0.37.1'
 readonly BUILDX_SHA256='9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b'
@@ -47,9 +49,9 @@ trap cleanup EXIT
 if [[ ! -f "$plugin" || ! -x "$plugin" ]] ||
    ! printf '%s  %s\n' "$BUILDX_SHA256" "$plugin" | sha256sum --check --status; then
   download_dir=$(mktemp -d "$RUNNER_TEMP/yueto-buildx.XXXXXXXX")
-  curl --fail --location --silent --show-error \
+  ci_download 4 --fail --location --silent --show-error \
     --proto '=https' --proto-redir '=https' --tlsv1.2 \
-    --connect-timeout 10 --max-time 120 --retry 3 --retry-all-errors \
+    --connect-timeout 10 --max-time 120 \
     "https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-amd64" \
     --output "$download_dir/docker-buildx"
   printf '%s  %s\n' "$BUILDX_SHA256" "$download_dir/docker-buildx" |

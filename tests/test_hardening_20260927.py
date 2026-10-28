@@ -392,6 +392,7 @@ class VerifiedTrivyInstallerTest(unittest.TestCase):
         path.chmod(0o755)
 
     def run_installer(self) -> subprocess.CompletedProcess:
+        (self.base / "ci-retry.sh").write_text((ROOT / "scripts/ci-retry.sh").read_text())
         candidate = self.base / "installer.sh"
         candidate.write_text(TRIVY_INSTALLER.read_text().replace(TRIVY_SHA256, self.digest))
         return subprocess.run(

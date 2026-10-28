@@ -2059,7 +2059,7 @@ jobs:
           done
 
       # OIDC 与 Fulcio 都是外部控制面。每次 sign/attest 尝试获取新 token，并对
-      # 短暂限流、连接重置和 registry 可见性延迟做有界重试；门禁本身不降级。
+      # 明确传输错误和 registry 可见性延迟做有界重试；4xx 与验证拒绝立即失败。
       - name: Sign & attest image (Sigstore keyless)
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
@@ -2067,41 +2067,7 @@ jobs:
           EXPECTED_ARCHITECTURES: ${{ contains(matrix.platforms, 'arm64') && 'amd64,arm64' || 'amd64' }}
         run: |
           set -euo pipefail
-          fetch_token() {
-            curl -sSf \
-              -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sigstore" \
-              | jq -er '.value'
-          }
-          keyless_cosign() {
-            local command="$1"
-            local token=""
-            local attempt
-            shift
-            for attempt in 1 2 3 4 5 6; do
-              token=""
-              if token=$(fetch_token 2>/dev/null) && [ -n "$token" ] &&
-                cosign "$command" --yes --identity-token "$token" "$@"; then
-                return 0
-              fi
-              echo "cosign ${command} attempt ${attempt} failed; retrying with fresh OIDC token..." >&2
-              sleep $(( attempt * 3 + (RANDOM % 7) ))
-            done
-            echo "FATAL: cosign ${command} failed after bounded retries" >&2
-            return 1
-          }
-          verify_cosign() {
-            local attempt
-            for attempt in 1 2 3 4 5 6; do
-              if cosign "$@"; then
-                return 0
-              fi
-              echo "cosign verification attempt ${attempt} failed; retrying..." >&2
-              sleep $(( attempt * 2 + (RANDOM % 5) ))
-            done
-            echo "FATAL: cosign verification failed after bounded retries" >&2
-            return 1
-          }
+          source .ci-policy/scripts/ci-retry.sh
           keyless_cosign sign "${IMAGE}@${DIGEST}"
           for sbom in sbom-linux-*.cdx.json; do
             keyless_cosign attest \
@@ -2117,18 +2083,10 @@ jobs:
             --certificate-identity "$IDENTITY" \
             --certificate-oidc-issuer "$ISSUER" \
             "${IMAGE}@${DIGEST}" >/dev/null
-          ATTESTATIONS=""
-          for i in 1 2 3 4 5 6; do
-            if ATTESTATIONS=$(cosign verify-attestation \
-              --certificate-identity "$IDENTITY" \
-              --certificate-oidc-issuer "$ISSUER" \
-              --type cyclonedx "${IMAGE}@${DIGEST}"); then
-              break
-            fi
-            ATTESTATIONS=""
-            echo "cosign attestation verification attempt ${i} failed; retrying..." >&2
-            sleep $(( i * 2 + (RANDOM % 5) ))
-          done
+          ATTESTATIONS=$(verify_cosign verify-attestation \
+            --certificate-identity "$IDENTITY" \
+            --certificate-oidc-issuer "$ISSUER" \
+            --type cyclonedx "${IMAGE}@${DIGEST}")
           [ -n "$ATTESTATIONS" ] || {
             echo "FATAL: cosign attestation verification failed after bounded retries" >&2
             exit 1
@@ -2138,18 +2096,10 @@ jobs:
             --digest "$DIGEST" \
             --expected-architectures "$EXPECTED_ARCHITECTURES" \
             <<<"$ATTESTATIONS"
-          SPDX_ATTESTATIONS=""
-          for i in 1 2 3 4 5 6; do
-            if SPDX_ATTESTATIONS=$(cosign verify-attestation \
-              --certificate-identity "$IDENTITY" \
-              --certificate-oidc-issuer "$ISSUER" \
-              --type spdxjson "${IMAGE}@${DIGEST}"); then
-              break
-            fi
-            SPDX_ATTESTATIONS=""
-            echo "cosign SPDX attestation verification attempt ${i} failed; retrying..." >&2
-            sleep $(( i * 2 + (RANDOM % 5) ))
-          done
+          SPDX_ATTESTATIONS=$(verify_cosign verify-attestation \
+            --certificate-identity "$IDENTITY" \
+            --certificate-oidc-issuer "$ISSUER" \
+            --type spdxjson "${IMAGE}@${DIGEST}")
           [ -n "$SPDX_ATTESTATIONS" ] || {
             echo "FATAL: cosign SPDX attestation verification failed after bounded retries" >&2
             exit 1
