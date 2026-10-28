@@ -1,0 +1,400 @@
+{
+  "schema_version": 1,
+  "fixture_files": {
+    "index.html": "<html>UI vector</html>\n",
+    "ui-requires.json": "{\"schema\":1,\"app\":\"web\",\"api\":\"v1\",\"schemaFloor\":1,\"requires_backend\":[\"v1\"]}\n"
+  },
+  "vectors": [
+    {
+      "id": "ci-list",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "id": "explicit-v1",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ],
+        "schema": 1
+      },
+      "expected": true
+    },
+    {
+      "id": "future-schema",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ],
+        "schema": 2
+      },
+      "expected": false,
+      "board_expected": true,
+      "board_difference": "Board list decoder ignores top-level metadata."
+    },
+    {
+      "id": "boolean-schema",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ],
+        "schema": true
+      },
+      "expected": false,
+      "board_expected": true,
+      "board_difference": "Board list decoder ignores top-level metadata."
+    },
+    {
+      "id": "revision-type",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": 7,
+        "requires_backend": [
+          "v1"
+        ]
+      },
+      "expected": false,
+      "board_expected": true,
+      "board_difference": "Board list decoder ignores top-level metadata."
+    },
+    {
+      "id": "backend-type",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": "v1"
+      },
+      "expected": false,
+      "board_expected": true,
+      "board_difference": "Board list decoder ignores top-level metadata."
+    },
+    {
+      "id": "backend-element-type",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          1
+        ]
+      },
+      "expected": false,
+      "board_expected": true,
+      "board_difference": "Board list decoder ignores top-level metadata."
+    },
+    {
+      "id": "unknown-metadata",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ],
+        "future": true
+      },
+      "expected": true
+    },
+    {
+      "id": "wrong-digest",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ],
+        "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected": false,
+      "board_expected": true,
+      "board_difference": "Board list decoder ignores top-level metadata."
+    },
+    {
+      "id": "legacy-map",
+      "manifest": {
+        "files": {
+          "index.html": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9",
+          "ui-requires.json": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+        }
+      },
+      "expected": true
+    },
+    {
+      "id": "map-with-metadata",
+      "manifest": {
+        "files": {
+          "index.html": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9",
+          "ui-requires.json": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+        },
+        "schema": 1
+      },
+      "expected": true,
+      "board_expected": false,
+      "board_difference": "Board map decoder disallows schema metadata."
+    },
+    {
+      "id": "canonical-digest",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ],
+        "digest": "27dc2971812f5f65dfc39aee0774241cf5c55ab1e39fc9538fa9dac4f9a63a37"
+      },
+      "expected": true
+    },
+    {
+      "id": "empty-files",
+      "manifest": {
+        "files": [],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "id": "duplicate-path",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          },
+          {
+            "path": "index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "id": "missing-index",
+      "manifest": {
+        "files": [
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "id": "uppercase-hash",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "C9659C1B4D4C47C36ECB99419E0460E9894EBA57428ACB827A4300054002BDE9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "id": "short-hash",
+      "manifest": {
+        "files": [
+          {
+            "path": "index.html",
+            "sha256": "a"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "id": "traversal",
+      "manifest": {
+        "files": [
+          {
+            "path": "../index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "id": "absolute-path",
+      "manifest": {
+        "files": [
+          {
+            "path": "/index.html",
+            "sha256": "c9659c1b4d4c47c36ecb99419e0460e9894eba57428acb827a4300054002bde9"
+          },
+          {
+            "path": "ui-requires.json",
+            "sha256": "b0eb965236d01c6cfd50699884cc0fd46c93e527ce23aa7e5b1b269150981433"
+          }
+        ],
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "id": "files-type",
+      "manifest": {
+        "files": 1,
+        "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "requires_backend": [
+          "v1"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "id": "missing-files",
+      "manifest": {},
+      "expected": false
+    },
+    {
+      "id": "non-object",
+      "manifest": [],
+      "expected": false
+    }
+  ]
+}
