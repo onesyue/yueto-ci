@@ -479,9 +479,22 @@ def _ui_units():
 
 
 def _ui_scope(entry: dict) -> str | None:
+    """Unit path for a ui-* service; None for every other service.
+
+    Non-UI services never load the catalog, so a vendored copy without
+    scripts/ui_static_units.py (yueops scripts/lib) keeps working. A ui-*
+    service whose catalog cannot be loaded is unknown, never widened.
+    """
+    service = entry.get("service")
+    if not isinstance(service, str) or not service.startswith("ui-"):
+        return None
     try:
-        return _ui_units().unit_scope(entry)
-    except _ui_units().ScopeError as exc:
+        units = _ui_units()
+    except (OSError, ImportError) as exc:
+        raise Unknown(f"{service} static-unit catalog unavailable: {exc}") from exc
+    try:
+        return units.unit_scope(entry)
+    except units.ScopeError as exc:
         raise Unknown(str(exc)) from exc
 
 
