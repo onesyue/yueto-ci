@@ -448,7 +448,6 @@ class PollDispatchTest(unittest.TestCase):
         ]), [
             f"workflow run build.yml -R onesyue/yueto-ci -f service=yue-node -f ref={sha} -f promote=false",
         ])
-        # An outside-only tree does not select the unit; a unit-path edit does.
         self.assertFalse(UI.decide_unit("unchanged"))
         self.assertTrue(UI.decide_unit("changed"))
 

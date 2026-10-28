@@ -241,7 +241,6 @@ class GoCachePolicyTest(unittest.TestCase):
         store = self.root / "cache-service"
         store.mkdir()
         key = output_input(compiler, "key", first)
-        # Cold/no-service starts successfully; Go really compiles this package.
         cold = run("build", "-x", "./...")
         self.assertIn("compile ", cold)
         shutil.copytree(env["GOCACHE"], store / key)
