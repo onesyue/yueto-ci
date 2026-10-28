@@ -48,5 +48,45 @@
     "context": ".",
     "dockerfile": "Dockerfile",
     "platforms": "linux/amd64,linux/arm64"
+  },
+  {
+    "service": "ui-console",
+    "group": "ui-console",
+    "repo": "onesyue/yueops",
+    "ref": "master",
+    "validation": "ui-console",
+    "context": ".",
+    "dockerfile": "services/ui-console/Dockerfile",
+    "platforms": "linux/amd64"
+  },
+  {
+    "service": "ui-miniapp",
+    "group": "ui-miniapp",
+    "repo": "onesyue/yueops",
+    "ref": "master",
+    "validation": "ui-miniapp",
+    "context": ".",
+    "dockerfile": "services/ui-miniapp/Dockerfile",
+    "platforms": "linux/amd64"
+  },
+  {
+    "service": "ui-site",
+    "group": "ui-site",
+    "repo": "onesyue/yueops",
+    "ref": "master",
+    "validation": "ui-site",
+    "context": ".",
+    "dockerfile": "services/ui-site/Dockerfile",
+    "platforms": "linux/amd64"
+  },
+  {
+    "service": "ui-board-web",
+    "group": "ui-board-web",
+    "repo": "onesyue/yueboard",
+    "ref": "master",
+    "validation": "ui-board-web",
+    "context": ".",
+    "dockerfile": "services/ui-board-web/Dockerfile",
+    "platforms": "linux/amd64"
   }
 ]

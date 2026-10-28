@@ -526,6 +526,18 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      # Static UI units validate in the source checkout and read their check
+      # list from this repository. They do not run the native-node contract.
+      - name: Checkout UI static unit policy
+        if: startsWith(matrix.validation, 'ui-')
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueto-ci
+          ref: ${{ github.sha }}
+          path: .ci-policy
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Download exact Ops admission plan
         if: matrix.validation == 'yueops' && matrix.ops_role != 'legacy'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
@@ -598,7 +610,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Node
-        if: matrix.validation == 'yueops' || matrix.validation == 'yueboard'
+        if: matrix.validation == 'yueops' || matrix.validation == 'yueboard' || startsWith(matrix.validation, 'ui-')
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -792,6 +804,7 @@ jobs:
             yueboard) tools+=(buf corepack docker gcc go make node psql) ;;
             yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql uv) ;;
             yuelink) ;;
+            ui-*) tools+=(corepack node npm) ;;
             *)
               echo "::error::unsupported validation kind: $VALIDATION_KIND"
               exit 1
@@ -1580,6 +1593,21 @@ jobs:
           path: ${{ runner.temp }}/ops-shard-evidence/
           if-no-files-found: error
           retention-days: 14
+
+      # Frontend fastlane for the scratch UI units. The full yueops and
+      # yueboard gauntlets above are unchanged. This step runs only lint,
+      # tsc, unit, a11y, and bundle budget, using the same package-manager
+      # commands as "Validate yueops frontend", "Validate Yue mini app",
+      # the site half of "Run yueops node unit tests (Mini App, console, site)",
+      # and "Validate yueboard frontends".
+      - name: Validate UI static unit
+        if: startsWith(matrix.validation, 'ui-')
+        env:
+          UI_VALIDATION: ${{ matrix.validation }}
+        run: |
+          set -euo pipefail
+          "$YUE_CI_PYTHON" .ci-policy/scripts/ui_static_units.py validate \
+            --validation "$UI_VALIDATION" --source "$GITHUB_WORKSPACE"
 
   validation-evidence:
     needs: [plan, validate]
