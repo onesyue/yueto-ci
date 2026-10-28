@@ -314,3 +314,18 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 Discovery rejects unreachable test cases and import failures. Policy CI also
 compiles Python, checks shell syntax, runs pinned actionlint and ShellCheck.
 See [policy-ci.yml](.github/workflows/policy-ci.yml) for exact commands and pins.
+
+### I33 A13 toolchain and PostgreSQL pin coverage
+
+The workspace guard `scripts/check-toolchain-pin-agreement.py` in `onesyue/yueto`
+compares YueLink's `core/go.mod` toolchain with its build workflows and benchmark
+image, in addition to the native services. It also checks the PostgreSQL Alpine
+18.6 pins in the clean-PG gate, e2e harness, workspace PG gate and i18n clients.
+Run that guard from an assembled workspace containing the companion PR revisions;
+a single central-CI checkout cannot establish cross-repository agreement.
+
+Central validation retains its reviewed `postgres:18@sha256:…` service image.
+It is digest-pinned and uses a different image variant from the Alpine helpers;
+changing its tag to Alpine while retaining that digest would mislabel the bytes.
+`python3 -m unittest discover -s tests -p 'test_postgres_image_pin.py'` rejects
+service-pin removal, mutable replacements and unreviewed digest changes.
