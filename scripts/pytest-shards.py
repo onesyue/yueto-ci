@@ -46,6 +46,8 @@ RELAY_PRESERVATION_MODULE_TRANSITION_SHA256 = "f5d43ba785159b00ab42f7034d29c77d7
 RELAY_METRICS_MODULE_TRANSITION_SHA256 = "777214bee79eb25858c97781aaa065b53770693252185f3ee61e19c3c61efa07"
 CASE_FILE_TRANSITION_SHA256 = "75190b489a8b271e693c52e78c183894f47e34e930183b9f433e538045afb9c7"
 SKIP_BLOB_SUCCESSOR_TRANSITION_SHA256 = "befa7b3d2cb2c5d3bbeb6e225f908087b1cd42c0bedbe290033a73b3fffe799d"
+RELEASE_SKIP_BLOB_SUCCESSOR_TRANSITION_SHA256 = "efa7c2e8c9944feeccbcf0bf1111b3b4b67f8b15c94e1b6d41879654136d274b"
+HANG_GUARD_INPUT_TRANSITION_SHA256 = "eb65c84d7ddab61a441c54d2f64a30e992f039b2c0c6ba709b570f5d3787fff0"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
     "tests/test_installed_checker_transport_20261014.py::"
@@ -669,6 +671,7 @@ ESTATE_ADDED_INPUT = "tests/native/subscribe_template_baseline_cas_pg.py"
 
 SITE_LOCK_INPUT = "site/pnpm-lock.yaml"
 BOT_PACKAGING_INPUT = "telegram-bot/yue/pyproject.toml"
+HANG_GUARD_INPUT = "tests/_subprocess.py"
 
 
 AUDIT_LOCK_INPUT = "uv.lock"
@@ -683,6 +686,97 @@ RUNTIME_DEPENDENCY_INPUTS = {
 }
 
 
+def reviewed_release_skip_blob_successor_transition(baseline):
+    """Peel reviewed release-time blob successors of already-admitted skips, sealed outermost.
+
+    Same contract as the first skip blob successor seal, reviewed separately: only
+    cases whose admitted skip (after every inner seal) names the exact before blob
+    may move to the reviewed after blob; outcome and reason stay historical and no
+    case is added.
+    """
+    key = "reviewed_release_skip_blob_successor_transition"
+    if key not in baseline:
+        return baseline, None
+    original = dict(baseline)
+    record = original.pop(key)
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "updates",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid release skip blob successor transition")
+    require(sha(encoded(record)) == RELEASE_SKIP_BLOB_SUCCESSOR_TRANSITION_SHA256,
+            "unreviewed release skip blob successor transition identity")
+    prior = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(prior),
+            "release skip blob successor transition changed historical baseline")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                for k in ("source_before", "source_after"))
+            and record["source_before"] != record["source_after"],
+            "release skip blob successor transition source identity missing")
+    require(isinstance(record["independent_review_sha256"], str)
+            and re.fullmatch(r"[0-9a-f]{64}", record["independent_review_sha256"])
+            and record["independent_review_sha256"] != "0" * 64,
+            "release skip blob successor transition review missing")
+    updates = record["updates"]
+    require(isinstance(updates, dict) and updates,
+            "unreviewed release skip blob successor cases")
+    module_blob = {}
+    for nodeid, change in updates.items():
+        module = nodeid.split("::", 1)[0] if isinstance(nodeid, str) else None
+        require(isinstance(nodeid, str) and "::" in nodeid and safe_module(module)
+                and isinstance(change, dict) and set(change) == {"before_blob", "after_blob"}
+                and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                        for k in ("before_blob", "after_blob"))
+                and change["before_blob"] != change["after_blob"],
+                "unreviewed release skip blob successor: " + str(nodeid))
+        pair = (change["before_blob"], change["after_blob"])
+        require(module_blob.setdefault(module, pair) == pair,
+                "release skip blob successor module diverges: " + module)
+    return original, record
+
+
+def reviewed_hang_guard_input_transition(baseline):
+    """Peel the reviewed shared hang-guard helper addition, sealed outermost.
+
+    Exactly one new shared test input (tests/_subprocess.py) may appear, with one
+    exact reviewed blob and mode 100644. Peeling restores the historical baseline
+    byte-for-byte; nothing historical is relabeled and no other path is admitted.
+    """
+    key = "reviewed_hang_guard_input_transition"
+    baseline, _ = reviewed_release_skip_blob_successor_transition(baseline)
+    if key not in baseline:
+        return baseline, None
+    original = dict(baseline)
+    record = original.pop(key)
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "source_freeze_sha256", "changes",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid hang guard input transition")
+    require(sha(encoded(record)) == HANG_GUARD_INPUT_TRANSITION_SHA256,
+            "unreviewed hang guard input transition identity")
+    prior = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(prior),
+            "hang guard input transition changed historical baseline")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                for k in ("source_before", "source_after"))
+            and record["source_before"] != record["source_after"],
+            "hang guard input transition source identity missing")
+    require(all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                and record[k] != "0" * 64
+                for k in ("independent_review_sha256", "source_freeze_sha256")),
+            "hang guard input transition review missing")
+    changes = record["changes"]
+    require(isinstance(changes, dict) and set(changes) == {HANG_GUARD_INPUT},
+            "unreviewed hang guard input paths")
+    change = changes[HANG_GUARD_INPUT]
+    require(isinstance(change, dict) and set(change) == {"before_blob", "after_blob", "mode"}
+            and change["before_blob"] is None and change["mode"] == "100644"
+            and isinstance(change["after_blob"], str) and SHA.fullmatch(change["after_blob"]),
+            "invalid hang guard input blob or mode")
+    return original, record
+
+
 def reviewed_skip_blob_successor_transition(baseline):
     """Peel reviewed test-module blob successors of already-admitted skips, sealed outermost.
 
@@ -691,6 +785,7 @@ def reviewed_skip_blob_successor_transition(baseline):
     historical outcome and reason stay on the admitted record. No case is added.
     """
     key = "reviewed_skip_blob_successor_transition"
+    baseline, _ = reviewed_hang_guard_input_transition(baseline)
     if key not in baseline:
         return baseline, None
     original = dict(baseline)
@@ -1085,6 +1180,7 @@ def estate_successor_proof(baseline, source, revision):
     predecessor inside the sealed admission; validators and the join re-admit
     against that sealed value and still compare every estate input blob.
     """
+    _, hang = reviewed_hang_guard_input_transition(baseline)
     _, runtime = reviewed_runtime_dependency_transition(baseline)
     _, lock = reviewed_audit_lock_transition(baseline)
     _, bot = reviewed_bot_packaging_transition(baseline)
@@ -1092,6 +1188,16 @@ def estate_successor_proof(baseline, source, revision):
     _, record = reviewed_estate_input_transition(baseline)
     if record is None or revision == record["source_after"]:
         return None
+    if hang is not None:
+        try:
+            blob = git(source, "rev-parse", f"{revision}:{HANG_GUARD_INPUT}").decode().strip()
+        except subprocess.CalledProcessError:
+            blob = None
+        if blob is not None:
+            try:
+                git(source, "merge-base", "--is-ancestor", hang["source_after"], revision)
+            except subprocess.CalledProcessError:
+                raise ValueError("hang guard successor source revision differs") from None
     after = record["source_after"]
     try:
         git(source, "merge-base", "--is-ancestor", after, revision)
@@ -1145,6 +1251,7 @@ def estate_successor_proof(baseline, source, revision):
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    _, hang = reviewed_hang_guard_input_transition(baseline)
     _, runtime = reviewed_runtime_dependency_transition(baseline)
     _, lock = reviewed_audit_lock_transition(baseline)
     _, bot = reviewed_bot_packaging_transition(baseline)
@@ -1154,6 +1261,20 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         return _admit_existing_shared_inputs(original, common, files)
     changes = record["changes"]
     require(isinstance(common, dict), "estate shared inputs must be a mapping")
+    if hang is not None and HANG_GUARD_INPUT in common:
+        # The only admissible new shared input: the exact reviewed helper blob, in a
+        # proven estate successor (planner proved ancestry from the helper's source).
+        change = hang["changes"][HANG_GUARD_INPUT]
+        require(common[HANG_GUARD_INPUT] == change["after_blob"]
+                and ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+                and source_revision != record["source_after"]
+                and estate_successor_of == record["source_after"],
+                "hang guard input requires the reviewed blob in a proven estate successor")
+        if files is not None:
+            require(files.get(HANG_GUARD_INPUT) == (change["mode"], change["after_blob"]),
+                    "hang guard input mode or tree changed")
+            files = {p: v for p, v in files.items() if p != HANG_GUARD_INPUT}
+        common = {p: v for p, v in common.items() if p != HANG_GUARD_INPUT}
     if site is not None and common.get(SITE_LOCK_INPUT) == site["changes"][SITE_LOCK_INPUT]["after_blob"]:
         # Only an estate successor (ancestry proven by the planner) may carry the
         # reviewed site lock; the exact predecessor blob is then re-admitted below.
@@ -2189,6 +2310,7 @@ def native_terminal(value, source, board, output):
 def admit_skips(value, result, native):
     sealed_baseline = skip_baseline()
     _, blob_record = reviewed_skip_blob_successor_transition(sealed_baseline)
+    _, release_blob_record = reviewed_release_skip_blob_successor_transition(sealed_baseline)
     _, case_successors = reviewed_case_file_transition(sealed_baseline)
     baseline, estate = reviewed_estate_input_transition(sealed_baseline)
     if estate is not None:
@@ -2208,6 +2330,9 @@ def admit_skips(value, result, native):
         admitted.update(mapping)
     blob_successors = skip_blob_successors(
         blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
+    admitted.update(blob_successors)
+    release_blob_successors = skip_blob_successors(
+        release_blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
     unknown = []
     observed_collection = {}
     reviewed = baseline.get("reviewed_hosted", {})
@@ -2230,7 +2355,8 @@ def admit_skips(value, result, native):
                 if observed not in (baseline["cases"].get(nodeid), successors.get(nodeid),
                                     relay_successors.get(nodeid), metrics_successors.get(nodeid),
                                     meter_successors.get(nodeid), preservation_successors.get(nodeid),
-                                    case_successors.get(nodeid), blob_successors.get(nodeid)):
+                                    case_successors.get(nodeid), blob_successors.get(nodeid),
+                                    release_blob_successors.get(nodeid)):
                     unknown.append(nodeid)
                     continue
                 disposition = "HISTORICAL_UNEXECUTED"

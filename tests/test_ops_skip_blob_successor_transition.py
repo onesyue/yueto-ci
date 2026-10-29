@@ -77,7 +77,8 @@ class SkipBlobSuccessorTransition(unittest.TestCase):
     def test_record_is_outermost_exact_and_pinned_to_the_review(self):
         canon = (json.dumps(self.sealed, indent=2, ensure_ascii=False) + "\n").encode()
         self.assertEqual(canon, self.raw)
-        self.assertEqual(list(self.sealed)[-1], KEY)
+        self.assertEqual(list(self.sealed)[-3:], [KEY, "reviewed_hang_guard_input_transition",
+                         "reviewed_release_skip_blob_successor_transition"])
         restored = (json.dumps(self.original, indent=2, ensure_ascii=False) + "\n").encode()
         self.assertEqual(self.record["prior_baseline_sha256"], SHARDS.sha(restored))
         self.assertEqual((self.record["source_before"], self.record["source_after"]),
@@ -131,6 +132,8 @@ class SkipBlobSuccessorTransition(unittest.TestCase):
                 SHARDS.admit_skips(self.value(self.after), changed, {})
         # Without the seal the reviewed successor blobs are refused exactly as in run 40552020790.
         stripped = copy.deepcopy(self.sealed)
+        stripped.pop("reviewed_release_skip_blob_successor_transition")
+        stripped.pop("reviewed_hang_guard_input_transition")
         stripped.pop(KEY)
         with (patch.object(SHARDS, "skip_baseline", return_value=stripped),
               self.assertRaisesRegex(ValueError, "new or changed case")):
@@ -141,6 +144,8 @@ class SkipBlobSuccessorTransition(unittest.TestCase):
         other = sorted(self.record["updates"])[-1]
         def damaged(mutate):
             baseline = copy.deepcopy(self.sealed)
+            baseline.pop("reviewed_release_skip_blob_successor_transition")
+            baseline.pop("reviewed_hang_guard_input_transition")  # outer seal over this one
             mutate(baseline[KEY])
             return baseline
         for mutate in (
@@ -179,6 +184,8 @@ class SkipBlobSuccessorTransition(unittest.TestCase):
 
     def test_swapped_nodeid_with_recomputed_review_is_refused_by_the_pin(self):
         baseline = copy.deepcopy(self.sealed)
+        baseline.pop("reviewed_release_skip_blob_successor_transition")
+        baseline.pop("reviewed_hang_guard_input_transition")  # outer seal over this one
         updates = baseline[KEY]["updates"]
         nodeid = sorted(n for n in updates if "panel_subscribe" in n)[0]
         swapped = nodeid.split("::")[0] + "::test_some_other_case"

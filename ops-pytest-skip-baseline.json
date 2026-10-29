@@ -6563,5 +6563,1245 @@
         "after_blob": "3f16a931133da90e3922da0aad1b1798af559448"
       }
     }
+  },
+  "reviewed_hang_guard_input_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "23cae1e94b7ed1d7f3d4fa91f11e514e8c91bdcc359041fa96e04f51cf3cb3b3",
+    "source_before": "bc583a440c466c039e8ba0c4b448012700d339a3",
+    "source_after": "03db123be8bc722cacaa47776c94776f6e8623be",
+    "independent_review_sha256": "ca0681704f642266fdaa246dde1a405563a1fbbc4e4016f045db15db45a38346",
+    "source_freeze_sha256": "141df51e561e21b4eaa968715e21031026977cfb4b60729397363cf5a1765c1c",
+    "changes": {
+      "tests/_subprocess.py": {
+        "before_blob": null,
+        "after_blob": "21c2cca9901c5cea683324a269d859bdd7b784d0",
+        "mode": "100644"
+      }
+    }
+  },
+  "reviewed_release_skip_blob_successor_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "53fdb15d3a18f4d6cd0e05b16adbb419168e997ab24e21f8618e5ab4d808e715",
+    "source_before": "8ffdedad24dcb23ca0c33a05ea0ea889cbdab0fe",
+    "source_after": "d9c302e126c039e90b5f34c82b796582b1e367e8",
+    "independent_review_sha256": "d1b0840c1effe4286668e9ffae44d43eeccb508c3b7174c081a5e8ea00b5a575",
+    "updates": {
+      "tests/test_agent_rollback_payload_20261013.py::test_real_linux_signed_payload_roots_and_native_consumer_rejections": {
+        "before_blob": "4e63ad7e168512c3317749dbbed031b6276376d9",
+        "after_blob": "7bbe1bae33d206b38634888ad2a4734e5a1754ef"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_hourly_limit_blocks_and_alerts": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_restores_once_then_cooldown_blocks_repeat[exited-True]": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_restores_once_then_cooldown_blocks_repeat[running-False]": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[capacity]": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[duplicate]": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[future]": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[mode]": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[owner]": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[parent]": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[shape]": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[symlink]": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_boot_container_reconcile_lock.py::test_structural_repair_retains_failed_post_repair_ready_verdict": {
+        "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+        "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f"
+      },
+      "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_audit_checks_trust_before_executing_helper": {
+        "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+        "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772"
+      },
+      "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_complete_inode_is_fsynced_before_publication": {
+        "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+        "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772"
+      },
+      "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_interrupted_publication_is_not_adopted_as_a_complete_asset": {
+        "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+        "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772"
+      },
+      "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_new_directory_and_files_get_exact_modes_under_private_umask": {
+        "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+        "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772"
+      },
+      "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_publication_preserves_concurrent_regular_file_and_symlink": {
+        "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+        "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772"
+      },
+      "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_reader_rejects_link_fifo_owner_mode_and_size_drift": {
+        "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+        "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772"
+      },
+      "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_reader_rejects_path_replacement_and_inplace_change_during_actual_fd_read": {
+        "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+        "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772"
+      },
+      "tests/test_cert_renew_log_dir_20260815.py::test_missing_dedicated_log_directory_is_still_created_locked_down": {
+        "before_blob": "78743dca4a3211d62b5059f84b6bf6fe2a43bfd2",
+        "after_blob": "b545a93d93baf5591cec4e609ec9c07812218b34"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandoned_never_installed_run_allows_cleanup[PREPARED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandoned_never_installed_run_allows_cleanup[PREPARING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandoned_receipt_with_install_stage_fields_blocks[after]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandoned_receipt_with_install_stage_fields_blocks[armed_at]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandoned_receipt_with_install_stage_fields_blocks[fallback_files]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandoned_receipt_with_install_stage_fields_blocks[fallback_menu_sha256]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandoned_receipt_with_install_stage_fields_blocks[target_entry]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[ARMED-never_installed]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[ARMED-superseded_rollback]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[ARMING-never_installed]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[ARMING-superseded_rollback]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[INSTALLED-never_installed]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[INSTALLED-superseded_rollback]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[INSTALLING-never_installed]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[INSTALLING-superseded_rollback]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[PROMOTING-never_installed]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[PROMOTING-superseded_rollback]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_still_in_progress_blocks": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[abandoner_sha256-not-a-digest]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[kind-superseded_rollback]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[original_phase-PREPARING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[phase-DONE]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[previous_executor_sha256-0000000000000000000000000000000000000000000000000000000000000000]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[receipt_sha256-0000000000000000000000000000000000000000000000000000000000000000]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[run_id-hostpatch-other]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[sid-yue-other]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_active_native_flock_prevents_any_cleanup": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adopted_installed_run_allows_cleanup": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adopted_receipt_that_was_armed_blocks[after]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adopted_receipt_that_was_armed_blocks[armed_at]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adopted_receipt_that_was_armed_blocks[fallback_files]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[ARMED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[ARMING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[INSTALLING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[PREPARED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[PROMOTING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[ROLLBACK_REQUESTED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[adopter_sha256-x]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[boot_id-]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[boot_id-install-boot]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[grub_entry-None]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[grub_entry-yueto-host-patch-fallback-x]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[kernel-other-kernel]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[original_phase-PREPARED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[phase-ADOPTING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[phase-DONE]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[previous_executor_sha256-0000000000000000000000000000000000000000000000000000000000000000]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[receipt_sha256-0000000000000000000000000000000000000000000000000000000000000000]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[run_id-other]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[sid-yue-other]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_all_runs_scanned_not_only_newest_promoted": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_current_boot_prepared_not_expired_by_age": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_exact_finalized_rollback_allows_cleanup": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_finalizer_for_different_receipt_is_rejected": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_incomplete_finalization_still_blocks": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_incomplete_promoted_proof_is_unknown": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_known_foreign_old_machine_not_inferred_superseded": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_legacy_missing_machine_proof_not_inferred_superseded": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_native_lock_remains_held_during_actual_cleanup_program": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_non_preboot_phase_cannot_be_inferred_superseded[ARMED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_non_preboot_phase_cannot_be_inferred_superseded[ARMING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_non_preboot_phase_cannot_be_inferred_superseded[INSTALLING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_non_preboot_phase_cannot_be_inferred_superseded[PROMOTING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_non_preboot_phase_cannot_be_inferred_superseded[ROLLBACK_REQUESTED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_one_abandoned_run_does_not_release_another_pending_one": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_orphan_fallback_even_without_receipt_directory_blocks": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_other_unresumable_preboot_history_needs_matching_promotion[INSTALLED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_other_unresumable_preboot_history_needs_matching_promotion[PREPARING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[ARMED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[ARMING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[BOOT_FELL_BACK]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[INSTALLED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[INSTALLING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[PREPARED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[PREPARING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[PROMOTING]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[ROLLBACK_REQUESTED]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[UNKNOWN]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_promoted_only_allows_normal_cleanup": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_remaining_fallback_unit_prevents_even_promoted_cleanup": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_same_fd_read_detects_actual_path_replacement": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_allows_cleanup": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[absent]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[hash]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[not-promoted]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[older]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[other-sid]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[unknown-run]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseding_proof_must_match_identity[boot]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseding_proof_must_match_identity[kernel]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseding_proof_must_match_identity[machine]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseding_proof_must_match_identity[owner]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_superseding_proof_must_match_identity[sid]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_adoption_blocks[malformed]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_adoption_blocks[symlink]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_adoption_blocks[writable]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_or_malformed_abandonment_blocks[hardlink]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_or_malformed_abandonment_blocks[malformed]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_or_malformed_abandonment_blocks[symlink]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_or_malformed_abandonment_blocks[writable]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[fifo]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[hardlink]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[large]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[malformed]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[symlink]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[writable]": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_cleanup_hostpatch_guard.py::test_valid_superseding_current_boot_releases_old_prepared": {
+        "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+        "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f"
+      },
+      "tests/test_entry_diagnostics_signed_closure_20261008.py::test_real_linux_signed_fixture_when_explicitly_requested": {
+        "before_blob": "1a88653d038cb780b4eefd6a8b28718e801d1b5e",
+        "after_blob": "3b3443dcf3a8fa9bce9cfa57da51969e2ab7ea1a"
+      },
+      "tests/test_host_diagnostic_tools.py::test_install_readback_idempotent_and_exact_rollback": {
+        "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+        "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde"
+      },
+      "tests/test_host_diagnostic_tools.py::test_preexisting_tool_is_not_claimed_for_rollback": {
+        "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+        "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde"
+      },
+      "tests/test_host_diagnostic_tools.py::test_rollback_refuses_later_version_or_new_dependents": {
+        "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+        "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde"
+      },
+      "tests/test_host_diagnostic_tools.py::test_unreviewed_or_installed_package_change_is_rejected[Inst libncurses6 [0] (1 test)]": {
+        "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+        "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde"
+      },
+      "tests/test_host_diagnostic_tools.py::test_unreviewed_or_installed_package_change_is_rejected[Inst openssh-server (1 test)]": {
+        "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+        "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde"
+      },
+      "tests/test_host_diagnostic_tools.py::test_unreviewed_or_installed_package_change_is_rejected[Remv libc6 [1]]": {
+        "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+        "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde"
+      },
+      "tests/test_host_runtime_converger_owns_sentinel_20261005.py::test_sandbox_is_refused_for_root": {
+        "before_blob": "d527ab3c0417d44a38683318724634c7b673f8bd",
+        "after_blob": "a0edcebe36745ab381fb58b405aeae62a83616b6"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_bad_certificate_fails_then_recovers[api/v2/avatar-untrusted-issuer]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_bad_certificate_fails_then_recovers[api/v2/avatar-wrong-san]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_bad_certificate_fails_then_recovers[s-untrusted-issuer]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_bad_certificate_fails_then_recovers[s-wrong-san]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[api/v2/avatar-/api/v1/client/subscribe?token=lab-token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[api/v2/avatar-/api/v1/subscribe?token=lab-token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[api/v2/avatar-/api/v2/client/subscribe?token=lab-token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[api/v2/avatar-/api/v2/subscribe?token=lab-token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[api/v2/avatar-/s/lab-token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[s-/api/v1/client/subscribe?token=lab-token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[s-/api/v1/subscribe?token=lab-token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[s-/api/v2/client/subscribe?token=lab-token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[s-/api/v2/subscribe?token=lab-token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[s-/s/lab-token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[api/v2/avatar-headers0]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[api/v2/avatar-headers1]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[api/v2/avatar-headers2]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[api/v2/avatar-headers3]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[s-headers0]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[s-headers1]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[s-headers2]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[s-headers3]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[api/v2/avatar-headers0]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[api/v2/avatar-headers1]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[api/v2/avatar-headers2]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[api/v2/avatar-headers3]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[api/v2/avatar-headers4]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[s-headers0]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[s-headers1]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[s-headers2]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[s-headers3]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[s-headers4]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[api/v2/avatar-/api/ops/auth/login]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[api/v2/avatar-/api/v2/private-admin/users]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[api/v2/avatar-/d/token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[api/v2/avatar-/s/lab-token/extra]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[s-/api/ops/auth/login]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[s-/api/v2/private-admin/users]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[s-/d/token]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[s-/s/lab-token/extra]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_untrusted_socket_cannot_forge_cf_peer[api/v2/avatar]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_independent_subscription_origin_20261012.py::test_native_untrusted_socket_cannot_forge_cf_peer[s]": {
+        "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+        "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-full-audit.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-rebuild-node-runtime.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-rollout-yue-node-image.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-verify-yue-node-rollout-runtime.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-full-audit.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-rebuild-node-runtime.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-rollout-yue-node-image.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-verify-yue-node-rollout-runtime.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-full-audit.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-rebuild-node-runtime.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-rollout-yue-node-image.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-verify-yue-node-rollout-runtime.sh]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_python_ssh_reader_to_both_compose_slots[False]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_python_ssh_reader_to_both_compose_slots[True]": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_actual_remote_reader_rejects_wrong_inventory_sid_without_exposing_auth": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_resource_consumers.py::test_rebuild_actual_renderer_keeps_proof_budget_and_outbox_fence": {
+        "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+        "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[dangling-symlink-converge-yue-node-gso-policy.sh-args2]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[dangling-symlink-converge-yue-node-host.sh-args3]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[dangling-symlink-finalize-yue-node-rollout-runtime.sh-args1]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[dangling-symlink-verify-yue-node-rollout-runtime.sh-args0]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[directory-converge-yue-node-gso-policy.sh-args2]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[directory-converge-yue-node-host.sh-args3]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[directory-finalize-yue-node-rollout-runtime.sh-args1]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[directory-verify-yue-node-rollout-runtime.sh-args0]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[file-converge-yue-node-gso-policy.sh-args2]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[file-converge-yue-node-host.sh-args3]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[file-finalize-yue-node-rollout-runtime.sh-args1]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[file-verify-yue-node-rollout-runtime.sh-args0]": {
+        "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+        "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_actual_kernel_memory_drift_refused": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_competing_docker_and_restart_policy_refused": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_mixed_docker_health_requires_original_live_owner": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_native_autonomous_consumers_reach_actual_runtime": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_native_readyz_failure_is_not_docker_recreation": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_native_unknown_blocks_consumers_but_preserves_journal_maintenance": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_owner_helper_and_receipt_cas_negative": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_process_environment_mismatch_refused_even_after_source_restored": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_real_pid1_cgroup_mount_and_agent_snapshot": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_real_unit_dropin_refused": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_staged_tree_remains_exact_after_actual_unit_start": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_unknown_owner_refuses_agent_docker_fallback": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_zz_final_fixture_invalidation_refuses_binary_and_mount_change": {
+        "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+        "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c"
+      },
+      "tests/test_panel_backend_bootstrap_20261019.py::test_real_recovery_cli_rejects_untrusted_journal_before_runtime_mutations": {
+        "before_blob": "5b3f95b91a67c7c8ff8d438fd5c7d906a0406462",
+        "after_blob": "5d6095b1b51cf75c756d5d405834703a84080802"
+      },
+      "tests/test_panel_backend_bootstrap_20261019.py::test_staged_config_real_nginx_preserves_uris_and_restricted_dual_ingress": {
+        "before_blob": "5b3f95b91a67c7c8ff8d438fd5c7d906a0406462",
+        "after_blob": "5d6095b1b51cf75c756d5d405834703a84080802"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[duplicate-document]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[duplicate-field]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[empty]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[late-diagnostic]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[none]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[wrong-sid]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_apply_accept_and_future_source_explicit_rollback": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_cold_atime_busy_lock_and_uid1001": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_failure_retains_original_and_private_recovery_record[reload]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_failure_retains_original_and_private_recovery_record[validate]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_interrupted_restore_reloads_even_when_file_is_already_original": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_sigkill_after_replacement_is_durably_recoverable": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_stale_cas_and_non_buffer_change_never_mutate": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_unaccepted_crash_record_requires_explicit_recovery": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_unsafe_config_metadata_is_rejected[hardlink]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_unsafe_config_metadata_is_rejected[symlink]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_unsafe_config_metadata_is_rejected[world-writable]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_native_wrong_sid_or_drift_cannot_restore": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[address]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[contract-json]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[identity]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[none]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[peers-json]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[after-proof]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[before-proof]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[none]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[source-drift]": {
+        "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+        "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_apply_imports_complete_private_closure_and_rollback_preserves_evolved_lease": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_busy_provider_service_is_not_killed_or_republished": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_effective_unit_override_cannot_enable_writer[entrypoint]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_effective_unit_override_cannot_enable_writer[timeout]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_existing_private_closure_is_restored_as_a_pair_with_its_unit": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[scripts/lib/__init__.py]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[scripts/lib/__pycache__/ssh_auth.pyc]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[yueops/__pycache__/fleet_inventory_env.pyc]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[yueops/unreviewed.py]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_identity_change_during_wait_is_not_admitted_as_address_refresh": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/converge-blackholed-pool-member-rotation.py]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/fleet-inventory-env.sh]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/moonvm_rotate.py]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/owned_dns.py]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/relay_peers.py]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/ssh_auth.py]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/ssh_kr_proxy.py]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[yueops/__init__.py]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[yueops/fleet_inventory_env.py]": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_naturally_completed_rotation_refreshes_addresses_before_delivery": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_old_flat_closure_is_untouched_and_new_directories_are_removed_on_rollback": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_private_inventory_bridge_and_loader_ignore_external_package": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_coordinator_delivery_closure_20260905.py::test_rollback_refuses_changed_published_dependency": {
+        "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+        "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+      },
+      "tests/test_relay_nginx_output_order_20261009.py::test_native_nginx_transaction_has_one_ordered_channel_and_preserves_rollback[None]": {
+        "before_blob": "201bcd8cba4eeccca55c221e898cd3f9a06714cc",
+        "after_blob": "09a3fe42fb73422c5d1ab49549721c1c9ddd497d"
+      },
+      "tests/test_relay_nginx_output_order_20261009.py::test_native_nginx_transaction_has_one_ordered_channel_and_preserves_rollback[reload]": {
+        "before_blob": "201bcd8cba4eeccca55c221e898cd3f9a06714cc",
+        "after_blob": "09a3fe42fb73422c5d1ab49549721c1c9ddd497d"
+      },
+      "tests/test_relay_nginx_output_order_20261009.py::test_native_nginx_transaction_has_one_ordered_channel_and_preserves_rollback[validate]": {
+        "before_blob": "201bcd8cba4eeccca55c221e898cd3f9a06714cc",
+        "after_blob": "09a3fe42fb73422c5d1ab49549721c1c9ddd497d"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_accept_is_immutable_and_reconcile_closes_real_window": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_actual_native_apply_and_reconcile_reach_pg18": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[admin_service-other]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[candidate_revision-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[database_oid-1]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[database_system_identifier-123]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[desired_generation-235]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[desired_signature_sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[desired_yaml_sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[host_machine_id_sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[image_id-sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[ops_revision-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[target_floor-141]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_forged_receipt_cannot_close_open_window[attempt-1]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_forged_receipt_cannot_close_open_window[checkpoint_sha256-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_forged_receipt_cannot_close_open_window[input_sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_forged_receipt_cannot_close_open_window[transaction_id-cccccccccccccccccccccccccccccccc]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_live_child_refuses_even_without_database_session": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_live_database_session_refuses": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_native_no_receipt_and_old_desired_refuse": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_native_sigkill_after_commit_then_fresh_reconcile[begin-141]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_native_sigkill_after_commit_then_fresh_reconcile[up-142]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_preclose_does_not_defer_unexpected_login_create": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_reconcile_not_started_does_not_close_or_migrate": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_reconcile_post_commit142_never_reapplies": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_security_closure_remains_committed_when_post_audit_fails": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_unsafe_receipt_rejected[duplicate]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_unsafe_receipt_rejected[hardlink]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_unsafe_receipt_rejected[mode]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      },
+      "tests/test_schema_contract_receipt_20261020.py::test_unsafe_receipt_rejected[symlink]": {
+        "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+        "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
+      }
+    }
   }
 }
