@@ -16,6 +16,7 @@ PATH = SHARDS.SITE_LOCK_INPUT
 class SiteLockTransition(unittest.TestCase):
     def setUp(self):
         self.sealed = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
+        self.sealed, _ = SHARDS.reviewed_tornado66_dependency_transition(self.sealed)
         self.record = self.sealed["reviewed_site_lock_transition"]
         self.estate = self.sealed["reviewed_estate_input_transition"]
         self.change = self.record["changes"][PATH]

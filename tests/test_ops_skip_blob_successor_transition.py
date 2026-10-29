@@ -53,6 +53,8 @@ class SkipBlobSuccessorTransition(unittest.TestCase):
     def setUp(self):
         self.raw = (ROOT / "ops-pytest-skip-baseline.json").read_bytes()
         self.sealed = json.loads(self.raw)
+        self.sealed, _ = SHARDS.reviewed_tornado66_dependency_transition(self.sealed)
+        self.raw = (json.dumps(self.sealed, indent=2, ensure_ascii=False) + "\n").encode()
         self.record = self.sealed[KEY]
         self.original, record = SHARDS.reviewed_skip_blob_successor_transition(self.sealed)
         self.assertEqual(record, self.record)

@@ -20,6 +20,7 @@ LOCK = "uv.lock"
 class RuntimeDependencyTransition(unittest.TestCase):
     def setUp(self):
         self.sealed = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
+        self.sealed, _ = SHARDS.reviewed_tornado66_dependency_transition(self.sealed)
         self.record = self.sealed[KEY]
         self.lock = self.sealed["reviewed_audit_lock_transition"]
         self.estate = self.sealed["reviewed_estate_input_transition"]
