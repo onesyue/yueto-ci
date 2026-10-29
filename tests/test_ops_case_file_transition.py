@@ -60,8 +60,9 @@ class CaseFileTransition(unittest.TestCase):
                  "reason": case["reason"]} for nodeid, case in cases.items()]
 
     def value(self, blobs):
+        # admit_skips reads the current baseline, including required native inputs.
         return {"skip_module_blobs": blobs, "skip_baseline_sha256": SHARDS.sha(self.raw),
-                "common_inputs": self.sealed["common_inputs"]}
+                "common_inputs": self.sealed["common_inputs"] | SHARDS.NATIVE_INPUTS}
 
     def test_record_is_pinned_to_the_independent_review_and_historical_bytes(self):
         canon = (json.dumps(self.sealed, indent=2, ensure_ascii=False) + "\n").encode()
@@ -144,7 +145,9 @@ class CaseFileTransition(unittest.TestCase):
         stripped.pop("reviewed_case_file_transition")
         with (patch.object(SHARDS, "skip_baseline", return_value=stripped),
               self.assertRaisesRegex(ValueError, "new or changed case")):
-            SHARDS.admit_skips(self.value(self.blobs), result, {})
+            # This historical baseline predates the native input registration.
+            SHARDS.admit_skips(self.value(self.blobs) | {
+                "common_inputs": stripped["common_inputs"]}, result, {})
 
     def test_reviewed_module_must_be_a_regular_file_and_the_record_cannot_drift(self):
         modes = self.sealed["reviewed_shared_input_transition"]["common_input_modes"]
