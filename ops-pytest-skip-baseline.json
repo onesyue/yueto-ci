@@ -7876,5 +7876,18 @@
       "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_unchanged_panel_site_url_bearer_and_default444",
       "tests/test_miniapp_existing_app_nginx_native_20261013.py::test_native_upload_rate_key_cannot_be_rotated_with_x_real_ip"
     ]
+  },
+  "reviewed_i10_skip_blob_successor_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "15a0d2545bec226d13808532fdffae9d3cbd808ea70025528f39a653c0eaf2ac",
+    "source_before": "e18f0ec8ccd21bacc8e249238ed89a8774ba8347",
+    "source_after": "5277e42a459bd1d530e4eea97f4056af7f3d529f",
+    "independent_review_sha256": "fd089b6dae3ce10f46053257d193e51e79c7876fb35459242b79da7c7d9b551d",
+    "updates": {
+      "tests/test_entry_diagnostics_signed_closure_20261008.py::test_real_linux_signed_fixture_when_explicitly_requested": {
+        "before_blob": "3b3443dcf3a8fa9bce9cfa57da51969e2ab7ea1a",
+        "after_blob": "74403b075bb053e563ad5fc5a3a1461c6be49e60"
+      }
+    }
   }
 }
