@@ -479,7 +479,8 @@ class LoadShedNativeRegistration(unittest.TestCase):
         self.assertEqual(inputs, self.consumer.NATIVE_INPUTS)
         self.assertEqual(set(inputs), {self.target})
         self.assertEqual(self.consumer.NATIVE_TARGETS[self.target], (7, 0))
-        self.assertEqual(original["cases"], self.baseline["cases"])
+        predecessor, _ = self.consumer.reviewed_retired_host_transition(self.baseline)
+        self.assertEqual(original["cases"], predecessor["cases"])
         self.consumer.reviewed_estate_input_transition(self.baseline)
         common = original["common_inputs"] | inputs
         files = {p: ("100644", blob) for p, blob in common.items()}

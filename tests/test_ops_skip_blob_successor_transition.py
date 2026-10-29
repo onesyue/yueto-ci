@@ -74,7 +74,7 @@ class SkipBlobSuccessorTransition(unittest.TestCase):
 
     def value(self, blobs):
         return {"skip_module_blobs": blobs, "skip_baseline_sha256": SHARDS.sha(self.raw),
-                "common_inputs": self.sealed["common_inputs"]}
+                "common_inputs": self.sealed["common_inputs"] | SHARDS.NATIVE_INPUTS}
 
     def test_record_is_outermost_exact_and_pinned_to_the_review(self):
         canon = (json.dumps(self.sealed, indent=2, ensure_ascii=False) + "\n").encode()
@@ -139,7 +139,9 @@ class SkipBlobSuccessorTransition(unittest.TestCase):
         stripped.pop(KEY)
         with (patch.object(SHARDS, "skip_baseline", return_value=stripped),
               self.assertRaisesRegex(ValueError, "new or changed case")):
-            SHARDS.admit_skips(self.value(self.after), result, {})
+            # This historical fixture predates F's required native registration.
+            SHARDS.admit_skips(self.value(self.after) | {
+                "common_inputs": stripped["common_inputs"]}, result, {})
 
     def test_damaged_records_are_refused(self):
         nodeid = sorted(self.record["updates"])[0]
