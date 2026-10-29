@@ -193,22 +193,63 @@ class CatalogTest(unittest.TestCase):
             for forbidden in ("pytest", "go test", "squawk", "migration", "npm run build"):
                 self.assertNotIn(forbidden, flat)
 
-            web = source / "web"
-            web.mkdir()
-            (web / "package.json").write_text(json.dumps({
-                "name": "yueboard-web", "packageManager": "pnpm@11.27.1",
-            }))
-            (source / "pnpm-workspace.yaml").write_text("packages:\n  - web\n")
+            for artifact in ("web", "web-admin"):
+                (source / artifact).mkdir()
+                (source / artifact / "package.json").write_text(json.dumps({
+                    "name": "yueboard-" + artifact,
+                }))
+            (source / "package.json").write_text(json.dumps({"packageManager": "pnpm@11.27.1"}))
+            (source / "pnpm-workspace.yaml").write_text("packages:\n  - web\n  - web-admin\n")
             workdir, prelude, checks = UI.validation_plan(source, "ui-board-web")
             self.assertEqual(workdir, source)
             self.assertEqual(prelude, [
                 ["corepack", "enable"],
                 ["corepack", "install", "--global", "pnpm@11.27.1"],
             ])
-            self.assertEqual(checks[0], ["pnpm", "install", "--frozen-lockfile", "--ignore-scripts"])
-            self.assertEqual(checks[1], ["pnpm", "--filter", "yueboard-web", "run", "lint"])
-            self.assertEqual(checks[2][:4], ["pnpm", "--filter", "yueboard-web", "exec"])
-            self.assertIn("--ignore-scripts", " ".join(checks[0]))
+            self.assertEqual(checks, [
+                ["pnpm", "install", "--frozen-lockfile", "--ignore-scripts"],
+                ["pnpm", "run", "lint"],
+                ["pnpm", "--filter", "yueboard-web", "--filter", "yueboard-web-admin", "run", "build"],
+                ["pnpm", "--dir", "web", "exec", "node", "scripts/verify-dist.mjs", "dist"],
+                ["pnpm", "--dir", "web-admin", "exec", "node", "scripts/verify-dist.mjs", "dist"],
+                ["pnpm", "--dir", "test/a11y", "exec", "playwright-core", "install", "chromium"],
+                ["node", "test/a11y/a11y-smoke.mjs"],
+            ])
+            # A package-local pin must not mask a missing workspace pin.
+            (source / "web/package.json").write_text(json.dumps({
+                "name": "yueboard-web", "packageManager": "pnpm@11.27.1",
+            }))
+            (source / "package.json").write_text("{}")
+            with self.assertRaisesRegex(UI.ScopeError, "packageManager pin"):
+                UI.validation_plan(source, "ui-board-web")
+
+    def test_workspace_browser_fixture_has_pinned_go_and_dependency_preflight(self) -> None:
+        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        setup = step_body(workflow, "Set up YueBoard Go")
+        self.assertIn("matrix.validation == 'ui-board-web'", setup)
+        self.assertIn("go-version: '1.27.3'", setup)
+        preflight = step_body(workflow, "Preflight validation dependencies")
+        self.assertIn("ui-board-web) tools+=(corepack go node npm) ;;", preflight)
+
+    def test_workspace_a11y_failure_is_not_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            board_fixture(source)
+            calls = []
+
+            def run(command, *, cwd, check):
+                self.assertEqual(cwd, source)
+                self.assertTrue(check)
+                calls.append(command)
+                if command == ["node", "test/a11y/a11y-smoke.mjs"]:
+                    raise subprocess.CalledProcessError(3, command)
+
+            with patch.object(UI.subprocess, "run", side_effect=run):
+                with self.assertRaises(subprocess.CalledProcessError) as failure:
+                    UI.run_validate(source, "ui-board-web")
+            self.assertEqual(failure.exception.returncode, 3)
+            self.assertIn(["pnpm", "--filter", "yueboard-web", "--filter", "yueboard-web-admin", "run", "build"], calls)
+            self.assertEqual(calls[-1], ["node", "test/a11y/a11y-smoke.mjs"])
 
     def test_real_fastlane_stops_on_the_failing_check(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

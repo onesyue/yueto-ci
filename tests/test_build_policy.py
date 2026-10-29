@@ -827,9 +827,12 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertCountEqual([step.splitlines()[0] for step in setup], expected)
         for step in setup:
             service, version = expected[step.splitlines()[0]]
+            condition = f"matrix.validation == '{service}'"
+            if service == "yueboard":
+                condition += " || matrix.validation == 'ui-board-web'"
             self.assertEqual(
                 re.findall(r"(?m)^        if: (.+)$", step),
-                [f"matrix.validation == '{service}'"],
+                [condition],
             )
             self.assertEqual(
                 re.findall(r"(?m)^          go-version: (.+)$", step),
@@ -862,7 +865,10 @@ class BuildPolicyTest(unittest.TestCase):
             "duplicate-setup": self.workflow.replace(board, board + node),
         }
         for service, block in blocks.items():
-            condition = f"        if: matrix.validation == '{service}'\n"
+            condition = f"        if: matrix.validation == '{service}'"
+            if service == "yueboard":
+                condition += " || matrix.validation == 'ui-board-web'"
+            condition += "\n"
             changes = {
                 "missing-setup": "",
                 "unconditional": block.replace(condition, ""),
@@ -875,6 +881,9 @@ class BuildPolicyTest(unittest.TestCase):
             }
             for label, changed in changes.items():
                 mutations[f"{service}-{label}"] = self.workflow.replace(block, changed)
+        mutations["missing-ui-board-fixture-toolchain"] = self.workflow.replace(
+            board, board.replace(" || matrix.validation == 'ui-board-web'", "")
+        )
         for label, workflow in mutations.items():
             with self.subTest(mutation=label):
                 self.assertNotEqual(workflow, self.workflow)

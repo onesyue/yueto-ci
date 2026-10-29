@@ -547,7 +547,7 @@ jobs:
           digest-mismatch: error
 
       - name: Set up YueBoard Go
-        if: matrix.validation == 'yueboard'
+        if: matrix.validation == 'yueboard' || matrix.validation == 'ui-board-web'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           # Board requires the crypto/x509 security fix in Go 1.27.3. The
@@ -804,6 +804,7 @@ jobs:
             yueboard) tools+=(buf corepack docker gcc go make node psql) ;;
             yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql uv) ;;
             yuelink) ;;
+            ui-board-web) tools+=(corepack go node npm) ;;
             ui-*) tools+=(corepack node npm) ;;
             *)
               echo "::error::unsupported validation kind: $VALIDATION_KIND"

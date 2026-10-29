@@ -698,7 +698,8 @@ def validation_plan(source: Path, validation: str) -> tuple[Path, list[list[str]
     """Return (workdir, prelude, checks) for one UI validation.
 
     Prelude is the package-manager pin used by the existing frontend steps.
-    Checks are only lint, tsc, unit, a11y, and bundle budget, in that order.
+    Checks cover lint, tsc, unit, a11y, and bundle budget. Workspace
+    builds produce the assets required by the bundle and browser checks.
     """
     matches = [row for row in ui_targets() if row.get("validation") == validation]
     if len(matches) != 1:
@@ -715,20 +716,39 @@ def validation_plan(source: Path, validation: str) -> tuple[Path, list[list[str]
         return unit, [], _npm_commands()
     if manager != "pnpm":
         raise ScopeError(f"{validation} package_manager is not npm or pnpm")
-    pin = package.get("packageManager") or ""
+    workspace = _layout(target) == "pnpm-workspace"
+    pin_package = json.loads((source / "package.json").read_text(encoding="utf-8")) if workspace else package
+    pin = pin_package.get("packageManager") or ""
     if not isinstance(pin, str) or not pin:
         raise ScopeError(f"{validation} package.json has no packageManager pin")
     prelude = [
         ["corepack", "enable"],
         ["corepack", "install", "--global", pin],
     ]
-    # Workspace layout (the YueBoard frontend step): one root install, then
-    # the named package only. A unit-local lockfile installs in the unit.
-    if (source / "pnpm-workspace.yaml").is_file():
-        name = package.get("name")
-        if not isinstance(name, str) or not name:
-            raise ScopeError(f"{validation} workspace package has no name")
-        return source, prelude, _pnpm_commands(name)
+    if workspace:
+        if not (source / "pnpm-workspace.yaml").is_file():
+            raise ScopeError(f"{validation} source has no pnpm-workspace.yaml")
+        filters: list[str] = []
+        artifacts = _artifact_paths(target)
+        for artifact in artifacts:
+            artifact_package = json.loads((source / artifact / "package.json").read_text(encoding="utf-8"))
+            name = artifact_package.get("name")
+            if not isinstance(name, str) or not name:
+                raise ScopeError(f"{validation} workspace package {artifact} has no name")
+            filters.extend(["--filter", name])
+        # Board owns lint at the root. Its build scripts include strict i18n,
+        # tsc, unit tests and the size budget, for both declared artifacts.
+        # The real accessibility gate serves those built assets and fails if
+        # Chromium or its Go fixture cannot start; a skip is never success.
+        return source, prelude, [
+            ["pnpm", "install", "--frozen-lockfile", "--ignore-scripts"],
+            ["pnpm", "run", "lint"],
+            ["pnpm", *filters, "run", "build"],
+            *[["pnpm", "--dir", artifact, "exec", "node", "scripts/verify-dist.mjs", "dist"]
+              for artifact in artifacts],
+            ["pnpm", "--dir", "test/a11y", "exec", "playwright-core", "install", "chromium"],
+            ["node", "test/a11y/a11y-smoke.mjs"],
+        ]
     return unit, prelude, _pnpm_commands(None)
 
 
