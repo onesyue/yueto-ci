@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import ast
 import configparser
+import copy
 import concurrent.futures
 import hashlib
 import importlib.util
@@ -692,8 +693,112 @@ RUNTIME_DEPENDENCY_INPUTS = {
 }
 
 
+RETIRED_HOST_KEY = "reviewed_retired_host_transition"
+RETIRED_HOST_MODULE = "tests/test_miniapp_existing_app_nginx_native_20261013.py"
+RETIRED_HOST_PRIOR_SHA256 = "927f711ddbdd4aa14012ccb687183e969610922e0c9b17b55eef06545ec86e91"
+RETIRED_HOST_BEFORE_BLOB = "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
+RETIRED_HOST_AFTER_BLOB = "ba19e043309d0805710e0a2d3fc9cc76ea6ce55f"
+RETIRED_HOST_TRANSITION_SHA256 = "961fa6fd314c9d292e766e1cea5b8571f0d97b489adbebb63d4f35d16af6d7b0"
+RETIRED_HOST_IDS = {
+    RETIRED_HOST_MODULE + "::" + name + "[mini.xn--jdu596h.com]"
+    for name in (
+        "test_native_mini_index_assets_and_telegram_frame_policy",
+        "test_native_auth_is_not_panel_cookie_or_bearer_and_secret_paths_do_not_log",
+        "test_native_alias_upload_method_body_limits_and_cache",
+    )
+}
+
+
+def baseline_bytes(baseline):
+    return (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()
+
+
+def reviewed_retired_host_transition(baseline):
+    """Undo only D, then let F and every historical seal validate unchanged."""
+    if RETIRED_HOST_KEY not in baseline:
+        return baseline, None
+    original = copy.deepcopy(baseline)
+    record = original.pop(RETIRED_HOST_KEY)
+    require(isinstance(record, dict)
+            and sha(encoded(record)) == RETIRED_HOST_TRANSITION_SHA256,
+            "unreviewed retired host transition identity")
+    require(record["prior_baseline_sha256"] == RETIRED_HOST_PRIOR_SHA256
+            and set(record["removed"]) == RETIRED_HOST_IDS,
+            "invalid retired host predecessor or IDs")
+    cases = original["cases"]
+    updates = original["reviewed_current_skip_transition"]["updates"]
+    survivors = record["surviving_ids"]
+    for rows in (cases, updates):
+        require({n for n in rows if n.startswith(RETIRED_HOST_MODULE + "::")}
+                == set(survivors), "retired host removal set differs")
+    for nodeid in survivors:
+        require(cases[nodeid]["module_blob"] == RETIRED_HOST_AFTER_BLOB
+                and updates[nodeid]["after_blob"] == RETIRED_HOST_AFTER_BLOB,
+                "retired host successor blob differs")
+        cases[nodeid]["module_blob"] = record["historical_blob"]
+        updates[nodeid]["after_blob"] = RETIRED_HOST_BEFORE_BLOB
+    # Restore insertion order too: historical seals bind the complete JSON bytes.
+    for rows, field in ((cases, "case"), (updates, "update")):
+        items = list(rows.items())
+        for nodeid, removed in sorted(record["removed"].items(),
+                                      key=lambda item: item[1][field + "_index"]):
+            items.insert(removed[field + "_index"], (nodeid, removed[field]))
+        rows.clear()
+        rows.update(items)
+    require(sha(baseline_bytes(original)) == RETIRED_HOST_PRIOR_SHA256,
+            "retired host transition changed historical baseline")
+    return original, record
+
+
+def generate_retired_host_baseline(predecessor, source, revision):
+    """One reviewed migration from F; output is deterministic, not execution proof."""
+    require(sha(predecessor.read_bytes()) == RETIRED_HOST_PRIOR_SHA256,
+            "retired host generator requires the exact F predecessor")
+    files = tree_inputs(source, revision)
+    require(files.get(RETIRED_HOST_MODULE) == ("100644", RETIRED_HOST_AFTER_BLOB),
+            "retired host source blob or mode differs")
+    baseline = read_json(predecessor)
+    reviewed_estate_input_transition(baseline)
+    cases = baseline["cases"]
+    updates = baseline["reviewed_current_skip_transition"]["updates"]
+    module_ids = [n for n in cases if n.startswith(RETIRED_HOST_MODULE + "::")]
+    require(len(module_ids) == 15 and RETIRED_HOST_IDS <= set(module_ids)
+            and all(updates[n]["after_blob"] == RETIRED_HOST_BEFORE_BLOB
+                    and cases[n]["module_blob"] == updates[n]["before_blob"]
+                    for n in module_ids), "retired host predecessor cases differ")
+    record = {
+        "schema": 1,
+        "prior_baseline_sha256": RETIRED_HOST_PRIOR_SHA256,
+        "host": "mini.xn--jdu596h.com",
+        "retired_by": "Jim",
+        "retired_at": "2026-10-30 01:26 SGT",
+        "reason": "Owner retired this Mini host; sibling Mini and app hosts remain required.",
+        "baseline_migration_approved_at": "2026-10-30 01:50 SGT",
+        "module": RETIRED_HOST_MODULE,
+        "before_blob": RETIRED_HOST_BEFORE_BLOB,
+        "after_blob": RETIRED_HOST_AFTER_BLOB,
+        "historical_blob": cases[module_ids[0]]["module_blob"],
+        "removed": {
+            n: {"case_index": list(cases).index(n), "case": cases[n],
+                "update_index": list(updates).index(n), "update": updates[n]}
+            for n in sorted(RETIRED_HOST_IDS)
+        },
+        "surviving_ids": sorted(set(module_ids) - RETIRED_HOST_IDS),
+    }
+    for nodeid in RETIRED_HOST_IDS:
+        del cases[nodeid]
+        del updates[nodeid]
+    for nodeid in record["surviving_ids"]:
+        cases[nodeid]["module_blob"] = RETIRED_HOST_AFTER_BLOB
+        updates[nodeid]["after_blob"] = RETIRED_HOST_AFTER_BLOB
+    baseline[RETIRED_HOST_KEY] = record
+    reviewed_estate_input_transition(baseline)
+    return baseline
+
+
 def required_native_inputs(baseline):
     """Separate new required execution inputs from immutable historical skips."""
+    baseline, _ = reviewed_retired_host_transition(baseline)
     original = dict(baseline)
     record = original.pop("required_native_inputs", None)
     if record is None:
@@ -2423,6 +2528,7 @@ def native_terminal(value, source, board, output):
 
 def admit_skips(value, result, native):
     sealed_baseline = skip_baseline()
+    _, retirement = reviewed_retired_host_transition(sealed_baseline)
     _, blob_record = reviewed_skip_blob_successor_transition(sealed_baseline)
     _, release_blob_record = reviewed_release_skip_blob_successor_transition(sealed_baseline)
     _, case_successors = reviewed_case_file_transition(sealed_baseline)
@@ -2460,6 +2566,14 @@ def admit_skips(value, result, native):
         for row in session["nonpassing_outcomes"]:
             nodeid = row["nodeid"]
             module = nodeid.split("::", 1)[0]
+            if retirement is not None and module == RETIRED_HOST_MODULE:
+                require(nodeid in retirement["surviving_ids"]
+                        and {"outcome": row["outcome"], "reason": row.get("reason"),
+                             "module_blob": value["skip_module_blobs"].get(module)}
+                        == sealed_baseline["cases"].get(nodeid),
+                        "retired host case or successor blob differs: " + nodeid)
+                counts["HISTORICAL_UNEXECUTED"] += 1
+                continue
             specific = reviewed.get("cases", {}).get(nodeid)
             if specific is None:
                 observed = {
@@ -2610,6 +2724,10 @@ def main():
         baseline_cli.add_argument("--" + key, type=Path, required=True)
     for key in ("revision", "collection-revision", "collection-at"):
         baseline_cli.add_argument("--" + key, required=True)
+    retirement_cli = sub.add_parser("generate-retired-host-baseline")
+    for key in ("predecessor", "source"):
+        retirement_cli.add_argument("--" + key, type=Path, required=True)
+    retirement_cli.add_argument("--revision", required=True)
     args = parser.parse_args()
     try:
         if args.command == "plan":
@@ -2619,6 +2737,8 @@ def main():
         elif args.command == "expand":
             result = expand(read_json(args.targets), args.source, args.board,
                             args.runner, args.capacity, args.shards)
+        elif args.command == "generate-retired-host-baseline":
+            result = generate_retired_host_baseline(args.predecessor, args.source, args.revision)
         elif args.command == "generate-skip-baseline":
             result = generate_skip_baseline(
                 args.source, args.revision, args.events, args.collection_xml,
