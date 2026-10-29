@@ -51,6 +51,7 @@ BOARD_BUILD_FILES = (
     "test/frontend/session-rejection.ts",
     "test/frontend/reload-guard.ts",
     "docs/contracts/yueboard-economy.golden.json",
+    "scripts/ci/verify-design-tokens.mjs",
 )
 SERVICE_KEYS = SOURCE_ONLY_KEYS | {"context", "dockerfile", "platforms"}
 

@@ -24,6 +24,7 @@ import subprocess
 import tempfile
 import textwrap
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +38,7 @@ BOARD_BUILD_INPUTS = (
     "test/frontend/session-rejection.ts",
     "test/frontend/reload-guard.ts",
     "docs/contracts/yueboard-economy.golden.json",
+    "scripts/ci/verify-design-tokens.mjs",
 )
 CHECKS = ["lint", "tsc", "unit", "a11y", "bundle-budget"]
 GATES = (
@@ -567,6 +569,22 @@ class FingerprintAndPromoteTest(unittest.TestCase):
     def fingerprint(self, app: bytes = b"v1\n", docs: bytes = b"a\n", dockerfile: str | None = None) -> dict:
         tree = Tree({"rev": self.files(app, docs, dockerfile)})
         return FP.compute(tree, "rev", self.entry())
+
+    def test_non_ui_fingerprint_does_not_load_missing_catalog(self) -> None:
+        tree = Tree({"rev": self.files(b"v1\n", b"a\n")})
+        entry = {**self.entry(), "service": "yueops"}
+        with patch.object(FP, "_ui_units", side_effect=FileNotFoundError("catalog absent")) as catalog:
+            result = FP.compute(tree, "rev", entry)
+        catalog.assert_not_called()
+        self.assertNotIn("unknown", result)
+        self.assertIn("fingerprint", result)
+
+    def test_ui_fingerprint_with_missing_catalog_fails_closed(self) -> None:
+        with patch.object(FP, "_ui_units", side_effect=FileNotFoundError("catalog absent")) as catalog:
+            result = self.fingerprint()
+        catalog.assert_called_once()
+        self.assertIn("static-unit catalog unavailable", result["unknown"])
+        self.assertNotIn("fingerprint", result)
 
     def test_fingerprint_excludes_paths_outside_the_unit(self) -> None:
         result = self.fingerprint()
