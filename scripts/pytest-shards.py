@@ -55,7 +55,11 @@ SSH_SKIP_CASES = {
     "tests/test_installed_checker_transport_20261014.py::"
     "test_real_pinned_sshd_json_transport_plan_apply_readback_and_old_n_negative",
 }
+NATIVE_INPUTS = {
+    "tests/native_loadshed_installer_20261030.py": "a861b1d6b30b3ba59d5321051430c73c099d25c2",
+}
 NATIVE_TARGETS = {
+    "tests/native_loadshed_installer_20261030.py": (7, 0),
     "tests/test_board139_schema_acl_native_20261018.py": (6, 1001),
     "tests/test_node_systemd_pilot_20261018.py": (38, 0),
     "tests/test_schema_contract_receipt_20261020.py": (30, 0),
@@ -688,8 +692,23 @@ RUNTIME_DEPENDENCY_INPUTS = {
 }
 
 
+def required_native_inputs(baseline):
+    """Separate new required execution inputs from immutable historical skips."""
+    original = dict(baseline)
+    record = original.pop("required_native_inputs", None)
+    if record is None:
+        return original, {}
+    require(isinstance(record, dict) and set(record) == {"prior_baseline_sha256", "inputs"}
+            and record["inputs"] == NATIVE_INPUTS, "invalid required native inputs")
+    prior = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(prior),
+            "required native inputs changed historical baseline")
+    return original, record["inputs"]
+
+
 def reviewed_tornado66_dependency_transition(baseline):
     """Peel only the reviewed Tornado security successor above the historical seals."""
+    baseline, _ = required_native_inputs(baseline)
     key = "reviewed_tornado66_dependency_transition"
     if key not in baseline:
         return baseline, None
@@ -1317,6 +1336,15 @@ def estate_successor_proof(baseline, source, revision):
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    baseline, required = required_native_inputs(baseline)
+    if required:
+        require(isinstance(common, dict) and all(common.get(p) == b for p, b in required.items()),
+                "missing or changed required native input")
+        if files is not None:
+            require(all(files.get(p) == ("100644", b) for p, b in required.items()),
+                    "required native input mode or tree changed")
+            files = {p: v for p, v in files.items() if p not in required}
+        common = {p: v for p, v in common.items() if p not in required}
     _, tornado = reviewed_tornado66_dependency_transition(baseline)
     _, hang = reviewed_hang_guard_input_transition(baseline)
     _, runtime = reviewed_runtime_dependency_transition(baseline)
@@ -1811,6 +1839,7 @@ def skip_baseline():
             and SHA.fullmatch(value.get("source_revision", ""))
             and value.get("common_inputs") and isinstance(value.get("cases"), dict)
             and isinstance(value.get("collection_skips"), dict), "invalid skip baseline")
+    required_native_inputs(value)
     return value
 
 

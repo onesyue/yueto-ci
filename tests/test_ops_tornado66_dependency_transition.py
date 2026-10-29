@@ -76,11 +76,12 @@ class TornadoDependencyTransition(unittest.TestCase):
             source_revision=self.record["source_after"] if source is None else source,
             estate_successor_of=self.estate["source_after"] if proof is None else proof)
 
-    def test_production_record_is_outermost_and_restores_the_exact_prior_bytes(self):
+    def test_production_record_restores_the_exact_prior_bytes_below_native_inputs(self):
         # Unlike the other fixture controls, this requires the real reviewed seal.
         raw = (ROOT / "ops-pytest-skip-baseline.json").read_bytes()
         sealed = json.loads(raw)
-        self.assertEqual(list(sealed)[-1], KEY)
+        historical, _ = SHARDS.required_native_inputs(sealed)
+        self.assertEqual(list(historical)[-1], KEY)
         actual_pin = SHARDS.TORNADO66_DEPENDENCY_TRANSITION_SHA256
         # The fixture pin is local to this test class, so read the deployed constant
         # in a fresh module rather than accidentally accepting synthetic receipts.

@@ -1482,6 +1482,9 @@ jobs:
           sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" \
             "$native_driver" tests/test_node_systemd_pilot_20261018.py 38 0 \
             "$native_evidence/test_node_systemd_pilot_20261018.json"
+          sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" \
+            "$native_driver" tests/native_loadshed_installer_20261030.py 7 0 \
+            "$native_evidence/native_loadshed_installer_20261030.json"
           sudo -n env PATH="$PATH" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard" \
             "$PWD/.venv/bin/python" "$native_driver" \
             tests/test_schema_contract_receipt_20261020.py 30 0 \
