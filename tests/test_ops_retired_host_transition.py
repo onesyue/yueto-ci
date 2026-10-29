@@ -20,7 +20,8 @@ MODULE = SHARDS.RETIRED_HOST_MODULE
 class RetiredHostTransition(unittest.TestCase):
     def setUp(self):
         self.raw = (ROOT / SHARDS.SKIP_BASELINE).read_bytes()
-        self.baseline = json.loads(self.raw)
+        self.baseline, _ = SHARDS.reviewed_i10_skip_blob_successor_transition(json.loads(self.raw))
+        self.raw = SHARDS.baseline_bytes(self.baseline)
         self.prior, self.record = SHARDS.reviewed_retired_host_transition(self.baseline)
         self.survivor = self.record["surviving_ids"][0]
 

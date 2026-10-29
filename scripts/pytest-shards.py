@@ -47,6 +47,7 @@ RELAY_PRESERVATION_MODULE_TRANSITION_SHA256 = "f5d43ba785159b00ab42f7034d29c77d7
 RELAY_METRICS_MODULE_TRANSITION_SHA256 = "777214bee79eb25858c97781aaa065b53770693252185f3ee61e19c3c61efa07"
 CASE_FILE_TRANSITION_SHA256 = "75190b489a8b271e693c52e78c183894f47e34e930183b9f433e538045afb9c7"
 SKIP_BLOB_SUCCESSOR_TRANSITION_SHA256 = "befa7b3d2cb2c5d3bbeb6e225f908087b1cd42c0bedbe290033a73b3fffe799d"
+I10_SKIP_BLOB_SUCCESSOR_TRANSITION_SHA256 = "f17408349a9f920c4712e112381a0b1ad40b00abc5d9357b6e423812b7e3ba20"
 RELEASE_SKIP_BLOB_SUCCESSOR_TRANSITION_SHA256 = "efa7c2e8c9944feeccbcf0bf1111b3b4b67f8b15c94e1b6d41879654136d274b"
 HANG_GUARD_INPUT_TRANSITION_SHA256 = "eb65c84d7ddab61a441c54d2f64a30e992f039b2c0c6ba709b570f5d3787fff0"
 # Sealed to the signed Tornado successor and authentic review/qualification receipts.
@@ -713,8 +714,58 @@ def baseline_bytes(baseline):
     return (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()
 
 
+def reviewed_i10_skip_blob_successor_transition(baseline):
+    """Peel reviewed I10 blob successors of already-admitted skips, sealed outermost.
+
+    Same contract as the first skip blob successor seal, reviewed separately: only
+    cases whose admitted skip (after every inner seal) names the exact before blob
+    may move to the reviewed after blob; outcome and reason stay historical and no
+    case is added.
+    """
+    key = "reviewed_i10_skip_blob_successor_transition"
+    if key not in baseline:
+        return baseline, None
+    original = dict(baseline)
+    record = original.pop(key)
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "updates",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid I10 skip blob successor transition")
+    require(sha(encoded(record)) == I10_SKIP_BLOB_SUCCESSOR_TRANSITION_SHA256,
+            "unreviewed I10 skip blob successor transition identity")
+    prior = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(prior),
+            "I10 skip blob successor transition changed historical baseline")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                for k in ("source_before", "source_after"))
+            and record["source_before"] != record["source_after"],
+            "I10 skip blob successor transition source identity missing")
+    require(isinstance(record["independent_review_sha256"], str)
+            and re.fullmatch(r"[0-9a-f]{64}", record["independent_review_sha256"])
+            and record["independent_review_sha256"] != "0" * 64,
+            "I10 skip blob successor transition review missing")
+    updates = record["updates"]
+    require(isinstance(updates, dict) and updates,
+            "unreviewed I10 skip blob successor cases")
+    module_blob = {}
+    for nodeid, change in updates.items():
+        module = nodeid.split("::", 1)[0] if isinstance(nodeid, str) else None
+        require(isinstance(nodeid, str) and "::" in nodeid and safe_module(module)
+                and isinstance(change, dict) and set(change) == {"before_blob", "after_blob"}
+                and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                        for k in ("before_blob", "after_blob"))
+                and change["before_blob"] != change["after_blob"],
+                "unreviewed I10 skip blob successor: " + str(nodeid))
+        pair = (change["before_blob"], change["after_blob"])
+        require(module_blob.setdefault(module, pair) == pair,
+                "I10 skip blob successor module diverges: " + module)
+    return original, record
+
+
 def reviewed_retired_host_transition(baseline):
     """Undo only D, then let F and every historical seal validate unchanged."""
+    baseline, _ = reviewed_i10_skip_blob_successor_transition(baseline)
     if RETIRED_HOST_KEY not in baseline:
         return baseline, None
     original = copy.deepcopy(baseline)
@@ -2528,6 +2579,7 @@ def native_terminal(value, source, board, output):
 
 def admit_skips(value, result, native):
     sealed_baseline = skip_baseline()
+    _, i10_blob_record = reviewed_i10_skip_blob_successor_transition(sealed_baseline)
     _, retirement = reviewed_retired_host_transition(sealed_baseline)
     _, blob_record = reviewed_skip_blob_successor_transition(sealed_baseline)
     _, release_blob_record = reviewed_release_skip_blob_successor_transition(sealed_baseline)
@@ -2553,6 +2605,9 @@ def admit_skips(value, result, native):
     admitted.update(blob_successors)
     release_blob_successors = skip_blob_successors(
         release_blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
+    admitted.update(release_blob_successors)
+    i10_blob_successors = skip_blob_successors(
+        i10_blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
     unknown = []
     observed_collection = {}
     reviewed = baseline.get("reviewed_hosted", {})
@@ -2584,7 +2639,8 @@ def admit_skips(value, result, native):
                                     relay_successors.get(nodeid), metrics_successors.get(nodeid),
                                     meter_successors.get(nodeid), preservation_successors.get(nodeid),
                                     case_successors.get(nodeid), blob_successors.get(nodeid),
-                                    release_blob_successors.get(nodeid)):
+                                    release_blob_successors.get(nodeid),
+                                    i10_blob_successors.get(nodeid)):
                     unknown.append(nodeid)
                     continue
                 disposition = "HISTORICAL_UNEXECUTED"
