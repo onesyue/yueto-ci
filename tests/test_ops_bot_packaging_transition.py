@@ -17,6 +17,7 @@ KEY = "reviewed_bot_packaging_transition"
 class BotPackagingTransition(unittest.TestCase):
     def setUp(self):
         self.sealed = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
+        self.sealed, _ = SHARDS.reviewed_tornado66_dependency_transition(self.sealed)
         self.record = self.sealed[KEY]
         self.estate = self.sealed["reviewed_estate_input_transition"]
         self.site = self.sealed["reviewed_site_lock_transition"]

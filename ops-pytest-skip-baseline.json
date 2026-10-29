@@ -7803,5 +7803,31 @@
         "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e"
       }
     }
+  },
+  "reviewed_tornado66_dependency_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "f6277c02518d820b8d6e9630b6dd339f60afe89774ced9a363b686c4e4795afa",
+    "source_before": "a0a46ca02ae2d01aa19ac5ce82c749b05ab6c80a",
+    "source_after": "3cbbdd4c9b4b208ea6845e3a6681b193cbbee286",
+    "independent_review_sha256": "a863f4d50876d5b4ab5203daa952832e7866250242418e7dd441c88970dd0398",
+    "source_freeze_sha256": "82f8276c823e2867c950231d967913f3f136b46db0a96bfe1cab637999ccac13",
+    "qualification_receipt_sha256": "382aad782ba7f4236baa753fa9c4bebef34351e807a589ecc9635c8bb1d193d3",
+    "changes": {
+      "pyproject.toml": {
+        "before_blob": "1e223f82f229773528fc0a98e7a2f849d2ba3940",
+        "after_blob": "7f598716706f7e2e197902599e7b12b5d0ccf086",
+        "mode": "100644"
+      },
+      "telegram-bot/yue/requirements.txt": {
+        "before_blob": "de417a3cc221baefeee5289e4c29f2351731e025",
+        "after_blob": "42c931eec1ae7949b37fe9e79bdbbcb47c526174",
+        "mode": "100644"
+      },
+      "uv.lock": {
+        "before_blob": "1d7c733424ad14b27fac43ddd924a2e7468c7c15",
+        "after_blob": "aa728bd1bea85c20624f7817ad643366476b0570",
+        "mode": "100644"
+      }
+    }
   }
 }

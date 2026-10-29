@@ -41,6 +41,8 @@ class CaseFileTransition(unittest.TestCase):
     def setUp(self):
         self.raw = (ROOT / "ops-pytest-skip-baseline.json").read_bytes()
         self.sealed = json.loads(self.raw)
+        self.sealed, _ = SHARDS.reviewed_tornado66_dependency_transition(self.sealed)
+        self.raw = (json.dumps(self.sealed, indent=2, ensure_ascii=False) + "\n").encode()
         self.record = self.sealed["reviewed_case_file_transition"]
         self.original, self.successors = SHARDS.reviewed_case_file_transition(self.sealed)
         self.blobs = {}

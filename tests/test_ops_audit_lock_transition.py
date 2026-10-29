@@ -19,6 +19,7 @@ KEY = "reviewed_audit_lock_transition"
 class AuditLockTransition(unittest.TestCase):
     def setUp(self):
         self.sealed = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
+        self.sealed, _ = SHARDS.reviewed_tornado66_dependency_transition(self.sealed)
         self.record = self.sealed[KEY]
         self.audit = self.sealed["reviewed_audit_dependency_transition"]
         self.estate = self.sealed["reviewed_estate_input_transition"]

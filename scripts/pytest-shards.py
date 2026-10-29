@@ -48,6 +48,8 @@ CASE_FILE_TRANSITION_SHA256 = "75190b489a8b271e693c52e78c183894f47e34e930183b9f4
 SKIP_BLOB_SUCCESSOR_TRANSITION_SHA256 = "befa7b3d2cb2c5d3bbeb6e225f908087b1cd42c0bedbe290033a73b3fffe799d"
 RELEASE_SKIP_BLOB_SUCCESSOR_TRANSITION_SHA256 = "efa7c2e8c9944feeccbcf0bf1111b3b4b67f8b15c94e1b6d41879654136d274b"
 HANG_GUARD_INPUT_TRANSITION_SHA256 = "eb65c84d7ddab61a441c54d2f64a30e992f039b2c0c6ba709b570f5d3787fff0"
+# Sealed to the signed Tornado successor and authentic review/qualification receipts.
+TORNADO66_DEPENDENCY_TRANSITION_SHA256 = "bed6e74fdb1a4b40775bc6fc9c4c4c6857ee6de8a245910e91809e7672756876"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
     "tests/test_installed_checker_transport_20261014.py::"
@@ -686,6 +688,54 @@ RUNTIME_DEPENDENCY_INPUTS = {
 }
 
 
+def reviewed_tornado66_dependency_transition(baseline):
+    """Peel only the reviewed Tornado security successor above the historical seals."""
+    key = "reviewed_tornado66_dependency_transition"
+    if key not in baseline:
+        return baseline, None
+    original = dict(baseline)
+    record = original.pop(key)
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "source_freeze_sha256",
+        "qualification_receipt_sha256", "changes",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid Tornado dependency transition")
+    require(sha(encoded(record)) == TORNADO66_DEPENDENCY_TRANSITION_SHA256,
+            "unreviewed Tornado dependency transition identity")
+    prior = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(prior),
+            "Tornado dependency transition changed historical baseline")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                for k in ("source_before", "source_after"))
+            and record["source_before"] != record["source_after"],
+            "Tornado dependency transition source identity missing")
+    require(all(isinstance(record[k], str)
+                and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                and record[k] != "0" * 64 for k in (
+                    "independent_review_sha256", "source_freeze_sha256",
+                    "qualification_receipt_sha256")),
+            "Tornado dependency transition review or qualification missing")
+    changes = record["changes"]
+    predecessor = original.get("reviewed_runtime_dependency_transition")
+    require(isinstance(changes, dict) and set(changes) == set(RUNTIME_DEPENDENCY_INPUTS),
+            "unreviewed Tornado dependency paths")
+    if not isinstance(predecessor, dict):
+        raise ValueError("unreviewed Tornado dependency paths")
+    for path, change in changes.items():
+        prior_change = predecessor.get("changes", {}).get(path)
+        require(isinstance(change, dict) and set(change) == {"before_blob", "after_blob", "mode"}
+                and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                        for k in ("before_blob", "after_blob"))
+                and change["before_blob"] != change["after_blob"]
+                and change["mode"] == "100644"
+                and isinstance(prior_change, dict)
+                and change["before_blob"] == prior_change.get("after_blob")
+                and change["mode"] == prior_change.get("mode"),
+                "invalid Tornado dependency blob or mode")
+    return original, record
+
+
 def reviewed_release_skip_blob_successor_transition(baseline):
     """Peel reviewed release-time blob successors of already-admitted skips, sealed outermost.
 
@@ -695,6 +745,7 @@ def reviewed_release_skip_blob_successor_transition(baseline):
     case is added.
     """
     key = "reviewed_release_skip_blob_successor_transition"
+    baseline, _ = reviewed_tornado66_dependency_transition(baseline)
     if key not in baseline:
         return baseline, None
     original = dict(baseline)
@@ -1180,6 +1231,7 @@ def estate_successor_proof(baseline, source, revision):
     predecessor inside the sealed admission; validators and the join re-admit
     against that sealed value and still compare every estate input blob.
     """
+    _, tornado = reviewed_tornado66_dependency_transition(baseline)
     _, hang = reviewed_hang_guard_input_transition(baseline)
     _, runtime = reviewed_runtime_dependency_transition(baseline)
     _, lock = reviewed_audit_lock_transition(baseline)
@@ -1233,6 +1285,20 @@ def estate_successor_proof(baseline, source, revision):
                 git(source, "merge-base", "--is-ancestor", lock["source_after"], revision)
             except subprocess.CalledProcessError:
                 raise ValueError("audit lock successor source revision differs") from None
+    if tornado is not None:
+        for path, change in tornado["changes"].items():
+            try:
+                blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
+            except subprocess.CalledProcessError:
+                blob = None
+            if blob == change["after_blob"]:
+                try:
+                    git(source, "merge-base", "--is-ancestor",
+                        tornado["source_before"], tornado["source_after"])
+                    git(source, "merge-base", "--is-ancestor", tornado["source_after"], revision)
+                except subprocess.CalledProcessError:
+                    raise ValueError("Tornado dependency successor source revision differs") from None
+                break
     if runtime is not None:
         for path, change in runtime["changes"].items():
             try:
@@ -1251,6 +1317,7 @@ def estate_successor_proof(baseline, source, revision):
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    _, tornado = reviewed_tornado66_dependency_transition(baseline)
     _, hang = reviewed_hang_guard_input_transition(baseline)
     _, runtime = reviewed_runtime_dependency_transition(baseline)
     _, lock = reviewed_audit_lock_transition(baseline)
@@ -1301,6 +1368,24 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                     "bot packaging successor mode or tree changed")
             files = dict(files) | {BOT_PACKAGING_INPUT: (change["mode"], change["before_blob"])}
         common = dict(common) | {BOT_PACKAGING_INPUT: change["before_blob"]}
+    if tornado is not None and any(common.get(path) == change["after_blob"]
+                                   for path, change in tornado["changes"].items()):
+        # Admit only the complete reviewed bundle, then restore the exact runtime
+        # predecessor for every existing seal and historical skip consumer.
+        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+                and source_revision != record["source_after"]
+                and estate_successor_of == record["source_after"]
+                and all(common.get(path) == change["after_blob"]
+                        for path, change in tornado["changes"].items()),
+                "Tornado dependency successor requires a proven estate successor")
+        if files is not None:
+            require(all(files.get(path) == (change["mode"], change["after_blob"])
+                        for path, change in tornado["changes"].items()),
+                    "Tornado dependency successor mode or tree changed")
+            files = dict(files) | {path: (change["mode"], change["before_blob"])
+                                   for path, change in tornado["changes"].items()}
+        common = dict(common) | {path: change["before_blob"]
+                                 for path, change in tornado["changes"].items()}
     if runtime is not None and any(common.get(path) == change["after_blob"]
                                    for path, change in runtime["changes"].items()):
         # Only a proven estate successor may carry the reviewed runtime dependency
