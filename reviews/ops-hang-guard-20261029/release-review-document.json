@@ -1,0 +1,2746 @@
+{
+  "cases": [
+    {
+      "after_blob": "7bbe1bae33d206b38634888ad2a4734e5a1754ef",
+      "basis": "environmental",
+      "before_blob": "4e63ad7e168512c3317749dbbed031b6276376d9",
+      "nodeid": "tests/test_agent_rollback_payload_20261013.py::test_real_linux_signed_payload_roots_and_native_consumer_rejections",
+      "outcome": "skipped",
+      "reason": "Skipped: explicit isolated Linux root/GPG fixture required; never production keys",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_hourly_limit_blocks_and_alerts",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_restores_once_then_cooldown_blocks_repeat[exited-True]",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_restores_once_then_cooldown_blocks_repeat[running-False]",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[capacity]",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[duplicate]",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[future]",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[mode]",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[owner]",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[parent]",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[shape]",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_failure_unsafe_or_unknown_state_never_mutates[symlink]",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "aa63d4180d06a939df28a8fba2f45109a0d0bc7f",
+      "basis": "environmental",
+      "before_blob": "56cd97b4a04eb17fac54841ce65358fea87be0a7",
+      "nodeid": "tests/test_boot_container_reconcile_lock.py::test_structural_repair_retains_failed_post_repair_ready_verdict",
+      "outcome": "skipped",
+      "reason": "Skipped: repair state requires actual Linux UID0 and root-owned safe ancestors",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772",
+      "basis": "environmental",
+      "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+      "nodeid": "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_audit_checks_trust_before_executing_helper",
+      "outcome": "skipped",
+      "reason": "Skipped: native root metadata and Linux filesystem required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772",
+      "basis": "environmental",
+      "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+      "nodeid": "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_complete_inode_is_fsynced_before_publication",
+      "outcome": "skipped",
+      "reason": "Skipped: native root metadata and Linux filesystem required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772",
+      "basis": "environmental",
+      "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+      "nodeid": "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_interrupted_publication_is_not_adopted_as_a_complete_asset",
+      "outcome": "skipped",
+      "reason": "Skipped: native root metadata and Linux filesystem required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772",
+      "basis": "environmental",
+      "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+      "nodeid": "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_new_directory_and_files_get_exact_modes_under_private_umask",
+      "outcome": "skipped",
+      "reason": "Skipped: native root metadata and Linux filesystem required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772",
+      "basis": "environmental",
+      "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+      "nodeid": "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_publication_preserves_concurrent_regular_file_and_symlink",
+      "outcome": "skipped",
+      "reason": "Skipped: native root metadata and Linux filesystem required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772",
+      "basis": "environmental",
+      "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+      "nodeid": "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_reader_rejects_link_fifo_owner_mode_and_size_drift",
+      "outcome": "skipped",
+      "reason": "Skipped: native root metadata and Linux filesystem required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "1ca96a2971e121affc89220d09d3228aa4e0a772",
+      "basis": "environmental",
+      "before_blob": "1b546609f02b20df89363f493e13c71b1dbaae3a",
+      "nodeid": "tests/test_cadvisor_persistent_owner.py::NativeFilesTests::test_reader_rejects_path_replacement_and_inplace_change_during_actual_fd_read",
+      "outcome": "skipped",
+      "reason": "Skipped: native root metadata and Linux filesystem required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b545a93d93baf5591cec4e609ec9c07812218b34",
+      "basis": "environmental",
+      "before_blob": "78743dca4a3211d62b5059f84b6bf6fe2a43bfd2",
+      "nodeid": "tests/test_cert_renew_log_dir_20260815.py::test_missing_dedicated_log_directory_is_still_created_locked_down",
+      "outcome": "skipped",
+      "reason": "Skipped: cannot chown to root here: install: cannot change owner and permissions of ‘/tmp/pytest-of-runner/pytest-0/test_missing_dedicated_log_dir0/cert-renew’: Operation not permitted",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandoned_never_installed_run_allows_cleanup[PREPARED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandoned_never_installed_run_allows_cleanup[PREPARING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandoned_receipt_with_install_stage_fields_blocks[after]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandoned_receipt_with_install_stage_fields_blocks[armed_at]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandoned_receipt_with_install_stage_fields_blocks[fallback_files]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandoned_receipt_with_install_stage_fields_blocks[fallback_menu_sha256]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandoned_receipt_with_install_stage_fields_blocks[target_entry]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[ARMED-never_installed]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[ARMED-superseded_rollback]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[ARMING-never_installed]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[ARMING-superseded_rollback]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[INSTALLED-never_installed]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[INSTALLED-superseded_rollback]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[INSTALLING-never_installed]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[INSTALLING-superseded_rollback]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[PROMOTING-never_installed]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_never_releases_a_phase_past_prepare[PROMOTING-superseded_rollback]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_still_in_progress_blocks",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[abandoner_sha256-not-a-digest]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[kind-superseded_rollback]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[original_phase-PREPARING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[phase-DONE]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[previous_executor_sha256-0000000000000000000000000000000000000000000000000000000000000000]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[receipt_sha256-0000000000000000000000000000000000000000000000000000000000000000]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[run_id-hostpatch-other]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_abandonment_that_does_not_bind_this_receipt_blocks[sid-yue-other]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_active_native_flock_prevents_any_cleanup",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adopted_installed_run_allows_cleanup",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adopted_receipt_that_was_armed_blocks[after]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adopted_receipt_that_was_armed_blocks[armed_at]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adopted_receipt_that_was_armed_blocks[fallback_files]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[ARMED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[ARMING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[INSTALLING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[PREPARED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[PROMOTING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_only_ever_releases_installed[ROLLBACK_REQUESTED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[adopter_sha256-x]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[boot_id-]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[boot_id-install-boot]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[grub_entry-None]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[grub_entry-yueto-host-patch-fallback-x]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[kernel-other-kernel]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[original_phase-PREPARED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[phase-ADOPTING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[phase-DONE]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[previous_executor_sha256-0000000000000000000000000000000000000000000000000000000000000000]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[receipt_sha256-0000000000000000000000000000000000000000000000000000000000000000]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[run_id-other]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_adoption_that_does_not_bind_blocks[sid-yue-other]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_all_runs_scanned_not_only_newest_promoted",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_current_boot_prepared_not_expired_by_age",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_exact_finalized_rollback_allows_cleanup",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_finalizer_for_different_receipt_is_rejected",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_incomplete_finalization_still_blocks",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_incomplete_promoted_proof_is_unknown",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_known_foreign_old_machine_not_inferred_superseded",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_legacy_missing_machine_proof_not_inferred_superseded",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_native_lock_remains_held_during_actual_cleanup_program",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_non_preboot_phase_cannot_be_inferred_superseded[ARMED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_non_preboot_phase_cannot_be_inferred_superseded[ARMING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_non_preboot_phase_cannot_be_inferred_superseded[INSTALLING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_non_preboot_phase_cannot_be_inferred_superseded[PROMOTING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_non_preboot_phase_cannot_be_inferred_superseded[ROLLBACK_REQUESTED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_one_abandoned_run_does_not_release_another_pending_one",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_orphan_fallback_even_without_receipt_directory_blocks",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_other_unresumable_preboot_history_needs_matching_promotion[INSTALLED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_other_unresumable_preboot_history_needs_matching_promotion[PREPARING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[ARMED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[ARMING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[BOOT_FELL_BACK]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[INSTALLED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[INSTALLING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[PREPARED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[PREPARING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[PROMOTING]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[ROLLBACK_REQUESTED]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_pending_or_unknown_receipt_prevents_any_cleanup[UNKNOWN]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_promoted_only_allows_normal_cleanup",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_remaining_fallback_unit_prevents_even_promoted_cleanup",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_same_fd_read_detects_actual_path_replacement",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_allows_cleanup",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[absent]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[hash]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[not-promoted]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[older]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[other-sid]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseded_rollback_must_bind_one_real_later_promotion[unknown-run]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseding_proof_must_match_identity[boot]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseding_proof_must_match_identity[kernel]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseding_proof_must_match_identity[machine]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseding_proof_must_match_identity[owner]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_superseding_proof_must_match_identity[sid]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_adoption_blocks[malformed]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_adoption_blocks[symlink]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_adoption_blocks[writable]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_or_malformed_abandonment_blocks[hardlink]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_or_malformed_abandonment_blocks[malformed]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_or_malformed_abandonment_blocks[symlink]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_or_malformed_abandonment_blocks[writable]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[fifo]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[hardlink]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[large]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[malformed]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[symlink]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_unsafe_receipt_refuses_before_cleanup[writable]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f536ee76a01e4f7d4c395ea018ecf688dfe2517f",
+      "basis": "environmental",
+      "before_blob": "700443e48165fe0132b6ed8e91df5a0186030d00",
+      "nodeid": "tests/test_cleanup_hostpatch_guard.py::test_valid_superseding_current_boot_releases_old_prepared",
+      "outcome": "skipped",
+      "reason": "Skipped: real root ownership and flock integration runs in Linux sandbox",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "3b3443dcf3a8fa9bce9cfa57da51969e2ab7ea1a",
+      "basis": "environmental",
+      "before_blob": "1a88653d038cb780b4eefd6a8b28718e801d1b5e",
+      "nodeid": "tests/test_entry_diagnostics_signed_closure_20261008.py::test_real_linux_signed_fixture_when_explicitly_requested",
+      "outcome": "skipped",
+      "reason": "Skipped: run isolated real GPG/strict-root fixture with explicit local image; no production keys",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde",
+      "basis": "environmental",
+      "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+      "nodeid": "tests/test_host_diagnostic_tools.py::test_install_readback_idempotent_and_exact_rollback",
+      "outcome": "skipped",
+      "reason": "Skipped: native root/Linux package CLI; Linux lens required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde",
+      "basis": "environmental",
+      "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+      "nodeid": "tests/test_host_diagnostic_tools.py::test_preexisting_tool_is_not_claimed_for_rollback",
+      "outcome": "skipped",
+      "reason": "Skipped: native root/Linux package CLI; Linux lens required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde",
+      "basis": "environmental",
+      "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+      "nodeid": "tests/test_host_diagnostic_tools.py::test_rollback_refuses_later_version_or_new_dependents",
+      "outcome": "skipped",
+      "reason": "Skipped: native root/Linux package CLI; Linux lens required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde",
+      "basis": "environmental",
+      "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+      "nodeid": "tests/test_host_diagnostic_tools.py::test_unreviewed_or_installed_package_change_is_rejected[Inst libncurses6 [0] (1 test)]",
+      "outcome": "skipped",
+      "reason": "Skipped: native root/Linux package CLI; Linux lens required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde",
+      "basis": "environmental",
+      "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+      "nodeid": "tests/test_host_diagnostic_tools.py::test_unreviewed_or_installed_package_change_is_rejected[Inst openssh-server (1 test)]",
+      "outcome": "skipped",
+      "reason": "Skipped: native root/Linux package CLI; Linux lens required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "9b069353a1cdb89639f7c856d90f6922dd1f6bde",
+      "basis": "environmental",
+      "before_blob": "545ebff82f64aa4ad1d6b7b056a6f9817fc29c3f",
+      "nodeid": "tests/test_host_diagnostic_tools.py::test_unreviewed_or_installed_package_change_is_rejected[Remv libc6 [1]]",
+      "outcome": "skipped",
+      "reason": "Skipped: native root/Linux package CLI; Linux lens required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "a0edcebe36745ab381fb58b405aeae62a83616b6",
+      "basis": "environmental",
+      "before_blob": "d527ab3c0417d44a38683318724634c7b673f8bd",
+      "nodeid": "tests/test_host_runtime_converger_owns_sentinel_20261005.py::test_sandbox_is_refused_for_root",
+      "outcome": "skipped",
+      "reason": "Skipped: needs a real uid 0",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_bad_certificate_fails_then_recovers[api/v2/avatar-untrusted-issuer]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_bad_certificate_fails_then_recovers[api/v2/avatar-wrong-san]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_bad_certificate_fails_then_recovers[s-untrusted-issuer]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_bad_certificate_fails_then_recovers[s-wrong-san]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[api/v2/avatar-/api/v1/client/subscribe?token=lab-token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[api/v2/avatar-/api/v1/subscribe?token=lab-token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[api/v2/avatar-/api/v2/client/subscribe?token=lab-token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[api/v2/avatar-/api/v2/subscribe?token=lab-token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[api/v2/avatar-/s/lab-token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[s-/api/v1/client/subscribe?token=lab-token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[s-/api/v1/subscribe?token=lab-token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[s-/api/v2/client/subscribe?token=lab-token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[s-/api/v2/subscribe?token=lab-token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_delivery_and_origin_preservation_with_bastion_down[s-/s/lab-token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[api/v2/avatar-headers0]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[api/v2/avatar-headers1]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[api/v2/avatar-headers2]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[api/v2/avatar-headers3]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[s-headers0]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[s-headers1]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[s-headers2]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_proven_edge_source_still_rejects_worker_ipv6_and_host_confusion[s-headers3]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[api/v2/avatar-headers0]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[api/v2/avatar-headers1]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[api/v2/avatar-headers2]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[api/v2/avatar-headers3]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[api/v2/avatar-headers4]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[s-headers0]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[s-headers1]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[s-headers2]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[s-headers3]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_public_cf_client_cannot_forge_edge_origin[s-headers4]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[api/v2/avatar-/api/ops/auth/login]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[api/v2/avatar-/api/v2/private-admin/users]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[api/v2/avatar-/d/token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[api/v2/avatar-/s/lab-token/extra]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[s-/api/ops/auth/login]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[s-/api/v2/private-admin/users]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[s-/d/token]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_subscription_lane_never_exposes_admin_or_other_path[s-/s/lab-token/extra]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_untrusted_socket_cannot_forge_cf_peer[api/v2/avatar]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "b5d647222f714528474fe9ff9749a9d1c174ebf2",
+      "basis": "environmental",
+      "before_blob": "9a9d2b964e7c351ba52256711e2dbbfc4d81513e",
+      "nodeid": "tests/test_independent_subscription_origin_20261012.py::test_native_untrusted_socket_cannot_forge_cf_peer[s]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Docker/TLS lab needs explicit resource coordination",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-full-audit.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-rebuild-node-runtime.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-rollout-yue-node-image.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[capacity-drift-verify-yue-node-rollout-runtime.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-full-audit.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-rebuild-node-runtime.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-rollout-yue-node-image.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[legacy-verify-yue-node-rollout-runtime.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-full-audit.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-rebuild-node-runtime.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-rollout-yue-node-image.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_four_shell_assignments_use_same_policy_and_never_fall_back[opt-in-verify-yue-node-rollout-runtime.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_python_ssh_reader_to_both_compose_slots[False]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_python_ssh_reader_to_both_compose_slots[True]",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_actual_remote_reader_rejects_wrong_inventory_sid_without_exposing_auth",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "ba7b0a20dcb051274bd38a9d1d6d658a22400446",
+      "basis": "environmental",
+      "before_blob": "cfed1a776576b7e62a75a124043ac3fe566a2bc8",
+      "nodeid": "tests/test_node_resource_consumers.py::test_rebuild_actual_renderer_keeps_proof_budget_and_outbox_fence",
+      "outcome": "skipped",
+      "reason": "Skipped: actual Linux root stable-FD policy files",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[dangling-symlink-converge-yue-node-gso-policy.sh-args2]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[dangling-symlink-converge-yue-node-host.sh-args3]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[dangling-symlink-finalize-yue-node-rollout-runtime.sh-args1]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[dangling-symlink-verify-yue-node-rollout-runtime.sh-args0]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[directory-converge-yue-node-gso-policy.sh-args2]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[directory-converge-yue-node-host.sh-args3]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[directory-finalize-yue-node-rollout-runtime.sh-args1]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[directory-verify-yue-node-rollout-runtime.sh-args0]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[file-converge-yue-node-gso-policy.sh-args2]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[file-converge-yue-node-host.sh-args3]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[file-finalize-yue-node-rollout-runtime.sh-args1]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "757f66662b0ee4e430e20eb9a0e2d9eeeaf69ad7",
+      "basis": "environmental",
+      "before_blob": "256fd472b326ad176f9d5d6fd546b802b6bf11f1",
+      "nodeid": "tests/test_node_systemd_legacy_interlock_20261018.py::test_actual_entry_refuses_any_native_owner_before_docker[file-verify-yue-node-rollout-runtime.sh-args0]",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated real Linux root; host skip is not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_actual_kernel_memory_drift_refused",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_competing_docker_and_restart_policy_refused",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_mixed_docker_health_requires_original_live_owner",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_native_autonomous_consumers_reach_actual_runtime",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_native_readyz_failure_is_not_docker_recreation",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_native_unknown_blocks_consumers_but_preserves_journal_maintenance",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_owner_helper_and_receipt_cas_negative",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_process_environment_mismatch_refused_even_after_source_restored",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_real_pid1_cgroup_mount_and_agent_snapshot",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_real_unit_dropin_refused",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_staged_tree_remains_exact_after_actual_unit_start",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_unknown_owner_refuses_agent_docker_fallback",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "c0175bae787b314890bbf46c2ef25dc58547e82c",
+      "basis": "environmental",
+      "before_blob": "271eaabce8df0c769a33ff78789c30fd02ca023e",
+      "nodeid": "tests/test_node_systemd_runtime_20261018.py::NativeRuntimeTest::test_zz_final_fixture_invalidation_refuses_binary_and_mount_change",
+      "outcome": "skipped",
+      "reason": "Skipped: requires isolated actual systemd lab; host skips are not acceptance",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "5d6095b1b51cf75c756d5d405834703a84080802",
+      "basis": "environmental",
+      "before_blob": "5b3f95b91a67c7c8ff8d438fd5c7d906a0406462",
+      "nodeid": "tests/test_panel_backend_bootstrap_20261019.py::test_real_recovery_cli_rejects_untrusted_journal_before_runtime_mutations",
+      "outcome": "skipped",
+      "reason": "Skipped: protected recovery CLI runs in the explicit isolated native gate",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "5d6095b1b51cf75c756d5d405834703a84080802",
+      "basis": "environmental",
+      "before_blob": "5b3f95b91a67c7c8ff8d438fd5c7d906a0406462",
+      "nodeid": "tests/test_panel_backend_bootstrap_20261019.py::test_staged_config_real_nginx_preserves_uris_and_restricted_dual_ingress",
+      "outcome": "skipped",
+      "reason": "Skipped: privileged NGINX semantics run only in the explicit native gate",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[duplicate-document]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root metadata response gate",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[duplicate-field]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root metadata response gate",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[empty]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root metadata response gate",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[late-diagnostic]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root metadata response gate",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[none]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root metadata response gate",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_actual_buffer_transport_consumes_one_exact_private_response[wrong-sid]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root metadata response gate",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_apply_accept_and_future_source_explicit_rollback",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_cold_atime_busy_lock_and_uid1001",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_failure_retains_original_and_private_recovery_record[reload]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_failure_retains_original_and_private_recovery_record[validate]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_interrupted_restore_reloads_even_when_file_is_already_original",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_sigkill_after_replacement_is_durably_recoverable",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_stale_cas_and_non_buffer_change_never_mutate",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_unaccepted_crash_record_requires_explicit_recovery",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_unsafe_config_metadata_is_rejected[hardlink]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_unsafe_config_metadata_is_rejected[symlink]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_unsafe_config_metadata_is_rejected[world-writable]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_native_wrong_sid_or_drift_cannot_restore",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[address]",
+      "outcome": "skipped",
+      "reason": "Skipped: capture requires native Linux UID0 file ownership",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[contract-json]",
+      "outcome": "skipped",
+      "reason": "Skipped: capture requires native Linux UID0 file ownership",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[identity]",
+      "outcome": "skipped",
+      "reason": "Skipped: capture requires native Linux UID0 file ownership",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[none]",
+      "outcome": "skipped",
+      "reason": "Skipped: capture requires native Linux UID0 file ownership",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_real_buffer_capture_compares_literal_identity_before_dns[peers-json]",
+      "outcome": "skipped",
+      "reason": "Skipped: capture requires native Linux UID0 file ownership",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[after-proof]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[before-proof]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[none]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "f08bbb7f773c4ba65c8c793533a0a69e0c7063df",
+      "basis": "environmental",
+      "before_blob": "db3609c2bba5128d1d1be952a30cbe7a44ed1dd0",
+      "nodeid": "tests/test_relay_buffer_transaction_20261013.py::test_real_controller_transaction_consumer_reacquires_lock_and_preserves_unknown[source-drift]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux UID0 with actual stream nginx required",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_apply_imports_complete_private_closure_and_rollback_preserves_evolved_lease",
+      "outcome": "skipped",
+      "reason": "Skipped: real GNU owner/mode and root installer, Linux root image",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_busy_provider_service_is_not_killed_or_republished",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_effective_unit_override_cannot_enable_writer[entrypoint]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_effective_unit_override_cannot_enable_writer[timeout]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_existing_private_closure_is_restored_as_a_pair_with_its_unit",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[scripts/lib/__init__.py]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[scripts/lib/__pycache__/ssh_auth.pyc]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[yueops/__pycache__/fleet_inventory_env.pyc]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[yueops/unreviewed.py]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_identity_change_during_wait_is_not_admitted_as_address_refresh",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/converge-blackholed-pool-member-rotation.py]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/fleet-inventory-env.sh]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/moonvm_rotate.py]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/owned_dns.py]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/relay_peers.py]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/ssh_auth.py]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/ssh_kr_proxy.py]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[yueops/__init__.py]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[yueops/fleet_inventory_env.py]",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_naturally_completed_rotation_refreshes_addresses_before_delivery",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_old_flat_closure_is_untouched_and_new_directories_are_removed_on_rollback",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer and predecessor filesystem",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_private_inventory_bridge_and_loader_ignore_external_package",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer and isolated interpreter",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "89a5553d408705adb39c7f703a4f3b0325b49171",
+      "basis": "environmental",
+      "before_blob": "a954d431f4e9b2327b3f952f2b7ac4d1b5c3cf30",
+      "nodeid": "tests/test_relay_coordinator_delivery_closure_20260905.py::test_rollback_refuses_changed_published_dependency",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "09a3fe42fb73422c5d1ab49549721c1c9ddd497d",
+      "basis": "environmental",
+      "before_blob": "201bcd8cba4eeccca55c221e898cd3f9a06714cc",
+      "nodeid": "tests/test_relay_nginx_output_order_20261009.py::test_native_nginx_transaction_has_one_ordered_channel_and_preserves_rollback[None]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux root filesystem transaction",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "09a3fe42fb73422c5d1ab49549721c1c9ddd497d",
+      "basis": "environmental",
+      "before_blob": "201bcd8cba4eeccca55c221e898cd3f9a06714cc",
+      "nodeid": "tests/test_relay_nginx_output_order_20261009.py::test_native_nginx_transaction_has_one_ordered_channel_and_preserves_rollback[reload]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux root filesystem transaction",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "09a3fe42fb73422c5d1ab49549721c1c9ddd497d",
+      "basis": "environmental",
+      "before_blob": "201bcd8cba4eeccca55c221e898cd3f9a06714cc",
+      "nodeid": "tests/test_relay_nginx_output_order_20261009.py::test_native_nginx_transaction_has_one_ordered_channel_and_preserves_rollback[validate]",
+      "outcome": "skipped",
+      "reason": "Skipped: native Linux root filesystem transaction",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_accept_is_immutable_and_reconcile_closes_real_window",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_actual_native_apply_and_reconcile_reach_pg18",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[admin_service-other]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[candidate_revision-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[database_oid-1]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[database_system_identifier-123]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[desired_generation-235]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[desired_signature_sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[desired_yaml_sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[host_machine_id_sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[image_id-sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[ops_revision-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_exact_identity_drift_refuses_before_closure[target_floor-141]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_forged_receipt_cannot_close_open_window[attempt-1]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_forged_receipt_cannot_close_open_window[checkpoint_sha256-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_forged_receipt_cannot_close_open_window[input_sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_forged_receipt_cannot_close_open_window[transaction_id-cccccccccccccccccccccccccccccccc]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_live_child_refuses_even_without_database_session",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_live_database_session_refuses",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_native_no_receipt_and_old_desired_refuse",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_native_sigkill_after_commit_then_fresh_reconcile[begin-141]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_native_sigkill_after_commit_then_fresh_reconcile[up-142]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_preclose_does_not_defer_unexpected_login_create",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_reconcile_not_started_does_not_close_or_migrate",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_reconcile_post_commit142_never_reapplies",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_security_closure_remains_committed_when_post_audit_fails",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_unsafe_receipt_rejected[duplicate]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_unsafe_receipt_rejected[hardlink]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_unsafe_receipt_rejected[mode]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    },
+    {
+      "after_blob": "8bbe33fd3e70bfe899d9ed1005e9c9437935243e",
+      "basis": "environmental",
+      "before_blob": "24ebf12305f69861acd22225575edccc0d40ba45",
+      "nodeid": "tests/test_schema_contract_receipt_20261020.py::test_unsafe_receipt_rejected[symlink]",
+      "outcome": "skipped",
+      "reason": "Skipped: native receipt ownership and PG18 fixture require isolated Linux root",
+      "verdict": "approve"
+    }
+  ],
+  "kind": "independent-skip-blob-successor-review",
+  "review_receipt_sha256": "bea31a6cb5c97a5de4bcc46febf9ec3430683082ecc38a8d93b2f7f5e38ce469",
+  "reviewer": "independent",
+  "run_id": "40578720805",
+  "source_after": "d9c302e126c039e90b5f34c82b796582b1e367e8",
+  "source_before": "8ffdedad24dcb23ca0c33a05ea0ea889cbdab0fe"
+}
