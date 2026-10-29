@@ -271,6 +271,7 @@ def _assert_native_contract(test, workflow):
         'scripts/run-native-nginx-tests.py',
         'sudo -n env PATH="$PATH" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"',
         'tests/test_schema_contract_receipt_20261020.py 30 0',
+        '"$native_driver" tests/native_loadshed_installer_20261030.py 7 0',
     ):
         test.assertIn(required, workflow)
 
@@ -294,6 +295,7 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
             'test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"',
             'test "$(id -u)" = 1001',
             '"$native_driver" tests/test_node_systemd_pilot_20261018.py 38 0',
+            '"$native_driver" tests/native_loadshed_installer_20261030.py 7 0',
         ):
             with self.subTest(removed=removed), self.assertRaises(AssertionError):
                 _assert_native_contract(self, workflow.replace(removed, '', 1))
@@ -359,7 +361,10 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
                         capture_output=True, text=True, timeout=20, check=False)
                     self.assertEqual(result.returncode, code, result.stderr)
                     rows = [json.loads(line) for line in log.read_text().splitlines()]
-                    self.assertEqual(len(rows), 4)
+                    self.assertEqual(len(rows), 5)
+                    self.assertEqual(rows[3]['argv'][1:4],
+                        ['tests/native_loadshed_installer_20261030.py', '7', '0'])
+                    self.assertEqual(rows[3]['tz'], 'UTC')
                     self.assertIn('native-start', rows[0]['argv'])
                     self.assertEqual(rows[-1]['argv'][1:],
                         ['tests/test_schema_contract_receipt_20261020.py', '30', '0',
@@ -456,3 +461,75 @@ class PersistedNativeReceipts(unittest.TestCase):
                 self.assertEqual(receipt["floor"], 6)
                 self.assertEqual(len(receipt["required"]), 6)
                 self.assertEqual(bool(receipt["failed_or_skipped"]), mode != "pass")
+
+
+class LoadShedNativeRegistration(unittest.TestCase):
+    def setUp(self):
+        import importlib.util
+        import json
+        spec = importlib.util.spec_from_file_location("loadshed_policy", ROOT / "scripts/pytest-shards.py")
+        assert spec is not None and spec.loader is not None
+        self.consumer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.consumer)
+        self.baseline = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
+        self.target = "tests/native_loadshed_installer_20261030.py"
+
+    def test_baseline_pin_inventory_and_workflow_agree(self):
+        original, inputs = self.consumer.required_native_inputs(self.baseline)
+        self.assertEqual(inputs, self.consumer.NATIVE_INPUTS)
+        self.assertEqual(set(inputs), {self.target})
+        self.assertEqual(self.consumer.NATIVE_TARGETS[self.target], (7, 0))
+        self.assertEqual(original["cases"], self.baseline["cases"])
+        self.consumer.reviewed_estate_input_transition(self.baseline)
+        common = original["common_inputs"] | inputs
+        files = {p: ("100644", blob) for p, blob in common.items()}
+        self.consumer.admit_shared_inputs(self.baseline, common, files)
+        for changed in (original["common_inputs"], common | {self.target: "f" * 40}):
+            with self.subTest(changed=changed.get(self.target)), self.assertRaisesRegex(
+                    ValueError, "missing or changed required native input"):
+                self.consumer.admit_shared_inputs(self.baseline, changed)
+        with self.assertRaisesRegex(ValueError, "mode or tree changed"):
+            self.consumer.admit_shared_inputs(
+                self.baseline, common, files | {self.target: ("120000", inputs[self.target])})
+
+    def test_pin_and_historical_seal_mutations_fail(self):
+        import copy
+        for mode in ("pin", "history", "extra"):
+            changed = copy.deepcopy(self.baseline)
+            if mode == "pin":
+                changed["required_native_inputs"]["inputs"][self.target] = "f" * 40
+            elif mode == "history":
+                changed["events_sha256"] = "f" * 64
+            else:
+                changed["required_native_inputs"]["inputs"]["tests/extra.py"] = "f" * 40
+            with self.subTest(mode=mode), self.assertRaises(ValueError):
+                self.consumer.required_native_inputs(changed)
+
+    def test_loadshed_receipt_is_required_and_cannot_reduce_floor_or_change_uid(self):
+        import json
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            (output / "native-context.json").write_text("{}")
+            for target, (floor, uid) in self.consumer.NATIVE_TARGETS.items():
+                names = sorted(f"{target}::test_case_{i}" for i in range(floor))
+                row = dict(target=target, floor=floor, uid=uid, platform="linux", binding={},
+                           required=names, passed=names, collection_bad=False,
+                           failed_or_skipped=[], exitstatus=0, process_exitstatus=0)
+                (output / (Path(target).stem + ".json")).write_text(json.dumps(row))
+            path = output / (Path(self.target).stem + ".json")
+            original = path.read_text()
+            with patch.object(self.consumer, "native_execution_context", return_value={}):
+                self.consumer.native_receipts({}, output)
+                for mode in ("missing", "floor", "uid", "incomplete"):
+                    row = json.loads(original)
+                    if mode == "missing":
+                        path.unlink()
+                    else:
+                        if mode == "floor": row["floor"] = 6
+                        elif mode == "uid": row["uid"] = 1001
+                        else: row["passed"] = row["passed"][:-1]
+                        path.write_text(json.dumps(row))
+                    with self.subTest(mode=mode), self.assertRaises(ValueError):
+                        self.consumer.native_receipts({}, output)
+                    path.write_text(original)

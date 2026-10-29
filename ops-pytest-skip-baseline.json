@@ -7829,5 +7829,11 @@
         "mode": "100644"
       }
     }
+  },
+  "required_native_inputs": {
+    "prior_baseline_sha256": "c8b76b0fa127981116b0dd7cee4b30a446162ceb0a7e2138fe949ec3fc479820",
+    "inputs": {
+      "tests/native_loadshed_installer_20261030.py": "a861b1d6b30b3ba59d5321051430c73c099d25c2"
+    }
   }
 }
