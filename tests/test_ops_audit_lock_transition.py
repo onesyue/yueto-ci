@@ -26,8 +26,9 @@ class AuditLockTransition(unittest.TestCase):
         self.change = self.record["changes"][PATH]
 
     def test_sealed_record_is_exact_and_chained_on_the_audit_seal(self):
-        self.assertEqual(list(self.sealed)[-3:], [KEY, "reviewed_runtime_dependency_transition",
-                                                 "reviewed_skip_blob_successor_transition"])
+        self.assertEqual(list(self.sealed)[-5:], [KEY, "reviewed_runtime_dependency_transition",
+                                                 "reviewed_skip_blob_successor_transition", "reviewed_hang_guard_input_transition",
+                         "reviewed_release_skip_blob_successor_transition"])
         prior, record = SHARDS.reviewed_audit_lock_transition(self.sealed)
         self.assertEqual(record, self.record)
         self.assertNotIn(KEY, prior)
@@ -116,6 +117,8 @@ class AuditLockTransition(unittest.TestCase):
             self.assertEqual(calls[-1][PATH], self.change["before_blob"])
             # Without the lock seal the same successor blob is refused as before.
             unsealed = copy.deepcopy(self.sealed)
+            unsealed.pop("reviewed_release_skip_blob_successor_transition")
+            unsealed.pop("reviewed_hang_guard_input_transition")
             unsealed.pop("reviewed_skip_blob_successor_transition")
             unsealed.pop("reviewed_runtime_dependency_transition")
             unsealed.pop(KEY)
@@ -155,8 +158,10 @@ class AuditLockTransition(unittest.TestCase):
             orig_site = SHARDS.reviewed_site_lock_transition
             orig_bot = SHARDS.reviewed_bot_packaging_transition
             orig_runtime = SHARDS.reviewed_runtime_dependency_transition
+            orig_hang = SHARDS.reviewed_hang_guard_input_transition
             git = SHARDS.git
             try:
+                SHARDS.reviewed_hang_guard_input_transition = lambda b: (b, None)
                 SHARDS.reviewed_runtime_dependency_transition = lambda b: (b, None)
                 SHARDS.reviewed_audit_lock_transition = lambda b: (b, lock)
                 SHARDS.reviewed_estate_input_transition = lambda b: (b, {"source_after": estate})
@@ -185,6 +190,7 @@ class AuditLockTransition(unittest.TestCase):
                 SHARDS.reviewed_site_lock_transition = orig_site
                 SHARDS.reviewed_bot_packaging_transition = orig_bot
                 SHARDS.reviewed_runtime_dependency_transition = orig_runtime
+                SHARDS.reviewed_hang_guard_input_transition = orig_hang
                 SHARDS.git = git
 
 

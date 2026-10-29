@@ -479,7 +479,18 @@ def _ui_units():
 
 
 def _ui_allowed(entry: dict, tree: dict, source) -> list[str] | None:
-    """COPY sources this ui-* image may fingerprint, or None for other images."""
+    """COPY sources this ui-* image may fingerprint, or None for other images.
+
+    Non-UI services never load the catalog, so vendored copies stay usable.
+    A UI service with an unavailable catalog remains unknown.
+    """
+    service = entry.get("service")
+    if not isinstance(service, str) or not service.startswith("ui-"):
+        return None
+    try:
+        units = _ui_units()
+    except (OSError, ImportError) as exc:
+        raise Unknown(f"{service} static-unit catalog unavailable: {exc}") from exc
 
     def read_text(path: str) -> str | None:
         row = tree.get(path)
@@ -491,8 +502,8 @@ def _ui_allowed(entry: dict, tree: dict, source) -> list[str] | None:
             raise Unknown(f"{path} is not utf-8") from exc
 
     try:
-        return _ui_units().allowed_copy_sources(entry, read_text, list(tree))
-    except _ui_units().ScopeError as exc:
+        return units.allowed_copy_sources(entry, read_text, list(tree))
+    except units.ScopeError as exc:
         raise Unknown(str(exc)) from exc
 
 
