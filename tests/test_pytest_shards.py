@@ -426,7 +426,7 @@ class ShardPrimitives(unittest.TestCase):
         self.assertTrue(build_job.startswith("    needs: [plan]\n"))
         self.assertNotIn("Authorize and promote verified default-branch digest", build_job)
         self.assertNotIn("built-${SOURCE_SHA}", build_job)
-        self.assertIn("needs: [build, plan, validate, validation-evidence]", publish)
+        self.assertIn("needs: [build, plan]\n", publish)  # B1 async validation
         self.assertIn("Authorize and promote verified default-branch digest", publish)
         self.assertIn("built-${SOURCE_SHA}", publish)
         self.assertEqual(workflow.count("Authorize and promote verified default-branch digest"), 1)

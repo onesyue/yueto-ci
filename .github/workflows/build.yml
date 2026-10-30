@@ -1687,7 +1687,7 @@ jobs:
   build:
     needs: [plan]
     # Candidate preparation overlaps validation. built-<sha> and :latest
-    # move only in publish, after validation-evidence.
+    # move only in publish (which no longer waits for validation, B1).
     # Job-level `if` is evaluated before strategy expansion.  A source-only
     # target therefore skips this job without asking Actions to expand or run
     # an empty Docker matrix.
@@ -2193,9 +2193,13 @@ jobs:
           retention-days: 14
 
   publish:
-    needs: [build, plan, validate, validation-evidence]
-    # Retag and :latest wait until the candidate exists and validation-evidence
-    # succeeded. A failed or skipped candidate skips this job.
+    needs: [build, plan]
+    # 2026-10-30 Jim 决定（计划「耗时环节取消清单」B1）：validate 不再拦 publish。
+    # Retag and :latest wait only for the verified candidate; validate and
+    # validation-evidence keep running in the same run as an asynchronous
+    # post-publish check, and validation-alert below opens an issue when
+    # they go red (roll back to the previous signed digest if needed).
+    # A failed or skipped candidate still skips this job.
     if: needs.plan.outputs.has_builds == 'true'
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 30
@@ -2602,27 +2606,34 @@ jobs:
             "${promotion_tag_args[@]}" \
             "${IMAGE}@${DIGEST}"
 
-  abort-on-validate-failure:
-    # Fail fast across jobs: as soon as any validation shard fails, cancel the
-    # whole run (other matrix rows, candidate builds, evidence) instead of
-    # letting a doomed release keep running. Runs no source code; its only
-    # privilege is cancelling this very run. Never runs on success.
-    needs: [plan, validate]
+  validation-alert:
+    # Asynchronous validation (B1, 2026-10-30): a red validate or
+    # validation-evidence no longer cancels the run or blocks publish, because
+    # cancelling mid-retag could leave sha-*/latest half-moved. Instead it
+    # raises a visible alert issue on this public repo. Runs no source code.
+    needs: [plan, validate, validation-evidence]
     if: failure()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      actions: write
+      issues: write
     steps:
-      - name: Cancel this run after a failed required job
+      - name: Open async validation alert
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          VALIDATE_RESULT: ${{ needs.validate.result }}
+          EVIDENCE_RESULT: ${{ needs.validation-evidence.result }}
         run: |
           set -euo pipefail
-          echo "::error::a required job failed; cancelling run $RUN_ID so nothing keeps running on a failed release"
-          gh run cancel "$RUN_ID"
+          url="${GITHUB_SERVER_URL}/${GH_REPO}/actions/runs/${RUN_ID}/attempts/${RUN_ATTEMPT}"
+          echo "::error::async validation red (validate=${VALIDATE_RESULT}, evidence=${EVIDENCE_RESULT}); images may already be published: ${url}"
+          gh issue create \
+            --title "async validation red: run ${RUN_ID}" \
+            --body "validate=${VALIDATE_RESULT} validation-evidence=${EVIDENCE_RESULT}. Publish no longer waits for validation (B1). Check ${url} and roll back to the previous signed digest if the release is affected." \
+            || echo "::warning::could not open alert issue; the red run itself is the alert"
 
   abort-on-build-failure:
     # Fail fast across jobs: as soon as any candidate image build fails, cancel the

@@ -42,7 +42,10 @@ class FailFastPolicyTest(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", block)
 
     def test_abort_jobs_cancel_the_run_with_minimal_privilege(self) -> None:
-        for gate in ("validate", "build"):
+        # B1 (2026-10-30): a red validation no longer cancels the run (that
+        # could interrupt publish mid-retag); only a failed build still does.
+        self.assertNotIn("abort-on-validate-failure", self.jobs)
+        for gate in ("build",):
             job = self.jobs[f"abort-on-{gate}-failure"]
             self.assertIn(f"    needs: [plan, {gate}]\n", job)
             self.assertIn("    if: failure()\n", job)
@@ -55,6 +58,18 @@ class FailFastPolicyTest(unittest.TestCase):
         # Nothing may wait on an abort job.
         for needs in re.findall(r"(?m)^    needs: (.+)$", self.text):
             self.assertNotIn("abort-", needs)
+            self.assertNotIn("validation-alert", needs)
+
+    def test_async_validation_alerts_without_blocking_publish(self) -> None:
+        job = self.jobs["validation-alert"]
+        self.assertIn("    needs: [plan, validate, validation-evidence]\n", job)
+        self.assertIn("    if: failure()\n", job)
+        self.assertIn("    permissions:\n      issues: write\n    steps:\n", job)
+        self.assertNotIn("actions: write", job)
+        self.assertNotIn("gh run cancel", job)
+        self.assertNotIn("uses:", job)
+        self.assertRegex(job, r"(?m)^    timeout-minutes: [1-5]$")
+        self.assertTrue(self.jobs["publish"].startswith("\n    needs: [build, plan]\n"))
 
 
 if __name__ == "__main__":
