@@ -1969,9 +1969,10 @@ class BuildPolicyTest(unittest.TestCase):
             for service in self.services
             for platform in service["platforms"].split(",")
         }
-        # Five product images (yue-node and yueboard are two platforms each)
-        # plus four amd64-only static UI units.
-        self.assertEqual(len(expected_pairs), 11)
+        # Five product images (yue-node and yueboard are two platforms each).
+        # The four ui-* static units were retired (负责人 AX03-A, 2026-10-30):
+        # frontends ship inside their backend images, so nothing to rescan.
+        self.assertEqual(len(expected_pairs), 7)
 
     def test_yueops_reports_are_unique_runner_temp_files(self) -> None:
         backend_start = self.workflow.index("- name: Validate yueops backend")
@@ -2475,7 +2476,6 @@ class BuildPolicyTest(unittest.TestCase):
             {entry["service"] for entry in plan["matrix"]},
             {
                 "yue-node", "yueops-web", "checkin-api", "yue-bot", "yueboard",
-                "ui-console", "ui-miniapp", "ui-site", "ui-board-web",
             },
         )
         self.assertNotIn("yuelink", {entry["service"] for entry in plan["matrix"]})
@@ -2483,7 +2483,6 @@ class BuildPolicyTest(unittest.TestCase):
             {entry["validation"] for entry in plan["validation_matrix"]},
             {
                 "yue-node", "yueops", "yueboard", "yuelink",
-                "ui-console", "ui-miniapp", "ui-site", "ui-board-web",
             },
         )
         node_entries = [entry for entry in plan["validation_matrix"]
@@ -2638,7 +2637,6 @@ class BuildPolicyTest(unittest.TestCase):
             names,
             {
                 "yue-node", "yueops-web", "checkin-api", "yue-bot", "yueboard",
-                "ui-console", "ui-miniapp", "ui-site", "ui-board-web",
             },
         )
 

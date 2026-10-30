@@ -4,14 +4,13 @@ Public build and release control for Yue.to server components. Private source
 is checked out with scoped credentials; images publish only to `ghcr.io/onesyue/*`.
 Client packages use [yuelink-ci](https://github.com/onesyue/yuelink-ci).
 
-[services.json](services.json) defines image targets, including the scratch
-UI units `ui-console`, `ui-miniapp`, `ui-site`, and `ui-board-web`.
+[services.json](services.json) defines image targets. Frontends ship inside
+their backend images (负责人 decision AX03-A, 2026-10-30); the former scratch
+UI units `ui-*` are retired and must not be re-registered.
 [validation-targets.json](validation-targets.json) defines source-only targets
-(YueLink and `yue-node-validation`, which never enter the image matrix) and the
-frontend fastlane for those UI units (lint, tsc, unit, a11y, bundle budget).
+(YueLink and `yue-node-validation`, which never enter the image matrix).
 The only release workflow is [build.yml](.github/workflows/build.yml): validate,
-build, sign, attest, then explicitly promote. UI units use that same promote
-gate and the same SBOM, cosign, and SLSA steps.
+build, sign, attest, then explicitly promote.
 
 ## Recover interrupted server delivery
 
@@ -79,9 +78,7 @@ version/digest, PG15 and rule exclusions remain pinned in the workflow.
 
 [poll-sources.yml](.github/workflows/poll-sources.yml) checks private default
 branches on a nominal 20-minute schedule. Product groups dispatch candidate
-builds only (`promote=false`). A static UI unit is dispatched with
-`promote=true` only when its unit path or unit Dockerfile changed; that
-promotes the scratch image and does not deploy.
+builds only (`promote=false`).
 GitHub scheduling is not a delivery guarantee. Root `scripts/kick-builds.sh`
 provides an immediate authorized poll after a source push.
 
