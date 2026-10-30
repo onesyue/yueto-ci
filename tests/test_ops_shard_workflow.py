@@ -650,7 +650,7 @@ class OpsShardWorkflow(unittest.TestCase):
         self.assertIn("timeout-minutes: 10", join_job)
         self.assertNotIn("timeout-minutes: 30", join_job)
         publish = workflow.split("\n  publish:\n", 1)[1]
-        self.assertTrue(publish.startswith("    needs: [build, plan, validate, validation-evidence]\n"))
+        self.assertTrue(publish.startswith("    needs: [build, plan]\n"))  # B1 async validation
         self.assertLess(workflow.index("- name: Require complete selected validation and corpus"),
                         workflow.index("- name: Retain complete validation verdict"))
 
@@ -980,7 +980,7 @@ class OpsShardWorkflow(unittest.TestCase):
         self.assertTrue(build_job.startswith("    needs: [plan]\n"))
         self.assertNotIn("Authorize and promote verified default-branch digest", build_job)
         self.assertNotIn("built-${SOURCE_SHA}", build_job)
-        self.assertIn("needs: [build, plan, validate, validation-evidence]", publish)
+        self.assertIn("needs: [build, plan]\n", publish)  # B1 async validation
         self.assertEqual(text.count("- name: Authorize and promote verified default-branch digest"), 1)
         self.assertEqual(text.count("- name: Mark this source revision as built"), 1)
         build = text.split("  build:\n", 1)[1]
