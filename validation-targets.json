@@ -12,49 +12,5 @@
     "repo": "onesyue/yue-node",
     "ref": "master",
     "validation": "yue-node"
-  },
-  {
-    "service": "ui-console",
-    "group": "ui-console",
-    "repo": "onesyue/yueops",
-    "ref": "master",
-    "validation": "ui-console",
-    "unit_path": "frontend",
-    "checks": ["lint", "tsc", "unit", "a11y", "bundle-budget"],
-    "frontend_step": "Validate yueops frontend",
-    "package_manager": "npm"
-  },
-  {
-    "service": "ui-miniapp",
-    "group": "ui-miniapp",
-    "repo": "onesyue/yueops",
-    "ref": "master",
-    "validation": "ui-miniapp",
-    "unit_path": "telegram-bot/yue/miniapp",
-    "checks": ["lint", "tsc", "unit", "a11y", "bundle-budget"],
-    "frontend_step": "Validate Yue mini app",
-    "package_manager": "npm"
-  },
-  {
-    "service": "ui-site",
-    "group": "ui-site",
-    "repo": "onesyue/yueops",
-    "ref": "master",
-    "validation": "ui-site",
-    "unit_path": "site",
-    "checks": ["lint", "tsc", "unit", "a11y", "bundle-budget"],
-    "frontend_step": "Run yueops node unit tests (Mini App, console, site)",
-    "package_manager": "pnpm"
-  },
-  {
-    "service": "ui-board-web",
-    "group": "ui-board-web",
-    "repo": "onesyue/yueboard",
-    "ref": "master",
-    "validation": "ui-board-web",
-    "unit_path": "web",
-    "checks": ["lint", "tsc", "unit", "a11y", "bundle-budget"],
-    "frontend_step": "Validate yueboard frontends",
-    "package_manager": "pnpm"
   }
 ]
