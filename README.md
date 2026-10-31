@@ -36,7 +36,8 @@ is not permission to substitute another revision into the interrupted release.
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yueboard -f ref=<40-hex-reviewed-contract-pin>
 
-# Validate all targets with the trusted predecessor required by Ops SQL lint.
+# Validate all targets and build registry-eligible candidate images (no promotion).
+# Supply the trusted predecessor required by Ops SQL lint.
 gh workflow run build.yml -R onesyue/yueto-ci -f service=all \
   -f migration_base=<40-hex-trusted-yueops-previous-revision>
 
@@ -86,8 +87,9 @@ The `rearm` job is disabled by default. Enabling it requires `poll-rearm` with
 a 20-minute wait and master-only deployment branches, plus repository variable
 `YUETO_CI_POLL_REARM=true`; remove that variable to disable it. The script rejects
 dispatch before 900 seconds and permits only the newest noncancelled poll to
-rearm. It dispatches only poll-sources with `promote=false`, preventing duplicate
-chains. The environment wait does not occupy a runner.
+rearm. It dispatches only poll-sources, preventing duplicate chains; the next poll
+retains the product-candidate and static-UI promotion rules above. The environment
+wait does not occupy a runner.
 
 The poller groups images from `services.json` and verifies every group member.
 Markers use full source SHAs; transitional seven-character markers require an
@@ -128,8 +130,10 @@ actions:write. Configure switches under repository Actions Variables.
 
 After both switches and successful poll/build/promotion/rescan/deadman drills,
 remove and revoke the legacy PAT. Source repositories no longer need
-`YUETO_CI_DISPATCH_PAT`; controlled compatibility dispatch still requires a trusted
-actor, full SHA and default-branch HEAD. [Credential tests](tests/test_credential_policy.py)
+`YUETO_CI_DISPATCH_PAT`. The `repository_dispatch` trigger has been removed;
+builds enter through `workflow_dispatch`, including requests from the poller.
+Retained compatibility guards in the plan do not expose a dispatch entry point.
+[Credential tests](tests/test_credential_policy.py)
 protect these boundaries.
 
 Production accepts only this signing workflow and provenance source ref:
@@ -213,9 +217,13 @@ Commands use `-count=1 -p 1 -tags integration -json -v` with full logs. Any top-
 or subtest SKIP, missing execution, nonzero exit or unscheduled discovered package
 fails. Run/attempt receipts bind all stages to the same source manifest. All four
 DSNs must match loopback `yueboard_test`; reset confirmation and production-scale
-switch remain required. Floor130 requires all ten current packages; lower floors
-may lack only the historical user/referencelock/nativeproto packages, with no
-SKIP exemption. Review schema-reset behavior before changing execution order.
+switch remain required. Required packages follow the validator's floor and source
+capability rules: floor 130 adds user/referencelock/nativeproto, floor 138 adds
+subscribe, and floor 139 adds statcron. Reminder and usage-policy suites depend
+on their source capability markers; the operator command suite is required when
+its owned Linux gate exists. Every discovered suite must execute, including on
+older sources; these compatibility rules grant no SKIP exemption. Review
+schema-reset behavior before changing execution order.
 
 ### Input shadow analysis
 
@@ -275,7 +283,7 @@ credentials or network access and an `--ephemeral --disableupdate` runner.
 Registration must retain `self-hosted`, `Linux`, `X64` and add `yue-local-release`.
 All four labels must match. It takes one job; export permitted diagnostics and
 destroy the VM/Docker state. Only an authorized manual dispatch can select it;
-default manual runs and repository_dispatch use hosted runners. Bootstrap GNU make,
+default manual runs and poll-triggered builds use hosted runners. Bootstrap GNU make,
 required Go/C toolchains and gettext-base; Debian13 verifies system Python3.13,
 while hosted jobs use setup-python. Manual runner state is not validation evidence.
 
