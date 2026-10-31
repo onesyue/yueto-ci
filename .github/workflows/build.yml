@@ -1289,6 +1289,31 @@ jobs:
           test "$(/usr/local/bin/gitleaks version)" = '8.30.1'
           test "$(stat -c '%u' /usr/local/bin/gitleaks)" = "$(id -u)"
 
+      # Decoupling S2 (2026-10-28): YueOps' tolerant notices reader and
+      # YueBoard's Go producer share contracts/yueboard-internal/notices.v1.json.
+      # Run the producer side against the pinned YueBoard checkout that is
+      # already present for this job; YUEOPS_REQUIRE_PRODUCER_CONTRACT turns a
+      # missing producer tree into a failure instead of a skip.  Ops refs that
+      # predate the contract test have nothing to check and say so.
+      - name: Validate YueBoard→YueOps notices wire contract
+        if: matrix.validation == 'yueops' && matrix.ops_role == 'native'
+        env:
+          YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard
+          YUEOPS_REQUIRE_PRODUCER_CONTRACT: "1"
+          UV_PYTHON_DOWNLOADS: never
+        run: |
+          set -euo pipefail
+          contract_test=tests/test_yueboard_notices_contract_20261028.py
+          if [ ! -f "$contract_test" ]; then
+            echo "::notice::$contract_test is not on this Ops ref; notices wire contract not yet adopted"
+            exit 0
+          fi
+          test -d "$YUEBOARD_REPO_PATH/.git" || {
+            echo "::error::pinned YueBoard checkout is missing for the notices contract" >&2
+            exit 1
+          }
+          .venv/bin/python -m pytest -q -p no:cacheprovider -o addopts="" "$contract_test"
+
       - name: Execute owned Ops pytest selection
         if: matrix.validation == 'yueops' && matrix.ops_role != 'legacy' && matrix.ops_role != 'native'
         env:
