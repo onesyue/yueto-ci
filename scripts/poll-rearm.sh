@@ -37,6 +37,12 @@ for value in "$min_delay" "$now" "$POLL_STARTED_EPOCH"; do
     exit 1
   }
 done
+# The default is 900s; no documented fixed lower bound exists. Zero removes
+# the delay guard altogether and is never valid (including padded zeros).
+[[ ! "$min_delay" =~ ^0+$ ]] || {
+  echo "::error::poll-rearm: minimum delay must be positive"
+  exit 1
+}
 [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ ]] || {
   echo "::error::poll-rearm: GITHUB_RUN_ID is not a run id"
   exit 1

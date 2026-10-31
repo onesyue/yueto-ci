@@ -608,6 +608,7 @@ class VerifiedBuildxTest(unittest.TestCase):
         self.assertEqual(source.count(BUILDX_SHA256), 1)
         # Only replace the fixed public digest with our executable test fixture;
         # production deliberately has no hash/version override environment hook.
+        (self.base / "ci-retry.sh").write_text((ROOT / "scripts/ci-retry.sh").read_text())
         candidate = self.base / "installer.sh"
         candidate.write_text(source.replace(BUILDX_SHA256, self.digest))
         if corrupt:
@@ -1701,11 +1702,11 @@ class BuildPolicyTest(unittest.TestCase):
             # (what this pipeline uses) are unaffected; pinned forward anyway
             # because the whole chain rests on cosign really checking identity.
             "cosign-release: v3.1.3",
-            "retrying with fresh OIDC token",
+            "source .ci-policy/scripts/ci-retry.sh",
             'keyless_cosign sign "${IMAGE}@${DIGEST}"',
             "keyless_cosign attest",
-            "FATAL: cosign ${command} failed after bounded retries",
-            "FATAL: cosign verification failed after bounded retries",
+            'ATTESTATIONS=$(verify_cosign verify-attestation',
+            'SPDX_ATTESTATIONS=$(verify_cosign verify-attestation',
             "actions/attest-build-provenance@",
         )
         for gate in required:

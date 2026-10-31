@@ -14,6 +14,8 @@
 # release's trivy_0.74.0_checksums.txt agree on the value below (read
 # 2026-09-27).
 set -euo pipefail
+# shellcheck source=scripts/ci-retry.sh
+source "$(dirname "${BASH_SOURCE[0]}")/ci-retry.sh"
 umask 077
 readonly TRIVY_VERSION='0.74.0'
 readonly TRIVY_ARCHIVE_SHA256='2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a'
@@ -28,9 +30,9 @@ fail() { echo "::error::$*" >&2; exit 1; }
 
 install_dir=$(mktemp -d "$RUNNER_TEMP/yueto-trivy.XXXXXXXX")
 archive="$install_dir/trivy.tar.gz"
-curl --fail --location --silent --show-error \
+ci_download 4 --fail --location --silent --show-error \
   --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  --connect-timeout 10 --max-time 180 --retry 3 --retry-all-errors \
+  --connect-timeout 10 --max-time 180 \
   "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
   --output "$archive"
 printf '%s  %s\n' "$TRIVY_ARCHIVE_SHA256" "$archive" | sha256sum --check --strict

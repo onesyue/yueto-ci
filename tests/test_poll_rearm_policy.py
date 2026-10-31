@@ -101,6 +101,20 @@ class PollRearmScriptTest(unittest.TestCase):
         self.assertEqual(self.dispatched(), [])
         self.assertFalse(self.log.exists(), "must not even list runs before the delay gate")
 
+    def test_zero_minimum_is_rejected_before_any_api_call(self) -> None:
+        for minimum in ("0", "00", "000000"):
+            with self.subTest(minimum=minimum):
+                result = self.run_script(runs=[], min_delay=minimum)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("minimum delay must be positive", result.stdout)
+                self.assertFalse(self.log.exists())
+
+    def test_positive_override_has_no_invented_900_second_floor(self) -> None:
+        result = self.run_script(runs=[{"databaseId": 200, "conclusion": ""}],
+                                 min_delay=1, now=1001)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.dispatched()), 1)
+
     def test_delay_boundary_is_inclusive(self) -> None:
         ok = self.run_script(runs=[{"databaseId": 200, "conclusion": ""}], now=1900)
         self.assertEqual(ok.returncode, 0, ok.stdout)
