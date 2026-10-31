@@ -1548,7 +1548,17 @@ def estate_successor_proof(baseline, source, revision):
             blob = git(source, "rev-parse", f"{revision}:{COLLECTION_SHUFFLE_INPUT}").decode().strip()
         except subprocess.CalledProcessError:
             blob = None
-        if blob is not None:
+        qualified_successor = revision == shuffle["source_after"]
+        if revision not in (shuffle["source_before"], shuffle["source_after"]):
+            try:
+                git(source, "merge-base", "--is-ancestor", shuffle["source_after"], revision)
+                qualified_successor = True
+            except subprocess.CalledProcessError as exc:
+                require(exc.returncode == 1,
+                        "collection shuffle successor ancestry unavailable")
+        # Absence is historical only before the qualified source. A descendant
+        # cannot delete the hook and silently regain the old baseline admission.
+        if qualified_successor or blob is not None:
             try:
                 git(source, "merge-base", "--is-ancestor", shuffle["source_before"], change["source"])
                 git(source, "merge-base", "--is-ancestor", change["source"], shuffle["source_after"])

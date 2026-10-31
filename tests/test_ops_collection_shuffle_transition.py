@@ -120,3 +120,70 @@ class CollectionShuffleTransition(unittest.TestCase):
                 git('add', PATH); git('commit', '-q', '-m', 'tamper')
                 with self.assertRaisesRegex(ValueError, 'collection shuffle successor'):
                     SHARDS.estate_successor_proof({}, source, git('rev-parse', 'HEAD'))
+
+    def test_real_git_descendant_deletion_cannot_reenter_historical_admission(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            def git(*args):
+                return subprocess.check_output(['git', '-C', str(source), *args],
+                                               stderr=subprocess.DEVNULL).decode().strip()
+            git('init', '-q')
+            git('config', 'user.name', 'fixture')
+            git('config', 'user.email', 'fixture@example.invalid')
+            git('config', 'commit.gpgsign', 'false')
+            git('config', 'core.filemode', 'true')
+            git('commit', '-q', '--allow-empty', '-m', 'historical source')
+            before = git('rev-parse', 'HEAD')
+            (source / PATH).write_text('reviewed hook\n')
+            git('add', PATH); git('commit', '-q', '-m', 'introducer')
+            introduced = git('rev-parse', 'HEAD')
+            blob = git('rev-parse', 'HEAD:' + PATH)
+            git('commit', '-q', '--allow-empty', '-m', 'qualified source')
+            after = git('rev-parse', 'HEAD')
+            git('commit', '-q', '--allow-empty', '-m', 'unchanged successor')
+            unchanged = git('rev-parse', 'HEAD')
+            record = copy.deepcopy(self.record)
+            record.update(source_before=before, source_after=after)
+            record['changes'][PATH].update(source=introduced, after_blob=blob)
+            original_peel = SHARDS.reviewed_collection_shuffle_transition
+            original_git = SHARDS.git
+
+            def peel(value):
+                prior, actual = original_peel(value)
+                return prior, record if actual is not None else None
+
+            def history(repo, *args):
+                # The old estate is represented by this fixture's initial commit.
+                # Hook introduction/qualification/successors use actual Git objects;
+                # full old input admission still consumes the unmodified freeze.
+                if args[:3] == ('merge-base', '--is-ancestor', self.proof):
+                    args = (*args[:2], before, *args[3:])
+                return original_git(repo, *args)
+
+            def admit(revision):
+                proof = SHARDS.estate_successor_proof(self.baseline, source, revision)
+                common, files = dict(self.common), dict(self.files)
+                hook = SHARDS.tree_inputs(source, revision).get(PATH)
+                if hook is None:
+                    common.pop(PATH); files.pop(PATH)
+                else:
+                    files[PATH] = hook
+                    common[PATH] = hook[1]
+                SHARDS.admit_shared_inputs(self.baseline, common, files,
+                                           source_revision=revision, estate_successor_of=proof)
+
+            with (patch.object(SHARDS, 'reviewed_collection_shuffle_transition', side_effect=peel),
+                  patch.object(SHARDS, 'git', side_effect=history)):
+                for revision in (before, after, unchanged):
+                    with self.subTest(accepted=revision):
+                        admit(revision)
+                (source / PATH).chmod(0o755)
+                git('update-index', '--chmod=+x', PATH)
+                git('commit', '-q', '-m', 'unreviewed executable mode')
+                with self.assertRaisesRegex(ValueError, 'mode or tree changed'):
+                    admit(git('rev-parse', 'HEAD'))
+                git('checkout', '-q', unchanged)
+                git('rm', '-q', PATH)
+                git('commit', '-q', '-m', 'delete qualified hook')
+                with self.assertRaisesRegex(ValueError, 'collection shuffle successor'):
+                    admit(git('rev-parse', 'HEAD'))
