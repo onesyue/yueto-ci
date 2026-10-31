@@ -349,13 +349,42 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         (self.root / 'schema-floor.txt').write_text('140\n')
         for path in GATE.ORDER:
             self.package(path)
-        for path in GATE.FLOOR_ADDITIONS:
+        for path, minimum in GATE.FLOOR_ADDITIONS.items():
+            if minimum > 140:
+                continue
             with self.subTest(path=path):
                 shutil.rmtree(self.root / path)
                 result = self.command('domain', self.root / 'receipt.json')
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("missing=['" + path + "']", result.stderr)
                 self.package(path)
+
+    def test_floor_150_requires_email_coupon_receipt_consumer(self):
+        (self.root / 'schema-floor.txt').write_text('150\n')
+        email = './internal/platform/emailcoupon'
+        for path in GATE.ORDER:
+            if path != email:
+                self.package(path)
+        result = self.command('domain', self.root / 'receipt.json')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing=['" + email + "']", result.stderr)
+
+    def test_email_coupon_suite_runs_before_user_reset(self):
+        email = './internal/platform/emailcoupon'
+        for path in GATE.ORDER:
+            body = 't.Log("reached integration consumer")'
+            if path == email:
+                body = 'if err := os.WriteFile(os.Getenv("COUPON_ORDER_MARKER"), []byte("ready"), 0600); err != nil { t.Fatal(err) }'
+            elif path == './internal/modules/user':
+                body = 'if _, err := os.Stat(os.Getenv("COUPON_ORDER_MARKER")); err != nil { t.Fatal("email coupon consumer must execute before user reset") }'
+            self.package(path, body)
+        self.command_gate()
+        self.environment['COUPON_ORDER_MARKER'] = str(self.root / 'email-coupon-reached')
+        receipt = self.root / 'receipt.json'
+        domain = self.command('domain', receipt)
+        self.assertEqual(domain.returncode, 0, domain.stdout + domain.stderr)
+        remaining = self.command('remaining', receipt)
+        self.assertEqual(remaining.returncode, 0, remaining.stdout + remaining.stderr)
 
     def test_expiry_consumer_marker_requires_its_real_integration_package(self):
         (self.root / 'schema-floor.txt').write_text('140\n')

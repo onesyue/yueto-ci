@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 DOMAIN = ['./test/integration']
 COMMANDS = ['./cmd/yueboard']
 MODULES = [
+    './internal/platform/emailcoupon',
     './internal/modules/user', './internal/platform/referencelock',
     './internal/modules/order', './internal/modules/emby', './internal/modules/handoff',
     './internal/platform/deviceidentity', './internal/modules/nodesync',
@@ -28,7 +29,8 @@ COMMAND_GATE = Path('scripts/ci/net-operator-pg18-gate.sh')
 # did not exist yet. Every suite actually discovered still must execute.
 HISTORICAL_ADDITIONS = {'./internal/modules/user', './internal/platform/referencelock',
                         './internal/platform/nativeproto'}
-FLOOR_ADDITIONS = {'./internal/modules/subscribe': 138, './internal/modules/statcron': 139}
+FLOOR_ADDITIONS = {'./internal/modules/subscribe': 138, './internal/modules/statcron': 139,
+                   './internal/platform/emailcoupon': 150}
 CAPABILITY_ADDITIONS = {
     './internal/modules/remindmailcron': Path('internal/platform/reminderrules/rules_g.go'),
 }
