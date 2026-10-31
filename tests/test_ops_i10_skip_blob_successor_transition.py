@@ -20,6 +20,7 @@ AFTER = "74403b075bb053e563ad5fc5a3a1461c6be49e60"
 class I10SkipBlobSuccessorTransition(unittest.TestCase):
     def setUp(self):
         self.baseline = json.loads((ROOT / SHARDS.SKIP_BASELINE).read_bytes())
+        self.baseline, _ = SHARDS.reviewed_ops_packaging_transition(self.baseline)
         self.prior, self.record = SHARDS.reviewed_i10_skip_blob_successor_transition(self.baseline)
         self.value = {
             "skip_module_blobs": {MODULE: AFTER},

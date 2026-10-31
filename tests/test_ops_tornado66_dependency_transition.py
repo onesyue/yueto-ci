@@ -80,8 +80,6 @@ class TornadoDependencyTransition(unittest.TestCase):
         # Unlike the other fixture controls, this requires the real reviewed seal.
         raw = (ROOT / "ops-pytest-skip-baseline.json").read_bytes()
         sealed = json.loads(raw)
-        historical, _ = SHARDS.required_native_inputs(sealed)
-        self.assertEqual(list(historical)[-1], KEY)
         actual_pin = SHARDS.TORNADO66_DEPENDENCY_TRANSITION_SHA256
         # The fixture pin is local to this test class, so read the deployed constant
         # in a fresh module rather than accidentally accepting synthetic receipts.
@@ -90,6 +88,11 @@ class TornadoDependencyTransition(unittest.TestCase):
         assert spec is not None and spec.loader is not None
         production = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(production)
+        # The reviewed ops packaging successor is sealed above Tornado; peel it with the
+        # production pins before walking the fixture-pinned chain.
+        below_packaging, _ = production.reviewed_ops_packaging_transition(sealed)
+        historical, _ = SHARDS.required_native_inputs(below_packaging)
+        self.assertEqual(list(historical)[-1], KEY)
         self.assertIsInstance(production.TORNADO66_DEPENDENCY_TRANSITION_SHA256, str)
         self.assertNotEqual(actual_pin, production.TORNADO66_DEPENDENCY_TRANSITION_SHA256)
         prior, record = production.reviewed_tornado66_dependency_transition(sealed)

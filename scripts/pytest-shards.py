@@ -52,6 +52,8 @@ RELEASE_SKIP_BLOB_SUCCESSOR_TRANSITION_SHA256 = "efa7c2e8c9944feeccbcf0bf1111b3b
 HANG_GUARD_INPUT_TRANSITION_SHA256 = "eb65c84d7ddab61a441c54d2f64a30e992f039b2c0c6ba709b570f5d3787fff0"
 # Sealed to the signed Tornado successor and authentic review/qualification receipts.
 TORNADO66_DEPENDENCY_TRANSITION_SHA256 = "bed6e74fdb1a4b40775bc6fc9c4c4c6857ee6de8a245910e91809e7672756876"
+# Sealed to the signed yueops 65887947/22a82f65 four-input successor and its receipts.
+OPS_PACKAGING_TRANSITION_SHA256 = "755b998311346730753ebc2c44dd8a3dcb4b3bb9216756b6f126125b07b8fb27"
 SSH_SKIP_CASES = {
     "tests/test_host_service_contracts_20261013.py::test_node_producer_is_durable_and_idempotent",
     "tests/test_installed_checker_transport_20261014.py::"
@@ -714,6 +716,90 @@ def baseline_bytes(baseline):
     return (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()
 
 
+OPS_PACKAGING_KEY = "reviewed_ops_packaging_transition"
+OPS_PACKAGING_INPUT = "pyproject.toml"
+OPS_PACKAGING_ADDED_INPUT = "tests/_runtime_module_patch.py"
+OPS_PACKAGING_INPUTS = frozenset({
+    OPS_PACKAGING_INPUT, OPS_PACKAGING_ADDED_INPUT,
+    "tests/_bot_real_modules.py", "tests/_yueboard_internal_source.py",
+})
+
+
+def reviewed_ops_packaging_transition(baseline):
+    """Peel the reviewed four-input yueops successor sealed on top of every other seal.
+
+    Exactly these shared inputs move, each from its exact reviewed predecessor:
+    the root pyproject (from the Tornado seal's after-blob), two existing test
+    helpers (from their historical common-input blobs) and one new test helper.
+    Each change names the signed source commit that introduced it; nothing else
+    is admitted.
+    """
+    if OPS_PACKAGING_KEY not in baseline:
+        return baseline, None
+    original = dict(baseline)
+    record = original.pop(OPS_PACKAGING_KEY)
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "source_freeze_sha256",
+        "qualification_receipt_sha256", "changes",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid ops packaging transition")
+    require(sha(encoded(record)) == OPS_PACKAGING_TRANSITION_SHA256,
+            "unreviewed ops packaging transition identity")
+    prior = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
+    require(record["prior_baseline_sha256"] == sha(prior),
+            "ops packaging transition changed historical baseline")
+    _, tornado = reviewed_tornado66_dependency_transition(original)
+    require(isinstance(tornado, dict)
+            and all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                    for k in ("source_before", "source_after"))
+            and record["source_before"] == tornado.get("source_after")
+            and record["source_before"] != record["source_after"],
+            "ops packaging transition source identity missing")
+    require(all(isinstance(record[k], str)
+                and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                and record[k] != "0" * 64 for k in (
+                    "independent_review_sha256", "source_freeze_sha256",
+                    "qualification_receipt_sha256")),
+            "ops packaging transition review or qualification missing")
+    changes = record["changes"]
+    require(isinstance(changes, dict) and set(changes) == OPS_PACKAGING_INPUTS,
+            "unreviewed ops packaging paths")
+    common = original.get("common_inputs")
+    modes = original.get("reviewed_shared_input_transition", {}).get("common_input_modes", {})
+    tornado_change = tornado.get("changes", {}).get(OPS_PACKAGING_INPUT)
+    require(isinstance(common, dict) and isinstance(modes, dict)
+            and isinstance(tornado_change, dict), "ops packaging predecessor missing")
+    sources = set()
+    for path, change in changes.items():
+        require(isinstance(change, dict)
+                and set(change) == {"before_blob", "after_blob", "mode", "source"}
+                and isinstance(change["after_blob"], str) and SHA.fullmatch(change["after_blob"])
+                and isinstance(change["source"], str) and SHA.fullmatch(change["source"])
+                and change["source"] != record["source_before"]
+                and change["before_blob"] != change["after_blob"]
+                and change["mode"] == "100644",
+                "invalid ops packaging blob, mode or source: " + path)
+        if path == OPS_PACKAGING_ADDED_INPUT:
+            expected = None
+        elif path == OPS_PACKAGING_INPUT:
+            expected = tornado_change.get("after_blob")
+            require(tornado_change.get("mode") == change["mode"],
+                    "invalid ops packaging blob, mode or source: " + path)
+        else:
+            expected = common.get(path)
+            require(modes.get(path) == change["mode"],
+                    "invalid ops packaging blob, mode or source: " + path)
+        require(change["before_blob"] == expected
+                and (expected is None) == (path not in common),
+                "ops packaging predecessor differs: " + path)
+        sources.add(change["source"])
+    require(record["source_after"] == changes[OPS_PACKAGING_INPUT]["source"]
+            and record["source_after"] in sources,
+            "ops packaging transition source identity missing")
+    return original, record
+
+
 def reviewed_i10_skip_blob_successor_transition(baseline):
     """Peel reviewed I10 blob successors of already-admitted skips, sealed outermost.
 
@@ -722,6 +808,7 @@ def reviewed_i10_skip_blob_successor_transition(baseline):
     may move to the reviewed after blob; outcome and reason stay historical and no
     case is added.
     """
+    baseline, _ = reviewed_ops_packaging_transition(baseline)
     key = "reviewed_i10_skip_blob_successor_transition"
     if key not in baseline:
         return baseline, None
@@ -1406,6 +1493,7 @@ def estate_successor_proof(baseline, source, revision):
     predecessor inside the sealed admission; validators and the join re-admit
     against that sealed value and still compare every estate input blob.
     """
+    _, packaging = reviewed_ops_packaging_transition(baseline)
     _, tornado = reviewed_tornado66_dependency_transition(baseline)
     _, hang = reviewed_hang_guard_input_transition(baseline)
     _, runtime = reviewed_runtime_dependency_transition(baseline)
@@ -1460,6 +1548,32 @@ def estate_successor_proof(baseline, source, revision):
                 git(source, "merge-base", "--is-ancestor", lock["source_after"], revision)
             except subprocess.CalledProcessError:
                 raise ValueError("audit lock successor source revision differs") from None
+    if packaging is not None:
+        for path, change in sorted(packaging["changes"].items()):
+            try:
+                blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
+            except subprocess.CalledProcessError:
+                blob = None
+            if blob != change["after_blob"]:
+                continue
+            # The named signed source must descend from the Tornado successor, must
+            # itself introduce exactly this blob transition, and must be an
+            # ancestor of the revision being planned.
+            try:
+                git(source, "merge-base", "--is-ancestor",
+                    packaging["source_before"], change["source"])
+                git(source, "merge-base", "--is-ancestor", change["source"], revision)
+                introduced = git(source, "rev-parse",
+                                 f"{change['source']}:{path}").decode().strip()
+            except subprocess.CalledProcessError:
+                raise ValueError("ops packaging successor source revision differs") from None
+            try:
+                parent = git(source, "rev-parse",
+                             f"{change['source']}^1:{path}").decode().strip()
+            except subprocess.CalledProcessError:
+                parent = None
+            require(introduced == change["after_blob"] and parent == change["before_blob"],
+                    "ops packaging successor source revision differs")
     if tornado is not None:
         for path, change in tornado["changes"].items():
             try:
@@ -1492,6 +1606,7 @@ def estate_successor_proof(baseline, source, revision):
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    _, packaging = reviewed_ops_packaging_transition(baseline)
     baseline, required = required_native_inputs(baseline)
     if required:
         require(isinstance(common, dict) and all(common.get(p) == b for p, b in required.items()),
@@ -1552,6 +1667,35 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                     "bot packaging successor mode or tree changed")
             files = dict(files) | {BOT_PACKAGING_INPUT: (change["mode"], change["before_blob"])}
         common = dict(common) | {BOT_PACKAGING_INPUT: change["before_blob"]}
+    if packaging is not None and any(
+            common.get(path) == change["after_blob"]
+            for path, change in packaging["changes"].items()):
+        # Same rule as the Tornado bundle: only a proven estate successor may carry
+        # the reviewed inputs, and only all four together. Each exact predecessor is
+        # then re-admitted below (the added helper is removed), so the complete
+        # Tornado bundle and every historical input are still required underneath.
+        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+                and source_revision != record["source_after"]
+                and estate_successor_of == record["source_after"]
+                and all(common.get(path) == change["after_blob"]
+                        for path, change in packaging["changes"].items()),
+                "ops packaging successor requires a proven estate successor")
+        if files is not None:
+            require(all(files.get(path) == (change["mode"], change["after_blob"])
+                        for path, change in packaging["changes"].items()),
+                    "ops packaging successor mode or tree changed")
+            files = dict(files)
+            for path, change in packaging["changes"].items():
+                if change["before_blob"] is None:
+                    files.pop(path)
+                else:
+                    files[path] = (change["mode"], change["before_blob"])
+        common = dict(common)
+        for path, change in packaging["changes"].items():
+            if change["before_blob"] is None:
+                common.pop(path)
+            else:
+                common[path] = change["before_blob"]
     if tornado is not None and any(common.get(path) == change["after_blob"]
                                    for path, change in tornado["changes"].items()):
         # Admit only the complete reviewed bundle, then restore the exact runtime

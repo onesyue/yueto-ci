@@ -7889,5 +7889,40 @@
         "after_blob": "74403b075bb053e563ad5fc5a3a1461c6be49e60"
       }
     }
+  },
+  "reviewed_ops_packaging_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "1ba9d700d1f805e498b79afea251fd196d899602b87ecfc08d3a0fcd7e361e01",
+    "source_before": "3cbbdd4c9b4b208ea6845e3a6681b193cbbee286",
+    "source_after": "6588794703ce04b3756ccb8c609ec81fadffe9e4",
+    "independent_review_sha256": "7d001ad9e367f7c55dfc3a3cf97fc53fdcdc657759ff8f0afb67a15785485d6c",
+    "source_freeze_sha256": "068b0bc1595129f1f9ab6bb5799148301e4302ed4c0c478d25c79c0cdf4fb817",
+    "qualification_receipt_sha256": "39313c8e8f39b743e3840f27b6ea101fb2ab0131d84bc977cb824de940246e5b",
+    "changes": {
+      "pyproject.toml": {
+        "before_blob": "7f598716706f7e2e197902599e7b12b5d0ccf086",
+        "after_blob": "1baeb62063307eaad0c8a395790806e2ec4ca223",
+        "mode": "100644",
+        "source": "6588794703ce04b3756ccb8c609ec81fadffe9e4"
+      },
+      "tests/_runtime_module_patch.py": {
+        "before_blob": null,
+        "after_blob": "c01d34addb780f1fc0bc06440588b751e8d725ca",
+        "mode": "100644",
+        "source": "6588794703ce04b3756ccb8c609ec81fadffe9e4"
+      },
+      "tests/_bot_real_modules.py": {
+        "before_blob": "18b533829a18f5b14b5fde545e448b6195176298",
+        "after_blob": "34bff7be30793eb4724ae36f0121ddd0869b80db",
+        "mode": "100644",
+        "source": "6588794703ce04b3756ccb8c609ec81fadffe9e4"
+      },
+      "tests/_yueboard_internal_source.py": {
+        "before_blob": "193e85fda9c87424111800184f5abd26e1bdb8d0",
+        "after_blob": "9ea0442538334dc414ffc81d50ca2f17833b888c",
+        "mode": "100644",
+        "source": "22a82f65eb0bf7a250fd3149915b97ef09ce61d0"
+      }
+    }
   }
 }
