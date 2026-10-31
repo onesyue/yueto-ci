@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """The reference collect must overlap independent parts and keep their order."""
+import concurrent.futures
 import importlib.util
 import json
 import os
@@ -7,9 +8,9 @@ import subprocess
 import sys
 import tempfile
 import threading
-import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,21 +23,36 @@ SPEC.loader.exec_module(SHARDS)
 
 class ReferenceCollectParallelTest(unittest.TestCase):
     def test_bounded_map_overlaps_and_preserves_order(self):
-        started = []
-        release = threading.Event()
+        both_started = threading.Barrier(2, timeout=2)
+        second_finished = threading.Event()
+        completed = []
+
+        class ObservedExecutor(concurrent.futures.ThreadPoolExecutor):
+            def submit(self, fn, /, *args, **kwargs):
+                future = super().submit(fn, *args, **kwargs)
+
+                def finished(done):
+                    if not done.cancelled() and done.exception() is None and done.result() == "b":
+                        second_finished.set()
+
+                future.add_done_callback(finished)
+                return future
 
         def work(name):
-            started.append(name)
-            if len(started) < 2:
-                self.assertTrue(release.wait(2), "the second part never started")
+            # A serial executor cannot cross this barrier. The timeout is only
+            # a deadlock guard; elapsed time is not a parallelism assertion.
+            both_started.wait()
+            if name == "a":
+                self.assertTrue(second_finished.wait(2), "the second part never finished")
+                completed.append(name)
             else:
-                release.set()
-            time.sleep(0.05)
+                completed.append(name)
             return name
 
-        began = time.monotonic()
-        self.assertEqual(SHARDS.map_bounded([lambda: work("a"), lambda: work("b")], 2), ["a", "b"])
-        self.assertLess(time.monotonic() - began, 0.2)
+        # Release a only after b's Future is done, not merely before b returns.
+        with patch.object(SHARDS.concurrent.futures, "ThreadPoolExecutor", ObservedExecutor):
+            self.assertEqual(SHARDS.map_bounded([lambda: work("a"), lambda: work("b")], 2), ["a", "b"])
+        self.assertEqual(completed, ["b", "a"])
         self.assertEqual(SHARDS.map_bounded([lambda: "only"], 4), ["only"])
         with self.assertRaises(ValueError):
             SHARDS.map_bounded([], 0)
