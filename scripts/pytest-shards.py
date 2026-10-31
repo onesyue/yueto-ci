@@ -716,6 +716,50 @@ def baseline_bytes(baseline):
     return (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()
 
 
+SECURITY_INPUT_KEY = "reviewed_npm_security_transition"
+SECURITY_INPUT_PATHS = frozenset({"frontend/package.json", "frontend/package-lock.json",
+    "telegram-bot/yue/miniapp/package.json", "telegram-bot/yue/miniapp/package-lock.json"})
+SECURITY_INPUT_TRANSITION_SHA256 = "92aae6604a0d8a027c667313be6fbaf9dc1f87ee260cf7baed00d57f2f767bb2"
+
+
+def reviewed_npm_security_transition(baseline):
+    if SECURITY_INPUT_KEY not in baseline:
+        return baseline, None
+    original = dict(baseline)
+    record = original.pop(SECURITY_INPUT_KEY)
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "source_freeze_sha256",
+        "qualification_receipt_sha256", "changes"}
+        and type(record["schema"]) is int and record["schema"] == 1,
+        "invalid npm security transition")
+    require(sha(encoded(record)) == SECURITY_INPUT_TRANSITION_SHA256,
+            "unreviewed npm security transition")
+    require(record["prior_baseline_sha256"] == sha(baseline_bytes(original)),
+            "npm security transition changed historical baseline")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                for k in ("source_before", "source_after"))
+            and record["source_before"] != record["source_after"],
+            "invalid npm security source")
+    require(all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                and record[k] != "0" * 64 for k in ("independent_review_sha256",
+                    "source_freeze_sha256", "qualification_receipt_sha256")),
+            "missing npm security evidence")
+    require(isinstance(record["changes"], dict)
+            and set(record["changes"]) == SECURITY_INPUT_PATHS,
+            "invalid npm security paths")
+    for change in record["changes"].values():
+        require(isinstance(change, dict) and set(change) == {
+            "before_blob", "after_blob", "mode", "source"}
+            and change["mode"] == "100644"
+            and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                    for k in ("before_blob", "after_blob", "source"))
+            and change["before_blob"] != change["after_blob"]
+            and change["source"] == record["source_after"],
+            "invalid npm security blob identity")
+    return original, record
+
+
 COLLECTION_SHUFFLE_KEY = "reviewed_collection_shuffle_transition"
 COLLECTION_SHUFFLE_INPUT = "conftest.py"
 # Exact independently reviewed record and actual same-source collection receipt.
@@ -724,6 +768,7 @@ COLLECTION_SHUFFLE_TRANSITION_SHA256 = "2140ecb94164f962036d2cd6353285042d5d955f
 
 def reviewed_collection_shuffle_transition(baseline):
     """Peel exactly the reviewed optional root collection hook, preserving history."""
+    baseline, _ = reviewed_npm_security_transition(baseline)
     if COLLECTION_SHUFFLE_KEY not in baseline:
         return baseline, None
     original = dict(baseline)
@@ -1541,6 +1586,32 @@ def estate_successor_proof(baseline, source, revision):
     predecessor inside the sealed admission; validators and the join re-admit
     against that sealed value and still compare every estate input blob.
     """
+    _, security = reviewed_npm_security_transition(baseline)
+    if security is not None:
+        successor = revision == security["source_after"]
+        if revision not in (security["source_before"], security["source_after"]):
+            try:
+                git(source, "merge-base", "--is-ancestor", security["source_after"], revision)
+                successor = True
+            except subprocess.CalledProcessError as exc:
+                require(exc.returncode == 1, "npm security ancestry unavailable")
+        files = tree_inputs(source, revision)
+        changed = any(files.get(path, (None, None))[1] == item["after_blob"]
+                      for path, item in security["changes"].items())
+        if successor or changed:
+            try:
+                git(source, "merge-base", "--is-ancestor", security["source_before"], security["source_after"])
+                git(source, "merge-base", "--is-ancestor", security["source_after"], revision)
+                parent_revision = git(source, "rev-parse", security["source_after"] + "^1").decode().strip()
+                parent = tree_inputs(source, parent_revision)
+                introduced = tree_inputs(source, security["source_after"])
+                before = tree_inputs(source, security["source_before"])
+            except subprocess.CalledProcessError:
+                raise ValueError("npm security source ancestry differs") from None
+            for path, item in security["changes"].items():
+                require(files.get(path) == introduced.get(path) == (item["mode"], item["after_blob"])
+                        and parent.get(path) == before.get(path) == (item["mode"], item["before_blob"]),
+                        "npm security successor blob or mode differs")
     _, shuffle = reviewed_collection_shuffle_transition(baseline)
     if shuffle is not None:
         change = shuffle["changes"][COLLECTION_SHUFFLE_INPUT]
@@ -1687,6 +1758,25 @@ def estate_successor_proof(baseline, source, revision):
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    baseline, security = reviewed_npm_security_transition(baseline)
+    if security is not None:
+        require(isinstance(common, dict), "npm security inputs must be a mapping")
+        changed = any(common.get(path) == item["after_blob"]
+                      for path, item in security["changes"].items())
+        if changed or source_revision == security["source_after"]:
+            estate = baseline.get("reviewed_estate_input_transition", {})
+            require(estate_successor_of == estate.get("source_after")
+                    and isinstance(source_revision, str), "npm security requires proven successor")
+            common = dict(common)
+            if files is not None:
+                files = dict(files)
+            for path, item in security["changes"].items():
+                require(common.get(path) == item["after_blob"], "npm security input missing or changed")
+                common[path] = item["before_blob"]
+                if files is not None:
+                    require(files.get(path) == (item["mode"], item["after_blob"]),
+                            "npm security input mode differs")
+                    files[path] = (item["mode"], item["before_blob"])
     baseline, shuffle = reviewed_collection_shuffle_transition(baseline)
     if shuffle is not None:
         require(isinstance(common, dict), "collection shuffle shared inputs must be a mapping")

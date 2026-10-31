@@ -1,0 +1,48 @@
+{
+  "status": "PASS_COLLECTION_QUALIFICATION_ONLY",
+  "source": "91ea64a329973b6c4f20451d41899ea16c925c5f",
+  "before_inputs": "acf7f59a9a1a4ce15a7ef4b2f91bbd4a85ffb365",
+  "after_inputs": "625cb93f369894bae7aad54dafb2b7f4d95008d4",
+  "controlled_paths": [
+    "frontend/package.json",
+    "frontend/package-lock.json",
+    "telegram-bot/yue/miniapp/package.json",
+    "telegram-bot/yue/miniapp/package-lock.json"
+  ],
+  "context": {
+    "policy_revision": "b471312d7576cde0d3d69682b5dc4bf1d8cca7bb",
+    "board_revision": "0b5a9fe3511decc55dbf838d108a389d1ee6bb08",
+    "run_id": "2026103104",
+    "run_attempt": "1",
+    "runner_os": "Linux",
+    "runner_arch": "aarch64",
+    "runner_image": "sha256:97e9a5cea0788b2c78e9fdbde1447068b6b1eba9a744a9aeeb079299c7948f0f"
+  },
+  "ordered_nodeids_equal": true,
+  "partition_no_loss_or_overlap": true,
+  "count": 28571,
+  "partition_counts": {
+    "ordinary-000": 1992,
+    "ordinary-001": 1453,
+    "ordinary-002": 1918,
+    "ordinary-003": 1944,
+    "ordinary-004": 1633,
+    "ordinary-005": 2084,
+    "ordinary-006": 1624,
+    "ordinary-007": 1868,
+    "ordinary-008": 1959,
+    "ordinary-009": 1881,
+    "ordinary-010": 1644,
+    "ordinary-011": 2055,
+    "ordinary-012": 1718,
+    "ordinary-013": 1595,
+    "ordinary-014": 1676,
+    "ordinary-015": 1488,
+    "serial": 39
+  },
+  "evidence_sha256": {
+    "before.json": "2ac28a04588206eada7dbb8bae319a2af27a7037930758b845d37653d9ccd1e8",
+    "after.json": "2ac28a04588206eada7dbb8bae319a2af27a7037930758b845d37653d9ccd1e8"
+  },
+  "full_execution_gate": "NOT_RUN; production hold retained"
+}

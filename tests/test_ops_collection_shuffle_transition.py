@@ -21,6 +21,7 @@ EVIDENCE = ROOT / 'reviews/ops-collection-shuffle-20261031'
 class CollectionShuffleTransition(unittest.TestCase):
     def setUp(self):
         self.baseline = json.loads((ROOT / SHARDS.SKIP_BASELINE).read_text())
+        self.baseline, _ = SHARDS.reviewed_npm_security_transition(self.baseline)
         self.record = self.baseline[KEY]
         self.prior, _ = SHARDS.reviewed_collection_shuffle_transition(self.baseline)
         freeze = json.loads((EVIDENCE / 'source-freeze.json').read_text())
