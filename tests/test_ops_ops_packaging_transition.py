@@ -44,6 +44,9 @@ class OpsPackagingTransition(unittest.TestCase):
     def setUp(self):
         self.raw = (ROOT / "ops-pytest-skip-baseline.json").read_bytes()
         self.sealed = json.loads(self.raw)
+        # Exercise the unchanged historical envelope beneath the new hook seal.
+        self.sealed, _ = SHARDS.reviewed_collection_shuffle_transition(self.sealed)
+        self.raw = SHARDS.baseline_bytes(self.sealed)
         self.record = self.sealed[KEY]
         self.changes = self.record["changes"]
         self.change = self.changes[PATH]

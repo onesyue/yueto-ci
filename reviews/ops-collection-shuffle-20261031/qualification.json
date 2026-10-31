@@ -1,0 +1,43 @@
+{
+  "status": "PASS_COLLECTION_QUALIFICATION_ONLY",
+  "source": "4e4630ec13c77b5b24bf51d2febd24e6a9a89eab",
+  "policy": "031b4cd34b1e6733a69e7eeaab8959c59b266c9e",
+  "board": "0b5a9fe3511decc55dbf838d108a389d1ee6bb08",
+  "image": "sha256:97e9a5cea0788b2c78e9fdbde1447068b6b1eba9a744a9aeeb079299c7948f0f",
+  "hook_blob": "05613fb260c40650ff94397493fe0bf8132d1e8e",
+  "hook_sha256": "007df94e05a14a88be08718ec78219cd3d35e8a7f029f73ccb91c10d39d285c9",
+  "default_order_and_rng_unchanged": true,
+  "shard_order_and_rng_unchanged": true,
+  "seed_repeat_equal": true,
+  "seed_multisets_equal": true,
+  "seed_global_rng_unchanged": true,
+  "complete_partition": true,
+  "counts": {
+    "disabled": 28568,
+    "disabled-ordinary-000": 14164,
+    "disabled-ordinary-001": 14365,
+    "disabled-serial": 39,
+    "enabled": 28568,
+    "enabled-ordinary-000": 14164,
+    "enabled-ordinary-001": 14365,
+    "enabled-serial": 39,
+    "seed-37-a": 28568,
+    "seed-37-b": 28568,
+    "seed-53": 28568
+  },
+  "evidence_sha256": {
+    "collection-plan.json": "094d083199b081b35a992128113fe7af41714a855de0382e42eb7a7ee4f2423f",
+    "disabled-ordinary-000.json": "84fd2771eb65ec9eb696fc7d199ab806c4c956056758ec9e7949e16e59005357",
+    "disabled-ordinary-001.json": "2d7e66707fbd77a2d4821912f9bc978fa1314a9612165e14b97fcde832ed694a",
+    "disabled-serial.json": "2b644abcdf09e138e0e035fc7b73a1382a38395538537bd1217293f31d208ce2",
+    "disabled.json": "30951b1620d0a2cca80bf6ce523a2398ec51325dd3656714bd9f4168933c9f05",
+    "enabled-ordinary-000.json": "84fd2771eb65ec9eb696fc7d199ab806c4c956056758ec9e7949e16e59005357",
+    "enabled-ordinary-001.json": "2d7e66707fbd77a2d4821912f9bc978fa1314a9612165e14b97fcde832ed694a",
+    "enabled-serial.json": "2b644abcdf09e138e0e035fc7b73a1382a38395538537bd1217293f31d208ce2",
+    "enabled.json": "30951b1620d0a2cca80bf6ce523a2398ec51325dd3656714bd9f4168933c9f05",
+    "seed-37-a.json": "966873d902d7b9d1eea8922a0d9f24bc86a40fe4f480e9d0046eff2a24f29700",
+    "seed-37-b.json": "966873d902d7b9d1eea8922a0d9f24bc86a40fe4f480e9d0046eff2a24f29700",
+    "seed-53.json": "f0fae7022b0ca9c95b163f6a58c79939f3ae8f662d389eb8d21aa2c9868b6dfb"
+  },
+  "full_execution_gate": "NOT_RUN; production hold retained"
+}

@@ -7924,5 +7924,22 @@
         "source": "22a82f65eb0bf7a250fd3149915b97ef09ce61d0"
       }
     }
+  },
+  "reviewed_collection_shuffle_transition": {
+    "schema": 1,
+    "prior_baseline_sha256": "d11a7572750c2e44d4781e92c2c0a910f40cae0e29b333aedd49132747842507",
+    "source_before": "63b7c5314e120f37a00c4f82dd4b06e32cee30ce",
+    "source_after": "4e4630ec13c77b5b24bf51d2febd24e6a9a89eab",
+    "independent_review_sha256": "ce935a6fb0aa76c1f9ae85af4699071eb7a3b04e8a3a58b22f0cc24799e93e9f",
+    "source_freeze_sha256": "b35ef26f896b8c2dda1203706f2c259348122066d9030cafc4bec853982082d7",
+    "qualification_receipt_sha256": "6b2fb7443a30fbb7f2345ebeb8561dbe1f835851f1638fb146293c6c96b1dd0f",
+    "changes": {
+      "conftest.py": {
+        "before_blob": null,
+        "after_blob": "05613fb260c40650ff94397493fe0bf8132d1e8e",
+        "mode": "100644",
+        "source": "f683e5391c723fd00da42b82d21cfd049a529e8c"
+      }
+    }
   }
 }

@@ -716,6 +716,53 @@ def baseline_bytes(baseline):
     return (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()
 
 
+COLLECTION_SHUFFLE_KEY = "reviewed_collection_shuffle_transition"
+COLLECTION_SHUFFLE_INPUT = "conftest.py"
+# Exact independently reviewed record and actual same-source collection receipt.
+COLLECTION_SHUFFLE_TRANSITION_SHA256 = "2140ecb94164f962036d2cd6353285042d5d955ffecc0817c753fed0fe2fa139"
+
+
+def reviewed_collection_shuffle_transition(baseline):
+    """Peel exactly the reviewed optional root collection hook, preserving history."""
+    if COLLECTION_SHUFFLE_KEY not in baseline:
+        return baseline, None
+    original = dict(baseline)
+    record = original.pop(COLLECTION_SHUFFLE_KEY)
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "source_freeze_sha256",
+        "qualification_receipt_sha256", "changes",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid collection shuffle transition")
+    require(sha(encoded(record)) == COLLECTION_SHUFFLE_TRANSITION_SHA256,
+            "unreviewed collection shuffle transition identity")
+    require(record["prior_baseline_sha256"] == sha(baseline_bytes(original)),
+            "collection shuffle transition changed historical baseline")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                for k in ("source_before", "source_after"))
+            and record["source_before"] != record["source_after"],
+            "collection shuffle source identity missing")
+    require(all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                and record[k] != "0" * 64 for k in (
+                    "independent_review_sha256", "source_freeze_sha256",
+                    "qualification_receipt_sha256")),
+            "collection shuffle review or qualification missing")
+    changes = record["changes"]
+    require(isinstance(changes, dict) and set(changes) == {COLLECTION_SHUFFLE_INPUT},
+            "unreviewed collection shuffle paths")
+    change = changes[COLLECTION_SHUFFLE_INPUT]
+    require(isinstance(change, dict)
+            and set(change) == {"before_blob", "after_blob", "mode", "source"}
+            and change["before_blob"] is None and change["mode"] == "100644"
+            and all(isinstance(change[k], str) and SHA.fullmatch(change[k])
+                    for k in ("after_blob", "source"))
+            and COLLECTION_SHUFFLE_INPUT not in original.get("common_inputs", {})
+            and COLLECTION_SHUFFLE_INPUT not in original.get(
+                "reviewed_shared_input_transition", {}).get("common_input_modes", {}),
+            "invalid collection shuffle blob, mode or source")
+    return original, record
+
+
 OPS_PACKAGING_KEY = "reviewed_ops_packaging_transition"
 OPS_PACKAGING_INPUT = "pyproject.toml"
 OPS_PACKAGING_ADDED_INPUT = "tests/_runtime_module_patch.py"
@@ -734,6 +781,7 @@ def reviewed_ops_packaging_transition(baseline):
     Each change names the signed source commit that introduced it; nothing else
     is admitted.
     """
+    baseline, _ = reviewed_collection_shuffle_transition(baseline)
     if OPS_PACKAGING_KEY not in baseline:
         return baseline, None
     original = dict(baseline)
@@ -1493,6 +1541,29 @@ def estate_successor_proof(baseline, source, revision):
     predecessor inside the sealed admission; validators and the join re-admit
     against that sealed value and still compare every estate input blob.
     """
+    _, shuffle = reviewed_collection_shuffle_transition(baseline)
+    if shuffle is not None:
+        change = shuffle["changes"][COLLECTION_SHUFFLE_INPUT]
+        try:
+            blob = git(source, "rev-parse", f"{revision}:{COLLECTION_SHUFFLE_INPUT}").decode().strip()
+        except subprocess.CalledProcessError:
+            blob = None
+        if blob is not None:
+            try:
+                git(source, "merge-base", "--is-ancestor", shuffle["source_before"], change["source"])
+                git(source, "merge-base", "--is-ancestor", change["source"], shuffle["source_after"])
+                git(source, "merge-base", "--is-ancestor", shuffle["source_after"], revision)
+                introduced = git(source, "rev-parse",
+                                 f"{change['source']}:{COLLECTION_SHUFFLE_INPUT}").decode().strip()
+            except subprocess.CalledProcessError:
+                raise ValueError("collection shuffle successor source revision differs") from None
+            try:
+                parent = git(source, "rev-parse",
+                             f"{change['source']}^1:{COLLECTION_SHUFFLE_INPUT}").decode().strip()
+            except subprocess.CalledProcessError:
+                parent = None
+            require(blob == introduced == change["after_blob"] and parent is None,
+                    "collection shuffle successor source revision differs")
     _, packaging = reviewed_ops_packaging_transition(baseline)
     _, tornado = reviewed_tornado66_dependency_transition(baseline)
     _, hang = reviewed_hang_guard_input_transition(baseline)
@@ -1606,6 +1677,25 @@ def estate_successor_proof(baseline, source, revision):
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    baseline, shuffle = reviewed_collection_shuffle_transition(baseline)
+    if shuffle is not None:
+        require(isinstance(common, dict), "collection shuffle shared inputs must be a mapping")
+        require(source_revision != shuffle["source_after"] or COLLECTION_SHUFFLE_INPUT in common,
+                "qualified collection shuffle input is missing")
+        if COLLECTION_SHUFFLE_INPUT in common:
+            change = shuffle["changes"][COLLECTION_SHUFFLE_INPUT]
+            estate = baseline.get("reviewed_estate_input_transition", {})
+            require(common[COLLECTION_SHUFFLE_INPUT] == change["after_blob"]
+                    and ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+                    and source_revision != estate.get("source_after")
+                    and estate_successor_of == estate.get("source_after"),
+                    "collection shuffle requires the reviewed blob in a proven estate successor")
+            if files is not None:
+                require(files.get(COLLECTION_SHUFFLE_INPUT) == (change["mode"], change["after_blob"]),
+                        "collection shuffle input mode or tree changed")
+                files = {p: v for p, v in files.items() if p != COLLECTION_SHUFFLE_INPUT}
+            common = {p: v for p, v in common.items() if p != COLLECTION_SHUFFLE_INPUT}
+    # The complete existing admission chain still consumes every other input.
     _, packaging = reviewed_ops_packaging_transition(baseline)
     baseline, required = required_native_inputs(baseline)
     if required:
