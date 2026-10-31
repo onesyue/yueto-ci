@@ -141,8 +141,10 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         for path in GATE.ORDER:
             self.package(path)
         workflow = (ROOT / '.github/workflows/build.yml').read_text().replace(
-            "(matrix.board_role == 'postgres' || matrix.board_role == 'migration')",
-            "matrix.board_role == 'postgres'", 1)
+            "- name: Validate YueBoard PostgreSQL integration\n"
+            "        if: matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')",
+            "- name: Validate YueBoard PostgreSQL integration\n"
+            "        if: matrix.validation == 'yueboard' && matrix.board_role == 'postgres'", 1)
         with self.assertRaisesRegex(RuntimeError, 'No such file or directory.*yueboard-pg-123-1.json'):
             self.run_workflow_role(workflow, 'migration')
 

@@ -996,6 +996,32 @@ jobs:
         if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'
         run: scripts/ci/proto-gate.sh
 
+      - name: Configure YueBoard PostgreSQL lock diagnostics
+        if: matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')
+        env:
+          PG_SERVICE: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          # Configure the exact disposable service, independent of host port mapping.
+          [ -n "$PG_SERVICE" ]
+          pg() { docker exec "$PG_SERVICE" psql -U postgres -d postgres -X -v ON_ERROR_STOP=1 -Atqc "$1"; }
+          for setting in "log_lock_waits = on" "deadlock_timeout = '200ms'" \
+            "log_line_prefix = '%m [%p] %q%u@%d app=%a xid=%x '"; do
+            pg "ALTER SYSTEM SET $setting"
+          done
+          [ "$(pg 'SELECT pg_reload_conf()')" = t ]
+          # Reload is asynchronous; read all three settings from fresh sessions.
+          for _ in $(seq 1 20); do
+            if [ "$(pg 'SHOW log_lock_waits')" = on ] && \
+               [ "$(pg 'SHOW deadlock_timeout')" = 200ms ] && \
+               [ "$(pg 'SHOW log_line_prefix')" = '%m [%p] %q%u@%d app=%a xid=%x ' ]; then
+              exit 0
+            fi
+            sleep 0.5
+          done
+          echo '::error::PostgreSQL lock diagnostics did not take effect' >&2
+          exit 1
+
       - name: Validate YueBoard PostgreSQL integration
         if: matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')
         env:
@@ -1067,6 +1093,18 @@ jobs:
           # Full migration + nativeproto suites run last, with scale cases on.
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \
             --phase remaining --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"
+
+      - name: Collect YueBoard PostgreSQL failure diagnostics
+        if: failure() && matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')
+        env:
+          PG_SERVICE: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          [ -n "$PG_SERVICE" ]
+          # A separate failure-only step cannot turn the original failed gate green.
+          # Keep the complete report: deadlock DETAIL names both backend PIDs/queries.
+          docker logs "$PG_SERVICE" > "$RUNNER_TEMP/yueboard-postgres.log" 2>&1
+          cat "$RUNNER_TEMP/yueboard-postgres.log"
 
       # 两种前端布局（W9.1，2026-09-24）：pnpm-workspace.yaml 在仓根 = 新布局，仓根唯一一份
       # pnpm-lock.yaml、仓根 packageManager、一次 root install；否则 = 旧布局（web / web-admin
