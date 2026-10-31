@@ -67,6 +67,12 @@ NATIVE_TARGETS = {
     "tests/test_board139_schema_acl_native_20261018.py": (6, 1001),
     "tests/test_node_systemd_pilot_20261018.py": (38, 0),
     "tests/test_schema_contract_receipt_20261020.py": (30, 0),
+    "tests/test_protocol_liveness_results_install.py": (34, 0),
+    "tests/test_protocol_liveness_results_pull.py": (34, 0),
+    "tests/test_panel_subscribe_delivery_alert_20261012.py": (17, 0),
+    "tests/test_frozen_manifest_reader_20261015.py": (4, 0),
+    "tests/test_install_operator_host_source.py": (29, 0),
+    "tests/test_status_tls_installer_20261027.py": (7, 0),
 }
 
 
@@ -1755,9 +1761,35 @@ def estate_successor_proof(baseline, source, revision):
     return after
 
 
+def first_native_policy():
+    """Trusted central policy; it grants no historical execution credit."""
+    policy = read_json(ROOT / "ops-first-native-successors.json")
+    require(policy.get("schema") == 1 and len(policy.get("cases", {})) == 52
+            and len(policy.get("module_blobs", {})) == 6,
+            "invalid first native successor policy")
+    return policy
+
+
+def admit_first_native_helper(common, files, source_revision):
+    policy = first_native_policy()
+    item = policy["shared_input"]
+    path = item["path"]
+    if path not in common and source_revision != policy["source_revision"]:
+        return common, files
+    require(source_revision == policy["source_revision"]
+            and common.get(path) == item["blob"],
+            "first native helper requires exact reviewed source and blob")
+    if files is not None:
+        require(files.get(path) == (item["mode"], item["blob"]),
+                "first native helper mode or tree changed")
+        files = {p: v for p, v in files.items() if p != path}
+    return {p: v for p, v in common.items() if p != path}, files
+
+
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    common, files = admit_first_native_helper(common, files, source_revision)
     baseline, security = reviewed_npm_security_transition(baseline)
     if security is not None:
         require(isinstance(common, dict), "npm security inputs must be a mapping")
@@ -2911,6 +2943,88 @@ def native_terminal(value, source, board, output):
     return result
 
 
+def reviewed_canceled_backup_blob_successor(baseline, value):
+    """Retain canceled backup cases as unexecuted; admit only reviewed blob drift."""
+    module = "tests/test_critical_key_restore_gate_mutations_20260903.py"
+    after = "a609746c0f11d0965861bbecd25044c659c5eabe"
+    if value.get("skip_module_blobs", {}).get(module) != after:
+        return baseline
+    selected = {key: row for key, row in baseline["cases"].items()
+                if key.startswith(module + "::")}
+    require(len(selected) == 23 and sha(encoded(selected)) == "8f23edcedaac436947b770f5d028c0deb4d2889201fa4bbdf63a68bec2b37ddf",
+            "canceled backup historical case identities or reasons differ")
+    require(not any(key.startswith(module + "::")
+                    for key in baseline.get("reviewed_hosted", {}).get("cases", {})),
+            "canceled backup cases must remain historically unexecuted")
+    updated = baseline["cases"] | {
+        key: row | {"module_blob": after} for key, row in selected.items()}
+    return baseline | {"cases": updated}
+
+
+def reviewed_board139_native_successor(baseline, value, native):
+    """Keep the historical skip seal; qualify the exact archive-fixture successor.
+
+    Ops 6a894a36 adds the production-shaped orders_archive fixture and a seventh
+    negative ACL case. It changes neither the fixture skip nor the native gate.
+    Original run 41186871728 passed all seven native calls; its ordinary skips
+    must still require those exact same-run calls, never become historical PASS.
+    """
+    module = "tests/test_board139_schema_acl_native_20261018.py"
+    before = "7031c88d7b25d3b61ff40429cc8e54f3e7248466"
+    after = "2d510c6a2e765ae7eb0379ab7671ba64d6770ef4"
+    if value.get("skip_module_blobs", {}).get(module) != after:
+        return baseline
+    names = (
+        "test_actual_bootstrap_adopts_139_trigger_owner_and_empty_acl",
+        "test_actual_audit_refuses_grant_option_and_foreign_owner",
+        "test_actual_audit_refuses_nonowner_execute[PUBLIC]",
+        "test_actual_audit_refuses_nonowner_execute[app_yue_bot]",
+        "test_actual_audit_refuses_nonowner_execute[app_checkin]",
+        "test_actual_audit_refuses_nonowner_execute[yueboard_runtime]",
+    )
+    previous = {module + "::" + name for name in names}
+    added = module + "::test_actual_bootstrap_and_audit_stay_strict_around_orders_archive"
+    cases = baseline["reviewed_hosted"]["cases"]
+    selected = {key for key in cases if key.startswith(module + "::")}
+    require(selected == previous, "Board139 historical native case set differs")
+    variant = [{"when": "setup", "reason":
+                "Skipped: requires frozen Board139 schema fixture; set YUEBOARD_MONEY_SCHEMA_FIXTURE"}]
+    for key in previous:
+        require(cases[key]["module_blob"] == before
+                and cases[key]["outcome"] == "skipped"
+                and cases[key]["variants"] == variant
+                and cases[key]["disposition"] == "SAME_RUN_NATIVE_REQUIRED"
+                and cases[key]["native_target"] == module,
+                "Board139 historical native skip binding differs")
+    passed = native["obligations"].get(module, {}).get("passed", [])
+    require(set(passed) == previous | {added} and len(passed) == 7,
+            "Board139 successor requires seven exact same-run native calls")
+    updated = dict(cases)
+    for key in previous | {added}:
+        updated[key] = {"module_blob": after, "outcome": "skipped",
+                        "variants": variant, "disposition": "SAME_RUN_NATIVE_REQUIRED",
+                        "native_target": module}
+    return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": updated}}
+
+
+def reviewed_first_native_successor(baseline, value, native):
+    policy = first_native_policy()
+    if value.get("source_revision") != policy["source_revision"]:
+        return baseline
+    require(all(value["skip_module_blobs"].get(module) == blob
+                for module, blob in policy["module_blobs"].items()),
+            "first native module source differs")
+    cases = dict(baseline["reviewed_hosted"]["cases"])
+    for nodeid, row in policy["cases"].items():
+        module = nodeid.split("::", 1)[0]
+        require(nodeid in native["obligations"].get(module, {}).get("passed", []),
+                "first native successor lacks exact same-run call: " + nodeid)
+        cases[nodeid] = row | {"module_blob": policy["module_blobs"][module],
+                              "disposition": "SAME_RUN_NATIVE_REQUIRED",
+                              "native_target": module}
+    return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": cases}}
+
+
 def admit_skips(value, result, native):
     sealed_baseline = skip_baseline()
     _, i10_blob_record = reviewed_i10_skip_blob_successor_transition(sealed_baseline)
@@ -2944,6 +3058,9 @@ def admit_skips(value, result, native):
         i10_blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
     unknown = []
     observed_collection = {}
+    baseline = reviewed_canceled_backup_blob_successor(baseline, value)
+    baseline = reviewed_board139_native_successor(baseline, value, native)
+    baseline = reviewed_first_native_successor(baseline, value, native)
     reviewed = baseline.get("reviewed_hosted", {})
     counts = {"HISTORICAL_UNEXECUTED": 0, "OWNER_CANCELED": 0,
               "SAME_RUN_NATIVE_REQUIRED": 0}

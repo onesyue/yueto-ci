@@ -68,6 +68,8 @@ class ShardPrimitives(unittest.TestCase):
         (self.policy / "scripts").mkdir(parents=True)
         for name in ("lens_report.py", "lens-report-source.json", "pytest-timing.py", "pytest-shards.py"):
             shutil.copyfile(ROOT / "scripts" / name, self.policy / "scripts" / name)
+        shutil.copyfile(ROOT / "ops-first-native-successors.json",
+                        self.policy / "ops-first-native-successors.json")
         self.env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", TZ="UTC",
                         PYTEST_ADDOPTS="", PYTHONPATH=str(self.site),
                         GITHUB_REPOSITORY="onesyue/yueto-ci", GITHUB_RUN_ID="42",

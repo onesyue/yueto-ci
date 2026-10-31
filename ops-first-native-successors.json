@@ -1,0 +1,491 @@
+{
+  "cases": {
+    "tests/test_frozen_manifest_reader_20261015.py::test_native_frozen_boundary_still_enforces_file_set_mode_and_content": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: native export boundary requires isolated Linux root",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_actual_native_sticky_lock_directory_is_supported": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_actual_signed_root_accepts_only_pinned_signer_and_exact_tree": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        },
+        {
+          "reason": "Skipped: canonical verifier requires an actual disposable container",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_approved_plan_drift_zero_publication": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_changed_container_or_authority_refuses_commit_and_rollback": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_commit_readback_crossing_deadline_cannot_write_marker": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_crash_intent_journal_covers_missing_publications": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_exclusive_publication_never_replaces_foreign_empty_directory": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_existing_executor_reference_refuses_partial_source_admission": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_existing_source_collision_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_expired_automatic_guard_does_not_refresh_its_budget_but_explicit_recovery_is_bounded": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_expired_before_git_publication_never_admits": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_expired_commit_keeps_guard": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_foreign_drift_refuses_all_rollback_writes": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_guard_failure_leaves_original_tree": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_guard_process_waits_for_real_writer_lock_then_rolls_back": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_hardlinked_runtime_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_lock_inode_change_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_lock_missing_is_not_recreated": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_contention": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_directory_refuses_nonsticky_symlink_or_foreign_owner[16895-0]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_directory_refuses_nonsticky_symlink_or_foreign_owner[17407-1]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_directory_refuses_nonsticky_symlink_or_foreign_owner[41471-0]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_partial_publication_failure_removes_only_owned_additions": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_peer_adoption_requires_exact_signed_bytes": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_preserves_all_existing_inodes_commit_and_guard_noop": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_readback_failure_withdraws_git_before_removing_source": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_rollback_restores_exact_original_tree": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_source_bytes_changed_after_plan_cannot_be_adopted": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_symlink_lock_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_panel_subscribe_delivery_alert_20261012.py::test_every_board_fail_delivery_event_is_watched": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: yueboard checkout absent",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_actual_nginx_routes_are_exact_private_and_read_only": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: explicit cached nginx Docker lab required",
+          "when": "call"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_automatic_guard_uses_original_deadline_and_explicit_recovery_does_not_mask_it": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_consumer_install_only_stages_units_and_cohort": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_expired_commit_has_no_success_marker": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[guard]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[reload]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[second_file]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[syntax]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_foreign_drift_refused_before_any_rollback_write": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_install_preserves_all_original_nginx_bytes_except_exact_include": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_missing_lock_never_recreated_by_rollback": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_refuses_existing_producer_unit_before_mutation": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[enabled-runtime]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[enabled]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[linked]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[masked]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_stages_exact_native_units_and_rollback_removes_them": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_plan_cas_refuses_changed_config": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_pull.py::test_actual_killed_service_process_then_configured_failure_command_projects_unknown": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: isolated root process failure lab required",
+          "when": "call"
+        }
+      ]
+    },
+    "tests/test_status_tls_installer_20261027.py::test_native_install_and_reverse_rollback_preserve_transport[False]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: native Linux root NGINX installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_status_tls_installer_20261027.py::test_native_install_and_reverse_rollback_preserve_transport[True]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: native Linux root NGINX installer required",
+          "when": "setup"
+        }
+      ]
+    }
+  },
+  "module_blobs": {
+    "tests/test_frozen_manifest_reader_20261015.py": "086246934ab623ad6df49be9225bc7ee04f4fee5",
+    "tests/test_install_operator_host_source.py": "64550a55f127f2db77cde4e7e4a6576158a02b56",
+    "tests/test_panel_subscribe_delivery_alert_20261012.py": "0d382f25ff22113ff54968d233555739da6da0d9",
+    "tests/test_protocol_liveness_results_install.py": "a4383cf33b167cb55578116b44a3f7c26d6e41b7",
+    "tests/test_protocol_liveness_results_pull.py": "7a2bfcfe44bc048da73aa7e6376994647377b487",
+    "tests/test_status_tls_installer_20261027.py": "5ea58a69495105019c7d10f39d4e5e82f5f194bd"
+  },
+  "schema": 1,
+  "shared_input": {
+    "blob": "614ba6cbdce76989b9028e3bed2fdf0799eba3eb",
+    "mode": "100644",
+    "path": "tests/_native_root_lab.py"
+  },
+  "source_revision": "aadf836d9eaf2a8c16a90f3fc92d2d8531e635dc"
+}
