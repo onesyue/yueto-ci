@@ -1,0 +1,10 @@
+head=8fc1dd37ee505b83f2622b3f8233f1d4d4dadac1 ran_at=2026-11-02T17:57:06Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/run-flutter-coverage.py tests/test_flutter_coverage_runner.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_flutter_coverage_runner.py  && for f in tests/fixtures/flutter-coverage-groups-20261028.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check ba7986ebbe4c07c322cc265b7c3eced287ef41c4 8fc1dd37ee505b83f2622b3f8233f1d4d4dadac1
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+...................... [ 61%]
+..............                                            [100%]
+36 passed, 65 subtests passed in 60.56s (0:01:00)
+rc=0

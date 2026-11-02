@@ -354,6 +354,48 @@
       "pr": 20,
       "reason": "Backfilled independent review of exact head 879c02c0974eb12b12ceb14faac3bd5aa6692d95 (2026-11-02T17:42:01Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yue-node-20-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yue-node-20-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink-ci",
+      "pr": 17,
+      "reason": "Backfilled independent review of exact head 8fc1dd37ee505b83f2622b3f8233f1d4d4dadac1 (2026-11-02T17:58:47Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-ci-17-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-ci-17-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink-ci",
+      "pr": 18,
+      "reason": "Backfilled independent review of exact head c72e6c5477a9f33c763c8ce17491059f1db2a9fd (2026-11-02T17:57:34Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-ci-18-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-ci-18-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink-ci",
+      "pr": 20,
+      "reason": "Backfilled independent review of exact head a94c7eee1cd310988192c5c9068e1f2f72c8710c (2026-11-02T17:59:13Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-ci-20-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-ci-20-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink-ci",
+      "pr": 21,
+      "reason": "Backfilled independent review of exact head 4614137aa38ced1622392b5e92f8f4614798a432 (2026-11-02T17:57:05Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-ci-21-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-ci-21-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink-ci",
+      "pr": 22,
+      "reason": "Backfilled independent review of exact head 12ded15f062a8749982560d8213e018d8f8080ac (2026-11-02T17:56:57Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-ci-22-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-ci-22-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink-ci",
+      "pr": 23,
+      "reason": "Backfilled independent review of exact head eac6f1a87c1380bbc8cdf7ae7e0d446df1b1256f (2026-11-02T17:56:13Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-ci-23-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-ci-23-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink-ci",
+      "pr": 26,
+      "reason": "Backfilled independent review of exact head f001f8058ab3102b6e688cdacf31761e40b1367b (2026-11-02T17:57:35Z). Codex review returned CHANGES: - [P2] `scripts/run-flutter-coverage.py:36`: Adding this entry to `ISOLATED` breaks execution for the frozen reviewed corpus. The unchanged plan omits it from `isolated`, so `grouped_plan()` rejects the equality check at line 88 before running tests. Preserve the frozen plan’s isolation contract separately from live-directory isolation. - [P2] `scripts/run-flutter-coverage.py:36`: Adding this entry to `ISOLATED` breaks execution for the frozen reviewed corpus. The unchanged plan omits it from `isolated`, so `grouped_plan()` rejects the equality check at line 88 before running tests. Preserve the frozen plan’s isolation contract separately from live-directory isolation.; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-ci-26-parity.log) (reviews/merge-receipts-20261103/yuelink-ci-26-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     }
   ]
 }
