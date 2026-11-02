@@ -1,0 +1,10 @@
+仅审查了指定 diff，未修改文件。`git diff --check` 通过；环境未提供 Flutter/Dart，未运行测试。
+
+VERDICT: changes
+- [P2] `test/contracts/yueboard_golden_contract_test.dart:150`：合并后的回退只验证最后一次 manifest 修改。先提交历史绑定重写，再提交 manifest 的纯格式修改并刷新校验和，第二次提交的父节点就成为已被重写的基线；递归调用因显式设置 baseline 不再追溯，检查会通过。应追溯到可信历史锚点，并补充此两次提交的回归测试。
+tokens used
+39,254
+仅审查了指定 diff，未修改文件。`git diff --check` 通过；环境未提供 Flutter/Dart，未运行测试。
+
+VERDICT: changes
+- [P2] `test/contracts/yueboard_golden_contract_test.dart:150`：合并后的回退只验证最后一次 manifest 修改。先提交历史绑定重写，再提交 manifest 的纯格式修改并刷新校验和，第二次提交的父节点就成为已被重写的基线；递归调用因显式设置 baseline 不再追溯，检查会通过。应追溯到可信历史锚点，并补充此两次提交的回归测试。

@@ -1,0 +1,4 @@
+head=645364b40a003ad5184bb616e890fdf38bef1b4c ran_at=2026-11-02T18:00:07Z runner=box
+cmd: for f in test/contracts/yueboard/manifest.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check 5825759e440364f6f045a1752961029c9df74e81 645364b40a003ad5184bb616e890fdf38bef1b4c
+NOTE: Dart sources changed; no Flutter toolchain on box, Dart not verified
+rc=97

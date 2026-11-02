@@ -1,0 +1,4 @@
+head=e93b12d2f78e5658046737e31ebf1ee7854b72e2 ran_at=2026-11-02T17:59:54Z runner=box
+cmd: git diff --check 5825759e440364f6f045a1752961029c9df74e81 e93b12d2f78e5658046737e31ebf1ee7854b72e2
+NOTE: Dart sources changed; no Flutter toolchain on box, Dart not verified
+rc=97

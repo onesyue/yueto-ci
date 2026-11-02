@@ -1,0 +1,4 @@
+head=ab7e24f3fb61c8928246efd5218bdce1258e3058 ran_at=2026-11-02T17:58:57Z runner=box
+cmd: python3 -c 'import sys,yaml;[list(yaml.safe_load_all(open(f))) for f in sys.argv[1:]]' assets/ruleset/development.domain.yaml assets/ruleset/meetings.domain.yaml assets/ruleset/microsoft365.domain.yaml assets/ruleset/microsoft365.ip.yaml assets/ruleset/work.domain.yaml  && git diff --check c1c5fd79941dc58a69585a5b913030d63a297d22 ab7e24f3fb61c8928246efd5218bdce1258e3058
+NOTE: Dart sources changed; no Flutter toolchain on box, Dart not verified
+rc=97
