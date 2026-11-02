@@ -15,7 +15,7 @@
   "parity": {
     "result": "pass",
     "head": "3fd010a62e538d63ee6c15206e25f050c6cb4530",
-    "command": "clean git worktree at merged head: TZ=UTC python3 -m pytest -q -p no:cacheprovider tests/test_host_locale_reconcile.py tests/test_host_locale_timeout_contract.py && echo PARITY_COMMAND_OK",
+    "command": "clean git worktree at merged head: TZ=UTC python3.13 (venv) -m pytest -q -p no:cacheprovider tests/test_host_locale_reconcile.py tests/test_host_locale_timeout_contract.py && echo PARITY_COMMAND_OK",
     "log_sha256": "cf066e81a6e3086ca21681bbc1fb28062b1224907041122e9f51d610fe7ba4cf",
     "ran_at": "2026-11-02T22:44:50Z",
     "runner": "box"
