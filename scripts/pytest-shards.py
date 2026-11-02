@@ -3314,6 +3314,9 @@ def main():
             result = join(read_json(args.admission), args.evidence, args.validation_result,
                           args.expected_sha)
     except (ValueError, OSError, KeyError, TypeError, subprocess.CalledProcessError) as error:
+        if args.command == "expand":
+            from admission_diagnostics import rejection
+            rejection(str(error))
         if args.command in ("run", "native-start", "native-terminal"):
             try:
                 retain_rejection(args, error)

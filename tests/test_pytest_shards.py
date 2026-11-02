@@ -66,7 +66,8 @@ class ShardPrimitives(unittest.TestCase):
         (self.source / "tests/test_skip_module.py").write_text(
             "import pytest\npytest.skip('existing collection skip', allow_module_level=True)\n")
         (self.policy / "scripts").mkdir(parents=True)
-        for name in ("lens_report.py", "lens-report-source.json", "pytest-timing.py", "pytest-shards.py"):
+        for name in ("lens_report.py", "lens-report-source.json", "pytest-timing.py",
+                     "pytest-shards.py", "admission_diagnostics.py"):
             shutil.copyfile(ROOT / "scripts" / name, self.policy / "scripts" / name)
         shutil.copyfile(ROOT / "ops-first-native-successors.json",
                         self.policy / "ops-first-native-successors.json")
