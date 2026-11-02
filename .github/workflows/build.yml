@@ -2269,7 +2269,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    # Unique matrix output keys retain successful rows when a sibling fails.
+    # Unique matrix output keys retain tag writes even when promotion or a sibling fails.
     outputs:
       yue-node: ${{ steps.published.outputs.yue-node }}
       yueops-web: ${{ steps.published.outputs.yueops-web }}
@@ -2427,7 +2427,9 @@ jobs:
       # Marking it at push time would let one failing scan permanently convince
       # the poller there was nothing left to do.
       - name: Mark this source revision as built
+        id: published
         env:
+          SERVICE: ${{ matrix.service }}
           IMAGE: ${{ steps.meta.outputs.image }}
           DIGEST: ${{ steps.build.outputs.digest }}
           SOURCE_SHA: ${{ steps.meta.outputs.source_sha }}
@@ -2435,6 +2437,7 @@ jobs:
           set -euo pipefail
           docker buildx imagetools create \
             --tag "${IMAGE}:built-${SOURCE_SHA}" "${IMAGE}@${DIGEST}"
+          echo "${SERVICE}=tag-written" >> "$GITHUB_OUTPUT"
           echo "marked ${IMAGE}:built-${SOURCE_SHA} -> ${DIGEST}"
 
       # The App token minted at job start lives one hour and this job may run
@@ -2676,12 +2679,6 @@ jobs:
             "${promotion_tag_args[@]}" \
             "${IMAGE}@${DIGEST}"
 
-      - name: Record successful image publication
-        id: published
-        env:
-          SERVICE: ${{ matrix.service }}
-        run: echo "${SERVICE}=success" >> "$GITHUB_OUTPUT"
-
   validation-alert:
     # Asynchronous validation (B1, 2026-10-30): a red validate or
     # validation-evidence no longer cancels the run or blocks publish, because
@@ -2697,10 +2694,10 @@ jobs:
       issues: write
     steps:
       - name: Report rejected admission without an issue
-        if: needs.plan.result != 'success' || (needs.publish.result != 'success' && !contains(toJSON(needs.publish.outputs), '"success"'))
+        if: ${{ !contains(toJSON(needs.publish.outputs), '"tag-written"') }}
         run: echo "::notice::admission rejected, nothing published"
       - name: Open or update the single async validation alert
-        if: needs.plan.result == 'success' && (needs.publish.result == 'success' || contains(toJSON(needs.publish.outputs), '"success"')) && (needs.validate.result == 'failure' || needs.validation-evidence.result == 'failure')
+        if: needs.plan.result == 'success' && contains(toJSON(needs.publish.outputs), '"tag-written"') && (needs.validate.result == 'failure' || needs.validation-evidence.result == 'failure')
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
