@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 278,
+  "head": "5324bd6d18be4b95c6b48981fced611458ea8c64",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "5324bd6d18be4b95c6b48981fced611458ea8c64",
+    "artifact": "reviews/merge-receipts-20261102/yueops-278.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T16:28:14Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "5324bd6d18be4b95c6b48981fced611458ea8c64",
+    "command": "TZ=UTC /home/box/Projects/yueto/yueops/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_recurring_writer_boundary_20260731.py tests/test_referral_clawback_timer.py tests/test_timer_restart_successor_20260914.py",
+    "log_sha256": "697c01ab3a297d0adf7f72188bf8e9477c35b540c478402ac6ccef5f7a8f5c20",
+    "ran_at": "2026-11-02T16:31:12Z",
+    "runner": "box"
+  }
+}
