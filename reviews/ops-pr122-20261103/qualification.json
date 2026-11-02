@@ -1,0 +1,18 @@
+{
+  "status": "PASS_STATIC_SHARED_INPUT_QUALIFICATION_ONLY",
+  "source_before": "c56159246c31ede8e24b40b8626b6a3c6b0b0137",
+  "source_after": "175860d056393697b752e21c58ae636e9466d86d",
+  "changed_lock_records": [
+    "langfuse",
+    "yueops"
+  ],
+  "exact_paths": [
+    "checkin-api/requirements.txt",
+    "pyproject.toml",
+    "telegram-bot/yue/requirements.txt",
+    "uv.lock"
+  ],
+  "regular_file_modes": true,
+  "merge_conflicts": false,
+  "full_execution_gate": "NOT_RUN; admission is not runtime qualification"
+}

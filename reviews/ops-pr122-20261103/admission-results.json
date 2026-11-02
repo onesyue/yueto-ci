@@ -1,0 +1,22 @@
+{
+  "master": {
+    "head": "c56159246c31ede8e24b40b8626b6a3c6b0b0137",
+    "exit": 0,
+    "status": "ADMISSION_ACCEPTED"
+  },
+  "122": {
+    "head": "175860d056393697b752e21c58ae636e9466d86d",
+    "exit": 0,
+    "status": "ADMISSION_ACCEPTED"
+  },
+  "256": {
+    "head": "1e6f5d53a8f749f326da51ffd9c5d9f5881574ec",
+    "exit": 0,
+    "status": "ADMISSION_ACCEPTED"
+  },
+  "260": {
+    "head": "9a51511f9c5613ad788eb264133a275a9d73eb14",
+    "exit": 1,
+    "status": "ADMISSION_REJECTED"
+  }
+}
