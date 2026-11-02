@@ -1,0 +1,6 @@
+yueops#278 head=5324bd6d18be4b95c6b48981fced611458ea8c64 rc=0 ran_at=2026-11-02T16:31:12Z sha=cb01a377db16e98d68cce69bb5a8c5529926a51cfbd0bace70ca360e2a7ddca4 cmd=TZ=UTC /home/box/Projects/yueto/yueops/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_recurring_writer_boundary_20260731.py tests/test_referral_clawback_timer.py tests/test_timer_restart_successor_20260914.py
+n" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+.............................                                            [100%]
+29 passed in 4.47s
