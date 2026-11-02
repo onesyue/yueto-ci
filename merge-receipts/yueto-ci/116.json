@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto-ci",
+  "pr": 116,
+  "head": "936c4f3712fbfee274eea50fe14e810dbd8d4f66",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "936c4f3712fbfee274eea50fe14e810dbd8d4f66",
+    "artifact": "reviews/merge-receipts-20261103/yueto-ci-116-review.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T21:19:34Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "936c4f3712fbfee274eea50fe14e810dbd8d4f66",
+    "command": "git worktree at 936c4f3712fbfee274eea50fe14e810dbd8d4f66: TZ=UTC python -m pytest -q -p no:cacheprovider tests && json.tool on changed *.json && git diff --check 7d3e31127153dd9cda23a51b32610dbc69f9c2eb 936c4f3712fbfee274eea50fe14e810dbd8d4f66 -- . ':(exclude)reviews/'",
+    "log_sha256": "2d5e35efd3ec1b3b5e525413487c497a8e649b4c607f0f50514df54f49487b76",
+    "ran_at": "2026-11-02T21:23:04Z",
+    "runner": "box"
+  }
+}
