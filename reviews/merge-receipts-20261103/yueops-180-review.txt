@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P1] `scripts/lib/fleet_membership_signature.py:81`：忽略 `REVKEYSIG`、`EXPKEYSIG`、`EXPSIG`；只要存在匹配的 `VALIDSIG` 且退出码为 0，就会接受已撤销或过期的签名。[GnuPG 官方说明](https://lists.gnupg.org/pipermail/gnupg-devel/2012-February/026580.html)明确指出不能仅依赖退出码。已用 exact head 的解析器在内存中复现三种状态均被接受。应显式拒绝这些状态，并补充回归测试。
+tokens used
+53,401
+VERDICT: changes
+
+- [P1] `scripts/lib/fleet_membership_signature.py:81`：忽略 `REVKEYSIG`、`EXPKEYSIG`、`EXPSIG`；只要存在匹配的 `VALIDSIG` 且退出码为 0，就会接受已撤销或过期的签名。[GnuPG 官方说明](https://lists.gnupg.org/pipermail/gnupg-devel/2012-February/026580.html)明确指出不能仅依赖退出码。已用 exact head 的解析器在内存中复现三种状态均被接受。应显式拒绝这些状态，并补充回归测试。

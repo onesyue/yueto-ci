@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P1] `scripts/yueops-tuning/files/usr/share/yueops-tuning/nftables.conf:10`、`nftables-relay.conf:23`：修改了两个包的载荷，却未更新包版本和对应 release manifest 的 SHA-256。`build-reviewed.sh:88` 强制校验构建产物哈希，而 Web Dockerfile 调用了该脚本，因此此提交会导致镜像构建失败。需同步更新两个包的版本及经验证的 manifest。
+tokens used
+50,077
+VERDICT: changes
+
+- [P1] `scripts/yueops-tuning/files/usr/share/yueops-tuning/nftables.conf:10`、`nftables-relay.conf:23`：修改了两个包的载荷，却未更新包版本和对应 release manifest 的 SHA-256。`build-reviewed.sh:88` 强制校验构建产物哈希，而 Web Dockerfile 调用了该脚本，因此此提交会导致镜像构建失败。需同步更新两个包的版本及经验证的 manifest。

@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P1] `scripts/node-unit-failure.py:41`：修改了 `nfpm.yaml:142` 收录的包内容，却未更新包版本及审核哈希。`services/yueops-web/Dockerfile:46` 调用 `build-reviewed.sh`，会因生成包与原固定 SHA-256 不符而失败，阻断 Web 镜像构建。需同步升级 direct 包版本并更新审核清单。
+tokens used
+44,913
+VERDICT: changes
+
+- [P1] `scripts/node-unit-failure.py:41`：修改了 `nfpm.yaml:142` 收录的包内容，却未更新包版本及审核哈希。`services/yueops-web/Dockerfile:46` 调用 `build-reviewed.sh`，会因生成包与原固定 SHA-256 不符而失败，阻断 Web 镜像构建。需同步升级 direct 包版本并更新审核清单。

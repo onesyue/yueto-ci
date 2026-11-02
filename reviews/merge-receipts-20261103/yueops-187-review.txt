@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P1] `scripts/release-root-prune-20261013.py:26`：更新哈希重新启用了旧包装器，但它未调用新版 `_run_locked()` 的保留根依赖闭包和挂载检查。`make_plan()` 可能将保留根依赖的旧根列为可删，`--apply` 则直接调用 `native.remove_root()`，也可能删除候选目录内挂载的数据。更新哈希前需将这些保护接入包装器实际执行路径，并增加回归测试。
+tokens used
+53,939
+VERDICT: changes
+- [P1] `scripts/release-root-prune-20261013.py:26`：更新哈希重新启用了旧包装器，但它未调用新版 `_run_locked()` 的保留根依赖闭包和挂载检查。`make_plan()` 可能将保留根依赖的旧根列为可删，`--apply` 则直接调用 `native.remove_root()`，也可能删除候选目录内挂载的数据。更新哈希前需将这些保护接入包装器实际执行路径，并增加回归测试。

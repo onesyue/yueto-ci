@@ -1,0 +1,10 @@
+已审查指定提交间的全部变更，未发现需阻止合并的问题。精确 head 的语法、报告模式无外部副作用检查及 diff 检查通过；未运行完整测试或 PostgreSQL 集成验证。
+
+VERDICT: approve
+- `scripts/heavy-share-reset.py:346`：执行模式在任何外部操作前被硬性禁用；审批仅覆盖当前报告模式，不代表重置链路已获验证。
+tokens used
+61,017
+已审查指定提交间的全部变更，未发现需阻止合并的问题。精确 head 的语法、报告模式无外部副作用检查及 diff 检查通过；未运行完整测试或 PostgreSQL 集成验证。
+
+VERDICT: approve
+- `scripts/heavy-share-reset.py:346`：执行模式在任何外部操作前被硬性禁用；审批仅覆盖当前报告模式，不代表重置链路已获验证。

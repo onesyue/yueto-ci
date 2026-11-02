@@ -1,0 +1,3 @@
+head=4f829b52342ba54cb1c54cc53ee59df5d2a92a0a ran_at=2026-11-02T18:10:30Z runner=box
+cmd: for f in scripts/subscribe-rule-catalog.json tests/subscribe-active-20261028.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check bf482ad3c7fffb7de58ec806006d223d14cd6072 4f829b52342ba54cb1c54cc53ee59df5d2a92a0a
+rc=0

@@ -1,0 +1,9 @@
+head=5336c2b5b50821c43a7e381438c30223c8d47393 ran_at=2026-11-02T18:14:53Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile tests/test_game_points_cap_lifetime_pg_20261028.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_game_points_cap_lifetime_pg_20261028.py  && git diff --check 497a5a49a1597f8297a90e2c056195f3f7ee124f 5336c2b5b50821c43a7e381438c30223c8d47393
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+sss..sss                                                                 [100%]
+2 passed, 6 skipped in 0.28s
+rc=0

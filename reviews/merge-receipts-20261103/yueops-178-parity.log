@@ -1,0 +1,9 @@
+head=0319bf1e58cde3096187253e604ff8f43e48881d ran_at=2026-11-02T18:13:26Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/generate-mgmt-bastion-nft.py tests/test_mgmt_bastion_nft.py tests/test_nft_v6_ssh_and_vm_tunables_20260803.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_mgmt_bastion_nft.py tests/test_nft_v6_ssh_and_vm_tunables_20260803.py  && git diff --check e479af018e2d16534e77eee3422995e1d3924cb7 0319bf1e58cde3096187253e604ff8f43e48881d
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+.............                                                            [100%]
+13 passed in 0.46s
+rc=0

@@ -1,0 +1,5 @@
+head=e84174baa69f94a900db6dfc137443dcfb062253 ran_at=2026-11-02T18:37:45Z runner=box
+cmd: /workspace/lane/yo-venv/bin/python -m py_compile telegram-bot/yue/service/checkin_claim.py telegram-bot/yue/service/checkin_membership.py telegram-bot/yue/service/checkin_weekly.py tests/_http_auth_matrix.py tests/test_checkin_internal_hmac_matrix.py tests/test_http_auth_matrix_20261013.py yueops_runtime/checkin_claim.py yueops_runtime/checkin_membership.py yueops_runtime/checkin_weekly.py  && /workspace/lane/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_checkin_internal_hmac_matrix.py tests/test_http_auth_matrix_20261013.py  && git diff --check b692fa36da2201105186b99397d8e0165eb013ba e84174baa69f94a900db6dfc137443dcfb062253
+..                                                                       [100%]
+2 passed in 3.83s
+rc=0
