@@ -1,0 +1,14 @@
+yueops#280 head=f99747931531a91847ec5cd100ed16a0a9ceeb68 rc=0 ran_at=2026-11-02T15:36:11Z sha=41ea61b249dfb30f2f6207b79dd0ac7369e5805ad2d6e8faa13a433b7cdecdab cmd=TZ=UTC /home/box/Projects/yueto/yueops/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_protocol_liveness_and_band_coverage_20260901.py tests/test_mgmt_bastion_nft.py tests/test_entry_bucket_liveness_guard_20260909.py tests/test_protocol_liveness_scope_20260921.py tests/test_node_class_health_guard_20261027.py tests/test_node_class_health_guard_blockers_20261031.py tests/test_cdn_vless_autohide_20261006.py tests/test_timer_restart_successor_20260914.py tests/test_protocol_liveness_results_install.py tests/test_status_protocol_consumer_20261018.py tests/test_delivery_source_pins_match_the_repo_20260916.py tests/test_recurring_writer_boundary_20260731.py tests/test_protocol_trace_native_curl_20260911.py tests/test_protocol_native_hysteria_uri_20260911.py tests/test_entry_diagnostics_signed_closure_20261008.py tests/test_ipv6_probe_vantage_20261009.py tests/test_liveness_pair_diagnostics_20261013.py tests/test_hy2_external_probe_visibility_20261017.py tests/test_probe_group1_selection_20261012.py tests/test_protocol_liveness_results_pull.py tests/test_every_repo_unit_is_installed_somewhere.py tests/test_protocol_liveness_ws_transport_20260902.py
+.....................s.......... [ 99%]
+....                                                                     [100%]
+=============================== warnings summary ===============================
+../../../../home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../../../home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/starlette/testclient.py:53
+  /home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+627 passed, 25 skipped, 2 warnings in 34.78s
