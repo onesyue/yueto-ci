@@ -1,0 +1,8 @@
+VERDICT: changes
+- [P1] `scripts/user-api-5xx-watch.py:28`: Subscription downloads and Mini App APIs have `access_log off` in the existing nginx configurations. Their failures never reach this reader, leaving subscription and redemption outages undetected. Add privacy-safe status counters/logging and test the actual producer-to-reader path.
+- [P2] `scripts/user-api-5xx-watch.service:11`: `SuccessExitStatus=75` suppresses notification when the sole input log is unreadable, indefinitely disabling monitoring without an alert. Incompatible logs also silently return success (`scripts/user-api-5xx-watch.py:57`). Surface persistent input failures and validate the log format.
+tokens used
+49,897
+VERDICT: changes
+- [P1] `scripts/user-api-5xx-watch.py:28`: Subscription downloads and Mini App APIs have `access_log off` in the existing nginx configurations. Their failures never reach this reader, leaving subscription and redemption outages undetected. Add privacy-safe status counters/logging and test the actual producer-to-reader path.
+- [P2] `scripts/user-api-5xx-watch.service:11`: `SuccessExitStatus=75` suppresses notification when the sole input log is unreadable, indefinitely disabling monitoring without an alert. Incompatible logs also silently return success (`scripts/user-api-5xx-watch.py:57`). Surface persistent input failures and validate the log format.

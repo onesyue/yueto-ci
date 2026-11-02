@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 235,
+  "head": "10eebbe1a4b5764dbb3cbf15ffd905ab90d09925",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "10eebbe1a4b5764dbb3cbf15ffd905ab90d09925",
+    "artifact": "reviews/merge-receipts-20261103/yueops-235.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T18:06:26Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "10eebbe1a4b5764dbb3cbf15ffd905ab90d09925",
+    "command": "/home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile tests/test_release_root_prune_schedule_20261101.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_release_root_prune_schedule_20261101.py  && for f in scripts/converge-release-root-prune-schedule.sh ; do bash -n $f || exit 1; done && shellcheck -S error scripts/converge-release-root-prune-schedule.sh  && git diff --check 109c989c089c230817f91ed4ac7d89af3995e75e 10eebbe1a4b5764dbb3cbf15ffd905ab90d09925",
+    "log_sha256": "b30e1729ec2a2d4e61768c383156ae4314a5adda2e80cb35b472d6f9934a50b7",
+    "ran_at": "2026-11-02T18:05:50Z",
+    "runner": "box"
+  }
+}

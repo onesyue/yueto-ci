@@ -1,0 +1,3 @@
+head=077a662da09495fa63c15edff7e5545e8916448d ran_at=2026-11-02T18:02:33Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/release-root-prune-20261013.py  && git diff --check c5e43e186bee4ac857d6ae639763f32a082b3225 077a662da09495fa63c15edff7e5545e8916448d
+rc=0

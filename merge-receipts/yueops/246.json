@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 246,
+  "head": "45336f6695b594d6f1ca9a6d46812ff3b1c8d8aa",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "45336f6695b594d6f1ca9a6d46812ff3b1c8d8aa",
+    "artifact": "reviews/merge-receipts-20261103/yueops-246.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T18:05:44Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "45336f6695b594d6f1ca9a6d46812ff3b1c8d8aa",
+    "command": "/home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/credential_gitleaks_evidence_20260822.py tests/test_credential_gitleaks_evidence_20260822.py tests/test_generate_gitleaks_ledger.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_credential_gitleaks_evidence_20260822.py tests/test_generate_gitleaks_ledger.py  && git diff --check 0cc09997ecda27d0182bd05f8fcc41430f2ddaa4 45336f6695b594d6f1ca9a6d46812ff3b1c8d8aa",
+    "log_sha256": "d1ee7c5281c57c04ac7676dc2eab2c76e6650719a8090e7cc775ecc2c85bb4eb",
+    "ran_at": "2026-11-02T18:04:00Z",
+    "runner": "box"
+  }
+}

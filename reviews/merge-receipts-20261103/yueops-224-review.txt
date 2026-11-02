@@ -1,0 +1,8 @@
+VERDICT: changes
+- [P2] `scripts/checkin-api-5xx-watch.sh:31`：进程替换中的 `tail`／Python 失败未被检查，空结果通过 `${bad:-0}` 被当作零错误，最终返回 0。已用读取失败和解析器失败替身复现。应检查采集结果，失败时返回不可测状态，避免监控失效却报绿。
+- [P2] `scripts/checkin-api-5xx-watch.sh:26`：探针连接失败只打印 `UNMEASURED`，不影响退出状态。已复现连接失败且日志为空时返回 0，与 service 声明的“探针不可达返回 75”契约不符；应保留不可测状态，在没有明确 5xx 告警时返回 75。
+tokens used
+60,494
+VERDICT: changes
+- [P2] `scripts/checkin-api-5xx-watch.sh:31`：进程替换中的 `tail`／Python 失败未被检查，空结果通过 `${bad:-0}` 被当作零错误，最终返回 0。已用读取失败和解析器失败替身复现。应检查采集结果，失败时返回不可测状态，避免监控失效却报绿。
+- [P2] `scripts/checkin-api-5xx-watch.sh:26`：探针连接失败只打印 `UNMEASURED`，不影响退出状态。已复现连接失败且日志为空时返回 0，与 service 声明的“探针不可达返回 75”契约不符；应保留不可测状态，在没有明确 5xx 告警时返回 75。

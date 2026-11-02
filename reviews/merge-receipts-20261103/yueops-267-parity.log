@@ -1,0 +1,10 @@
+head=9c63e04f3be50e115d319d01ced5dc694b22f4b6 ran_at=2026-11-02T18:00:35Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/inventory-orphan-tables.py tests/test_orphan_table_inventory_20260920.py tests/test_service_role_grants_20261102.py tests/test_users_secret_columns_least_privilege_20260923.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_orphan_table_inventory_20260920.py tests/test_service_role_grants_20261102.py tests/test_users_secret_columns_least_privilege_20260923.py  && git diff --check b49ac9278431e20daf126089328237901f0b6cb7 9c63e04f3be50e115d319d01ced5dc694b22f4b6
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+..............s.ss..s.....s..ss..ssssssssssssssssss...................s. [ 78%]
+....................                                                     [100%]
+66 passed, 26 skipped in 23.33s
+rc=0
