@@ -186,7 +186,21 @@ class ShardPrimitives(unittest.TestCase):
             SHARDS.plan(self.source, self.context, 2, [])
         ignored.unlink()
         config = self.source / "pytest.ini"
-        config.write_text(config.read_text() + "addopts = --ignore=tests/test_a.py\n")
+        base_config = config.read_text()
+        # Reviewed temp retention keys do not change collection.
+        config.write_text(base_config + "tmp_path_retention_policy = failed\n"
+                          "tmp_path_retention_count = 1\n")
+        self.git(self.source, "add", "pytest.ini")
+        self.commit(self.source)
+        SHARDS.plan(self.source, self.context, 2, [])
+        for extra in ("tmp_path_retention_policy = all\n",
+                      "tmp_path_retention_count = 3\n"):
+            config.write_text(base_config + extra)
+            self.git(self.source, "add", "pytest.ini")
+            self.commit(self.source)
+            with self.assertRaisesRegex(ValueError, "unsupported"):
+                SHARDS.plan(self.source, self.context, 2, [])
+        config.write_text(base_config + "addopts = --ignore=tests/test_a.py\n")
         self.git(self.source, "add", "pytest.ini")
         self.commit(self.source)
         with self.assertRaisesRegex(ValueError, "unsupported"):
