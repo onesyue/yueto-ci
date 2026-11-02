@@ -1,0 +1,4 @@
+head=5a5201b2044f7ed2c9112ae5825e59d5d36af831 ran_at=2026-11-02T22:55:58Z env=CI-equivalent venv (uv export --frozen, same groups as ci-backend.yml), python 3.13.5
+..................................                                       [100%]
+34 passed in 0.88s
+PARITY_COMMAND_OK
