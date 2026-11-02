@@ -154,3 +154,139 @@ class MergeHygieneAudit(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()) as output:
                 self.assertEqual(AUDIT.main(), 2)
             self.assertNotIn("secret", output.getvalue())
+
+
+class MergeReceipts(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.patch = patch.object(AUDIT, "ROOT", self.root)
+        self.patch.start()
+        self.addCleanup(self.patch.stop)
+        self.fixture = json.loads((ROOT / "tests/fixtures/merge-hygiene/approved.json").read_text())
+        self.pr = self.fixture["pr"]
+        self.sha = self.pr["head"]["sha"]
+        (self.root / "review.md").write_text("Independent review: approve")
+        self.path = self.root / "merge-receipts/yueops/203.json"
+        self.path.parent.mkdir(parents=True)
+        self.value = dict(schema=1, repo="yueops", pr=203, head=self.sha, backfilled=True,
+            review=dict(tool="codex", verdict="approve", reviewed_head=self.sha,
+                        artifact="review.md", reviewer="codex", reviewed_at="2026-11-02T11:00:00Z"),
+            parity=dict(result="pass", head=self.sha, command="make test", log_sha256="a" * 64,
+                        ran_at="2026-11-02T11:00:00Z", runner="box"))
+
+    def api(self, endpoint):
+        if "/pulls?" in endpoint:
+            return [self.pr]
+        if "/reviews?" in endpoint:
+            return []
+        if "/check-runs?" in endpoint:
+            return {"check_runs": self.fixture["checks"]}
+        return self.fixture["statuses"]
+
+    def run_audit(self):
+        self.path.write_text(json.dumps(self.value))
+        # git show is mocked separately from gh API; receipt bytes must be committed.
+        import subprocess
+        with patch.object(AUDIT, "api", side_effect=self.api), patch.object(
+                AUDIT.subprocess, "run", side_effect=lambda args, **kwargs: subprocess.CompletedProcess(
+                    [], 0, (self.root / args[-1].removeprefix("HEAD:")).read_text(), "")):
+            return AUDIT.audit("onesyue", ["yueops"], AUDIT.timestamp("2026-11-02T00:00:00Z"),
+                               {}, AUDIT.timestamp("2026-11-03T00:00:00Z"))
+
+    def test_accept_exact_committed_receipt(self):
+        self.fixture.update(checks=[], statuses=[])
+        row, = self.run_audit()
+        self.assertEqual(row["findings"], [])
+        self.assertEqual(set(row["satisfied_by_receipt"]),
+                         {"no_approving_review_at_merge", "no_check_evidence_at_merge"})
+
+    def test_wrong_sha_and_missing_artifact(self):
+        for field in ("head", "review", "parity"):
+            with self.subTest(field=field):
+                if field == "head": self.value[field] = "b" * 40
+                else: self.value[field]["reviewed_head" if field == "review" else "head"] = "b" * 40
+                with self.assertRaises(ValueError): self.run_audit()
+                self.reset_sha()
+        (self.root / "review.md").unlink()
+        with self.assertRaises(ValueError): self.run_audit()
+
+    def reset_sha(self):
+        self.value["head"] = self.value["review"]["reviewed_head"] = self.value["parity"]["head"] = self.sha
+
+    def test_red_pending_and_unknown_not_suppressed(self):
+        for change, reason in (({"conclusion": "failure"}, "check_nonpassing_at_merge:policy"),
+                               ({"status": "queued"}, "check_pending_at_merge:policy"),
+                               ({"started_at": "2026-11-02T11:00:00Z"}, "check_history_unavailable:policy")):
+            original = self.fixture["checks"][0]
+            self.fixture["checks"] = [original | change]
+            self.fixture["statuses"][0]["state"] = "failure"
+            row, = self.run_audit()
+            self.assertIn(reason, row["findings"])
+            self.assertIn("status_nonpassing_at_merge:external-ci", row["findings"])
+            self.fixture["checks"] = [original]
+
+    def test_strict_schema_and_times(self):
+        import copy
+        original = copy.deepcopy(self.value)
+        mutations = [lambda v: v.update(extra=1), lambda v: v.update(schema=True),
+                     lambda v: v.update(backfilled="true"), lambda v: v.pop("backfilled"),
+                     lambda v: v.update(backfilled=False),
+                     lambda v: v["review"].update(reviewer="AUTHOR"),
+                     lambda v: v["review"].update(reviewer=" AUTHOR "),
+                     lambda v: v["review"].update(artifact="../outside.md"),
+                     lambda v: v["review"].update(reviewed_at="2026-11-02T11:00:00"),
+                     lambda v: v["parity"].update(ran_at="2026-11-03T10:00:01Z"),
+                     lambda v: v["parity"].update(log_sha256="bad"),
+                     lambda v: v["parity"].update(runner="unknown")]
+        for mutate in mutations:
+            self.value = copy.deepcopy(original)
+            mutate(self.value)
+            with self.assertRaises(ValueError): self.run_audit()
+        self.value = original
+        self.value["parity"]["ran_at"] = "2026-11-03T10:00:00Z"
+        self.run_audit()
+
+    def test_malformed_receipt_is_incomplete_even_with_exception(self):
+        import contextlib
+        import io
+        import subprocess
+        self.path.write_text('{"schema":')
+        with patch.object(AUDIT, "api", side_effect=self.api), patch.object(
+                AUDIT.subprocess, "run", return_value=subprocess.CompletedProcess(
+                    [], 0, self.path.read_text(), "")), patch.object(AUDIT, "exceptions", return_value={
+                        ("yueops", 203): {"reason": "exception"}}), patch(
+                            "sys.argv", ["audit", "--format", "json"]), patch.object(AUDIT, "datetime") as dt:
+            from datetime import datetime
+            dt.fromisoformat.side_effect = datetime.fromisoformat
+            dt.now.return_value = AUDIT.timestamp("2026-11-02T12:00:00Z")
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(AUDIT.main(), 2)
+            self.assertFalse(json.loads(output.getvalue())["complete"])
+
+    def test_uncommitted_receipt_rejected(self):
+        import subprocess
+        self.path.write_text(json.dumps(self.value))
+        with patch.object(AUDIT.subprocess, "run", return_value=subprocess.CompletedProcess([], 128, "", "")):
+            with self.assertRaises(ValueError): AUDIT.receipt("yueops", self.pr)
+
+
+    def test_actual_git_requires_committed_unchanged_artifact(self):
+        import subprocess
+        def git(*args):
+            subprocess.run(["git", "-C", str(self.root), *args], check=True,
+                           capture_output=True)
+        git("init", "-q")
+        git("config", "user.name", "Test")
+        git("config", "user.email", "test@example.invalid")
+        git("config", "commit.gpgsign", "false")
+        self.path.write_text(json.dumps(self.value))
+        git("add", "merge-receipts")
+        git("commit", "-qm", "receipt only")
+        with self.assertRaises(ValueError): AUDIT.receipt("yueops", self.pr)
+        git("add", "review.md")
+        git("commit", "-qm", "review artifact")
+        self.assertEqual(AUDIT.receipt("yueops", self.pr), self.value)
+        (self.root / "review.md").write_text("Uncommitted replacement")
+        with self.assertRaises(ValueError): AUDIT.receipt("yueops", self.pr)

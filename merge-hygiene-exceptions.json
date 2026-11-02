@@ -1,4 +1,17 @@
 {
   "schema": 1,
-  "exceptions": []
+  "exceptions": [
+    {
+      "repo": "yueops",
+      "pr": 259,
+      "reason": "Exact-head independent Codex review approved on 2026-11-02 (reviews/merge-receipts-20261102/yueops-259.md), but no attributable passing local parity log for 0e61718e33122859f0c9f2b699d638e8c76c69f0 was found in PR comments or searched review/run logs. Full YueOps suites were skipped on this box under the authorized heavy-suite exception; no Mac/SSH run performed. Missing evidence: passing local CI parity log, not human approval.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 67,
+      "reason": "Fresh independent Codex review of 4ce45b2e032b5341ac9ac6ad78d3bffbca1521c8 returned CHANGES: P1 recovery closes unresolved alerts for unrelated targets or newer revisions (reviews/merge-receipts-20261102/yueto-ci-67.md). Missing evidence: an approving independent review; test results cannot substitute for that approval. This registration records the unresolved finding, not a claim that it is fixed.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    }
+  ]
 }
