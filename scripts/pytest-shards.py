@@ -28,6 +28,11 @@ EXPECTED_CONFIG = {
     "testpaths": "tests", "python_files": "test_*.py",
     "python_functions": "test_*", "asyncio_mode": "auto",
 }
+# Temp-dir retention keys only bound what pytest keeps on disk after a run;
+# they never change which modules or tests are collected.
+OPTIONAL_RETENTION_CONFIG = {
+    "tmp_path_retention_policy": "failed", "tmp_path_retention_count": "1",
+}
 IDENTITY_FIELDS = ("policy_revision", "board_revision", "run_id", "run_attempt",
                    "runner_os", "runner_arch", "runner_image")
 FILES = ("metadata.json", "events.jsonl", "pytest-exit-code.txt",
@@ -147,6 +152,13 @@ def runner_summary(planned, roles):
             "performance_comparison": "NOT_ESTABLISHED"}
 
 
+def collection_config_ok(actual):
+    """Exact collection keys, plus only the reviewed retention keys/values."""
+    extra = {k: v for k, v in actual.items() if k not in EXPECTED_CONFIG}
+    return (all(actual.get(k) == v for k, v in EXPECTED_CONFIG.items())
+            and all(OPTIONAL_RETENTION_CONFIG.get(k) == v for k, v in extra.items()))
+
+
 def plan(source, context, count, serial):
     """Select whole tracked modules before importing pytest or product code."""
     source = source.resolve()
@@ -162,7 +174,7 @@ def plan(source, context, count, serial):
     config = configparser.ConfigParser(interpolation=None)
     config.read_string(config_path.read_text())
     require(config.sections() == ["pytest"]
-            and dict(config["pytest"]) == EXPECTED_CONFIG,
+            and collection_config_ok(dict(config["pytest"])),
             "unsupported pytest collection configuration")
     tracked = git(source, "ls-files", "-z").decode().split("\0")[:-1]
     require("pytest.ini" in tracked, "pytest config is not tracked")
