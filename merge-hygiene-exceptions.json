@@ -216,6 +216,72 @@
       "pr": 70,
       "reason": "Backfilled independent Codex review of exact head 7298093179d651b53fc6cd399422d112faea4240 (2026-11-02T17:01:54Z) returned CHANGES: - [P2] `internal/modules/user/abuse_limits.go:128-129`：JSON 编码后的设备标识仍会被底层 `authattempt.Normalize` 转为小写，违反现有 HWID 区分大小写的语义。同一 IP 下，`AbCdEf0123456789` 注册满三次后，会错误阻止不同设备 `abcdef0123456789` 注册。应在构造桶键时保留大小写区别，例如先对原始配对编码计算摘要，并补充大小写不同设备的隔离测试。 - [P2] `internal/modules/user/abuse_limits.go:128-129`：JSON 编码后的设备标识仍会被底层 `authattempt.Normalize` 转为小写，违反现有 HWID 区分大小写的语义。同一 IP 下，`AbCdEf0123456789` 注册满三次后，会错误阻止不同设备 `abcdef0123456789` 注册。应在构造桶键时保留大小写区别，例如先对原始配对编码计算摘要，并补充大小写不同设备的隔离测试。 (reviews/merge-receipts-20261103/yueboard-70-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 17,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 8e8d491420143a0a4fb5980d4141a5f8c5239af8 on 2026-11-02T17:05:25Z; artifact reviews/merge-receipts-20261103/yueboard-17.md, log_sha256 73eaa014753021af92c88a5ba82c070bc066d2ac11c9a4f780f7a63012bca7bd",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 38,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 03b13c1e57a6e56adb8318734e7fe7be25692246 on 2026-11-02T17:06:01Z; artifact reviews/merge-receipts-20261103/yueboard-38.md, log_sha256 d7c0ff133e2365c67dbe1d0cebd99e311c0a999d484a80a2eb0d58c5a692a42e",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 39,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 462068c3a4f9f628e16a94b6a36c39dba7de80d8 on 2026-11-02T17:04:26Z; artifact reviews/merge-receipts-20261103/yueboard-39.md, log_sha256 08d8e4c81eaa2639dffcffb89574acf901988ebb9de707ec7c64d592443ff8bc",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 45,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head b6d811d8a5890c27f3288caae48949ffe7adaddf on 2026-11-02T17:04:56Z; artifact reviews/merge-receipts-20261103/yueboard-45.md, log_sha256 dcc9c7946209e29dbaf383fc2ce9e69e1219c44d0e37a884a194a15d900b64fa",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 46,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 8c1b920be9b645d3f6cb69f186a40f1721f03de4 on 2026-11-02T17:06:22Z; artifact reviews/merge-receipts-20261103/yueboard-46.md, log_sha256 5a22b5c20f49a6ee85af830a59d88467388ca768283980214a468ab0ecc5c6d8",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 54,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 5340ac9c137068f4f199a8853c0996543d4624fe on 2026-11-02T17:06:26Z; artifact reviews/merge-receipts-20261103/yueboard-54.md, log_sha256 f231eac588514ef584e12f220ae459b768483be317ddffe85a17bf6fdca67a8a",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 63,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 3ad259f2f2eda2972e845a157ad368e25072bfa0 on 2026-11-02T17:02:39Z; artifact reviews/merge-receipts-20261103/yueboard-63.md, log_sha256 827c23d7c78e70739756491e60052d2dd3b927ef8985fa7ab57170a2a3fa14b3",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 66,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head d5764cbc5b8a4cbcd45b6e7023f0cd27e3ae168b on 2026-11-02T17:02:55Z; artifact reviews/merge-receipts-20261103/yueboard-66.md, log_sha256 260f264dc369441b340d29738d47f099a15b18bf6eecf10692a5fbf88956393d",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 68,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head e2521d692ec082fed4e8e7ce664f6a1f1cfd4d9e on 2026-11-02T17:00:33Z; artifact reviews/merge-receipts-20261103/yueboard-68.md, log_sha256 ca205030bce67de442f2cd37d1e842e735c22f7febc0aa508ffbc62601cf28f9",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 69,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 49d1fe552c5ee15fb58493259451af87e6a74f04 on 2026-11-02T17:01:18Z; artifact reviews/merge-receipts-20261103/yueboard-69.md, log_sha256 5d30b1a922da8a56a205a1d4ac442f786be6fad11e87bcf459fedb6f42ef0211",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 73,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head f20952b2c50b884f3fca8e3270c0d11a80417e50 on 2026-11-02T17:01:59Z; artifact reviews/merge-receipts-20261103/yueboard-73.md, log_sha256 10f846154aaf01461b6d4765f2755e09aecd571b7fcbca0cb9d96eac45cc077a",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     }
   ]
 }
