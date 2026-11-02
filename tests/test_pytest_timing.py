@@ -243,7 +243,7 @@ class PytestTimingConsumer(unittest.TestCase):
         self.assertLess(policy.index(install), policy.index("python3 -m unittest discover"))
         requirements = (ROOT / "requirements-policy.txt").read_text()
         self.assertEqual(len(re.findall(r"^[a-z]+==.*--hash=sha256:[0-9a-f]{64}$",
-                                        requirements, re.M)), 5)
+                                        requirements, re.M)), 6)
 
 
 if __name__ == "__main__":
