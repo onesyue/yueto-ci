@@ -966,6 +966,12 @@
       "pr": 255,
       "reason": "Backfilled independent review of exact head bb8522e44dd9e8f60ba0df2545abead8a1084479 (2026-11-02T18:04:37Z). Codex review returned CHANGES: - [P2] `scripts/ONEOFF-INDEX.json:4`：将 122 个恢复的脚本加入 `baseline`，违反现有检查器的“baseline may only shrink”约束。与指定基线比较必然失败；应按 `registered` 登记并提供 `expires`。 - [P2] `contracts/openapi/yueops-web.v1.json:8175`：两个 WebSocket 路径被替换为空字符串，丢失 SSH 和任务流端点的身份。现有快照测试使用同一导出逻辑比较，无法发现这种退化，后续路径变更可悄然通过。应修复降级后的路径提取并保留真实路径断言。 - [P2] `scripts/ONEOFF-INDEX.json:4`：将 122 个恢复的脚本加入 `baseline`，违反现有检查器的“baseline may only shrink”约束。与指定基线比较必然失败；应按 `registered` 登记并提供 `expires`。 - [P2] `contracts/openapi/yueops-web.v1.json:8175`：两个 WebSocket 路径被替换为空字符串，丢失 SSH 和任务流端点的身份。现有快照测试使用同一导出逻辑比较，无法发现这种退化，后续路径变更可悄然通过。应修复降级后的路径提取并保留真实路径断言。; exact-head box parity: FAIL/not runnable (rc=1) (reviews/merge-receipts-20261103/yueops-255-parity.log) (reviews/merge-receipts-20261103/yueops-255-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto",
+      "pr": 51,
+      "reason": "Exact-head independent Codex review of c9d086905bcdec6cfd6d7c66a221c8c1f9ad5aa7 returned VERDICT: approve (reviews/merge-receipts-20261102/yueto-51-review.txt). Parity cannot be green because master itself is red: same-env box run PR 19 failed/1114 passed (log yueto-51-parity-pr.log sha256 3c6a9b10f8dc3cab01d9f314d591ef810ab2bf6d47923092ffc93e3038c2b02a) vs master 36 failed/1096 passed (yueto-51-parity-master.log sha256 17591bc97a6360b7c6db621096079e23c6154db95f1d393af7f69dcbaa4fbd33). The PR fixes 18 master failures; its only new failure, test_workspace_source_check_passes, is environmental live pin drift, not a code defect. Missing evidence: a passing parity log.",
+      "approver": "xiaoming su 2026-11-03 05:13 SGT owner decision (receipt exception approved for yueto #51)"
     }
   ]
 }

@@ -1,0 +1,1046 @@
+........................................................................ [  6%]
+........................................................................ [ 12%]
+.....................FF.................FF.............................. [ 18%]
+........................FFFFF............FF....................... [ 24%]
+.....................F......................................FFFFFFFFFFFF [ 31%]
+F.........................................sss........................... [ 37%]
+........................................................................ [ 43%]
+........................................................................ [ 50%]
+.................................................F...................... [ 56%]
+........................................................................ [ 62%]
+................................s....................................... [ 69%]
+.......F...........FF..........s.............FF.FFFF.................... [ 75%]
+........................................................................ [ 81%]
+........................................................................ [ 88%]
+................s....................................................... [ 94%]
+.................F..............................................         [100%]
+=================================== FAILURES ===================================
+_________________________ test_real_workspace_is_green _________________________
+
+    def test_real_workspace_is_green():
+>       assert guard.main() == 0
+E       assert 1 == 0
+E        +  where 1 = <function main at 0x7f2ec05702c0>()
+E        +    where <function main at 0x7f2ec05702c0> = guard.main
+
+scripts/test-doc-path-truth.py:29: AssertionError
+----------------------------- Captured stdout call -----------------------------
+✗ doc-path-truth
+  · CLAUDE.md: 提到 `src/data/video-script.json`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · CLAUDE.md: 提到 `yuelink/core/mihomo`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · CLAUDE.md: 提到 `yueto-ci/poll-sources.yml`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `build.yml`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `converge-cloudflared-sshd-startup-boundary-20260822.sh`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `converge-direct-pool-membership.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `converge-panel-chat-widget-version.sh`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `deploy-yueops-digests.sh`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `docs/RUNBOOK.md`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `host-install-state.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `panel-deploy.sh`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `rollout-route-sync.sh`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `run-yueboard-schema-migration.sh`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `scripts/automation-2026/host-install-state.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `scripts/lib/release_yaml.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `scripts/yueops-tuning/release-relay-2026.10.08.1.env`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `yue-bot-migrate.sh`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `yueops/scripts/lib/render-yueboard-panel-env.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `yueops/scripts/prepare-yueboard-ipgeo.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `yueops/scripts/v4-relay-topology.json`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `yueops/secrets/yueboard-panel.env.tmpl`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/release-chain-runbook.md: 提到 `yueto-ci/native-node-contract.json`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `admin/user.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `cert-auto-renew.sh`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `checkin-api/main.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `config.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `connect.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `controlplane/connect.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `dao/chicken.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `desktop_tun_state.dart`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `dns_policy_catalog.dart`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `dns_transformer.dart`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `geodata.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `internal/kernel/xray/runtime_config_vless.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `kernel/hysteria/hysteria.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `loon.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `miniapp_uno_bff.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `nodesync/builders.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `reality_renderer_parity_test.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `release.sh`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `scripts/backup-critical-keys.sh`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `service/tg_miniapp.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `settings.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `surge.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `ticket_worker.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `validate.go`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `web/crypto.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `yueops/crypto.py`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · docs/2026-endgame-plan.md: 提到 `yueops/uv.lock`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+  · 登记的操作文档不存在：yueboard/CLAUDE.md。它要么被改名了（同步改这里），要么真没了（那 OPERATIONAL_DOCS 该少一条）。
+  · 登记的操作文档不存在：yue-node/CLAUDE.md。它要么被改名了（同步改这里），要么真没了（那 OPERATIONAL_DOCS 该少一条）。
+  · 登记的操作文档不存在：yueops/CLAUDE.md。它要么被改名了（同步改这里），要么真没了（那 OPERATIONAL_DOCS 该少一条）。
+  · 登记的操作文档不存在：yuelink/CLAUDE.md。它要么被改名了（同步改这里），要么真没了（那 OPERATIONAL_DOCS 该少一条）。
+  · 登记的操作文档不存在：yueops/docs/RUNBOOK.md。它要么被改名了（同步改这里），要么真没了（那 OPERATIONAL_DOCS 该少一条）。
+_______________________ test_every_registered_doc_exists _______________________
+
+    def test_every_registered_doc_exists():
+        for rel in guard.OPERATIONAL_DOCS:
+>           assert (ROOT / rel).is_file(), f"登记的操作文档不存在：{rel}"
+E           AssertionError: 登记的操作文档不存在：yueboard/CLAUDE.md
+E           assert False
+E            +  where False = is_file()
+E            +    where is_file = (PosixPath('/workspace/lane/wt/m51') / 'yueboard/CLAUDE.md').is_file
+
+scripts/test-doc-path-truth.py:34: AssertionError
+_________________ test_resolves_relative_to_the_docs_own_repo __________________
+
+    def test_resolves_relative_to_the_docs_own_repo():
+        """🚨 `yueops/CLAUDE.md` 里的 `docs/adr/0003` 指的是 yueops 自己的 docs/，
+        不是根仓的。第一版没有这一条，于是它误报了一条完全正确的引用。"""
+        assert not guard.resolve("docs/adr/0003")
+>       assert guard.resolve("docs/adr/0003", ROOT / "yueops")
+E       AssertionError: assert False
+E        +  where False = <function resolve at 0x7f2ec0570360>('docs/adr/0003', (PosixPath('/workspace/lane/wt/m51') / 'yueops'))
+E        +    where <function resolve at 0x7f2ec0570360> = guard.resolve
+
+scripts/test-doc-path-truth.py:83: AssertionError
+_______________________ test_resolves_a_prefix_spelling ________________________
+
+    def test_resolves_a_prefix_spelling():
+        """`docs/adr/0003` 是「ADR 0003」的写法，磁盘上是 0003-*.md。"""
+>       assert guard.resolve("docs/adr/0003", ROOT / "yueops")
+E       AssertionError: assert False
+E        +  where False = <function resolve at 0x7f2ec0570360>('docs/adr/0003', (PosixPath('/workspace/lane/wt/m51') / 'yueops'))
+E        +    where <function resolve at 0x7f2ec0570360> = guard.resolve
+
+scripts/test-doc-path-truth.py:88: AssertionError
+_ test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[before---apply] _
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f2ebfd72eb0>
+point = 'before---apply'
+
+    @pytest.mark.parametrize('point',['before---apply','after-accepted','after-up','after-candidate-ready','after-bastion-projection'])
+    def test_actual_sigkill_fresh_cli_reconciles_without_repeated_up(fx,point):
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        fx.set(pause=point)
+        child=subprocess.Popen(fx.cli(),env=fx.env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline and not (fx.path/'paused').exists():
+            if child.poll() is not None:break
+            time.sleep(.03)
+        if not (fx.path/'paused').exists():
+>           out,err=child.communicate(timeout=2);pytest.fail(err+out)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+E           Failed: REFUSED / 拒绝写入: release.yaml is held by another release in flight:
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0aa409b204d1 repos=fleet lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0aa409b204d1 pid=unknown start=1793652552.0161166 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_0/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0aa409b204d1 repos=yueboard lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0aa409b204d1 pid=unknown start=1793652552.0157588 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_0/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0aa409b204d1 repos=yueto-ci lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0aa409b204d1 pid=unknown start=1793652552.0159822 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_0/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E           FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+
+scripts/test-first-contract-transaction.py:300: Failed
+_ test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-accepted] _
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f2ebff1c130>
+point = 'after-accepted'
+
+    @pytest.mark.parametrize('point',['before---apply','after-accepted','after-up','after-candidate-ready','after-bastion-projection'])
+    def test_actual_sigkill_fresh_cli_reconciles_without_repeated_up(fx,point):
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        fx.set(pause=point)
+        child=subprocess.Popen(fx.cli(),env=fx.env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline and not (fx.path/'paused').exists():
+            if child.poll() is not None:break
+            time.sleep(.03)
+        if not (fx.path/'paused').exists():
+>           out,err=child.communicate(timeout=2);pytest.fail(err+out)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+E           Failed: REFUSED / 拒绝写入: release.yaml is held by another release in flight:
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:334da8121212 repos=fleet lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:334da8121212 pid=unknown start=1793652553.3509169 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_1/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:334da8121212 repos=yueboard lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:334da8121212 pid=unknown start=1793652553.350646 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_1/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:334da8121212 repos=yueto-ci lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:334da8121212 pid=unknown start=1793652553.3508174 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_1/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E           FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+
+scripts/test-first-contract-transaction.py:300: Failed
+____ test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-up] ____
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f2ebf3aaea0>
+point = 'after-up'
+
+    @pytest.mark.parametrize('point',['before---apply','after-accepted','after-up','after-candidate-ready','after-bastion-projection'])
+    def test_actual_sigkill_fresh_cli_reconciles_without_repeated_up(fx,point):
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        fx.set(pause=point)
+        child=subprocess.Popen(fx.cli(),env=fx.env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline and not (fx.path/'paused').exists():
+            if child.poll() is not None:break
+            time.sleep(.03)
+        if not (fx.path/'paused').exists():
+>           out,err=child.communicate(timeout=2);pytest.fail(err+out)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+E           Failed: REFUSED / 拒绝写入: release.yaml is held by another release in flight:
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:eb6635ff57c0 repos=fleet lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:eb6635ff57c0 pid=unknown start=1793652554.7009633 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_2/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:eb6635ff57c0 repos=yueboard lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:eb6635ff57c0 pid=unknown start=1793652554.7006373 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_2/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:eb6635ff57c0 repos=yueto-ci lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:eb6635ff57c0 pid=unknown start=1793652554.7008498 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_2/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E           FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+
+scripts/test-first-contract-transaction.py:300: Failed
+_ test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-candidate-ready] _
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f2ebfcf4d10>
+point = 'after-candidate-ready'
+
+    @pytest.mark.parametrize('point',['before---apply','after-accepted','after-up','after-candidate-ready','after-bastion-projection'])
+    def test_actual_sigkill_fresh_cli_reconciles_without_repeated_up(fx,point):
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        fx.set(pause=point)
+        child=subprocess.Popen(fx.cli(),env=fx.env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline and not (fx.path/'paused').exists():
+            if child.poll() is not None:break
+            time.sleep(.03)
+        if not (fx.path/'paused').exists():
+>           out,err=child.communicate(timeout=2);pytest.fail(err+out)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+E           Failed: REFUSED / 拒绝写入: release.yaml is held by another release in flight:
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:6b0e996237b8 repos=fleet lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:6b0e996237b8 pid=unknown start=1793652556.0870278 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_3/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:6b0e996237b8 repos=yueboard lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:6b0e996237b8 pid=unknown start=1793652556.0867102 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_3/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:6b0e996237b8 repos=yueto-ci lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:6b0e996237b8 pid=unknown start=1793652556.0869143 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_3/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E           FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+
+scripts/test-first-contract-transaction.py:300: Failed
+_ test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-bastion-projection] _
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f2ebfcf4dd0>
+point = 'after-bastion-projection'
+
+    @pytest.mark.parametrize('point',['before---apply','after-accepted','after-up','after-candidate-ready','after-bastion-projection'])
+    def test_actual_sigkill_fresh_cli_reconciles_without_repeated_up(fx,point):
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        fx.set(pause=point)
+        child=subprocess.Popen(fx.cli(),env=fx.env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline and not (fx.path/'paused').exists():
+            if child.poll() is not None:break
+            time.sleep(.03)
+        if not (fx.path/'paused').exists():
+>           out,err=child.communicate(timeout=2);pytest.fail(err+out)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+E           Failed: REFUSED / 拒绝写入: release.yaml is held by another release in flight:
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:30660d755e8a repos=fleet lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:30660d755e8a pid=unknown start=1793652557.4724295 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_4/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:30660d755e8a repos=yueboard lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:30660d755e8a pid=unknown start=1793652557.4721205 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_4/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E             · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:30660d755e8a repos=yueto-ci lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:30660d755e8a pid=unknown start=1793652557.4723163 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_fresh_cli_4/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E           FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+
+scripts/test-first-contract-transaction.py:300: Failed
+_______ test_actual_sigkill_after_fsync_preserves_orphan_receipt[stdout] _______
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f2ebfcf56d0>
+boundary = 'stdout'
+
+    @pytest.mark.parametrize('boundary',['stdout','request'])
+    def test_actual_sigkill_after_fsync_preserves_orphan_receipt(fx,boundary):
+        helper=fx.root/'scripts/lib/first-contract-transaction.py'
+        text=helper.read_text()
+        anchor="        durable(self.directory / (stem + '.stdout'), p.stdout, exclusive=True)" if boundary=='stdout' else "            durable(self.directory / name, raw, exclusive=True)"
+        inject=r"""
+            marker = self.directory / 'test-killed-after-stdout'
+            if name == 'panel-observe' and not marker.exists():
+                durable(marker, b'actual SIGKILL after stdout fsync\n', exclusive=True)
+                os.kill(os.getpid(), 9)
+    """
+        if boundary=='request':inject=inject.replace("name == 'panel-observe'","name.startswith('apply-')")
+        helper.write_text(text.replace(anchor,anchor+inject))
+        fx.q['executed_sources']['scripts/lib/first-contract-transaction.py']=m.digest(helper.read_bytes())
+        write(fx.root/'qualification.json',fx.q,0o644)
+        fx.git('add','scripts/lib/first-contract-transaction.py','qualification.json')
+        fx.git('commit','-qm','isolated actual crash boundary')
+        fx.git('push','-q','origin','master')
+        request=json.loads(fx.request.read_text());request['qualification_commit']=fx.git('rev-parse','HEAD');write(fx.request,request)
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        p=fx.execute();assert p.returncode==-signal.SIGKILL,p.stderr
+        orphan=list(fx.journal.parent.glob('*panel-observe-*.stdout' if boundary=='stdout' else 'apply-0.json'));assert len(orphan)==1
+        raw=orphan[0].read_bytes()
+        if boundary=='stdout':assert not orphan[0].with_suffix('.stderr').exists()
+>       p=fx.execute(True);assert p.returncode==0,p.stderr
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: REFUSED / 拒绝写入: release.yaml is held by another release in flight:
+E           · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:f9d6c80d6944 repos=fleet lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:f9d6c80d6944 pid=unknown start=1793652582.535161 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_after_fsyn0/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E           · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:f9d6c80d6944 repos=yueboard lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:f9d6c80d6944 pid=unknown start=1793652582.5346427 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_after_fsyn0/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E           · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:f9d6c80d6944 repos=yueto-ci lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:f9d6c80d6944 pid=unknown start=1793652582.534952 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_after_fsyn0/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E         FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+E         
+E       assert 78 == 0
+E        +  where 78 = CompletedProcess(args=['/usr/bin/bash', '/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_after_fsyn0/root/scripts/s...chema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nFIRST_CONTRACT_REFUSED Refused: canonical desired planning refused\n').returncode
+
+scripts/test-first-contract-transaction.py:409: AssertionError
+______ test_actual_sigkill_after_fsync_preserves_orphan_receipt[request] _______
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f2ebfcf4ad0>
+boundary = 'request'
+
+    @pytest.mark.parametrize('boundary',['stdout','request'])
+    def test_actual_sigkill_after_fsync_preserves_orphan_receipt(fx,boundary):
+        helper=fx.root/'scripts/lib/first-contract-transaction.py'
+        text=helper.read_text()
+        anchor="        durable(self.directory / (stem + '.stdout'), p.stdout, exclusive=True)" if boundary=='stdout' else "            durable(self.directory / name, raw, exclusive=True)"
+        inject=r"""
+            marker = self.directory / 'test-killed-after-stdout'
+            if name == 'panel-observe' and not marker.exists():
+                durable(marker, b'actual SIGKILL after stdout fsync\n', exclusive=True)
+                os.kill(os.getpid(), 9)
+    """
+        if boundary=='request':inject=inject.replace("name == 'panel-observe'","name.startswith('apply-')")
+        helper.write_text(text.replace(anchor,anchor+inject))
+        fx.q['executed_sources']['scripts/lib/first-contract-transaction.py']=m.digest(helper.read_bytes())
+        write(fx.root/'qualification.json',fx.q,0o644)
+        fx.git('add','scripts/lib/first-contract-transaction.py','qualification.json')
+        fx.git('commit','-qm','isolated actual crash boundary')
+        fx.git('push','-q','origin','master')
+        request=json.loads(fx.request.read_text());request['qualification_commit']=fx.git('rev-parse','HEAD');write(fx.request,request)
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+>       p=fx.execute();assert p.returncode==-signal.SIGKILL,p.stderr
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: REFUSED / 拒绝写入: release.yaml is held by another release in flight:
+E           · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:8d130f1f54ae repos=fleet lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:8d130f1f54ae pid=unknown start=1793652584.582861 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_after_fsyn1/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E           · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:8d130f1f54ae repos=yueboard lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:8d130f1f54ae pid=unknown start=1793652584.5825183 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_after_fsyn1/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E           · owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:8d130f1f54ae repos=yueto-ci lane=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:8d130f1f54ae pid=unknown start=1793652584.582734 worktree=/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_after_fsyn1/root age=0m reason=ship.sh first schema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E         FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+E         
+E       assert 78 == -<Signals.SIGKILL: 9>
+E        +  where 78 = CompletedProcess(args=['/usr/bin/bash', '/tmp/pytest-of-box/pytest-5952/test_actual_sigkill_after_fsyn1/root/scripts/s...chema contract aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nFIRST_CONTRACT_REFUSED Refused: canonical desired planning refused\n').returncode
+E        +  and   <Signals.SIGKILL: 9> = signal.SIGKILL
+
+scripts/test-first-contract-transaction.py:405: AssertionError
+__________________ test_raw_history_findings_equal_the_ledger __________________
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-5952/test_raw_history_findings_equa0')
+
+    @pytest.mark.skipif(shutil.which("gitleaks") is None, reason="gitleaks 不在 PATH：双向比对没有执行（不是通过）")
+    def test_raw_history_findings_equal_the_ledger(tmp_path):
+        # gitleaks 无论 --gitleaks-ignore-path 指哪，都会顺手加载「被扫目录」里的
+        # .gitleaksignore（8.30.1 实测）。要拿 raw，就扫一份不检出工作树的克隆。
+        clone = tmp_path / "clone"
+        subprocess.run(["git", "clone", "--quiet", "--no-checkout", str(ROOT), str(clone)], check=True)
+        assert not (clone / ".gitleaksignore").exists()
+        empty = tmp_path / "empty-ignore"
+        empty.mkdir()
+        report = tmp_path / "raw.json"
+        proc = subprocess.run(
+            ["gitleaks", "git", "--no-banner", "--redact", f"--gitleaks-ignore-path={empty}",
+             "--report-format", "json", "--report-path", str(report), str(clone)],
+            capture_output=True, text=True, timeout=600,
+        )
+        assert proc.returncode in (0, 1), proc.stderr[-2000:]
+        raw = {item["Fingerprint"] for item in json.loads(report.read_text(encoding="utf-8"))}
+        assert raw, "扫描地板：全历史 raw finding 为 0，扫描器很可能没真跑"
+        ledger = set(_entries())
+>       assert raw - ledger == set(), f"未分类的新 raw finding（逐条核对后单独登记）：{sorted(raw - ledger)}"
+E       AssertionError: 未分类的新 raw finding（逐条核对后单独登记）：['063c18333fcdc5ae1c94cff357aa07117262b4d6:scripts/protocol-probes/install-initial-protocol-probes.py:jfrog-identity-token:27']
+E       assert {'063c18333fc...ity-token:27'} == set()
+E         
+E         Extra items in the left set:
+E         '063c18333fcdc5ae1c94cff357aa07117262b4d6:scripts/protocol-probes/install-initial-protocol-probes.py:jfrog-identity-token:27'
+E         Use -v to get more diff
+
+scripts/test-gitleaks-root-ledger.py:75: AssertionError
+----------------------------- Captured stderr call -----------------------------
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: is subject to change. To configure the initial branch name to use in all
+hint: of your new repositories, which will suppress this warning, call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+____________________________ test_both_copies_exist ____________________________
+
+    def test_both_copies_exist():
+        for path in (CENTRAL, VENDORED):
+            if not path.is_file():
+>               pytest.fail(f"{path} 不在——这条对照只在完整工作区跑，缺一侧不能算过")
+E               Failed: /workspace/lane/wt/m51/yueto-ci/scripts/input-fingerprint.py 不在——这条对照只在完整工作区跑，缺一侧不能算过
+
+scripts/test-input-fingerprint-vendored.py:27: Failed
+___________ test_vendored_copy_is_byte_identical_to_the_central_one ____________
+
+    def test_vendored_copy_is_byte_identical_to_the_central_one():
+>       central, vendored = CENTRAL.read_bytes(), VENDORED.read_bytes()
+                            ^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:625: in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueto-ci/scripts/input-fingerprint.py')
+mode = 'rb', buffering = -1, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueto-ci/scripts/input-fingerprint.py'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+__________________ test_the_deployer_loads_the_vendored_copy ___________________
+
+    def test_the_deployer_loads_the_vendored_copy():
+>       verifier = (ROOT / "yueops" / "scripts" / "verify-input-equivalence.py").read_text(encoding="utf-8")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/verify-input-equivalence.py')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/verify-input-equivalence.py'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+_ test_removing_a_dependency_from_the_native_loop_is_rejected[INPUT_EQUIVALENCE_VERIFIER] _
+
+name = 'INPUT_EQUIVALENCE_VERIFIER'
+
+    @pytest.mark.parametrize("name", ["INPUT_EQUIVALENCE_VERIFIER", "INPUT_FINGERPRINT_LIB"])
+    def test_removing_a_dependency_from_the_native_loop_is_rejected(name):
+>       deployer = (ROOT / "yueops/scripts/deploy-yueops-digests.sh").read_text()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:62: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+_ test_removing_a_dependency_from_the_native_loop_is_rejected[INPUT_FINGERPRINT_LIB] _
+
+name = 'INPUT_FINGERPRINT_LIB'
+
+    @pytest.mark.parametrize("name", ["INPUT_EQUIVALENCE_VERIFIER", "INPUT_FINGERPRINT_LIB"])
+    def test_removing_a_dependency_from_the_native_loop_is_rejected(name):
+>       deployer = (ROOT / "yueops/scripts/deploy-yueops-digests.sh").read_text()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:62: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+_ test_native_signed_loop_rejects_unsafe_input_helpers[None-INPUT_EQUIVALENCE_VERIFIER] _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-5952/test_native_signed_loop_reject0')
+name = 'INPUT_EQUIVALENCE_VERIFIER', fault = None
+
+    @pytest.mark.parametrize("name", ["INPUT_EQUIVALENCE_VERIFIER", "INPUT_FINGERPRINT_LIB"])
+    @pytest.mark.parametrize("fault", [None, "missing", "changed", "symlink"])
+    def test_native_signed_loop_rejects_unsafe_input_helpers(tmp_path, name, fault):
+>       deployer = (ROOT / "yueops/scripts/deploy-yueops-digests.sh").read_text()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+_ test_native_signed_loop_rejects_unsafe_input_helpers[None-INPUT_FINGERPRINT_LIB] _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-5952/test_native_signed_loop_reject1')
+name = 'INPUT_FINGERPRINT_LIB', fault = None
+
+    @pytest.mark.parametrize("name", ["INPUT_EQUIVALENCE_VERIFIER", "INPUT_FINGERPRINT_LIB"])
+    @pytest.mark.parametrize("fault", [None, "missing", "changed", "symlink"])
+    def test_native_signed_loop_rejects_unsafe_input_helpers(tmp_path, name, fault):
+>       deployer = (ROOT / "yueops/scripts/deploy-yueops-digests.sh").read_text()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+_ test_native_signed_loop_rejects_unsafe_input_helpers[missing-INPUT_EQUIVALENCE_VERIFIER] _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-5952/test_native_signed_loop_reject2')
+name = 'INPUT_EQUIVALENCE_VERIFIER', fault = 'missing'
+
+    @pytest.mark.parametrize("name", ["INPUT_EQUIVALENCE_VERIFIER", "INPUT_FINGERPRINT_LIB"])
+    @pytest.mark.parametrize("fault", [None, "missing", "changed", "symlink"])
+    def test_native_signed_loop_rejects_unsafe_input_helpers(tmp_path, name, fault):
+>       deployer = (ROOT / "yueops/scripts/deploy-yueops-digests.sh").read_text()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+_ test_native_signed_loop_rejects_unsafe_input_helpers[missing-INPUT_FINGERPRINT_LIB] _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-5952/test_native_signed_loop_reject3')
+name = 'INPUT_FINGERPRINT_LIB', fault = 'missing'
+
+    @pytest.mark.parametrize("name", ["INPUT_EQUIVALENCE_VERIFIER", "INPUT_FINGERPRINT_LIB"])
+    @pytest.mark.parametrize("fault", [None, "missing", "changed", "symlink"])
+    def test_native_signed_loop_rejects_unsafe_input_helpers(tmp_path, name, fault):
+>       deployer = (ROOT / "yueops/scripts/deploy-yueops-digests.sh").read_text()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+_ test_native_signed_loop_rejects_unsafe_input_helpers[changed-INPUT_EQUIVALENCE_VERIFIER] _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-5952/test_native_signed_loop_reject4')
+name = 'INPUT_EQUIVALENCE_VERIFIER', fault = 'changed'
+
+    @pytest.mark.parametrize("name", ["INPUT_EQUIVALENCE_VERIFIER", "INPUT_FINGERPRINT_LIB"])
+    @pytest.mark.parametrize("fault", [None, "missing", "changed", "symlink"])
+    def test_native_signed_loop_rejects_unsafe_input_helpers(tmp_path, name, fault):
+>       deployer = (ROOT / "yueops/scripts/deploy-yueops-digests.sh").read_text()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+_ test_native_signed_loop_rejects_unsafe_input_helpers[changed-INPUT_FINGERPRINT_LIB] _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-5952/test_native_signed_loop_reject5')
+name = 'INPUT_FINGERPRINT_LIB', fault = 'changed'
+
+    @pytest.mark.parametrize("name", ["INPUT_EQUIVALENCE_VERIFIER", "INPUT_FINGERPRINT_LIB"])
+    @pytest.mark.parametrize("fault", [None, "missing", "changed", "symlink"])
+    def test_native_signed_loop_rejects_unsafe_input_helpers(tmp_path, name, fault):
+>       deployer = (ROOT / "yueops/scripts/deploy-yueops-digests.sh").read_text()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+_ test_native_signed_loop_rejects_unsafe_input_helpers[symlink-INPUT_EQUIVALENCE_VERIFIER] _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-5952/test_native_signed_loop_reject6')
+name = 'INPUT_EQUIVALENCE_VERIFIER', fault = 'symlink'
+
+    @pytest.mark.parametrize("name", ["INPUT_EQUIVALENCE_VERIFIER", "INPUT_FINGERPRINT_LIB"])
+    @pytest.mark.parametrize("fault", [None, "missing", "changed", "symlink"])
+    def test_native_signed_loop_rejects_unsafe_input_helpers(tmp_path, name, fault):
+>       deployer = (ROOT / "yueops/scripts/deploy-yueops-digests.sh").read_text()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+_ test_native_signed_loop_rejects_unsafe_input_helpers[symlink-INPUT_FINGERPRINT_LIB] _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-5952/test_native_signed_loop_reject7')
+name = 'INPUT_FINGERPRINT_LIB', fault = 'symlink'
+
+    @pytest.mark.parametrize("name", ["INPUT_EQUIVALENCE_VERIFIER", "INPUT_FINGERPRINT_LIB"])
+    @pytest.mark.parametrize("fault", [None, "missing", "changed", "symlink"])
+    def test_native_signed_loop_rejects_unsafe_input_helpers(tmp_path, name, fault):
+>       deployer = (ROOT / "yueops/scripts/deploy-yueops-digests.sh").read_text()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+scripts/test-input-fingerprint-vendored.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:546: in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_abc.py:632: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/m51/yueops/scripts/deploy-yueops-digests.sh'
+
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py:537: FileNotFoundError
+__________________ script-guard test-release-chain-drivers.py __________________
+脚本式守卫退出码 1
+--- stdout ---
+
+--- stderr ---
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.005s
+
+OK
+Traceback (most recent call last):
+  File "/workspace/lane/wt/m51/scripts/test-release-chain-drivers.py", line 587, in <module>
+    check(_exec_detached(ship), "detached release remained in its launcher's process group")
+          ~~~~~~~~~~~~~~^^^^^^
+  File "/workspace/lane/wt/m51/scripts/test-release-chain-drivers.py", line 568, in _exec_detached
+    assert completed() == isolated, "release completion did not reflect actual process-group isolation"
+           ^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: release completion did not reflect actual process-group isolation
+
+_____________________ test_ghcr_unreachable_exits_75_not_0 _____________________
+
+ws = <test-release-yaml.WS object at 0x7f2ebf2fc150>
+
+    def test_ghcr_unreachable_exits_75_not_0(ws) -> None:
+        # 把 docker 从 PATH 上拿掉：探测本身失败必须是 UNMEASURABLE，不是「一致」也不是「漂移」。
+        (ws.root / "empty-bin").mkdir()
+        proc = run(ws.root, "verify", env_extra={"PATH": str(ws.root / "empty-bin") + ":/usr/bin:/bin"})
+        # git 仍要在（祖先 / B1 用），docker 不在
+>       assert proc.returncode in (75,), proc.stdout + proc.stderr
+E       AssertionError:   OK    yueops/scripts/yue-node.image 已退役（不存在）
+E           OK    yueops/scripts/yue-node.image.revision 已退役（不存在）
+E           OK    yueops/scripts/yueboard.image 已退役（不存在）
+E           OK    yueops/scripts/yueboard-schema-release.env 已退役（不存在）
+E           OK    yueboard reviewed pin == desired 3d1b143f8769
+E           已退役投影检查：4/4 份；reviewed pin 比较 1；漂移 0
+E           DRIFT yue-node: GHCR 没有 ghcr.io/onesyue/yue-node:sha-5eb934d686d297c90a6debfd3c9f77b8e7956c4a（记录完整性）——记录的 revision 从未被 promote 过？
+E           DRIFT yue-node: ghcr.io/onesyue/yue-node:latest 指向 sha256:f91323140d169f78c83c71494a2f9afb62179f74d464356c70430321513fdf31，release.yaml 记录 sha256:1111111111111111111111111111111111111111111111111111111111111111（时效性）
+E           DRIFT yueboard: GHCR 没有 ghcr.io/onesyue/yueboard:sha-3d1b143f87692b5d47d56a0ccb76939112403df1（记录完整性）——记录的 revision 从未被 promote 过？
+E           DRIFT yueboard: ghcr.io/onesyue/yueboard:latest 指向 sha256:fe2167d5d031d455b00fe0bb7991196d62b225dca96e3fcdedce2d3c1a36d560，release.yaml 记录 sha256:2222222222222222222222222222222222222222222222222222222222222222（时效性）
+E           GHCR 比对：一致 0 / 漂移 4 / 探不到 0
+E         
+E       assert 1 in (75,)
+E        +  where 1 = CompletedProcess(args=['/tmp/git-env-venv/bin/python', '/workspace/lane/wt/m51/scripts/release-yaml.py', 'verify'], re...256:2222222222222222222222222222222222222222222222222222222222222222（时效性）\n  GHCR 比对：一致 0 / 漂移 4 / 探不到 0\n', stderr='').returncode
+
+scripts/test-release-yaml.py:210: AssertionError
+_______________ test_group_accepts_an_input_equivalent_ancestor ________________
+
+ws = <test-release-yaml.WS object at 0x7f2ebf8f85f0>
+
+    def test_group_accepts_an_input_equivalent_ancestor(ws) -> None:
+        # web at [2] (its input changed), bot/checkin at [1]: their inputs are identical at [2]
+        proc = _ops(ws, 2, 1, 1)
+>       assert proc.returncode == 0, proc.stderr
+E       AssertionError: FAIL: yueops 组内跨 revision 无法证明输入等价：输入指纹实现 /workspace/lane/wt/m51/yueto-ci/scripts/input-fingerprint.py 不在（yueto-ci 未检出？）——测不到不是等价
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/tmp/git-env-venv/bin/python', '/workspace/lane/wt/m51/scripts/release-yaml.py', 'write', '--r...内跨 revision 无法证明输入等价：输入指纹实现 /workspace/lane/wt/m51/yueto-ci/scripts/input-fingerprint.py 不在（yueto-ci 未检出？）——测不到不是等价\n').returncode
+
+scripts/test-release-yaml.py:340: AssertionError
+_________ test_group_refuses_changed_inputs_and_non_descendant_newest __________
+
+ws = <test-release-yaml.WS object at 0x7f2ebf7a8b00>
+
+    def test_group_refuses_changed_inputs_and_non_descendant_newest(ws) -> None:
+        before = ws.root.joinpath("release.yaml").read_bytes()
+        proc = _ops(ws, 3, 2, 3)   # bot at [2] but bot inputs changed at [3]
+>       assert proc.returncode == 1 and "构建输入 changed" in proc.stderr
+E       AssertionError: assert (1 == 1 and '构建输入 changed' in 'FAIL: yueops 组内跨 revision 无法证明输入等价：输入指纹实现 /workspace/lane/wt/m51/yueto-ci/scripts/input-fingerprint.py 不在（yueto-ci 未检出？）——测不到不是等价\n')
+E        +  where 1 = CompletedProcess(args=['/tmp/git-env-venv/bin/python', '/workspace/lane/wt/m51/scripts/release-yaml.py', 'write', '--r...内跨 revision 无法证明输入等价：输入指纹实现 /workspace/lane/wt/m51/yueto-ci/scripts/input-fingerprint.py 不在（yueto-ci 未检出？）——测不到不是等价\n').returncode
+E        +  and   'FAIL: yueops 组内跨 revision 无法证明输入等价：输入指纹实现 /workspace/lane/wt/m51/yueto-ci/scripts/input-fingerprint.py 不在（yueto-ci 未检出？）——测不到不是等价\n' = CompletedProcess(args=['/tmp/git-env-venv/bin/python', '/workspace/lane/wt/m51/scripts/release-yaml.py', 'write', '--r...内跨 revision 无法证明输入等价：输入指纹实现 /workspace/lane/wt/m51/yueto-ci/scripts/input-fingerprint.py 不在（yueto-ci 未检出？）——测不到不是等价\n').stderr
+
+scripts/test-release-yaml.py:347: AssertionError
+_____________ RemoteRunTest.test_job_runs_inside_runner_heavy_slot _____________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_job_runs_inside_runner_heavy_slot>
+
+    def test_job_runs_inside_runner_heavy_slot(self):
+        """SE29 heavy-guard admits lens/pytest entry points only under the runner's own slot."""
+        guard = os.path.join(ROOT, 'scripts', 'heavy-guard.py')
+>       self.assertEqual(self.run_heavy('--', 'python3', guard, 'probe').returncode, 0)
+E       AssertionError: 127 != 0
+
+scripts/test-remote-run.py:100: AssertionError
+______________ RemoteRunTest.test_job_tmpdir_is_under_runner_home ______________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_job_tmpdir_is_under_runner_home>
+
+    def test_job_tmpdir_is_under_runner_home(self):
+        """Docker bind sources from mktemp must live where the runner's VM can see them."""
+        probe = 'case "$TMPDIR" in "$HOME"/*/jobs/*/tmp) test -d "$TMPDIR" ;; *) exit 9 ;; esac'
+>       self.assertEqual(self.run_heavy('--', 'sh', '-c', probe).returncode, 0)
+E       AssertionError: 127 != 0
+
+scripts/test-remote-run.py:109: AssertionError
+_____________________ RemoteRunTest.test_nested_repo_with ______________________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_nested_repo_with>
+
+    def test_nested_repo_with(self):
+        sub = os.path.join(self.tmp, 'board')
+        sub_sha = make_repo(sub, {'b.txt': 'beta\n'})
+        proc = self.run_heavy('--with', 'board=%s@HEAD' % sub, '--', 'grep', '-qx', 'beta', 'board/b.txt')
+>       self.assertEqual(proc.returncode, 0, proc.stderr)
+E       AssertionError: 127 != 0 :
+
+scripts/test-remote-run.py:80: AssertionError
+________________ RemoteRunTest.test_rc_and_receipt_bound_to_sha ________________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_rc_and_receipt_bound_to_sha>
+
+    def test_rc_and_receipt_bound_to_sha(self):
+        proc = self.run_heavy('--label', 'rc', '--', 'sh', '-c', 'cat a.txt; test "$YUETO_GATE_SHA" = "$(git rev-parse HEAD)"; exit 4')
+>       self.assertEqual(proc.returncode, 4, proc.stderr)
+E       AssertionError: 127 != 4 :
+
+scripts/test-remote-run.py:51: AssertionError
+__________ RemoteRunTest.test_se27_trust_requires_equivalence_record ___________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_se27_trust_requires_equivalence_record>
+
+    def test_se27_trust_requires_equivalence_record(self):
+        state = os.path.join(self.repo, '.claude', 'state')
+        os.makedirs(state, exist_ok=True)
+        json.dump({'fake': {'equivalent': True, 'scopes': ['light-go']}},
+                  open(os.path.join(state, 'runner-equivalence.json'), 'w'))
+>       self.assertEqual(self.run_heavy('--gate-class', 'light-go', '--', 'true').returncode, 0)
+E       AssertionError: 127 != 0
+
+scripts/test-remote-run.py:116: AssertionError
+_____________ RemoteRunTest.test_uncommitted_changes_never_travel ______________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_uncommitted_changes_never_travel>
+
+    def test_uncommitted_changes_never_travel(self):
+        open(os.path.join(self.repo, 'a.txt'), 'w').write('dirty\n')
+        proc = self.run_heavy('--', 'true')
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn('uncommitted', proc.stderr)
+        proc = self.run_heavy('--sha', 'HEAD', '--', 'grep', '-qx', 'alpha', 'a.txt')
+>       self.assertEqual(proc.returncode, 0, proc.stderr)
+E       AssertionError: 127 != 0 :
+
+scripts/test-remote-run.py:64: AssertionError
+__________ test_output_covers_every_git_checkout_under_the_workspace ___________
+
+    def test_output_covers_every_git_checkout_under_the_workspace() -> None:
+        """扫描面地板：工作区里每一个 git 检出都必须被列出，含根仓与嵌套的 mihomo。"""
+        expected = {"yueto(根仓)"}
+        for child in sorted(ROOT.iterdir()):
+            if (child / ".git").exists():
+                expected.add(child.name)
+        mihomo = ROOT / "yuelink" / "core" / "mihomo"
+        if (mihomo / ".git").exists():
+            expected.add("yuelink/core/mihomo")
+    
+        out = _run(SCRIPT)
+        listed = {line.split()[0] for line in out.splitlines() if line.strip() and "dirty:" in line}
+        missing = expected - listed
+        assert not missing, f"这些 git 检出没有被列出：{sorted(missing)}\n实际:\n{out}"
+        # 地板：少于这个数说明遍历塌了，而不是「工作区变小了」
+>       assert len(listed) >= 10, f"只列出了 {len(listed)} 个检出，扫描面塌了"
+E       AssertionError: 只列出了 1 个检出，扫描面塌了
+E       assert 1 >= 10
+E        +  where 1 = len({'yueto(根仓)'})
+
+scripts/test-status-all.py:123: AssertionError
+=========================== short test summary info ============================
+FAILED scripts/test-doc-path-truth.py::test_real_workspace_is_green - assert ...
+FAILED scripts/test-doc-path-truth.py::test_every_registered_doc_exists - Ass...
+FAILED scripts/test-doc-path-truth.py::test_resolves_relative_to_the_docs_own_repo
+FAILED scripts/test-doc-path-truth.py::test_resolves_a_prefix_spelling - Asse...
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[before---apply]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-accepted]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-up]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-candidate-ready]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-bastion-projection]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_after_fsync_preserves_orphan_receipt[stdout]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_after_fsync_preserves_orphan_receipt[request]
+FAILED scripts/test-gitleaks-root-ledger.py::test_raw_history_findings_equal_the_ledger
+FAILED scripts/test-input-fingerprint-vendored.py::test_both_copies_exist - F...
+FAILED scripts/test-input-fingerprint-vendored.py::test_vendored_copy_is_byte_identical_to_the_central_one
+FAILED scripts/test-input-fingerprint-vendored.py::test_the_deployer_loads_the_vendored_copy
+FAILED scripts/test-input-fingerprint-vendored.py::test_removing_a_dependency_from_the_native_loop_is_rejected[INPUT_EQUIVALENCE_VERIFIER]
+FAILED scripts/test-input-fingerprint-vendored.py::test_removing_a_dependency_from_the_native_loop_is_rejected[INPUT_FINGERPRINT_LIB]
+FAILED scripts/test-input-fingerprint-vendored.py::test_native_signed_loop_rejects_unsafe_input_helpers[None-INPUT_EQUIVALENCE_VERIFIER]
+FAILED scripts/test-input-fingerprint-vendored.py::test_native_signed_loop_rejects_unsafe_input_helpers[None-INPUT_FINGERPRINT_LIB]
+FAILED scripts/test-input-fingerprint-vendored.py::test_native_signed_loop_rejects_unsafe_input_helpers[missing-INPUT_EQUIVALENCE_VERIFIER]
+FAILED scripts/test-input-fingerprint-vendored.py::test_native_signed_loop_rejects_unsafe_input_helpers[missing-INPUT_FINGERPRINT_LIB]
+FAILED scripts/test-input-fingerprint-vendored.py::test_native_signed_loop_rejects_unsafe_input_helpers[changed-INPUT_EQUIVALENCE_VERIFIER]
+FAILED scripts/test-input-fingerprint-vendored.py::test_native_signed_loop_rejects_unsafe_input_helpers[changed-INPUT_FINGERPRINT_LIB]
+FAILED scripts/test-input-fingerprint-vendored.py::test_native_signed_loop_rejects_unsafe_input_helpers[symlink-INPUT_EQUIVALENCE_VERIFIER]
+FAILED scripts/test-input-fingerprint-vendored.py::test_native_signed_loop_rejects_unsafe_input_helpers[symlink-INPUT_FINGERPRINT_LIB]
+FAILED scripts/test-release-chain-drivers.py::script_guard - 脚本式守卫退出码 1
+FAILED scripts/test-release-yaml.py::test_ghcr_unreachable_exits_75_not_0 - A...
+FAILED scripts/test-release-yaml.py::test_group_accepts_an_input_equivalent_ancestor
+FAILED scripts/test-release-yaml.py::test_group_refuses_changed_inputs_and_non_descendant_newest
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_job_runs_inside_runner_heavy_slot
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_job_tmpdir_is_under_runner_home
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_nested_repo_with - Ass...
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_rc_and_receipt_bound_to_sha
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_se27_trust_requires_equivalence_record
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_uncommitted_changes_never_travel
+FAILED scripts/test-status-all.py::test_output_covers_every_git_checkout_under_the_workspace
+36 failed, 1096 passed, 6 skipped, 6 subtests passed in 399.55s (0:06:39)

@@ -1,0 +1,437 @@
+........................................................................ [  6%]
+........................................................................ [ 12%]
+.....................F.................................................. [ 18%]
+........................FFFFF............FF....................... [ 24%]
+.....................F.................................................. [ 31%]
+..........................................sss........................... [ 37%]
+........................................................................ [ 43%]
+........................................................................ [ 50%]
+.................................................F...................... [ 56%]
+........................................................................ [ 62%]
+........................................................................ [ 69%]
+.......F.......................F.............FF.FFFF.................... [ 75%]
+........................................................................ [ 81%]
+........................................................................ [ 88%]
+................s....................................................... [ 94%]
+..........F....................................................          [100%]
+=================================== FAILURES ===================================
+_________________________ test_real_workspace_is_green _________________________
+
+    def test_real_workspace_is_green():
+>       assert guard.main() == 0
+E       assert 1 == 0
+E        +  where 1 = <function main at 0x7f3023e358a0>()
+E        +    where <function main at 0x7f3023e358a0> = guard.main
+
+scripts/test-doc-path-truth.py:31: AssertionError
+----------------------------- Captured stdout call -----------------------------
+✗ doc-path-truth
+  · CLAUDE.md: 提到 `src/data/video-script.json`，而全工作区找不到它。
+      操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
+_ test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[before---apply] _
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f302376e890>
+point = 'before---apply'
+
+    @pytest.mark.parametrize('point',['before---apply','after-accepted','after-up','after-candidate-ready','after-bastion-projection'])
+    def test_actual_sigkill_fresh_cli_reconciles_without_repeated_up(fx,point):
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        fx.set(pause=point)
+        child=subprocess.Popen(fx.cli(),env=clean_git_env(fx.env),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline and not (fx.path/'paused').exists():
+            if child.poll() is not None:break
+            time.sleep(.03)
+        if not (fx.path/'paused').exists():
+>           out,err=child.communicate(timeout=2);pytest.fail(err+out)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+E           Failed: REFUSED: release.yaml is held by another release in flight; wait for it to end:
+E             owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:54250491f48d repos=yueboard,yueto-ci,fleet
+E           FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+
+scripts/test-first-contract-transaction.py:302: Failed
+_ test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-accepted] _
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f30237a3a10>
+point = 'after-accepted'
+
+    @pytest.mark.parametrize('point',['before---apply','after-accepted','after-up','after-candidate-ready','after-bastion-projection'])
+    def test_actual_sigkill_fresh_cli_reconciles_without_repeated_up(fx,point):
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        fx.set(pause=point)
+        child=subprocess.Popen(fx.cli(),env=clean_git_env(fx.env),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline and not (fx.path/'paused').exists():
+            if child.poll() is not None:break
+            time.sleep(.03)
+        if not (fx.path/'paused').exists():
+>           out,err=child.communicate(timeout=2);pytest.fail(err+out)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+E           Failed: REFUSED: release.yaml is held by another release in flight; wait for it to end:
+E             owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:378dd6047252 repos=yueboard,yueto-ci,fleet
+E           FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+
+scripts/test-first-contract-transaction.py:302: Failed
+____ test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-up] ____
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f30237176c0>
+point = 'after-up'
+
+    @pytest.mark.parametrize('point',['before---apply','after-accepted','after-up','after-candidate-ready','after-bastion-projection'])
+    def test_actual_sigkill_fresh_cli_reconciles_without_repeated_up(fx,point):
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        fx.set(pause=point)
+        child=subprocess.Popen(fx.cli(),env=clean_git_env(fx.env),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline and not (fx.path/'paused').exists():
+            if child.poll() is not None:break
+            time.sleep(.03)
+        if not (fx.path/'paused').exists():
+>           out,err=child.communicate(timeout=2);pytest.fail(err+out)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+E           Failed: REFUSED: release.yaml is held by another release in flight; wait for it to end:
+E             owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:1473bf887309 repos=yueboard,yueto-ci,fleet
+E           FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+
+scripts/test-first-contract-transaction.py:302: Failed
+_ test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-candidate-ready] _
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f302339b7d0>
+point = 'after-candidate-ready'
+
+    @pytest.mark.parametrize('point',['before---apply','after-accepted','after-up','after-candidate-ready','after-bastion-projection'])
+    def test_actual_sigkill_fresh_cli_reconciles_without_repeated_up(fx,point):
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        fx.set(pause=point)
+        child=subprocess.Popen(fx.cli(),env=clean_git_env(fx.env),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline and not (fx.path/'paused').exists():
+            if child.poll() is not None:break
+            time.sleep(.03)
+        if not (fx.path/'paused').exists():
+>           out,err=child.communicate(timeout=2);pytest.fail(err+out)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+E           Failed: REFUSED: release.yaml is held by another release in flight; wait for it to end:
+E             owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:9ff36c13becc repos=yueboard,yueto-ci,fleet
+E           FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+
+scripts/test-first-contract-transaction.py:302: Failed
+_ test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-bastion-projection] _
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f30233996d0>
+point = 'after-bastion-projection'
+
+    @pytest.mark.parametrize('point',['before---apply','after-accepted','after-up','after-candidate-ready','after-bastion-projection'])
+    def test_actual_sigkill_fresh_cli_reconciles_without_repeated_up(fx,point):
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        fx.set(pause=point)
+        child=subprocess.Popen(fx.cli(),env=clean_git_env(fx.env),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline and not (fx.path/'paused').exists():
+            if child.poll() is not None:break
+            time.sleep(.03)
+        if not (fx.path/'paused').exists():
+>           out,err=child.communicate(timeout=2);pytest.fail(err+out)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+E           Failed: REFUSED: release.yaml is held by another release in flight; wait for it to end:
+E             owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:dcff2228b93c repos=yueboard,yueto-ci,fleet
+E           FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+
+scripts/test-first-contract-transaction.py:302: Failed
+_______ test_actual_sigkill_after_fsync_preserves_orphan_receipt[stdout] _______
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f3023399e50>
+boundary = 'stdout'
+
+    @pytest.mark.parametrize('boundary',['stdout','request'])
+    def test_actual_sigkill_after_fsync_preserves_orphan_receipt(fx,boundary):
+        helper=fx.root/'scripts/lib/first-contract-transaction.py'
+        text=helper.read_text()
+        anchor="        durable(self.directory / (stem + '.stdout'), p.stdout, exclusive=True)" if boundary=='stdout' else "            durable(self.directory / name, raw, exclusive=True)"
+        inject=r"""
+            marker = self.directory / 'test-killed-after-stdout'
+            if name == 'panel-observe' and not marker.exists():
+                durable(marker, b'actual SIGKILL after stdout fsync\n', exclusive=True)
+                os.kill(os.getpid(), 9)
+    """
+        if boundary=='request':inject=inject.replace("name == 'panel-observe'","name.startswith('apply-')")
+        helper.write_text(text.replace(anchor,anchor+inject))
+        fx.q['executed_sources']['scripts/lib/first-contract-transaction.py']=m.digest(helper.read_bytes())
+        write(fx.root/'qualification.json',fx.q,0o644)
+        fx.git('add','scripts/lib/first-contract-transaction.py','qualification.json')
+        fx.git('commit','-qm','isolated actual crash boundary')
+        fx.git('push','-q','origin','master')
+        request=json.loads(fx.request.read_text());request['qualification_commit']=fx.git('rev-parse','HEAD');write(fx.request,request)
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+        p=fx.execute();assert p.returncode==-signal.SIGKILL,p.stderr
+        orphan=list(fx.journal.parent.glob('*panel-observe-*.stdout' if boundary=='stdout' else 'apply-0.json'));assert len(orphan)==1
+        raw=orphan[0].read_bytes()
+        if boundary=='stdout':assert not orphan[0].with_suffix('.stderr').exists()
+>       p=fx.execute(True);assert p.returncode==0,p.stderr
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: REFUSED: release.yaml is held by another release in flight; wait for it to end:
+E           owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:e7dd5359aad9 repos=yueboard,yueto-ci,fleet
+E         FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+E         
+E       assert 78 == 0
+E        +  where 78 = CompletedProcess(args=['/usr/bin/bash', '/tmp/pytest-of-box/pytest-5730/test_actual_sigkill_after_fsyn0/root/scripts/s...aaaa:e7dd5359aad9 repos=yueboard,yueto-ci,fleet\nFIRST_CONTRACT_REFUSED Refused: canonical desired planning refused\n').returncode
+
+scripts/test-first-contract-transaction.py:411: AssertionError
+______ test_actual_sigkill_after_fsync_preserves_orphan_receipt[request] _______
+
+fx = <test-first-contract-transaction.Fixture object at 0x7f30233981d0>
+boundary = 'request'
+
+    @pytest.mark.parametrize('boundary',['stdout','request'])
+    def test_actual_sigkill_after_fsync_preserves_orphan_receipt(fx,boundary):
+        helper=fx.root/'scripts/lib/first-contract-transaction.py'
+        text=helper.read_text()
+        anchor="        durable(self.directory / (stem + '.stdout'), p.stdout, exclusive=True)" if boundary=='stdout' else "            durable(self.directory / name, raw, exclusive=True)"
+        inject=r"""
+            marker = self.directory / 'test-killed-after-stdout'
+            if name == 'panel-observe' and not marker.exists():
+                durable(marker, b'actual SIGKILL after stdout fsync\n', exclusive=True)
+                os.kill(os.getpid(), 9)
+    """
+        if boundary=='request':inject=inject.replace("name == 'panel-observe'","name.startswith('apply-')")
+        helper.write_text(text.replace(anchor,anchor+inject))
+        fx.q['executed_sources']['scripts/lib/first-contract-transaction.py']=m.digest(helper.read_bytes())
+        write(fx.root/'qualification.json',fx.q,0o644)
+        fx.git('add','scripts/lib/first-contract-transaction.py','qualification.json')
+        fx.git('commit','-qm','isolated actual crash boundary')
+        fx.git('push','-q','origin','master')
+        request=json.loads(fx.request.read_text());request['qualification_commit']=fx.git('rev-parse','HEAD');write(fx.request,request)
+        fx.env.pop('YUETO_RELEASE_LOCK_OWNER')
+>       p=fx.execute();assert p.returncode==-signal.SIGKILL,p.stderr
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: REFUSED: release.yaml is held by another release in flight; wait for it to end:
+E           owner=first-contract:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:8a61c233aecc repos=yueboard,yueto-ci,fleet
+E         FIRST_CONTRACT_REFUSED Refused: canonical desired planning refused
+E         
+E       assert 78 == -<Signals.SIGKILL: 9>
+E        +  where 78 = CompletedProcess(args=['/usr/bin/bash', '/tmp/pytest-of-box/pytest-5730/test_actual_sigkill_after_fsyn1/root/scripts/s...aaaa:8a61c233aecc repos=yueboard,yueto-ci,fleet\nFIRST_CONTRACT_REFUSED Refused: canonical desired planning refused\n').returncode
+E        +  and   <Signals.SIGKILL: 9> = signal.SIGKILL
+
+scripts/test-first-contract-transaction.py:407: AssertionError
+__________________ test_raw_history_findings_equal_the_ledger __________________
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-5730/test_raw_history_findings_equa0')
+
+    @pytest.mark.skipif(shutil.which("gitleaks") is None, reason="gitleaks 不在 PATH：双向比对没有执行（不是通过）")
+    def test_raw_history_findings_equal_the_ledger(tmp_path):
+        # gitleaks 无论 --gitleaks-ignore-path 指哪，都会顺手加载「被扫目录」里的
+        # .gitleaksignore（8.30.1 实测）。要拿 raw，就扫一份不检出工作树的克隆。
+        clone = tmp_path / "clone"
+        subprocess.run(["git", "clone", "--quiet", "--no-checkout", str(ROOT), str(clone)], env=clean_git_env(), check=True)
+        assert not (clone / ".gitleaksignore").exists()
+        empty = tmp_path / "empty-ignore"
+        empty.mkdir()
+        report = tmp_path / "raw.json"
+        proc = subprocess.run(
+            ["gitleaks", "git", "--no-banner", "--redact", f"--gitleaks-ignore-path={empty}",
+             "--report-format", "json", "--report-path", str(report), str(clone)],
+            env=clean_git_env(), capture_output=True, text=True, timeout=600,
+        )
+        assert proc.returncode in (0, 1), proc.stderr[-2000:]
+        raw = {item["Fingerprint"] for item in json.loads(report.read_text(encoding="utf-8"))}
+        assert raw, "扫描地板：全历史 raw finding 为 0，扫描器很可能没真跑"
+        ledger = set(_entries())
+>       assert raw - ledger == set(), f"未分类的新 raw finding（逐条核对后单独登记）：{sorted(raw - ledger)}"
+E       AssertionError: 未分类的新 raw finding（逐条核对后单独登记）：['063c18333fcdc5ae1c94cff357aa07117262b4d6:scripts/protocol-probes/install-initial-protocol-probes.py:jfrog-identity-token:27']
+E       assert {'063c18333fc...ity-token:27'} == set()
+E         
+E         Extra items in the left set:
+E         '063c18333fcdc5ae1c94cff357aa07117262b4d6:scripts/protocol-probes/install-initial-protocol-probes.py:jfrog-identity-token:27'
+E         Use -v to get more diff
+
+scripts/test-gitleaks-root-ledger.py:77: AssertionError
+----------------------------- Captured stderr call -----------------------------
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: is subject to change. To configure the initial branch name to use in all
+hint: of your new repositories, which will suppress this warning, call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+__________________ script-guard test-release-chain-drivers.py __________________
+脚本式守卫退出码 1
+--- stdout ---
+
+--- stderr ---
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.005s
+
+OK
+Traceback (most recent call last):
+  File "/workspace/lane/wt/fix-yueto-51/scripts/test-release-chain-drivers.py", line 589, in <module>
+    check(_exec_detached(ship), "detached release remained in its launcher's process group")
+          ~~~~~~~~~~~~~~^^^^^^
+  File "/workspace/lane/wt/fix-yueto-51/scripts/test-release-chain-drivers.py", line 570, in _exec_detached
+    assert completed() == isolated, "release completion did not reflect actual process-group isolation"
+           ^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: release completion did not reflect actual process-group isolation
+
+_____________________ test_ghcr_unreachable_exits_75_not_0 _____________________
+
+ws = <test-release-yaml.WS object at 0x7f30236db250>
+
+    def test_ghcr_unreachable_exits_75_not_0(ws) -> None:
+        # 把 docker 从 PATH 上拿掉：探测本身失败必须是 UNMEASURABLE，不是「一致」也不是「漂移」。
+        (ws.root / "empty-bin").mkdir()
+        proc = run(ws.root, "verify", env_extra={"PATH": str(ws.root / "empty-bin") + ":/usr/bin:/bin"})
+        # git 仍要在（祖先 / B1 用），docker 不在
+>       assert proc.returncode in (75,), proc.stdout + proc.stderr
+E       AssertionError:   OK    yueops/scripts/yue-node.image 已退役（不存在）
+E           OK    yueops/scripts/yue-node.image.revision 已退役（不存在）
+E           OK    yueops/scripts/yueboard.image 已退役（不存在）
+E           OK    yueops/scripts/yueboard-schema-release.env 已退役（不存在）
+E           OK    yueboard reviewed pin == desired b988f91c308b
+E           已退役投影检查：4/4 份；reviewed pin 比较 1；漂移 0
+E           DRIFT yue-node: GHCR 没有 ghcr.io/onesyue/yue-node:sha-1498ddc9a566f7540f81ed7cae7ceba534d16076（记录完整性）——记录的 revision 从未被 promote 过？
+E           DRIFT yue-node: ghcr.io/onesyue/yue-node:latest 指向 sha256:f91323140d169f78c83c71494a2f9afb62179f74d464356c70430321513fdf31，release.yaml 记录 sha256:1111111111111111111111111111111111111111111111111111111111111111（时效性）
+E           DRIFT yueboard: GHCR 没有 ghcr.io/onesyue/yueboard:sha-b988f91c308b301633934f445e92ada7ded1d690（记录完整性）——记录的 revision 从未被 promote 过？
+E           DRIFT yueboard: ghcr.io/onesyue/yueboard:latest 指向 sha256:fe2167d5d031d455b00fe0bb7991196d62b225dca96e3fcdedce2d3c1a36d560，release.yaml 记录 sha256:2222222222222222222222222222222222222222222222222222222222222222（时效性）
+E           GHCR 比对：一致 0 / 漂移 4 / 探不到 0
+E         
+E       assert 1 in (75,)
+E        +  where 1 = CompletedProcess(args=['/tmp/git-env-venv/bin/python', '/workspace/lane/wt/fix-yueto-51/scripts/release-yaml.py', 'ver...256:2222222222222222222222222222222222222222222222222222222222222222（时效性）\n  GHCR 比对：一致 0 / 漂移 4 / 探不到 0\n', stderr='').returncode
+
+scripts/test-release-yaml.py:212: AssertionError
+______________________ test_workspace_source_check_passes ______________________
+
+    @pytest.mark.skipif(not (ROOT / "yueops" / "scripts").is_dir(), reason="yueops 未检出（不可当成通过）")
+    def test_workspace_source_check_passes() -> None:
+        proc = subprocess.run([PY, str(SCRIPT), "source-check"], env=clean_git_env(), capture_output=True, text=True, timeout=120, check=False)
+>       assert proc.returncode == 0, proc.stdout + proc.stderr
+E       AssertionError:   SOURCE CHECK：允许已评审后继源码；不证明镜像已发布或生产已部署
+E           OK    yueops/scripts/yue-node.image 已退役（不存在）
+E           OK    yueops/scripts/yue-node.image.revision 已退役（不存在）
+E           OK    yueops/scripts/yueboard.image 已退役（不存在）
+E           OK    yueops/scripts/yueboard-schema-release.env 已退役（不存在）
+E           DRIFT yueboard reviewed pin cc0de351345d（yueto-ci/native-node-contract.json）≠ desired 659d1624e224
+E           已退役投影检查：4/4 份；reviewed pin 比较 1；漂移 1
+E           GHCR：--offline，未比对（记录完整性与时效性未验证）
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/tmp/git-env-venv/bin/python', '/workspace/lane/wt/fix-yueto-51/scripts/release-yaml.py', 'sou....json）≠ desired 659d1624e224\n  已退役投影检查：4/4 份；reviewed pin 比较 1；漂移 1\n  GHCR：--offline，未比对（记录完整性与时效性未验证）\n', stderr='').returncode
+
+scripts/test-release-yaml.py:482: AssertionError
+_____________ RemoteRunTest.test_job_runs_inside_runner_heavy_slot _____________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_job_runs_inside_runner_heavy_slot>
+
+    def test_job_runs_inside_runner_heavy_slot(self):
+        """SE29 heavy-guard admits lens/pytest entry points only under the runner's own slot."""
+        guard = os.path.join(ROOT, 'scripts', 'heavy-guard.py')
+>       self.assertEqual(self.run_heavy('--', 'python3', guard, 'probe').returncode, 0)
+E       AssertionError: 127 != 0
+
+scripts/test-remote-run.py:102: AssertionError
+______________ RemoteRunTest.test_job_tmpdir_is_under_runner_home ______________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_job_tmpdir_is_under_runner_home>
+
+    def test_job_tmpdir_is_under_runner_home(self):
+        """Docker bind sources from mktemp must live where the runner's VM can see them."""
+        probe = 'case "$TMPDIR" in "$HOME"/*/jobs/*/tmp) test -d "$TMPDIR" ;; *) exit 9 ;; esac'
+>       self.assertEqual(self.run_heavy('--', 'sh', '-c', probe).returncode, 0)
+E       AssertionError: 127 != 0
+
+scripts/test-remote-run.py:111: AssertionError
+_____________________ RemoteRunTest.test_nested_repo_with ______________________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_nested_repo_with>
+
+    def test_nested_repo_with(self):
+        sub = os.path.join(self.tmp, 'board')
+        sub_sha = make_repo(sub, {'b.txt': 'beta\n'})
+        proc = self.run_heavy('--with', 'board=%s@HEAD' % sub, '--', 'grep', '-qx', 'beta', 'board/b.txt')
+>       self.assertEqual(proc.returncode, 0, proc.stderr)
+E       AssertionError: 127 != 0 :
+
+scripts/test-remote-run.py:82: AssertionError
+________________ RemoteRunTest.test_rc_and_receipt_bound_to_sha ________________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_rc_and_receipt_bound_to_sha>
+
+    def test_rc_and_receipt_bound_to_sha(self):
+        proc = self.run_heavy('--label', 'rc', '--', 'sh', '-c', 'cat a.txt; test "$YUETO_GATE_SHA" = "$(git rev-parse HEAD)"; exit 4')
+>       self.assertEqual(proc.returncode, 4, proc.stderr)
+E       AssertionError: 127 != 4 :
+
+scripts/test-remote-run.py:53: AssertionError
+__________ RemoteRunTest.test_se27_trust_requires_equivalence_record ___________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_se27_trust_requires_equivalence_record>
+
+    def test_se27_trust_requires_equivalence_record(self):
+        state = os.path.join(self.repo, '.claude', 'state')
+        os.makedirs(state, exist_ok=True)
+        json.dump({'fake': {'equivalent': True, 'scopes': ['light-go']}},
+                  open(os.path.join(state, 'runner-equivalence.json'), 'w'))
+>       self.assertEqual(self.run_heavy('--gate-class', 'light-go', '--', 'true').returncode, 0)
+E       AssertionError: 127 != 0
+
+scripts/test-remote-run.py:118: AssertionError
+_____________ RemoteRunTest.test_uncommitted_changes_never_travel ______________
+
+self = <test-remote-run.RemoteRunTest testMethod=test_uncommitted_changes_never_travel>
+
+    def test_uncommitted_changes_never_travel(self):
+        open(os.path.join(self.repo, 'a.txt'), 'w').write('dirty\n')
+        proc = self.run_heavy('--', 'true')
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn('uncommitted', proc.stderr)
+        proc = self.run_heavy('--sha', 'HEAD', '--', 'grep', '-qx', 'alpha', 'a.txt')
+>       self.assertEqual(proc.returncode, 0, proc.stderr)
+E       AssertionError: 127 != 0 :
+
+scripts/test-remote-run.py:66: AssertionError
+__________ test_output_covers_every_git_checkout_under_the_workspace ___________
+
+    def test_output_covers_every_git_checkout_under_the_workspace() -> None:
+        """扫描面地板：工作区里每一个 git 检出都必须被列出，含根仓与嵌套的 mihomo。"""
+        expected = {"yueto(根仓)"}
+        for child in sorted(ROOT.iterdir()):
+            if (child / ".git").exists():
+                expected.add(child.name)
+        mihomo = ROOT / "yuelink" / "core" / "mihomo"
+        if (mihomo / ".git").exists():
+            expected.add("yuelink/core/mihomo")
+    
+        out = _run(SCRIPT)
+        listed = {line.split()[0] for line in out.splitlines() if line.strip() and "dirty:" in line}
+        missing = expected - listed
+        assert not missing, f"这些 git 检出没有被列出：{sorted(missing)}\n实际:\n{out}"
+        # 地板：少于这个数说明遍历塌了，而不是「工作区变小了」
+>       assert len(listed) >= 10, f"只列出了 {len(listed)} 个检出，扫描面塌了"
+E       AssertionError: 只列出了 7 个检出，扫描面塌了
+E       assert 7 >= 10
+E        +  where 7 = len({'yue-node', 'yueboard', 'yuelink', 'yuelink/core/mihomo', 'yueops', 'yueto(根仓)', ...})
+
+scripts/test-status-all.py:125: AssertionError
+=========================== short test summary info ============================
+FAILED scripts/test-doc-path-truth.py::test_real_workspace_is_green - assert ...
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[before---apply]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-accepted]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-up]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-candidate-ready]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_fresh_cli_reconciles_without_repeated_up[after-bastion-projection]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_after_fsync_preserves_orphan_receipt[stdout]
+FAILED scripts/test-first-contract-transaction.py::test_actual_sigkill_after_fsync_preserves_orphan_receipt[request]
+FAILED scripts/test-gitleaks-root-ledger.py::test_raw_history_findings_equal_the_ledger
+FAILED scripts/test-release-chain-drivers.py::script_guard - 脚本式守卫退出码 1
+FAILED scripts/test-release-yaml.py::test_ghcr_unreachable_exits_75_not_0 - A...
+FAILED scripts/test-release-yaml.py::test_workspace_source_check_passes - Ass...
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_job_runs_inside_runner_heavy_slot
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_job_tmpdir_is_under_runner_home
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_nested_repo_with - Ass...
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_rc_and_receipt_bound_to_sha
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_se27_trust_requires_equivalence_record
+FAILED scripts/test-remote-run.py::RemoteRunTest::test_uncommitted_changes_never_travel
+FAILED scripts/test-status-all.py::test_output_covers_every_git_checkout_under_the_workspace
+19 failed, 1114 passed, 4 skipped, 6 subtests passed in 369.22s (0:06:09)
