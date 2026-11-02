@@ -86,12 +86,15 @@ class FailFastPolicyTest(unittest.TestCase):
         names = ("plan", "publish", "validate", "validation-evidence")
         states = ("success", "failure", "skipped", "cancelled")
 
-        def evaluate(condition, results, tag_written):
+        def evaluate(condition, results, tag_written, admission_rejected):
             condition = condition.removeprefix("${{").removesuffix("}}").strip()
             condition = condition.replace(
                 "!contains(toJSON(needs.publish.outputs), '\"tag-written\"')", str(not tag_written)
             ).replace(
                 "contains(toJSON(needs.publish.outputs), '\"tag-written\"')", str(tag_written)
+            )
+            condition = condition.replace(
+                "needs.plan.outputs.admission_rejected", repr(str(admission_rejected).lower())
             )
             expression = re.sub(
                 r"needs\.([a-z-]+)\.result",
@@ -102,12 +105,14 @@ class FailFastPolicyTest(unittest.TestCase):
 
         for values in itertools.product(states, repeat=len(names)):
             results = dict(zip(names, values))
-            for tag_written in (False, True):
-                with self.subTest(**results, tag_written=tag_written):
-                    published = results["plan"] == "success" and tag_written
+            for tag_written, admission_rejected in itertools.product((False, True), repeat=2):
+                with self.subTest(**results, tag_written=tag_written, admission_rejected=admission_rejected):
+                    published = (results["plan"] == "success" and not admission_rejected
+                                 and results["publish"] == "success" and tag_written)
                     red = "failure" in (results["validate"], results["validation-evidence"])
-                    self.assertEqual(evaluate(issue_condition, results, tag_written), published and red)
-                    self.assertEqual(evaluate(notice_condition, results, tag_written), not tag_written)
+                    self.assertEqual(evaluate(issue_condition, results, tag_written, admission_rejected), published and red)
+                    self.assertEqual(evaluate(notice_condition, results, tag_written, admission_rejected),
+                                     results["plan"] == "failure" or admission_rejected)
 
         # This is the real matrix publisher, including its unconditional tag write.
         publisher = self.jobs["publish"]
@@ -125,9 +130,16 @@ class FailFastPolicyTest(unittest.TestCase):
         self.assertNotIn("if:", record)
         self.assertNotIn("continue-on-error:", publisher)
         self.assertNotIn("gh issue", notice)
-        command = re.search(r"(?m)^        run: (.+)$", notice).group(1)
-        result = subprocess.run(["bash", "-c", command], check=True, capture_output=True, text=True)
-        self.assertEqual(result.stdout, "::notice::admission rejected, nothing published\n")
+        self.assertIn("admission_rejected: ${{ steps.ops_plan.outputs.admission_rejected }}", self.jobs["plan"])
+        command = notice.split("        run: |\n", 1)[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            summary = Path(tmp) / "summary"
+            result = subprocess.run(
+                ["bash", "-c", command], check=True, capture_output=True, text=True,
+                env=dict(os.environ, GITHUB_STEP_SUMMARY=str(summary)),
+            )
+            self.assertEqual(result.stdout, "::notice::admission rejected\n")
+            self.assertEqual(summary.read_text(), "admission rejected\n")
 
 
     def test_tag_write_marker_survives_promotion_failure(self) -> None:
@@ -152,7 +164,7 @@ class FailFastPolicyTest(unittest.TestCase):
                 self.assertEqual(promotion.returncode, 1)
                 self.assertEqual(output.read_text(), "yue-node=tag-written\n" if write_status == 0 else "")
                 # The truth-table test above verifies these exact marker states
-                # with publish=failure: written -> issue; nothing -> notice only.
+                # with publish=failure: neither marker state opens a rollback issue.
 
     def test_async_validation_alert_is_one_rolling_issue(self) -> None:
         alert = self.jobs["validation-alert"]

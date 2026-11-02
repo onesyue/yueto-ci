@@ -109,9 +109,12 @@ class AdmissionPrecheck(unittest.TestCase):
 
     def test_annotation_summary_single_line_and_escape(self):
         summary = self.source / "summary"
-        with patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "GITHUB_STEP_SUMMARY": str(summary)}):
+        step_output = self.source / "output"
+        with patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "GITHUB_STEP_SUMMARY": str(summary),
+                                     "GITHUB_OUTPUT": str(step_output)}):
             with contextlib.redirect_stderr(io.StringIO()) as output:
                 admission_diagnostics.rejection("pyproject.toml changed\n::notice::100%")
+        self.assertEqual(step_output.read_text(), "admission_rejected=true\n")
         self.assertEqual(len(output.getvalue().splitlines()), 1)
         self.assertIn("::error::ADMISSION_REJECTED:", output.getvalue())
         self.assertIn("100%25", output.getvalue())

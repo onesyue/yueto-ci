@@ -181,6 +181,40 @@ class NativeNodeMakeChainTest(unittest.TestCase):
                 self.assertIn("yue-node Make test chain", result.stderr)
 
 
+class NativeFragmentWhitespaceTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location("fragment_contract", NATIVE_VALIDATOR)
+        cls.guard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.guard)
+
+    def test_alignment_spacing_on_both_sides(self):
+        for source_spacing in (" ", "    ", "\t\t"):
+            for fragment_spacing in (" ", "    ", "\t"):
+                source = '"applied_user_ids":' + source_spacing + '[]int64{uid}'
+                fragment = '"applied_user_ids":' + fragment_spacing + '[]int64{uid}'
+                with self.subTest(source=source, fragment=fragment):
+                    self.guard.require(source, [fragment], "device API")
+                    with self.assertRaisesRegex(RuntimeError, "retired contract fragments"):
+                        self.guard.forbid(source, [fragment], "device API")
+                    with self.assertRaisesRegex(RuntimeError, "retired contract fragments"):
+                        self.guard.forbid_casefold(source.upper(), [fragment], "device API")
+
+    def test_semantics_and_line_boundaries_remain_required(self):
+        fragment = '"applied_user_ids":    []int64{uid}'
+        for source in (
+            '"applied_user_ids": []int64{otherUID}',
+            '"applied_user_ids": []int32{uid}',
+            '"applied_device_ids": []int64{uid}',
+            '"applied_user_ids":\n[]int64{uid}',
+            '"applied_user_ids":[]int64{uid}',
+        ):
+            with self.subTest(source=source):
+                with self.assertRaisesRegex(RuntimeError, "missing native contract fragments"):
+                    self.guard.require(source, [fragment], "device API")
+                self.guard.forbid(source, [fragment], "device API")
+
+
 class PublishedWidgetContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

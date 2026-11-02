@@ -76,6 +76,7 @@ jobs:
       validation_parallelism: ${{ steps.ops_plan.outputs.max_parallel }}
       ops_mode: ${{ steps.ops_plan.outputs.ops_mode }}
       admission_sha256: ${{ steps.ops_plan.outputs.admission_sha256 }}
+      admission_rejected: ${{ steps.ops_plan.outputs.admission_rejected }}
       has_builds: ${{ steps.plan.outputs.has_builds }}
       promote: ${{ steps.plan.outputs.promote }}
       yueboard_contract_ref: ${{ steps.plan.outputs.yueboard_contract_ref }}
@@ -2683,7 +2684,8 @@ jobs:
     # Asynchronous validation (B1, 2026-10-30): a red validate or
     # validation-evidence no longer cancels the run or blocks publish, because
     # cancelling mid-retag could leave sha-*/latest half-moved. Instead it
-    # raises a visible alert issue on this public repo. Runs no source code.
+    # raises a visible alert issue after successful publication. Admission
+    # rejection gets a notice and summary instead. Runs no source code.
     # Image names (yue-bot, yueops-web, checkin-api, etc.) are matrix rows
     # of publish, not separate job IDs. Wait for their publication result.
     needs: [plan, validate, validation-evidence, publish]
@@ -2694,10 +2696,12 @@ jobs:
       issues: write
     steps:
       - name: Report rejected admission without an issue
-        if: ${{ !contains(toJSON(needs.publish.outputs), '"tag-written"') }}
-        run: echo "::notice::admission rejected, nothing published"
+        if: needs.plan.result == 'failure' || needs.plan.outputs.admission_rejected == 'true'
+        run: |
+          echo "::notice::admission rejected"
+          echo "admission rejected" >> "$GITHUB_STEP_SUMMARY"
       - name: Open or update the single async validation alert
-        if: needs.plan.result == 'success' && contains(toJSON(needs.publish.outputs), '"tag-written"') && (needs.validate.result == 'failure' || needs.validation-evidence.result == 'failure')
+        if: needs.plan.result == 'success' && needs.plan.outputs.admission_rejected != 'true' && needs.publish.result == 'success' && contains(toJSON(needs.publish.outputs), '"tag-written"') && (needs.validate.result == 'failure' || needs.validation-evidence.result == 'failure')
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

@@ -15,3 +15,7 @@ def rejection(reason):
     if summary:
         with Path(summary).open("a") as stream:
             stream.write(line + "\n")
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with Path(output).open("a") as stream:
+            stream.write("admission_rejected=true\n")
