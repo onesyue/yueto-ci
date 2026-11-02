@@ -1,0 +1,12 @@
+VERDICT: changes
+- [P2] `tests/test_subscription_template_admin_only.py:40`: Comment stripping ignores SQL quoting. Valid SQL such as `SELECT '--'; UPDATE subscribe_templates SET content = 'changed';` passes undetected because the UPDATE is stripped. Use quote-aware comment handling and add a regression case.
+- [P2] `tests/test_subscription_template_admin_only.py:42`: Scanning raw Python misses ordinary adjacent SQL literals: `op.execute("UPDATE " "subscribe_templates SET content = 'changed'")` passes despite modifying templates. Normalize Python string literals before scanning and test this case.
+
+Both bypasses were reproduced in memory against the exact requested head; no files were modified.
+tokens used
+26,231
+VERDICT: changes
+- [P2] `tests/test_subscription_template_admin_only.py:40`: Comment stripping ignores SQL quoting. Valid SQL such as `SELECT '--'; UPDATE subscribe_templates SET content = 'changed';` passes undetected because the UPDATE is stripped. Use quote-aware comment handling and add a regression case.
+- [P2] `tests/test_subscription_template_admin_only.py:42`: Scanning raw Python misses ordinary adjacent SQL literals: `op.execute("UPDATE " "subscribe_templates SET content = 'changed'")` passes despite modifying templates. Normalize Python string literals before scanning and test this case.
+
+Both bypasses were reproduced in memory against the exact requested head; no files were modified.

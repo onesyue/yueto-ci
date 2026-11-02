@@ -594,6 +594,126 @@
       "pr": 142,
       "reason": "Backfilled independent review of exact head 438b45023430cf09ae51edd5722a2bae241e2f4e (2026-11-02T18:03:26Z). Codex review returned CHANGES: - [P1] `telegram-bot/yue/checkin_membership.py:9`：会员查询迁入使用 `app_checkin` 的事务，但此 head 未提供相应授权迁移；现有 `080_membership.sql` 仅授权 `app_yue_bot`。缺少 `miniapp_membership`、`membership_settings` 的 SELECT 权限会使 Mini App 签到返回 503，包括非会员。请补充最小权限迁移，并用实际受限角色验证。 - [P1] `telegram-bot/yue/checkin_membership.py:9`：会员查询迁入使用 `app_checkin` 的事务，但此 head 未提供相应授权迁移；现有 `080_membership.sql` 仅授权 `app_yue_bot`。缺少 `miniapp_membership`、`membership_settings` 的 SELECT 权限会使 Mini App 签到返回 503，包括非会员。请补充最小权限迁移，并用实际受限角色验证。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-142-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-142-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 143,
+      "reason": "Backfilled independent review of exact head 044e80f49f6e6bdb70456fc43d8d59956ccfdb32 (2026-11-02T18:03:59Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-143-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-143-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 144,
+      "reason": "Backfilled independent review of exact head 1cd52d734be935df617f7ba912c766d8df460fa5 (2026-11-02T18:04:30Z). Codex review returned CHANGES: - [P2] `scripts/converge-onfailure-hooks.sh:79`：空 `OnFailure=` 不会清除已有依赖；[systemd v257 实现](https://github.com/systemd/systemd/blob/v257/src/core/load-fragment.c#L249-L299)直接忽略空值。这里清空 `effective` 会误报缺失，并在 `--apply` 时给已有自定义处理器追加通知钩子，违反保留既有告警链的约定。新增 `reset` 测试也固化了错误语义，应同步修正。 - [P2] `scripts/converge-onfailure-hooks.sh:79`：空 `OnFailure=` 不会清除已有依赖；[systemd v257 实现](https://github.com/systemd/systemd/blob/v257/src/core/load-fragment.c#L249-L299)直接忽略空值。这里清空 `effective` 会误报缺失，并在 `--apply` 时给已有自定义处理器追加通知钩子，违反保留既有告警链的约定。新增 `reset` 测试也固化了错误语义，应同步修正。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-144-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-144-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 146,
+      "reason": "Backfilled independent review of exact head a5afbef60886b0ef565116523423f6f60c014851 (2026-11-02T18:04:33Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-146-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-146-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 147,
+      "reason": "Backfilled independent review of exact head 4b12d2ed80d738f0780da9807060d926250a116a (2026-11-02T18:05:07Z). Codex review returned CHANGES: - [P1] `scripts/cn-reachability-rum.py:71`：新增 120 秒硬超时会截断已知正常耗时约 189 秒的运行。目标提交中的 service 已将超时提高到 300 秒，现有测试也明确保留该依据；本改动会重新造成探测失败、快照未更新或通知未完成。请协调两层预算，并补充正常慢运行的回归覆盖。 - [P1] `scripts/cn-reachability-rum.py:71`：新增 120 秒硬超时会截断已知正常耗时约 189 秒的运行。目标提交中的 service 已将超时提高到 300 秒，现有测试也明确保留该依据；本改动会重新造成探测失败、快照未更新或通知未完成。请协调两层预算，并补充正常慢运行的回归覆盖。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-147-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-147-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 149,
+      "reason": "Backfilled independent review of exact head 95ce4dc6be82c9cf4288d9e48ad0d3e7c37b89e3 (2026-11-02T18:05:27Z). Codex review returned CHANGES: - [P2] `scripts/sync-subscribe-templates.py:172`: Backups overwrite `zh/` and `en/` generated outputs, but `--verify` still calls `_check_generated()`, and `test_generated_outputs_are_deterministic_complete_and_current` enforces the old skeleton-derived bytes. Any differing panel edit therefore makes the documented backup fail verification and CI; regenerating erases the snapshot. Separate backups from generated outputs or update these consumers to accept panel-owned snapshots. - [P2] `scripts/sync-subscribe-templates.py:172`: Backups overwrite `zh/` and `en/` generated outputs, but `--verify` still calls `_check_generated()`, and `test_generated_outputs_are_deterministic_complete_and_current` enforces the old skeleton-derived bytes. Any differing panel edit therefore makes the documented backup fail verification and CI; regenerating erases the snapshot. Separate backups from generated outputs or update these consumers to accept panel-owned snapshots.; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-149-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-149-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 151,
+      "reason": "Backfilled independent review of exact head b63cab7260b9c71c5befe703bcd90d39331e8535 (2026-11-02T18:05:10Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-151-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-151-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 152,
+      "reason": "Backfilled independent review of exact head 54dcefa327a69945b21b9179bf15a4e941583aa9 (2026-11-02T18:06:08Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-152-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-152-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 153,
+      "reason": "Backfilled independent review of exact head ce59c06df853aa1999b91db4d38a5728de24d59f (2026-11-02T18:07:14Z). Codex review returned CHANGES: - [P1] `scripts/release-root-prune-20261013.py:171`：只记录符号链接第一跳。例如已安装入口 → `/opt/tool/current` → release root 内脚本，后续 `open()` 会跟随第二跳，但不会记录其中的 revision。若无其他引用且超过保留期限，该仍被使用的 root 会被删除。应遍历链接链并记录最终解析路径，增加相应回归测试。 - [P2] `scripts/install-release-root-prune-20261014.py:275`：`apply()` 已启用 timer，随后回执写入和最终校验却位于回滚事务之外。磁盘满或最终校验失败时，安装命令报错但新配置仍生效；使用 `--enable-deletion` 时自动删除也仍启用。应将回执持久化和最终校验纳入同一回滚事务。 - [P1] `scripts/release-root-prune-20261013.py:171`：只记录符号链接第一跳。例如已安装入口 → `/opt/tool/current` → release root 内脚本，后续 `open()` 会跟随第二跳，但不会记录其中的 revision。若无其他引用且超过保留期限，该仍被使用的 root 会被删除。应遍历链接链并记录最终解析路径，增加相应回归测试。 - [P2] `scripts/install-release-root-prune-20261014.py:275`：`apply()` 已启用 timer，随后回执写入和最终校验却位于回滚事务之外。磁盘满或最终校验失败时，安装命令报错但新配置仍生效；使用 `--enable-deletion` 时自动删除也仍启用。应将回执持久化和最终校验纳入同一回滚事务。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-153-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-153-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 154,
+      "reason": "Backfilled independent review of exact head a37ab32ca9ba4daea827edba928a7b2e17ffa45d (2026-11-02T18:07:15Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-154-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-154-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 155,
+      "reason": "Backfilled independent review of exact head 4ef17c89feac499c8883c796661021d0df594980 (2026-11-02T18:06:58Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-155-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-155-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 156,
+      "reason": "Backfilled independent review of exact head 7a53fa374d9ede564956310ca4601d88df48f56b (2026-11-02T18:08:31Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-156-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-156-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 157,
+      "reason": "Backfilled independent review of exact head d2c760757f88a5cfb26404453fdb8d5a4092ac37 (2026-11-02T18:08:21Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-157-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-157-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 158,
+      "reason": "Backfilled independent review of exact head 212d38aa10064c4411b997509b817c14534ac0f5 (2026-11-02T18:08:10Z). Codex review returned CHANGES: - [P2] `tests/test_subscription_template_admin_only.py:40`: Comment stripping ignores SQL quoting. Valid SQL such as `SELECT '--'; UPDATE subscribe_templates SET content = 'changed';` passes undetected because the UPDATE is stripped. Use quote-aware comment handling and add a regression case. - [P2] `tests/test_subscription_template_admin_only.py:42`: Scanning raw Python misses ordinary adjacent SQL literals: `op.execute(\"UPDATE \" \"subscribe_templates SET content = 'changed'\")` passes despite modifying templates. Normalize Python string literals before scanning and test this case. - [P2] `tests/test_subscription_template_admin_only.py:40`: Comment stripping ignores SQL quoting. Valid SQL such as `SELECT '--'; UPDATE subscribe_templates SET content = 'changed';` passes undetected because the UPDATE is stripped. Use quote-aware comment handling and add a regression case. - [P2] `tests/test_subscription_template_admin_only.py:42`: Scanning raw Python misses ordinary adjacent SQL literals: `op.execute(\"UPDATE \" \"subscribe_templates SET content = 'changed'\")` passes despite modifying templates. Normalize Python string literals before scanning and test this case.; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-158-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-158-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 159,
+      "reason": "Backfilled independent review of exact head f6e47871f64af868fd5f3778e55323bb926fdb2c (2026-11-02T18:08:59Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-159-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-159-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 160,
+      "reason": "Backfilled independent review of exact head a5596e22f14da94d0616aec60aac7b8014ce1e6c (2026-11-02T18:09:39Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-160-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-160-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 161,
+      "reason": "Backfilled independent review of exact head d69682a562e608bad54b4c8f24d80cdb27ae5ab2 (2026-11-02T18:08:53Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-161-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-161-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 162,
+      "reason": "Backfilled independent review of exact head 439c563f016a82c70f72caa5627da2f49dca6cad (2026-11-02T18:09:45Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-162-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-162-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 163,
+      "reason": "Backfilled independent review of exact head 20ac2f270abec53948e7de3a5d3ca0aab4959630 (2026-11-02T18:09:54Z). Codex review returned CHANGES: - [P2] `checkin-api/telemetry/db.py:34–36`: Missing upper bound permits raw telemetry and day salts to exceed the published 30-day retention limit (`nginx/html/en/privacy.html:194`). Confirmed `365` is accepted and used by cleanup. Restrict configuration to 1–30 days and test rejection above 30. - [P2] `checkin-api/telemetry/db.py:34–36`: Missing upper bound permits raw telemetry and day salts to exceed the published 30-day retention limit (`nginx/html/en/privacy.html:194`). Confirmed `365` is accepted and used by cleanup. Restrict configuration to 1–30 days and test rejection above 30.; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-163-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-163-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 164,
+      "reason": "Backfilled independent review of exact head a181a70563ef598bb727e57766188eb94a61fa33 (2026-11-02T18:10:22Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-164-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-164-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 166,
+      "reason": "Backfilled independent review of exact head a0617e052e961b781db9372710e3008e991501a5 (2026-11-02T18:10:28Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-166-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-166-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     }
   ]
 }

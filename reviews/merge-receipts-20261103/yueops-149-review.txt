@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P2] `scripts/sync-subscribe-templates.py:172`: Backups overwrite `zh/` and `en/` generated outputs, but `--verify` still calls `_check_generated()`, and `test_generated_outputs_are_deterministic_complete_and_current` enforces the old skeleton-derived bytes. Any differing panel edit therefore makes the documented backup fail verification and CI; regenerating erases the snapshot. Separate backups from generated outputs or update these consumers to accept panel-owned snapshots.
+tokens used
+42,489
+VERDICT: changes
+- [P2] `scripts/sync-subscribe-templates.py:172`: Backups overwrite `zh/` and `en/` generated outputs, but `--verify` still calls `_check_generated()`, and `test_generated_outputs_are_deterministic_complete_and_current` enforces the old skeleton-derived bytes. Any differing panel edit therefore makes the documented backup fail verification and CI; regenerating erases the snapshot. Separate backups from generated outputs or update these consumers to accept panel-owned snapshots.
