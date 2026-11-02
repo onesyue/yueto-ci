@@ -29,9 +29,12 @@ COMMAND_GATE = Path('scripts/ci/net-operator-pg18-gate.sh')
 # did not exist yet. Every suite actually discovered still must execute.
 HISTORICAL_ADDITIONS = {'./internal/modules/user', './internal/platform/referencelock',
                         './internal/platform/nativeproto'}
-FLOOR_ADDITIONS = {'./internal/modules/subscribe': 138, './internal/modules/statcron': 139,
-                   './internal/platform/emailcoupon': 150}
+FLOOR_ADDITIONS = {'./internal/modules/subscribe': 138, './internal/modules/statcron': 139}
+# The email coupon receipt consumer was reviewed against a branch whose 00150
+# was never merged; yueboard master's 00150 is vless_xhttp_rows. Gate the
+# suite on the consumer's own source, not on a schema floor it never owned.
 CAPABILITY_ADDITIONS = {
+    './internal/platform/emailcoupon': Path('internal/platform/emailcoupon/worker.go'),
     './internal/modules/remindmailcron': Path('internal/platform/reminderrules/rules_g.go'),
 }
 # Durable abuse reset retries were introduced without a schema-floor change.

@@ -361,15 +361,27 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
                 self.assertIn("missing=['" + path + "']", result.stderr)
                 self.package(path)
 
-    def test_floor_150_requires_email_coupon_receipt_consumer(self):
-        (self.root / 'schema-floor.txt').write_text('150\n')
+    def test_email_coupon_worker_requires_its_receipt_consumer(self):
+        (self.root / 'schema-floor.txt').write_text('151\n')
+        email = './internal/platform/emailcoupon'
+        for path in GATE.ORDER:
+            if path != email:
+                self.package(path)
+        marker = self.root / GATE.CAPABILITY_ADDITIONS[email]
+        marker.parent.mkdir(parents=True)
+        marker.write_text('package emailcoupon\n')
+        result = self.command('domain', self.root / 'receipt.json')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing=['" + email + "']", result.stderr)
+
+    def test_floor_151_without_email_coupon_source_is_not_missing(self):
+        (self.root / 'schema-floor.txt').write_text('151\n')
         email = './internal/platform/emailcoupon'
         for path in GATE.ORDER:
             if path != email:
                 self.package(path)
         result = self.command('domain', self.root / 'receipt.json')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("missing=['" + email + "']", result.stderr)
+        self.assertNotIn('integration package plan mismatch', result.stderr)
 
     def test_email_coupon_suite_runs_before_user_reset(self):
         email = './internal/platform/emailcoupon'
