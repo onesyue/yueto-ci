@@ -1,0 +1,7 @@
+repo=yueto-ci ref=cf6330fefd9330c4d01069227c28c2bf9bebf8c8 workers=2 logs=/tmp/yt-premerge-dj3tat1a
+policy-tests: FAIL (log: /tmp/yt-premerge-dj3tat1a/policy-tests.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+policy-tests                 FAIL     1
+Private logs: /tmp/yt-premerge-dj3tat1a
