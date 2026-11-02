@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 283,
+  "head": "86847c73689fb941d9b291f6a0ad099dd3553713",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "86847c73689fb941d9b291f6a0ad099dd3553713",
+    "artifact": "reviews/merge-receipts-20261102/yueops-283.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T18:59:59Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "86847c73689fb941d9b291f6a0ad099dd3553713",
+    "command": "TZ=UTC /home/box/Projects/yueto/yueops/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_service_role_grants_20261102.py",
+    "log_sha256": "3582829a725384d77a95d19a88a5f67a628d3de5c3abdc89136ffbcac5a6f53b",
+    "ran_at": "2026-11-02T19:00:33Z",
+    "runner": "box"
+  }
+}
