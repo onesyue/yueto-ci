@@ -1,0 +1,15 @@
+repo=yueto ref=85ac012db4efa1ad11fe74d1d760620df87f4b92 workers=6 logs=/tmp/yt-premerge-zobiqveg
+sibling=yueops ref=f517b3c8eaf92ea6e493367d6326d66033466dd0
+sibling=yueboard ref=cc0de351345d9d84b1269d8b0bd46102e44e8c12
+sibling=yuelink ref=ea6d4bc32e1bc9c4bc870775cb9ed0a4b0919cf7
+sibling=yuelink-ci ref=1882b67f405452e573286f24fbbe7b13c7735eaf
+sibling=yueto-ci ref=a3a155fc29267f1660db5eb82dcc59f6f98e9b91
+sibling=yue-node ref=080a877d9d9afb0ffb1b9d27f1d9c5747be56be1
+contracts: FAIL (log: /tmp/yt-premerge-zobiqveg/contracts.log)
+fast-check: PASS (log: /tmp/yt-premerge-zobiqveg/fast-check.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+contracts                    FAIL     1
+fast-check                   PASS     0
+Private logs: /tmp/yt-premerge-zobiqveg

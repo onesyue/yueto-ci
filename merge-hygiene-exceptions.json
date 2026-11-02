@@ -30,6 +30,12 @@
       "pr": 50,
       "reason": "Exact-head independent Codex review approved for 5225f4d636ea61c4b9ae685473b95dbf8d3a05b8. Repository-owned bash scripts/check-all-contracts.sh failed (exit 1): release-chain-drivers asserted that release completion did not reflect actual process-group isolation; initial Python checks also lacked pytest, and 95 cross-repository checks were skipped because sibling checkouts are absent. Missing evidence: a passing local parity log; fast-check was not reached after the failed contract gate. Original failed-run log SHA256 2a2bc455004ea62e9d6b374c0ef27305c5d77ab362404a2be58a8fae13fa0d1b. No full multi-repository fixture was fabricated.",
       "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueto",
+      "pr": 43,
+      "reason": "Independent Codex approved exact head c66811a93a544d762495d97640e7722219e85ea8 after merge. Backfilled local yt-premerge evidence (/workspace/yt43-premerge.log, committed with baseline logs in reviews/merge-receipts-20261102/yueto-43.md): fast-check PASS; contracts FAIL, exit 1, with identical failing-label set to then-origin/master d7f79431beef2baf04db251072bd609a5300bf1c. Log binds integration merge 85ac012db4efa1ad11fe74d1d760620df87f4b92 (PR head plus master), not the exact PR head. Missing evidence: passing exact-head contract parity; no all-green receipt is claimed.",
+      "approver": "owner 2026-11-02 explicit continuation: truthful exception if evidence cannot be produced"
     }
   ]
 }

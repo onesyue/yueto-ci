@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yue-node",
+  "pr": 23,
+  "head": "620bcaeb5e473db9205072f13f5251f5cea0a591",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "620bcaeb5e473db9205072f13f5251f5cea0a591",
+    "artifact": "reviews/merge-receipts-20261102/yue-node-23.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T08:41:09.549250+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "620bcaeb5e473db9205072f13f5251f5cea0a591",
+    "command": "GOMAXPROCS=2 bash scripts/premerge.sh HEAD^ && GOMAXPROCS=2 GOFLAGS=\"-mod=vendor -p=1\" go test ./internal/gateretry -count=1",
+    "log_sha256": "de94f973c5d8a21efbc668f5288598ae899c8f8679337d3f01dad3f053043334",
+    "ran_at": "2026-11-02T08:43:37.838712+00:00",
+    "runner": "box"
+  }
+}

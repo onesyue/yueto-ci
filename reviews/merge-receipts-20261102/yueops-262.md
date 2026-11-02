@@ -1,0 +1,18 @@
+# Retrospective independent Codex review: yueops-262
+
+Reviewed at 2026-11-02T08:41:09.549250+00:00. Read-only `codex exec`; original transcript `/tmp/merge-receipt-evidence/additional-review.log`; prompt `/tmp/merge-receipt-evidence/additional-review-prompt.txt`. All reviews were after merge (backfilled).
+
+Reviewed all four exact heads via `git show`. No actionable defects found.
+
+| PR | Exact head | Verdict | Review basis |
+|---|---|---|---|
+| yueops-262 | `7152b72f4b98196ba9563b014bdcbf778965ca6b` | **APPROVE** | Assertions match the points-only membership UI. Watcher exemption matches its documented host-specific configuration and installation prerequisites. |
+| yueto-43 | `c66811a93a544d762495d97640e7722219e85ea8` | **APPROVE** | English wording preserves the fair-use topic and explicit appeal request. Catalog digest matches the changed source. |
+| yuelink-ci-34 | `470121d033d3fc8e309cd2d400585c0fba1ad8e6` | **APPROVE** | Advances the reviewed floor coherently; preserves the previous fixture byte-for-byte and updates replay coverage without weakening verifier logic. |
+| yue-node-23 | `620bcaeb5e473db9205072f13f5251f5cea0a591` | **APPROVE** | Shell entry points and Go transport consistently remove repository selectors while retaining credential configuration. Regression controls cover outer-checkout corruption. |
+
+YueLink CI source was read from the existing detached worktree at `/tmp/merge-receipt-evidence/yuelink-ci-34-checkout`.
+
+Source-review verdicts only; no tests, signature verification, live parity checks, agents, edits, comments, commits, pushes, or deployment performed.
+
+Local parity: exact-head detached checkout, both changed test files, 58 passed, exit 0. Command: `TZ=UTC /home/box/Projects/yueto/yueops/.venv/bin/python -m pytest -q tests/test_ai_bot_fixes_20260916.py tests/test_every_repo_unit_is_installed_somewhere.py`. Ran at 2026-11-02T08:41:18.239984+00:00. This is scoped test-only change evidence, not the full YueOps backend/frontend/release suites. Initial policy-venv attempt had 56 passes and two import failures (missing psycopg_pool); original failed output is retained in `yueops-262-initial-failed.log`. Retry used the existing YueOps environment, without installing or altering dependencies.

@@ -1,0 +1,19 @@
+head=620bcaeb5e473db9205072f13f5251f5cea0a591
+command=GOMAXPROCS=2 bash scripts/premerge.sh HEAD^ && GOMAXPROCS=2 GOFLAGS="-mod=vendor -p=1" go test ./internal/gateretry -count=1
+started_at=2026-11-02T08:43:01.134568+00:00
+............
+----------------------------------------------------------------------
+Ran 12 tests in 7.789s
+
+OK
+ok  	github.com/onesyue/yue-node/internal/forkledger	0.013s
+--- FAIL: TestVerifyForkTagsRetryAndVerification (1.11s)
+    --- FAIL: TestVerifyForkTagsRetryAndVerification/digest_failure (0.08s)
+        verify-fork-tags_test.go:219: calls= err=open /tmp/merge-receipt-evidence/TestVerifyForkTagsRetryAndVerificationdigest_failure3701132229/001/count: no such file or directory output=transport attempt=1 elapsed=0s reason=success
+            fork tag verification failed: fixture v1 peels to an unexpected commit
+FAIL
+FAIL	github.com/onesyue/yue-node/scripts	1.108s
+FAIL
+premerge: gate failed at line 22
+
+exit=1
