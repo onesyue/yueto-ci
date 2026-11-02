@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P2] `tests/test_service_role_grants_20261102.py:275`：CTE 排除逻辑只检查位置与分号，未限定查询作用域。已复现 `WITH outer_cte AS (WITH users AS (SELECT id FROM users) SELECT id FROM users) SELECT last_login_ip FROM users`：基线能检测 `users.last_login_ip`，此 head 却漏检，使缺少真实列授权的查询通过守卫。应限定 CTE 的有效作用域，并补充嵌套同名 CTE 的回归测试。
+tokens used
+48,930
+VERDICT: changes
+
+- [P2] `tests/test_service_role_grants_20261102.py:275`：CTE 排除逻辑只检查位置与分号，未限定查询作用域。已复现 `WITH outer_cte AS (WITH users AS (SELECT id FROM users) SELECT id FROM users) SELECT last_login_ip FROM users`：基线能检测 `users.last_login_ip`，此 head 却漏检，使缺少真实列授权的查询通过守卫。应限定 CTE 的有效作用域，并补充嵌套同名 CTE 的回归测试。

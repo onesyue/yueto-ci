@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P2] `scripts/release-root-prune.py:569`：dry-run 未列出隔离区内即将永久删除的根，且输出 `.quarantine ... never touched`。已用精确 head 的代码及内存 mock 复现：同一状态下 dry-run 显示 `prune=0、would_free_bytes=0`，apply 却执行永久删除。应让两种模式共享隔离区操作计划，明确预览恢复、删除对象及预计释放空间。
+tokens used
+43,772
+VERDICT: changes
+
+- [P2] `scripts/release-root-prune.py:569`：dry-run 未列出隔离区内即将永久删除的根，且输出 `.quarantine ... never touched`。已用精确 head 的代码及内存 mock 复现：同一状态下 dry-run 显示 `prune=0、would_free_bytes=0`，apply 却执行永久删除。应让两种模式共享隔离区操作计划，明确预览恢复、删除对象及预计释放空间。

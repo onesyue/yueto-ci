@@ -1,0 +1,14 @@
+已按指定 base/head 审查，未修改文件。内存验证确认索引检查返回 1，共 122 个错误；未运行完整测试套件。
+
+VERDICT: changes
+
+- [P2] `scripts/ONEOFF-INDEX.json:4`：将 122 个恢复的脚本加入 `baseline`，违反现有检查器的“baseline may only shrink”约束。与指定基线比较必然失败；应按 `registered` 登记并提供 `expires`。
+- [P2] `contracts/openapi/yueops-web.v1.json:8175`：两个 WebSocket 路径被替换为空字符串，丢失 SSH 和任务流端点的身份。现有快照测试使用同一导出逻辑比较，无法发现这种退化，后续路径变更可悄然通过。应修复降级后的路径提取并保留真实路径断言。
+tokens used
+78,590
+已按指定 base/head 审查，未修改文件。内存验证确认索引检查返回 1，共 122 个错误；未运行完整测试套件。
+
+VERDICT: changes
+
+- [P2] `scripts/ONEOFF-INDEX.json:4`：将 122 个恢复的脚本加入 `baseline`，违反现有检查器的“baseline may only shrink”约束。与指定基线比较必然失败；应按 `registered` 登记并提供 `expires`。
+- [P2] `contracts/openapi/yueops-web.v1.json:8175`：两个 WebSocket 路径被替换为空字符串，丢失 SSH 和任务流端点的身份。现有快照测试使用同一导出逻辑比较，无法发现这种退化，后续路径变更可悄然通过。应修复降级后的路径提取并保留真实路径断言。

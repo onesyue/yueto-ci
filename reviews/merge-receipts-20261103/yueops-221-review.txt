@@ -1,0 +1,10 @@
+VERDICT: changes
+
+- [P2] `scripts/ai-quality-judge.py:544`: The reply-pairs endpoint does not return `ai_meta`, so real samples always lack tool evidence. The new test invents that field, masking the disconnected production path. Add exact-message metadata retrieval and test the actual API contract.
+- [P2] `scripts/ai-quality-judge.py:405`: Changing `judge_notes` to JSON breaks the weekly report’s plain-text consumer (`scripts/ai-quality-weekly-report.py:212`), which displays only the first 50 characters. Reports now show truncated JSON instead of the diagnostic note. Update the reader to support both formats.
+tokens used
+54,831
+VERDICT: changes
+
+- [P2] `scripts/ai-quality-judge.py:544`: The reply-pairs endpoint does not return `ai_meta`, so real samples always lack tool evidence. The new test invents that field, masking the disconnected production path. Add exact-message metadata retrieval and test the actual API contract.
+- [P2] `scripts/ai-quality-judge.py:405`: Changing `judge_notes` to JSON breaks the weekly report’s plain-text consumer (`scripts/ai-quality-weekly-report.py:212`), which displays only the first 50 characters. Reports now show truncated JSON instead of the diagnostic note. Update the reader to support both formats.

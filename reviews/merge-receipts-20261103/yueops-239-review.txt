@@ -1,0 +1,12 @@
+仅审查了指定 diff；未修改文件，也未运行会删除实际临时目录的测试。
+
+VERDICT: changes
+
+- [P2] `tests/_archived_scripts.py:38`：无 owner 标记的目录超过一小时就被视为可删除，但指定 base 的 `historical_root()` 正会创建这种目录。旧版本测试仍在运行时，目录 mtime 不会随读取更新；新版测试启动后可能删除其正在使用的脚本，导致失败。应保留无法证明 owner 已退出的旧目录，并增加“仍在使用的旧目录”保护测试。
+tokens used
+29,903
+仅审查了指定 diff；未修改文件，也未运行会删除实际临时目录的测试。
+
+VERDICT: changes
+
+- [P2] `tests/_archived_scripts.py:38`：无 owner 标记的目录超过一小时就被视为可删除，但指定 base 的 `historical_root()` 正会创建这种目录。旧版本测试仍在运行时，目录 mtime 不会随读取更新；新版测试启动后可能删除其正在使用的脚本，导致失败。应保留无法证明 owner 已退出的旧目录，并增加“仍在使用的旧目录”保护测试。

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 223,
+  "head": "3ec5309d6c760f64ae29367d75bcf23f551249b2",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "3ec5309d6c760f64ae29367d75bcf23f551249b2",
+    "artifact": "reviews/merge-receipts-20261103/yueops-223.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T18:08:40Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "3ec5309d6c760f64ae29367d75bcf23f551249b2",
+    "command": "/home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile telegram-bot/yue/adapters/yueboard_chat.py tests/test_yueboard_chat_transcript.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_yueboard_chat_transcript.py  && git diff --check 408036bbe435b14f000a323e114a0f8e862b93c6 3ec5309d6c760f64ae29367d75bcf23f551249b2",
+    "log_sha256": "743a7412074c253fd18795a2ac974a5d5ec866259f752e90b8e9a16b004d7100",
+    "ran_at": "2026-11-02T18:07:56Z",
+    "runner": "box"
+  }
+}

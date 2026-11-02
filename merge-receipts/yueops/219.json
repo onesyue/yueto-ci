@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 219,
+  "head": "94255e06db426292b7f6d0a6d01f60325e6e11d3",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "94255e06db426292b7f6d0a6d01f60325e6e11d3",
+    "artifact": "reviews/merge-receipts-20261103/yueops-219.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T18:09:24Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "94255e06db426292b7f6d0a6d01f60325e6e11d3",
+    "command": "/home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile telegram-bot/yue/support_core/agent_tools.py telegram-bot/yue/tools/usage_policy.py tests/test_ai_tool_usage_policy.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_ai_tool_usage_policy.py  && git diff --check 70957da583cce96dae7f735fad54c026bed8d75e 94255e06db426292b7f6d0a6d01f60325e6e11d3",
+    "log_sha256": "c42d657a5835e7e50d2aa8ab85402a602eabf22c454478ae020dff4649c4f4f7",
+    "ran_at": "2026-11-02T18:08:42Z",
+    "runner": "box"
+  }
+}

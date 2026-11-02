@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P2] `scripts/rollout-yue-node-image.sh:3625`：失败节点汇总放在提前退出的门禁之后。owner-hold 模式超过失败比例时，会在第 3604 行退出，无法输出新增的 `failed nodes` 汇总或 `OWNER_HOLD_PARTIAL`。已用该精确 head 的代码片段复现。应在终态门禁退出前生成失败清单，并补充超过阈值的测试。
+tokens used
+47,848
+VERDICT: changes
+- [P2] `scripts/rollout-yue-node-image.sh:3625`：失败节点汇总放在提前退出的门禁之后。owner-hold 模式超过失败比例时，会在第 3604 行退出，无法输出新增的 `failed nodes` 汇总或 `OWNER_HOLD_PARTIAL`。已用该精确 head 的代码片段复现。应在终态门禁退出前生成失败清单，并补充超过阈值的测试。
