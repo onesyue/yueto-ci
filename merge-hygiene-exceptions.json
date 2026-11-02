@@ -480,6 +480,120 @@
       "pr": 14,
       "reason": "Backfilled independent review of exact head 607241c15af4f4d135ef4ba66cb3bca4310e76a0 (2026-11-02T19:01:43Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-14-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueto-ci-14-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 40,
+      "reason": "Backfilled independent review of exact head 0b9ae5b1148d941c0bdb6e9559fa156a21d007cf (2026-11-02T17:55:26Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-40-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-40-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 95,
+      "reason": "Backfilled independent review of exact head dcfb03536d52943790a8c50fe03d03e91f9c38c0 (2026-11-02T17:56:42Z). Codex review returned CHANGES: - [P1] `scripts/subscribe-rule-catalog.json:450`：新增 Sentry 的 `AI` 预期会阻断规则镜像发布。提交内固定的广告快照匹配该域名，而 `check_routing()` 仍无条件优先判为 `REJECT`；已用精确 head 内存复现异常。它在新优先级豁免检查之前执行，导致同步脚本提前退出。应让旧校验识别模板中的优先规则，并补充覆盖完整校验调用链的回归测试。 - [P1] `scripts/subscribe-rule-catalog.json:450`：新增 Sentry 的 `AI` 预期会阻断规则镜像发布。提交内固定的广告快照匹配该域名，而 `check_routing()` 仍无条件优先判为 `REJECT`；已用精确 head 内存复现异常。它在新优先级豁免检查之前执行，导致同步脚本提前退出。应让旧校验识别模板中的优先规则，并补充覆盖完整校验调用链的回归测试。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-95-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-95-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 125,
+      "reason": "Backfilled independent review of exact head 74a261e5a31cac1d2c0188077263114c74716600 (2026-11-02T17:57:35Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-125-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-125-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 126,
+      "reason": "Backfilled independent review of exact head fd15a99f72451fcb4a5ec7973eab89c0e4cf5de7 (2026-11-02T17:56:24Z). Codex review returned CHANGES: - [P1] `telegram-bot/yue/service/miniapp_gamble.py:729`: The new cap charges 800 points on an insured 1,000-point loss, but `_insurance_status()` still promises zero point loss before confirmation, and the shop advertises full coverage. Update purchase and pre-bet disclosures to explain the 200-point cap and consumption on wins, with behavioral regression coverage. Confirmed against the exact head using a read-only AST reproduction. - [P1] `telegram-bot/yue/service/miniapp_gamble.py:729`: The new cap charges 800 points on an insured 1,000-point loss, but `_insurance_status()` still promises zero point loss before confirmation, and the shop advertises full coverage. Update purchase and pre-bet disclosures to explain the 200-point cap and consumption on wins, with behavioral regression coverage. Confirmed against the exact head using a read-only AST reproduction.; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-126-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-126-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 127,
+      "reason": "Backfilled independent review of exact head bca63af83b5d5e777fe21f4a130d45b565dc9d91 (2026-11-02T17:57:08Z). Codex review returned CHANGES: - [P2] `web/api/status.py:829`：阈值转换仅作用于 `/summary`，但公共页面的区域卡片读取 `/public` 的 `pub.regions`（`web/static/status.html:506–522`），不使用 `sum.regions`。因此可用率为 99.934% 的降级区域仍显示“降级”，本次预期的显示修复未生效。应将规则接入实际渲染路径，并补充覆盖该路径的测试；新增的 4 个辅助函数测试虽通过，却无法发现此问题。 - [P2] `web/api/status.py:829`：阈值转换仅作用于 `/summary`，但公共页面的区域卡片读取 `/public` 的 `pub.regions`（`web/static/status.html:506–522`），不使用 `sum.regions`。因此可用率为 99.934% 的降级区域仍显示“降级”，本次预期的显示修复未生效。应将规则接入实际渲染路径，并补充覆盖该路径的测试；新增的 4 个辅助函数测试虽通过，却无法发现此问题。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-127-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-127-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 128,
+      "reason": "Backfilled independent review of exact head 248956f07921e87722f98308809c6e02ed04b465 (2026-11-02T17:57:22Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-128-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-128-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 129,
+      "reason": "Backfilled independent review of exact head 670efcdd5d8d965c431fb519fb1358603a44eac1 (2026-11-02T17:57:49Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-129-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-129-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 130,
+      "reason": "Backfilled independent review of exact head 18f9f0b67f2e1a1d6d9b85a88a68d59c9d6469ca (2026-11-02T17:59:30Z). Codex review returned CHANGES: - [P1] `telegram-bot/yue/dao/chicken/_market.py:184`：限额检查前只锁当前挂单。不同买家并发购买同一卖家的不同挂单，可同时读到旧收入并突破每日上限；无幂等键的并发请求也能突破交易对周限额。应在检查前取得覆盖卖家及交易对的事务锁，并补并发测试。 - [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:191`：用当前手续费率重算历史收入，而非累计实际入账积分。当天提高手续费会低估已到账收入，允许突破日限额；降低则可能误拦交易。应累计 `points_ledger` 的实际 `market_sell` 入账，或保存每笔成交净收入。 - [P1] `telegram-bot/yue/dao/chicken/_market.py:184`：限额检查前只锁当前挂单。不同买家并发购买同一卖家的不同挂单，可同时读到旧收入并突破每日上限；无幂等键的并发请求也能突破交易对周限额。应在检查前取得覆盖卖家及交易对的事务锁，并补并发测试。 - [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:191`：用当前手续费率重算历史收入，而非累计实际入账积分。当天提高手续费会低估已到账收入，允许突破日限额；降低则可能误拦交易。应累计 `points_ledger` 的实际 `market_sell` 入账，或保存每笔成交净收入。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-130-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-130-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 131,
+      "reason": "Backfilled independent review of exact head 288fdf0885407d7e784487ccb77cae24d95f396e (2026-11-02T17:58:32Z). Codex review returned CHANGES: - [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:137`：同 IP 检查读取废弃的 `last_login_ip`；现有隐私守卫要求该列保持 NULL，因此正常数据下永远不会命中。应使用获准的有效关联数据源。 - [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:140`：该列实际为 `bigint`，非零值会使 `.strip()` 抛出 `AttributeError`，导致购买失败；已用精确 head 代码在内存中复现。新增测试使用字符串，掩盖了类型错误。 - [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:148`：HWID 比较未排除 `device_identity_collisions` 中的已知碰撞值。面板刻意保留这些设备记录，但禁止用于身份关联；当前查询会将使用碰撞 HWID 的不同用户误判为关联账号并拒绝交易。 - [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:137`：同 IP 检查读取废弃的 `last_login_ip`；现有隐私守卫要求该列保持 NULL，因此正常数据下永远不会命中。应使用获准的有效关联数据源。 - [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:140`：该列实际为 `bigint`，非零值会使 `.strip()` 抛出 `AttributeError`，导致购买失败；已用精确 head 代码在内存中复现。新增测试使用字符串，掩盖了类型错误。 - [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:148`：HWID 比较未排除 `device_identity_collisions` 中的已知碰撞值。面板刻意保留这些设备记录，但禁止用于身份关联；当前查询会将使用碰撞 HWID 的不同用户误判为关联账号并拒绝交易。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-131-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-131-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 132,
+      "reason": "Backfilled independent review of exact head 8c83fac68117f64dffa3e376362277f12488d5dc (2026-11-02T17:58:30Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-132-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-132-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 133,
+      "reason": "Backfilled independent review of exact head f5e6e52ffb895b1b55879331eddd9c8175c84db1 (2026-11-02T17:59:50Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-133-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-133-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 134,
+      "reason": "Backfilled independent review of exact head cbdea471667399a922b65e3c6fca29dc5da1fec9 (2026-11-02T17:59:21Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-134-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-134-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 135,
+      "reason": "Backfilled independent review of exact head 11b2dd250b37771d4c7d096c28274843e3e44af2 (2026-11-02T18:00:05Z). Codex review returned CHANGES: - [P2] `services/journald/zz-yue-bastion-journal-budget.conf:12`：按文件记录的约 300 MB/天，2G 只能保留约 7 天日志，无法满足 `docs/runbook/disk-growth-watchdog-20261018.md:15` 的至少 14 天要求。每日 cleanup 同步降至 2G，会持续删除历史；“磁盘低于 75% 后恢复”仅为注释。应保留足够预算，或先降低日志写入量并验证保留期。 - [P2] `services/journald/zz-yue-bastion-journal-budget.conf:12`：按文件记录的约 300 MB/天，2G 只能保留约 7 天日志，无法满足 `docs/runbook/disk-growth-watchdog-20261018.md:15` 的至少 14 天要求。每日 cleanup 同步降至 2G，会持续删除历史；“磁盘低于 75% 后恢复”仅为注释。应保留足够预算，或先降低日志写入量并验证保留期。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-135-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-135-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 136,
+      "reason": "Backfilled independent review of exact head 5739bf87085cf4f4cf782dea65c082589f7d301e (2026-11-02T18:00:43Z). Codex review returned CHANGES: - [P1] `telegram-bot/yue/service/campaign_midautumn_jobs.py:542`：删除退款奖励收回的唯一执行链路。已有 `revoke_failed` 欠款在余额恢复后，以及历史获奖订单后续退款时，都不再自动收回奖励。应保留结算执行者，直到有明确的清零及后续退款处理依据；新增未付款订单查询测试不能覆盖此问题。 - [P2] `telegram-bot/yue/service/campaign_midautumn_jobs.py:391`：删除 `_dispatch_admin_reports` 会遗留 `campaign_push_log` 中尚未提交到告警 outbox 的持久化报表。新增测试直接向下游 outbox 入队，未覆盖这一阶段。应保留转发器或提供可靠迁移，确保待发送报表不会永久滞留。 - [P1] `telegram-bot/yue/service/campaign_midautumn_jobs.py:542`：删除退款奖励收回的唯一执行链路。已有 `revoke_failed` 欠款在余额恢复后，以及历史获奖订单后续退款时，都不再自动收回奖励。应保留结算执行者，直到有明确的清零及后续退款处理依据；新增未付款订单查询测试不能覆盖此问题。 - [P2] `telegram-bot/yue/service/campaign_midautumn_jobs.py:391`：删除 `_dispatch_admin_reports` 会遗留 `campaign_push_log` 中尚未提交到告警 outbox 的持久化报表。新增测试直接向下游 outbox 入队，未覆盖这一阶段。应保留转发器或提供可靠迁移，确保待发送报表不会永久滞留。; exact-head box parity: FAIL/not runnable (rc=1) (reviews/merge-receipts-20261103/yueops-136-parity.log) (reviews/merge-receipts-20261103/yueops-136-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 137,
+      "reason": "Backfilled independent review of exact head 3d14a95c933051fddea5dacf40c3b1d79e61353f (2026-11-02T18:01:06Z). Codex review returned CHANGES: - [P1] `scripts/dns-scheduler/scheduler.py:427`：任一分组校验或写入异常都会退出整个循环。例如 JP 记录缺失时，TW 分组不会同步禁用状态，已摘除的故障节点仍可持续接收流量。应隔离各分组错误，并继续处理其他分组的摘除。 - [P2] `scripts/dns-scheduler/scheduler.py:355`：只要一条权重不匹配，就重写所有记录，包括权重已经正确的记录。若后续记录持续失败，每轮重试及回滚会反复提交无变化修改；[DNSPod 文档](https://docs.dnspod.cn/api/modify-records/)说明此类请求超过每小时五次会锁定记录一小时，影响正常更新。应跳过无需修改的记录。 - [P1] `scripts/dns-scheduler/scheduler.py:427`：任一分组校验或写入异常都会退出整个循环。例如 JP 记录缺失时，TW 分组不会同步禁用状态，已摘除的故障节点仍可持续接收流量。应隔离各分组错误，并继续处理其他分组的摘除。 - [P2] `scripts/dns-scheduler/scheduler.py:355`：只要一条权重不匹配，就重写所有记录，包括权重已经正确的记录。若后续记录持续失败，每轮重试及回滚会反复提交无变化修改；[DNSPod 文档](https://docs.dnspod.cn/api/modify-records/)说明此类请求超过每小时五次会锁定记录一小时，影响正常更新。应跳过无需修改的记录。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-137-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-137-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 138,
+      "reason": "Backfilled independent review of exact head 487f43047047d29be768a6ee1fb72e8ddba895bb (2026-11-02T18:01:14Z). Codex review returned CHANGES: - [P1] `scripts/evening-speed-alert.py:182`：`YUE_ALERT_PRIORITY=P2` 将晚高峰告警送入次日 09:00 早报队列，而早报仅汇总来源、标题和次数，不展示主机及测速正文。因此连续两轮低速后，当晚不会收到可定位的告警。应使用即时通知通道，并增加覆盖真实优先级路由的测试。 - [P1] `scripts/evening-speed-alert.py:182`：`YUE_ALERT_PRIORITY=P2` 将晚高峰告警送入次日 09:00 早报队列，而早报仅汇总来源、标题和次数，不展示主机及测速正文。因此连续两轮低速后，当晚不会收到可定位的告警。应使用即时通知通道，并增加覆盖真实优先级路由的测试。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-138-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-138-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 139,
+      "reason": "Backfilled independent review of exact head a8faae40ecd649e7abb35bbcf5afa273579b6685 (2026-11-02T18:02:12Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-139-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-139-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 141,
+      "reason": "Backfilled independent review of exact head d09023f7d219e31960b056cd8a7ed62cdba38f54 (2026-11-02T18:02:54Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-141-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-141-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 142,
+      "reason": "Backfilled independent review of exact head 438b45023430cf09ae51edd5722a2bae241e2f4e (2026-11-02T18:03:26Z). Codex review returned CHANGES: - [P1] `telegram-bot/yue/checkin_membership.py:9`：会员查询迁入使用 `app_checkin` 的事务，但此 head 未提供相应授权迁移；现有 `080_membership.sql` 仅授权 `app_yue_bot`。缺少 `miniapp_membership`、`membership_settings` 的 SELECT 权限会使 Mini App 签到返回 503，包括非会员。请补充最小权限迁移，并用实际受限角色验证。 - [P1] `telegram-bot/yue/checkin_membership.py:9`：会员查询迁入使用 `app_checkin` 的事务，但此 head 未提供相应授权迁移；现有 `080_membership.sql` 仅授权 `app_yue_bot`。缺少 `miniapp_membership`、`membership_settings` 的 SELECT 权限会使 Mini App 签到返回 503，包括非会员。请补充最小权限迁移，并用实际受限角色验证。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-142-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-142-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     }
   ]
 }

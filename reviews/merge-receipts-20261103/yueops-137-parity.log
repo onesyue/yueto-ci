@@ -1,0 +1,9 @@
+head=3d14a95c933051fddea5dacf40c3b1d79e61353f ran_at=2026-11-02T17:59:55Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/dns-scheduler/scheduler.py scripts/install-operator-host-source.py scripts/lib/owned_dns.py tests/test_dns_scheduler_entry_options.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_dns_scheduler_entry_options.py  && for f in scripts/v4-relay-multi-a-peers.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check 80306e9683959c08b3360aa42cf60e76702df03e 3d14a95c933051fddea5dacf40c3b1d79e61353f
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+.....................                                                    [100%]
+21 passed in 0.28s
+rc=0

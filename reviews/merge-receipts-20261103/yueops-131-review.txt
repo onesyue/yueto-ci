@@ -1,0 +1,10 @@
+VERDICT: changes
+- [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:137`：同 IP 检查读取废弃的 `last_login_ip`；现有隐私守卫要求该列保持 NULL，因此正常数据下永远不会命中。应使用获准的有效关联数据源。
+- [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:140`：该列实际为 `bigint`，非零值会使 `.strip()` 抛出 `AttributeError`，导致购买失败；已用精确 head 代码在内存中复现。新增测试使用字符串，掩盖了类型错误。
+- [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:148`：HWID 比较未排除 `device_identity_collisions` 中的已知碰撞值。面板刻意保留这些设备记录，但禁止用于身份关联；当前查询会将使用碰撞 HWID 的不同用户误判为关联账号并拒绝交易。
+tokens used
+52,810
+VERDICT: changes
+- [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:137`：同 IP 检查读取废弃的 `last_login_ip`；现有隐私守卫要求该列保持 NULL，因此正常数据下永远不会命中。应使用获准的有效关联数据源。
+- [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:140`：该列实际为 `bigint`，非零值会使 `.strip()` 抛出 `AttributeError`，导致购买失败；已用精确 head 代码在内存中复现。新增测试使用字符串，掩盖了类型错误。
+- [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:148`：HWID 比较未排除 `device_identity_collisions` 中的已知碰撞值。面板刻意保留这些设备记录，但禁止用于身份关联；当前查询会将使用碰撞 HWID 的不同用户误判为关联账号并拒绝交易。

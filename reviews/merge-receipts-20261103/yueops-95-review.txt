@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P1] `scripts/subscribe-rule-catalog.json:450`：新增 Sentry 的 `AI` 预期会阻断规则镜像发布。提交内固定的广告快照匹配该域名，而 `check_routing()` 仍无条件优先判为 `REJECT`；已用精确 head 内存复现异常。它在新优先级豁免检查之前执行，导致同步脚本提前退出。应让旧校验识别模板中的优先规则，并补充覆盖完整校验调用链的回归测试。
+tokens used
+84,445
+VERDICT: changes
+
+- [P1] `scripts/subscribe-rule-catalog.json:450`：新增 Sentry 的 `AI` 预期会阻断规则镜像发布。提交内固定的广告快照匹配该域名，而 `check_routing()` 仍无条件优先判为 `REJECT`；已用精确 head 内存复现异常。它在新优先级豁免检查之前执行，导致同步脚本提前退出。应让旧校验识别模板中的优先规则，并补充覆盖完整校验调用链的回归测试。

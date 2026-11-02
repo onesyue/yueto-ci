@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P2] `services/journald/zz-yue-bastion-journal-budget.conf:12`：按文件记录的约 300 MB/天，2G 只能保留约 7 天日志，无法满足 `docs/runbook/disk-growth-watchdog-20261018.md:15` 的至少 14 天要求。每日 cleanup 同步降至 2G，会持续删除历史；“磁盘低于 75% 后恢复”仅为注释。应保留足够预算，或先降低日志写入量并验证保留期。
+tokens used
+34,569
+VERDICT: changes
+- [P2] `services/journald/zz-yue-bastion-journal-budget.conf:12`：按文件记录的约 300 MB/天，2G 只能保留约 7 天日志，无法满足 `docs/runbook/disk-growth-watchdog-20261018.md:15` 的至少 14 天要求。每日 cleanup 同步降至 2G，会持续删除历史；“磁盘低于 75% 后恢复”仅为注释。应保留足够预算，或先降低日志写入量并验证保留期。

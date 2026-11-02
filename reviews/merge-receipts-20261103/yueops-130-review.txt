@@ -1,0 +1,14 @@
+已审查指定 diff；精确 head 的 7 个辅助函数测试通过，未执行 PostgreSQL 集成测试。未修改文件。
+
+VERDICT: changes
+
+- [P1] `telegram-bot/yue/dao/chicken/_market.py:184`：限额检查前只锁当前挂单。不同买家并发购买同一卖家的不同挂单，可同时读到旧收入并突破每日上限；无幂等键的并发请求也能突破交易对周限额。应在检查前取得覆盖卖家及交易对的事务锁，并补并发测试。
+- [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:191`：用当前手续费率重算历史收入，而非累计实际入账积分。当天提高手续费会低估已到账收入，允许突破日限额；降低则可能误拦交易。应累计 `points_ledger` 的实际 `market_sell` 入账，或保存每笔成交净收入。
+tokens used
+73,492
+已审查指定 diff；精确 head 的 7 个辅助函数测试通过，未执行 PostgreSQL 集成测试。未修改文件。
+
+VERDICT: changes
+
+- [P1] `telegram-bot/yue/dao/chicken/_market.py:184`：限额检查前只锁当前挂单。不同买家并发购买同一卖家的不同挂单，可同时读到旧收入并突破每日上限；无幂等键的并发请求也能突破交易对周限额。应在检查前取得覆盖卖家及交易对的事务锁，并补并发测试。
+- [P2] `telegram-bot/yue/dao/chicken/_market_guard.py:191`：用当前手续费率重算历史收入，而非累计实际入账积分。当天提高手续费会低估已到账收入，允许突破日限额；降低则可能误拦交易。应累计 `points_ledger` 的实际 `market_sell` 入账，或保存每笔成交净收入。

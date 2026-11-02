@@ -1,0 +1,16 @@
+head=a8faae40ecd649e7abb35bbcf5afa273579b6685 ran_at=2026-11-02T18:37:29Z runner=box
+cmd: /workspace/lane/yo-venv/bin/python -m py_compile telegram-bot/yue/gambling/quiz_bank.py telegram-bot/yue/service/refund_connect.py telegram-bot/yue/support_core/__init__.py telegram-bot/yue/support_core/agent_tools.py telegram-bot/yue/support_core/diagnose.py telegram-bot/yue/support_core/facts.py telegram-bot/yue/support_core/policy_facts.py telegram-bot/yue/support_core/prompt.py telegram-bot/yue/support_core/stream.py telegram-bot/yue/support_core/usage_policy.py telegram-bot/yue/tools/line_health.py telegram-bot/yue/tools/orders.py tests/test_ai_cs_capabilities.py tests/test_ai_tool_allowlist_20260727.py tests/test_refund_connect_check_20261027.py tests/test_review_followups_20261027.py tests/test_support_review_mode_20261027.py  && /workspace/lane/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_ai_cs_capabilities.py tests/test_ai_tool_allowlist_20260727.py tests/test_refund_connect_check_20261027.py tests/test_review_followups_20261027.py tests/test_support_review_mode_20261027.py  && for f in telegram-bot/yue/i18n/en.json telegram-bot/yue/miniapp/src/i18n/en.json telegram-bot/yue/support_core/evals/generation_context_snapshot_20260922_corrected.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check 0c3e06e772e75c3e14e72bf6359b2e1410c5c8d5 a8faae40ecd649e7abb35bbcf5afa273579b6685
+........................................................................ [ 72%]
+...................s......s                                              [100%]
+=============================== warnings summary ===============================
+../../yo-venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /workspace/lane/yo-venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../yo-venv/lib/python3.13/site-packages/starlette/testclient.py:53
+  /workspace/lane/yo-venv/lib/python3.13/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+97 passed, 2 skipped, 2 warnings in 2.34s
+rc=0

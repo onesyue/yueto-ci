@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P1] `telegram-bot/yue/service/miniapp_gamble.py:729`: The new cap charges 800 points on an insured 1,000-point loss, but `_insurance_status()` still promises zero point loss before confirmation, and the shop advertises full coverage. Update purchase and pre-bet disclosures to explain the 200-point cap and consumption on wins, with behavioral regression coverage. Confirmed against the exact head using a read-only AST reproduction.
+tokens used
+53,841
+VERDICT: changes
+- [P1] `telegram-bot/yue/service/miniapp_gamble.py:729`: The new cap charges 800 points on an insured 1,000-point loss, but `_insurance_status()` still promises zero point loss before confirmation, and the shop advertises full coverage. Update purchase and pre-bet disclosures to explain the 200-point cap and consumption on wins, with behavioral regression coverage. Confirmed against the exact head using a read-only AST reproduction.

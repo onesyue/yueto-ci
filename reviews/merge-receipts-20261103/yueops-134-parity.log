@@ -1,0 +1,3 @@
+head=cbdea471667399a922b65e3c6fca29dc5da1fec9 ran_at=2026-11-02T17:58:35Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile telegram-bot/yue/dao/miniapp_growth.py telegram-bot/yue/dao/points.py  && git diff --check a156d661b90d43ef8e338a60fe52b287a5679be3 cbdea471667399a922b65e3c6fca29dc5da1fec9
+rc=0

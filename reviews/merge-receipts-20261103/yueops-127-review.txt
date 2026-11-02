@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P2] `web/api/status.py:829`：阈值转换仅作用于 `/summary`，但公共页面的区域卡片读取 `/public` 的 `pub.regions`（`web/static/status.html:506–522`），不使用 `sum.regions`。因此可用率为 99.934% 的降级区域仍显示“降级”，本次预期的显示修复未生效。应将规则接入实际渲染路径，并补充覆盖该路径的测试；新增的 4 个辅助函数测试虽通过，却无法发现此问题。
+tokens used
+36,755
+VERDICT: changes
+- [P2] `web/api/status.py:829`：阈值转换仅作用于 `/summary`，但公共页面的区域卡片读取 `/public` 的 `pub.regions`（`web/static/status.html:506–522`），不使用 `sum.regions`。因此可用率为 99.934% 的降级区域仍显示“降级”，本次预期的显示修复未生效。应将规则接入实际渲染路径，并补充覆盖该路径的测试；新增的 4 个辅助函数测试虽通过，却无法发现此问题。
