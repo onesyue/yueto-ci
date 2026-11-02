@@ -1,4 +1,4 @@
-# Codex review — yueops #273 @ 15b21d4d72c26d65fba9e7fe4a9eea017b362b27
+# Resolution review — yueops #273 @ 15b21d4d (with fix #282); NOT a receipt for #273
 
 Box `codex exec -s read-only`, prompt scoped to `git diff <merge-base> 15b21d4d72c26d65fba9e7fe4a9eea017b362b27`. Reviewed 2026-11-02T16:27:26Z.
 Parity: `/home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:randomly tests/test_yue_node_rollout_owner_holds_20261031.py tests/test_yue_node_skip_failed_node_20261102.py` at exact head, ran 2026-11-02T15:38:37Z, log `yueops-273.log` (sha256 970e4e5aa05854eb74eea0be84ad9d64f932cf7bfcea8e7ebc90fc00a12318c7). Scoped to the PR's changed area on the box; not the full hosted suite.
