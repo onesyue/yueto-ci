@@ -396,6 +396,72 @@
       "pr": 26,
       "reason": "Backfilled independent review of exact head f001f8058ab3102b6e688cdacf31761e40b1367b (2026-11-02T17:57:35Z). Codex review returned CHANGES: - [P2] `scripts/run-flutter-coverage.py:36`: Adding this entry to `ISOLATED` breaks execution for the frozen reviewed corpus. The unchanged plan omits it from `isolated`, so `grouped_plan()` rejects the equality check at line 88 before running tests. Preserve the frozen plan’s isolation contract separately from live-directory isolation. - [P2] `scripts/run-flutter-coverage.py:36`: Adding this entry to `ISOLATED` breaks execution for the frozen reviewed corpus. The unchanged plan omits it from `isolated`, so `grouped_plan()` rejects the equality check at line 88 before running tests. Preserve the frozen plan’s isolation contract separately from live-directory isolation.; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-ci-26-parity.log) (reviews/merge-receipts-20261103/yuelink-ci-26-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 28,
+      "reason": "Backfilled independent review of exact head 645364b40a003ad5184bb616e890fdf38bef1b4c (2026-11-02T18:01:01Z). Codex review returned CHANGES: - [P1] `test/contracts/yueboard_golden_contract_test.dart:114`：默认基线在已同步的 master 上等于 HEAD，随后第 124 行必然抛错，导致正常 `flutter test` 失败；从该状态创建分支后的首次提交也会被现有 pre-commit 测试阻断。现有测试入口未设置 `YUELINK_CONTRACT_BASELINE`，README 说明不能完成接入。应在启用强制校验前，为测试调用方接入可信基线并确保对应历史可用。 - [P1] `test/contracts/yueboard_golden_contract_test.dart:114`：默认基线在已同步的 master 上等于 HEAD，随后第 124 行必然抛错，导致正常 `flutter test` 失败；从该状态创建分支后的首次提交也会被现有 pre-commit 测试阻断。现有测试入口未设置 `YUELINK_CONTRACT_BASELINE`，README 说明不能完成接入。应在启用强制校验前，为测试调用方接入可信基线并确保对应历史可用。; exact-head box parity: FAIL/not runnable (rc=97) (reviews/merge-receipts-20261103/yuelink-28-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-28-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 29,
+      "reason": "Backfilled independent review of exact head 76777794849d97bd76827d4d5c4a65e389e19d10 (2026-11-02T18:00:50Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-29-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-29-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 30,
+      "reason": "Backfilled independent review of exact head e93b12d2f78e5658046737e31ebf1ee7854b72e2 (2026-11-02T18:00:33Z). Codex review approved; exact-head box parity: FAIL/not runnable (rc=97) (reviews/merge-receipts-20261103/yuelink-30-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-30-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 40,
+      "reason": "Backfilled independent review of exact head 457138143f802fa5cc1b39e357b1ba871ae3c999 (2026-11-02T18:00:16Z). Codex review returned CHANGES: - [P2] `test/contracts/yueboard_golden_contract_test.dart:150`：合并后的回退只验证最后一次 manifest 修改。先提交历史绑定重写，再提交 manifest 的纯格式修改并刷新校验和，第二次提交的父节点就成为已被重写的基线；递归调用因显式设置 baseline 不再追溯，检查会通过。应追溯到可信历史锚点，并补充此两次提交的回归测试。 - [P2] `test/contracts/yueboard_golden_contract_test.dart:150`：合并后的回退只验证最后一次 manifest 修改。先提交历史绑定重写，再提交 manifest 的纯格式修改并刷新校验和，第二次提交的父节点就成为已被重写的基线；递归调用因显式设置 baseline 不再追溯，检查会通过。应追溯到可信历史锚点，并补充此两次提交的回归测试。; exact-head box parity: FAIL/not runnable (rc=97) (reviews/merge-receipts-20261103/yuelink-40-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-40-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 41,
+      "reason": "Backfilled independent review of exact head 1bb50f6cbab3ca4038170702a61f1fe2dbab85b4 (2026-11-02T18:00:03Z). Codex review returned CHANGES: - [P2] `test/contracts/yueboard_golden_contract_test.dart:150`：合并后回退只校验最后一次 manifest 变更，其父提交通过显式 baseline 分支直接受信。若提交 A 改写已发布绑定，提交 B 再追加合法版本，合并后默认检查会通过，遗漏 A 的历史改写；原逻辑会拒绝该情况。应验证历史链至可信锚点，并增加“改写后再发布一版”的回归测试。 - [P2] `test/contracts/yueboard_golden_contract_test.dart:150`：合并后回退只校验最后一次 manifest 变更，其父提交通过显式 baseline 分支直接受信。若提交 A 改写已发布绑定，提交 B 再追加合法版本，合并后默认检查会通过，遗漏 A 的历史改写；原逻辑会拒绝该情况。应验证历史链至可信锚点，并增加“改写后再发布一版”的回归测试。; exact-head box parity: FAIL/not runnable (rc=97) (reviews/merge-receipts-20261103/yuelink-41-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-41-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 42,
+      "reason": "Backfilled independent review of exact head 94d7cf470694f51c9611574b52fe4b34fc6698cd (2026-11-02T17:59:51Z). Codex review approved; exact-head box parity: FAIL/not runnable (rc=97) (reviews/merge-receipts-20261103/yuelink-42-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-42-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 43,
+      "reason": "Backfilled independent review of exact head ab7e24f3fb61c8928246efd5218bdce1258e3058 (2026-11-02T18:00:00Z). Codex review approved; exact-head box parity: FAIL/not runnable (rc=97) (reviews/merge-receipts-20261103/yuelink-43-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-43-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 45,
+      "reason": "Backfilled independent review of exact head 07465b5e57346bc144dce7f692e393b69bb3e2f2 (2026-11-02T17:59:29Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-45-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-45-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 46,
+      "reason": "Backfilled independent review of exact head ca8da99b941c67114d7262704cdfe8dd5079a53b (2026-11-02T17:59:04Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yuelink-46-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-46-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 47,
+      "reason": "Backfilled independent review of exact head 025602d6cd959f0e0a78e2a63e3c0435be11b56b (2026-11-02T17:58:54Z). Codex review approved; exact-head box parity: FAIL/not runnable (rc=97) (reviews/merge-receipts-20261103/yuelink-47-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yuelink-47-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 49,
+      "reason": "Backfilled independent review of exact head 133421aaaf3a78686c0b3e47859a777889d2812e (2026-11-02T17:58:24Z). Codex review approved; exact-head box parity: FAIL/not runnable (rc=97) (reviews/merge-receipts-20261103/yuelink-49-parity.log) (reviews/merge-receipts-20261103/yuelink-49-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     }
   ]
 }

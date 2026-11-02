@@ -1,0 +1,4 @@
+head=025602d6cd959f0e0a78e2a63e3c0435be11b56b ran_at=2026-11-02T17:58:10Z runner=box
+cmd: for f in assets/licenses/native/manifest.json docs/governance/mihomo-fork-ledger.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check ff4c04776c2c840dcb0ddb1df68df8f6f1811592 025602d6cd959f0e0a78e2a63e3c0435be11b56b
+NOTE: Dart sources changed; no Flutter toolchain on box, Dart not verified
+rc=97

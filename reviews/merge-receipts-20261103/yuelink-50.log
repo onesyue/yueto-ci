@@ -1,0 +1,3 @@
+head=b7e981366daa6ec17d9ccc2a1456205896a936c6 ran_at=2026-11-02T17:57:40Z runner=box
+cmd: python3 -c 'import sys,yaml;[list(yaml.safe_load_all(open(f))) for f in sys.argv[1:]]' pubspec.yaml  && git diff --check b539d0f9407c86241df7035ef206425dc4f12fb2 b7e981366daa6ec17d9ccc2a1456205896a936c6
+rc=0

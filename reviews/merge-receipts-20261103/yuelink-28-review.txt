@@ -1,0 +1,10 @@
+已审查指定 diff；包校验和、内容摘要及旧版历史绑定一致。未修改文件；环境无 Flutter/Dart，未运行测试。
+
+VERDICT: changes
+- [P1] `test/contracts/yueboard_golden_contract_test.dart:114`：默认基线在已同步的 master 上等于 HEAD，随后第 124 行必然抛错，导致正常 `flutter test` 失败；从该状态创建分支后的首次提交也会被现有 pre-commit 测试阻断。现有测试入口未设置 `YUELINK_CONTRACT_BASELINE`，README 说明不能完成接入。应在启用强制校验前，为测试调用方接入可信基线并确保对应历史可用。
+tokens used
+35,105
+已审查指定 diff；包校验和、内容摘要及旧版历史绑定一致。未修改文件；环境无 Flutter/Dart，未运行测试。
+
+VERDICT: changes
+- [P1] `test/contracts/yueboard_golden_contract_test.dart:114`：默认基线在已同步的 master 上等于 HEAD，随后第 124 行必然抛错，导致正常 `flutter test` 失败；从该状态创建分支后的首次提交也会被现有 pre-commit 测试阻断。现有测试入口未设置 `YUELINK_CONTRACT_BASELINE`，README 说明不能完成接入。应在启用强制校验前，为测试调用方接入可信基线并确保对应历史可用。

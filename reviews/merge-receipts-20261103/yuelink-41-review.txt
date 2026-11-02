@@ -1,0 +1,10 @@
+仅审查指定 diff，未修改文件；未运行会创建临时仓库的测试。
+
+VERDICT: changes
+- [P2] `test/contracts/yueboard_golden_contract_test.dart:150`：合并后回退只校验最后一次 manifest 变更，其父提交通过显式 baseline 分支直接受信。若提交 A 改写已发布绑定，提交 B 再追加合法版本，合并后默认检查会通过，遗漏 A 的历史改写；原逻辑会拒绝该情况。应验证历史链至可信锚点，并增加“改写后再发布一版”的回归测试。
+tokens used
+37,847
+仅审查指定 diff，未修改文件；未运行会创建临时仓库的测试。
+
+VERDICT: changes
+- [P2] `test/contracts/yueboard_golden_contract_test.dart:150`：合并后回退只校验最后一次 manifest 变更，其父提交通过显式 baseline 分支直接受信。若提交 A 改写已发布绑定，提交 B 再追加合法版本，合并后默认检查会通过，遗漏 A 的历史改写；原逻辑会拒绝该情况。应验证历史链至可信锚点，并增加“改写后再发布一版”的回归测试。

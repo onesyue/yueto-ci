@@ -1,0 +1,6 @@
+VERDICT: approve
+- `core/mihomo/adapter/adapter.go:273–274`: Only logging severity changes; probe results and error handling remain unchanged. No correctness, security, secret-exposure, or test regressions found.
+tokens used
+22,385
+VERDICT: approve
+- `core/mihomo/adapter/adapter.go:273–274`: Only logging severity changes; probe results and error handling remain unchanged. No correctness, security, secret-exposure, or test regressions found.
