@@ -1,0 +1,13 @@
+repo=yueboard ref=ce786dc74e26ae9c19b65737bf84b4814de90db5 workers=6 logs=/tmp/yt-premerge-_4aym24o
+go-vet: PASS (log: /tmp/yt-premerge-_4aym24o/go-vet.log)
+go-test: PASS (log: /tmp/yt-premerge-_4aym24o/go-test.log)
+migrations: PASS (log: /tmp/yt-premerge-_4aym24o/migrations.log)
+migration-allocation: FAIL (log: /tmp/yt-premerge-_4aym24o/migration-allocation.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+go-vet                       PASS     0
+go-test                      PASS     0
+migrations                   PASS     0
+migration-allocation         FAIL     1
+Private logs: /tmp/yt-premerge-_4aym24o
