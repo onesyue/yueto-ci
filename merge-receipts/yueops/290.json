@@ -2,22 +2,22 @@
   "schema": 1,
   "repo": "yueops",
   "pr": 290,
-  "head": "13a46ef7960a6a1c76d7711d68be0988e729f71e",
-  "backfilled": false,
+  "head": "85dc451834084c44694c753a25dd210edab1392f",
+  "backfilled": true,
   "review": {
     "tool": "codex",
     "verdict": "approve",
-    "reviewed_head": "13a46ef7960a6a1c76d7711d68be0988e729f71e",
-    "artifact": "reviews/merge-receipts-20261103/yueops-290.md",
+    "reviewed_head": "85dc451834084c44694c753a25dd210edab1392f",
+    "artifact": "reviews/merge-receipts-20261103/yueops-290-review-r2.md",
     "reviewer": "codex",
-    "reviewed_at": "2026-11-02T22:13:57Z"
+    "reviewed_at": "2026-11-02T23:11:07Z"
   },
   "parity": {
     "result": "pass",
-    "head": "13a46ef7960a6a1c76d7711d68be0988e729f71e",
-    "command": "json/sha256 validation + admission-precheck (temp pin) + pytest -k 'hosts or ip_literal or registry' on merge with master",
-    "log_sha256": "10d088c4ebfffc2edfb31d55297e54f9fbd8a673c078935f4ad9ac87a5c90e13",
-    "ran_at": "2026-11-02T22:34:37Z",
+    "head": "85dc451834084c44694c753a25dd210edab1392f",
+    "command": "clean git worktree at merged head, CI-equivalent venv (python3.13): python3 -c json.load(config/ip-literals-baseline.json) && TZ=UTC python3 -m pytest -q -p no:cacheprovider tests -k 'hosts or ip_literal or registry' && echo PARITY_COMMAND_OK",
+    "log_sha256": "7a83b71e81e421ec4605ca8ca42af17076c52270f5a8a8b74481d2ab1ad86758",
+    "ran_at": "2026-11-02T23:10:20Z",
     "runner": "box"
   }
 }
