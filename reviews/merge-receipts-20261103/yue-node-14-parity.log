@@ -1,0 +1,5 @@
+head=e73a069f3071043b8a24339a7ed450ecb67bf634 ran_at=2026-11-02T17:42:04Z runner=box
+cmd: go vet -tags integration ./internal/reportoutbox ./internal/service  && go test ./internal/reportoutbox ./internal/service  && git diff --check e4ae62a829c33104e4411d141e2f9d3d2c169bb1 e73a069f3071043b8a24339a7ed450ecb67bf634
+ok  	github.com/onesyue/yue-node/internal/reportoutbox	0.688s
+ok  	github.com/onesyue/yue-node/internal/service	7.039s
+rc=0

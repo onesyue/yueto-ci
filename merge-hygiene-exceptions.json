@@ -300,6 +300,60 @@
       "pr": 46,
       "reason": "Backfilled independent review of exact head bded5c71eebae72ea07c63fe4c8c79351f7b1a4d (2026-11-02T17:42:03Z). Codex review returned CHANGES: - [P1] `scripts/ship-sshd-authority.py:102`：脱敏依赖关键词和地址格式，SQL 错误中未标记的敏感值（例如类型转换失败回显的输入）会原样进入 receipt 和 stderr。纯内存复现已确认；应采用允许列表，仅保留安全错误模板。 - [P2] `scripts/ship-sshd-authority.py:239`：原生 CLI 将拒绝 JSON 写入 stderr，这里却解析 stdout，导致实际失败详情被丢弃。新增测试同样模拟了错误的输出通道；应解析 stderr 中的结构化拒绝，并补充对应测试。 - [P1] `scripts/ship-sshd-authority.py:102`：脱敏依赖关键词和地址格式，SQL 错误中未标记的敏感值（例如类型转换失败回显的输入）会原样进入 receipt 和 stderr。纯内存复现已确认；应采用允许列表，仅保留安全错误模板。 - [P2] `scripts/ship-sshd-authority.py:239`：原生 CLI 将拒绝 JSON 写入 stderr，这里却解析 stdout，导致实际失败详情被丢弃。新增测试同样模拟了错误的输出通道；应解析 stderr 中的结构化拒绝，并补充对应测试。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-46-parity.log) (reviews/merge-receipts-20261103/yueto-46-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yue-node",
+      "pr": 7,
+      "reason": "Backfilled independent review of exact head 6868ba43951d82efa8a7ea46d0e74e117f657808 (2026-11-02T17:46:05Z). Codex review returned CHANGES: - [P1] `internal/kernel/xray/testdata/fleet-acl/route-xray-ai.json:587`：新增快照包含非占位 VLESS 认证 UUID，并同时提供公网端点和 Reality 连接参数，暴露了完整客户端连接配置；未验证凭据是否仍有效。请使用合成凭据及文档地址，并同步更新摘要和复制流程，防止再次引入真实认证信息。 - [P1] `internal/kernel/xray/testdata/fleet-acl/route-xray-ai.json:587`：新增快照包含非占位 VLESS 认证 UUID，并同时提供公网端点和 Reality 连接参数，暴露了完整客户端连接配置；未验证凭据是否仍有效。请使用合成凭据及文档地址，并同步更新摘要和复制流程，防止再次引入真实认证信息。; exact-head box parity: pass (reviews/merge-receipts-20261103/yue-node-7-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yue-node-7-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yue-node",
+      "pr": 8,
+      "reason": "Backfilled independent review of exact head 9cd94eccd1aea24a949378d33d6e8ad9491a1314 (2026-11-02T17:44:33Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yue-node-8-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yue-node-8-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yue-node",
+      "pr": 10,
+      "reason": "Backfilled independent review of exact head 2d7e265899dcd203bfd4061d2ea7938182be3ff6 (2026-11-02T17:44:11Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yue-node-10-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yue-node-10-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yue-node",
+      "pr": 12,
+      "reason": "Backfilled independent review of exact head ceb82d5aa66859255975784770c1e94a849b9a95 (2026-11-02T17:44:35Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yue-node-12-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yue-node-12-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yue-node",
+      "pr": 13,
+      "reason": "Backfilled independent review of exact head f521e41f655373dd8d681ed6d4d98395d0399c95 (2026-11-02T17:43:43Z). Codex review returned CHANGES: - [P2] `internal/gateretry/retry.go:387`：在完整 Git 输出中匹配裸字符串 `401`、`403`、`404`，会将正常进度（如 `Receiving objects: 40% (404/1000)`）误判为永久错误。随后即使发生超时或连接重置，也会直接退出而不重试。应限定匹配实际错误诊断，并补充“含这些数字的进度输出后发生传输失败”的回归测试。 - [P2] `internal/gateretry/retry.go:387`：在完整 Git 输出中匹配裸字符串 `401`、`403`、`404`，会将正常进度（如 `Receiving objects: 40% (404/1000)`）误判为永久错误。随后即使发生超时或连接重置，也会直接退出而不重试。应限定匹配实际错误诊断，并补充“含这些数字的进度输出后发生传输失败”的回归测试。; exact-head box parity: pass (reviews/merge-receipts-20261103/yue-node-13-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yue-node-13-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yue-node",
+      "pr": 14,
+      "reason": "Backfilled independent review of exact head e73a069f3071043b8a24339a7ed450ecb67bf634 (2026-11-02T17:43:09Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yue-node-14-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yue-node-14-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yue-node",
+      "pr": 15,
+      "reason": "Backfilled independent review of exact head 5a186a1f103654e2a86d134aa551745f14703f6f (2026-11-02T17:43:36Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yue-node-15-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yue-node-15-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yue-node",
+      "pr": 17,
+      "reason": "Backfilled independent review of exact head 273871006e050fabb1fbd172cc5cb1e251404c8c (2026-11-02T17:42:08Z). Codex review returned CHANGES: - [P2] README.md:43–45（CLAUDE.md:142 同样遗漏）：`ship.sh yue-node --from-promoted` 仅发布签名 desired state，不执行舰队滚动。新增说明却将它称为部署，并直接进入 route-sync，可能导致节点仍运行旧镜像或后续镜像门禁失败。应明确要求等待发布完成，再从签名 YueOps 发布根执行 `rollout-yue-node-image.sh`，完成后才进入 route-sync。 - [P2] README.md:43–45（CLAUDE.md:142 同样遗漏）：`ship.sh yue-node --from-promoted` 仅发布签名 desired state，不执行舰队滚动。新增说明却将它称为部署，并直接进入 route-sync，可能导致节点仍运行旧镜像或后续镜像门禁失败。应明确要求等待发布完成，再从签名 YueOps 发布根执行 `rollout-yue-node-image.sh`，完成后才进入 route-sync。; exact-head box parity: pass (reviews/merge-receipts-20261103/yue-node-17-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yue-node-17-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yue-node",
+      "pr": 20,
+      "reason": "Backfilled independent review of exact head 879c02c0974eb12b12ceb14faac3bd5aa6692d95 (2026-11-02T17:42:01Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yue-node-20-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yue-node-20-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     }
   ]
 }

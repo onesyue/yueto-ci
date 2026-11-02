@@ -1,0 +1,4 @@
+head=879c02c0974eb12b12ceb14faac3bd5aa6692d95 ran_at=2026-11-02T17:41:24Z runner=box
+cmd: go vet -tags integration ./scripts  && go test ./scripts  && git diff --check c602a3f8898fcd25a6a94c5c0f61c918eaf620f6 879c02c0974eb12b12ceb14faac3bd5aa6692d95
+ok  	github.com/onesyue/yue-node/scripts	0.922s
+rc=0

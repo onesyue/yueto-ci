@@ -1,0 +1,12 @@
+已审阅指定 diff；未修改文件或运行测试。`git diff --check` 通过。
+
+VERDICT: changes
+
+- [P2] `internal/gateretry/retry.go:387`：在完整 Git 输出中匹配裸字符串 `401`、`403`、`404`，会将正常进度（如 `Receiving objects: 40% (404/1000)`）误判为永久错误。随后即使发生超时或连接重置，也会直接退出而不重试。应限定匹配实际错误诊断，并补充“含这些数字的进度输出后发生传输失败”的回归测试。
+tokens used
+46,468
+已审阅指定 diff；未修改文件或运行测试。`git diff --check` 通过。
+
+VERDICT: changes
+
+- [P2] `internal/gateretry/retry.go:387`：在完整 Git 输出中匹配裸字符串 `401`、`403`、`404`，会将正常进度（如 `Receiving objects: 40% (404/1000)`）误判为永久错误。随后即使发生超时或连接重置，也会直接退出而不重试。应限定匹配实际错误诊断，并补充“含这些数字的进度输出后发生传输失败”的回归测试。
