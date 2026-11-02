@@ -2269,6 +2269,13 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # Unique matrix output keys retain successful rows when a sibling fails.
+    outputs:
+      yue-node: ${{ steps.published.outputs.yue-node }}
+      yueops-web: ${{ steps.published.outputs.yueops-web }}
+      checkin-api: ${{ steps.published.outputs.checkin-api }}
+      yue-bot: ${{ steps.published.outputs.yue-bot }}
+      yueboard: ${{ steps.published.outputs.yueboard }}
     strategy:
       # Deliberately not fail-fast: publish only starts after every gate is
       # green, and interrupting a sibling mid-retag would leave sha-*/latest
@@ -2669,19 +2676,31 @@ jobs:
             "${promotion_tag_args[@]}" \
             "${IMAGE}@${DIGEST}"
 
+      - name: Record successful image publication
+        id: published
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: echo "${SERVICE}=success" >> "$GITHUB_OUTPUT"
+
   validation-alert:
     # Asynchronous validation (B1, 2026-10-30): a red validate or
     # validation-evidence no longer cancels the run or blocks publish, because
     # cancelling mid-retag could leave sha-*/latest half-moved. Instead it
     # raises a visible alert issue on this public repo. Runs no source code.
-    needs: [plan, validate, validation-evidence]
+    # Image names (yue-bot, yueops-web, checkin-api, etc.) are matrix rows
+    # of publish, not separate job IDs. Wait for their publication result.
+    needs: [plan, validate, validation-evidence, publish]
     if: failure()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       issues: write
     steps:
+      - name: Report rejected admission without an issue
+        if: needs.plan.result != 'success' || (needs.publish.result != 'success' && !contains(toJSON(needs.publish.outputs), '"success"'))
+        run: echo "::notice::admission rejected, nothing published"
       - name: Open or update the single async validation alert
+        if: needs.plan.result == 'success' && (needs.publish.result == 'success' || contains(toJSON(needs.publish.outputs), '"success"')) && (needs.validate.result == 'failure' || needs.validation-evidence.result == 'failure')
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
