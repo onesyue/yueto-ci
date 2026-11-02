@@ -1,0 +1,6 @@
+head=f521e41f655373dd8d681ed6d4d98395d0399c95 ran_at=2026-11-02T17:42:08Z runner=box
+cmd: go vet -tags integration ./internal/gateretry ./internal/toolchain ./scripts  && go test ./internal/gateretry ./internal/toolchain ./scripts  && for f in scripts/verify-fork-tags.sh ; do bash -n $f || exit 1; done && shellcheck -S error scripts/verify-fork-tags.sh  && git diff --check fc222375b8563fcb201aae73e0ec0c74a679fb8e f521e41f655373dd8d681ed6d4d98395d0399c95
+ok  	github.com/onesyue/yue-node/internal/gateretry	0.489s
+ok  	github.com/onesyue/yue-node/internal/toolchain	13.609s
+ok  	github.com/onesyue/yue-node/scripts	4.568s
+rc=0

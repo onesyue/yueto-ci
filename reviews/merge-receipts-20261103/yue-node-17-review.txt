@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P2] README.md:43–45（CLAUDE.md:142 同样遗漏）：`ship.sh yue-node --from-promoted` 仅发布签名 desired state，不执行舰队滚动。新增说明却将它称为部署，并直接进入 route-sync，可能导致节点仍运行旧镜像或后续镜像门禁失败。应明确要求等待发布完成，再从签名 YueOps 发布根执行 `rollout-yue-node-image.sh`，完成后才进入 route-sync。
+tokens used
+30,749
+VERDICT: changes
+
+- [P2] README.md:43–45（CLAUDE.md:142 同样遗漏）：`ship.sh yue-node --from-promoted` 仅发布签名 desired state，不执行舰队滚动。新增说明却将它称为部署，并直接进入 route-sync，可能导致节点仍运行旧镜像或后续镜像门禁失败。应明确要求等待发布完成，再从签名 YueOps 发布根执行 `rollout-yue-node-image.sh`，完成后才进入 route-sync。

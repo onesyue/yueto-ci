@@ -1,0 +1,7 @@
+head=ceb82d5aa66859255975784770c1e94a849b9a95 ran_at=2026-11-02T17:42:13Z runner=box
+cmd: go vet -tags integration ./cmd/yue-node ./internal/kernel/hysteria ./internal/kernel/xray ./internal/service  && go test ./cmd/yue-node ./internal/kernel/hysteria ./internal/kernel/xray ./internal/service  && git diff --check e4ae62a829c33104e4411d141e2f9d3d2c169bb1 ceb82d5aa66859255975784770c1e94a849b9a95
+ok  	github.com/onesyue/yue-node/cmd/yue-node	1.817s
+ok  	github.com/onesyue/yue-node/internal/kernel/hysteria	8.981s
+ok  	github.com/onesyue/yue-node/internal/kernel/xray	31.818s
+ok  	github.com/onesyue/yue-node/internal/service	6.709s
+rc=0

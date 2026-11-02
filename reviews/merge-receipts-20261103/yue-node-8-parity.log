@@ -1,0 +1,6 @@
+head=9cd94eccd1aea24a949378d33d6e8ad9491a1314 ran_at=2026-11-02T17:43:38Z runner=box
+cmd: go vet -tags integration ./internal/controlplane ./internal/kernel/hysteria ./internal/tracker  && go test ./internal/controlplane ./internal/kernel/hysteria ./internal/tracker  && git diff --check e4ae62a829c33104e4411d141e2f9d3d2c169bb1 9cd94eccd1aea24a949378d33d6e8ad9491a1314
+ok  	github.com/onesyue/yue-node/internal/controlplane	2.783s
+ok  	github.com/onesyue/yue-node/internal/kernel/hysteria	9.247s
+ok  	github.com/onesyue/yue-node/internal/tracker	0.011s
+rc=0

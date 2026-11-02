@@ -1,0 +1,7 @@
+head=5a186a1f103654e2a86d134aa551745f14703f6f ran_at=2026-11-02T17:41:46Z runner=box
+cmd: go vet -tags integration ./internal/egress6 ./internal/fairshare ./internal/kernel/hysteria ./internal/kernel/xray  && go test ./internal/egress6 ./internal/fairshare ./internal/kernel/hysteria ./internal/kernel/xray  && git diff --check e4ae62a829c33104e4411d141e2f9d3d2c169bb1 5a186a1f103654e2a86d134aa551745f14703f6f
+ok  	github.com/onesyue/yue-node/internal/egress6	0.293s
+ok  	github.com/onesyue/yue-node/internal/fairshare	2.399s
+ok  	github.com/onesyue/yue-node/internal/kernel/hysteria	10.032s
+ok  	github.com/onesyue/yue-node/internal/kernel/xray	44.636s
+rc=0

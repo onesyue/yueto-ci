@@ -1,0 +1,12 @@
+已审查指定两提交间的完整差异及相关调用路径，未发现正确性、安全、秘密泄露、测试弱化或回归问题。`git diff --check` 通过；未运行测试，未修改文件。
+
+VERDICT: approve
+- `internal/service/relay_expiry.go:39`：提取常量保持原有一秒宽限期，运行行为不变。
+- `internal/service/relay_expiry_test.go:90`：非阻塞通知配合原子计数保留重复应用检测，观察窗口由 1.5 秒延长至 2 秒。
+tokens used
+19,657
+已审查指定两提交间的完整差异及相关调用路径，未发现正确性、安全、秘密泄露、测试弱化或回归问题。`git diff --check` 通过；未运行测试，未修改文件。
+
+VERDICT: approve
+- `internal/service/relay_expiry.go:39`：提取常量保持原有一秒宽限期，运行行为不变。
+- `internal/service/relay_expiry_test.go:90`：非阻塞通知配合原子计数保留重复应用检测，观察窗口由 1.5 秒延长至 2 秒。

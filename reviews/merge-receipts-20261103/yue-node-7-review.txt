@@ -1,0 +1,10 @@
+已完成指定 diff 的只读审查及 JSON 摘要核验；未运行 Go 测试。
+
+VERDICT: changes
+- [P1] `internal/kernel/xray/testdata/fleet-acl/route-xray-ai.json:587`：新增快照包含非占位 VLESS 认证 UUID，并同时提供公网端点和 Reality 连接参数，暴露了完整客户端连接配置；未验证凭据是否仍有效。请使用合成凭据及文档地址，并同步更新摘要和复制流程，防止再次引入真实认证信息。
+tokens used
+46,436
+已完成指定 diff 的只读审查及 JSON 摘要核验；未运行 Go 测试。
+
+VERDICT: changes
+- [P1] `internal/kernel/xray/testdata/fleet-acl/route-xray-ai.json:587`：新增快照包含非占位 VLESS 认证 UUID，并同时提供公网端点和 Reality 连接参数，暴露了完整客户端连接配置；未验证凭据是否仍有效。请使用合成凭据及文档地址，并同步更新摘要和复制流程，防止再次引入真实认证信息。

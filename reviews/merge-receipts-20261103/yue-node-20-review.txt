@@ -1,0 +1,12 @@
+已审查指定提交范围，未发现正确性、安全、秘密泄露或测试弱化问题。`git diff --check` 通过。遵守只读要求，未运行会生成文件的测试；Darwin 行为未经实测。
+
+VERDICT: approve
+- `scripts/verify-fork-tags_test.go:57`：overlay 保留模块导入身份，避免生成源码污染检出目录。
+- `scripts/verify-fork-tags_test.go:262`：非阻塞 FIFO 支持关闭时中断读取；原有重试、签名和摘要验证断言保留。
+tokens used
+26,297
+已审查指定提交范围，未发现正确性、安全、秘密泄露或测试弱化问题。`git diff --check` 通过。遵守只读要求，未运行会生成文件的测试；Darwin 行为未经实测。
+
+VERDICT: approve
+- `scripts/verify-fork-tags_test.go:57`：overlay 保留模块导入身份，避免生成源码污染检出目录。
+- `scripts/verify-fork-tags_test.go:262`：非阻塞 FIFO 支持关闭时中断读取；原有重试、签名和摘要验证断言保留。

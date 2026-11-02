@@ -1,0 +1,4 @@
+head=2d7e265899dcd203bfd4061d2ea7938182be3ff6 ran_at=2026-11-02T17:43:13Z runner=box
+cmd: go vet -tags integration ./internal/service  && go test ./internal/service  && git diff --check e4ae62a829c33104e4411d141e2f9d3d2c169bb1 2d7e265899dcd203bfd4061d2ea7938182be3ff6
+ok  	github.com/onesyue/yue-node/internal/service	6.521s
+rc=0

@@ -1,0 +1,4 @@
+head=6868ba43951d82efa8a7ea46d0e74e117f657808 ran_at=2026-11-02T17:43:46Z runner=box
+cmd: go vet -tags integration ./internal/kernel/xray  && go test ./internal/kernel/xray  && for f in internal/kernel/xray/testdata/fleet-acl/fleet-acl-verdicts.json internal/kernel/xray/testdata/fleet-acl/route-xray-ai.json internal/kernel/xray/testdata/fleet-acl/route-xray.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check e4ae62a829c33104e4411d141e2f9d3d2c169bb1 6868ba43951d82efa8a7ea46d0e74e117f657808
+ok  	github.com/onesyue/yue-node/internal/kernel/xray	31.866s
+rc=0
