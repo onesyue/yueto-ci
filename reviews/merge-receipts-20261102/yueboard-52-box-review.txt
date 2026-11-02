@@ -1,0 +1,2971 @@
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /home/box/Projects/yueto/yueboard
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a19cb1-c3ef-7ca0-bc12-b164083542b8
+--------
+user
+You are an independent code reviewer for onesyue/yueboard PR #52 at exact head 4cef3672de11336d76d739728ad482aecf99558a. Review ONLY the change in 'git diff e87cfacdb522fabbf56db7114753d88807b6a8a8 4cef3672de11336d76d739728ad482aecf99558a' (use git show/diff; do not modify anything). Look for correctness bugs, security problems, secret exposure, weakened tests, and regressions. Do not print any secret values. End with a block exactly of the form:
+VERDICT: approve   (or VERDICT: changes)
+followed by concise bullet findings with file:line.
+codex
+I’ll read the repository guidance, then review the exact diff and relevant code without modifying anything.
+exec
+/bin/bash -lc 'pwd && cat CLAUDE.md && cat ../AGENTS.md && cat ../CLAUDE.md' in /home/box/Projects/yueto/yueboard
+ succeeded in 0ms:
+/home/box/Projects/yueto/yueboard
+# CLAUDE.md
+
+Guidance for engineering agents working in `onesyue/yueboard`, an independent
+repository in the Yue.to workspace. Read `../CLAUDE.md` for workspace rules.
+Commit and push this repository separately.
+
+## Purpose and compatibility
+
+**Native Go control plane for Yue.to.** The strangler rewrite originated from
+Xboard, but production Xboard was retired on 2026-07-23. There is no PHP process,
+container or fallback. PostgreSQL uses native names such as `users`, `orders`,
+`plugins` and `settings`. Released clients retain the compatible HTTP wire
+contract in `docs/api-contract.md`.
+
+1. **Preserve client contracts.** The v1 envelope remains
+   `{status,message,data,error}` through `internal/platform/apiresp` where that
+   contract applies. Authentication rejection must be HTTP 403 with non-HTML
+   JSON: clients use non-HTML 401/403 responses to detect logout. Check the
+   contract's endpoint-specific exceptions before changing responses.
+2. **Never restore the retired panel fallback.** `internal/platform/fallback`
+   was deleted and legacy fallback environment variables are unsupported.
+   Unmatched routes use the anti-GFW decoy/404 behavior. Implement missing
+   business endpoints natively with contract coverage.
+
+## Commands
+
+```sh
+go run ./cmd/yueboard          # :8080; health-only mode without DATABASE_URL
+go build ./... && go vet ./...
+go test ./...
+go test ./internal/modules/emby/...
+go test ./internal/modules/emby/ -run TestToUsername -v
+gofmt -w <file>
+```
+
+## PostgreSQL integration tests
+
+Integration tests use in-process `httptest` servers and a real PostgreSQL schema
+fixture derived from production `pg_dump`. They catch execution-only errors such
+as ambiguous columns, unused INSERT parameters and pgx fatal-close on mismatched
+types. Fixtures include PG17/18 `transaction_timeout`, requiring PostgreSQL 17+.
+The actual CI environment uses PostgreSQL 18.
+
+```sh
+YUEBOARD_TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5432/yueboard_test \
+  go test -tags integration -v ./test/integration/...
+```
+
+**That command does not cover the module integration suites.** `nodesync`,
+`emby`, `handoff`, `deviceidentity`, `user`, `referencelock`, `order`, `db` and
+`nativeproto` require their own coverage. Missing DSNs can call `t.Skip` while
+`go test` still prints `ok`; inspect actual verbose run/pass/skip events.
+`TestClonedReportOutboxCannotDoubleBill` and the billing-report cases are among
+the critical tests outside `./test/integration/`.
+
+The public central runner owns the current sequencing. Run domain fixtures on
+a fresh PostgreSQL service, the clean-PG gate in an independent fresh database
+of the same cluster, module suites serially, then full db/nativeproto migrations
+and production-scale cases. Earlier migrations can create roles that hide a
+fixture-initialization defect. `deviceidentity` and `nodesync` rebuild `public`
+and must follow consumers of the full fixture.
+
+For a targeted module run against an explicitly disposable database:
+
+```sh
+YUEBOARD_TRAFFIC_TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5432/yueboard_test \
+YUEBOARD_TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5432/yueboard_test \
+YUEBOARD_EMAILVERIFY_TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5432/yueboard_test \
+YUEBOARD_TEST_FIXTURES=$PWD/test/fixtures \
+YUEBOARD_MIGRATION_TEST_ALLOW_RESET=YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE \
+  go test -count=1 -p 1 -tags integration -v \
+    ./internal/modules/user ./internal/platform/referencelock \
+    ./internal/modules/order ./internal/modules/emby ./internal/modules/handoff \
+    ./internal/platform/deviceidentity ./internal/modules/nodesync
+```
+
+`user` and `referencelock` were missing from all commands before 2026-09-21.
+`nativeproto` uses the migration DSN. `internal/platform/toolchain`'s
+`TestEveryIntegrationPackageRunsInCI` detects integration packages omitted from
+CI orchestration. A successful package line alone is insufficient.
+
+Migration tests need separate explicit inputs:
+
+```sh
+YUEBOARD_MIGRATION_TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5432/yueboard_test \
+YUEBOARD_MIGRATION_TEST_ALLOW_RESET=YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE \
+YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE=1 \
+  go test -count=1 -tags integration -v ./internal/platform/db ./internal/platform/nativeproto
+```
+
+These tests are destructive (`DROP SCHEMA public CASCADE`). Use the native
+runner's ordering or a separate disposable database, never production.
+`TestNativeMigrationsProductionScaleOnPostgres` executes the complete goose
+chain from zero, including the approximately 1.1-million-row scale fixture.
+`TestNativeMigrationsOnPostgres` checks a selected chain's ACL, trigger and
+catalog semantics. An ACL migration requires updated semantic assertions, not
+just adding its filename. The 2026-08-12 `emby_launch_audit` permission failure
+exposed the cost of skipped real PostgreSQL migration tests.
+
+The shared integration account/server also shares the checkout rate limiter.
+Production defaults to ten checkouts per user per minute. `TestMain` defaults
+`YUEBOARD_CHECKOUT_RATE_LIMIT_PER_MINUTE` to `10000` before `bootHandler`, unless
+the caller sets it, to prevent unrelated later cases receiving 429. Keep the
+production default protected by `checkout_rate_limit_default_test.go`.
+`t.Setenv` inside a test cannot reconfigure a limiter already read by `order.New`.
+
+Use workspace `../scripts/run-yueboard-pg18-gauntlet.sh` when no suitable local
+PostgreSQL is running. It uses disposable `postgres:18.6-alpine`, a pool size of
+four and automatic container cleanup. Do not run heavy tests on the bastion:
+it has been CPU-steal constrained since the dated 2026-10-11 observation.
+Clean up disposable containers, binaries and accounts. Production database
+inspection remains read-only; never use it for destructive tests.
+
+## Architecture
+
+The backend is a modular monolith using chi and pgx/pgxpool, with no ORM.
+
+- `internal/modules/<mod>/`: business domains with `New(pool, st, ...)` and
+  `Routes(chi.Router)`. Do not import another business module.
+- `internal/platform/<pkg>/`: shared `db`, `auth`, `settings`, `apiresp`, `mail`,
+  `verify`, `metrics`, `antigfw`, `resource` and `apptime` infrastructure.
+- `internal/server/server.go`: composition only. Middleware order matters:
+  `antigfw.Harden` first (`Server: nginx`), then `RealIP`,
+  `antigfw.TarpitMiddleware`, RequestID, Recoverer and metrics.
+- `cmd/yueboard/main.go`: constructs `server.Deps`. Wire new modules here and
+  mirror the wiring in `test/integration/harness_test.go::bootHandler`.
+  `deps.Extra` is for `/api`; `deps.Root` is for root endpoints.
+
+User modules mount only under `/api/v1/*`, using relative paths such as
+`/user/emby` in `Routes`. `/api/v2/*` contains the admin group and subscription
+aliases, not user APIs. `TestAdminRoutesGuarded` protects that boundary after
+stale dual-prefix guidance was corrected on 2026-09-05.
+
+Admin traffic uses `/api/v2/{secure_path}/*` inside the `/api` group, never the
+root group. The production secure path exists only in settings; do not record
+it in source. Subscription delivery and node synchronization use `deps.Root`.
+For explicitly parallel development, each worker owns its package; the main
+integrator alone wires `main.go` and `harness_test.go`.
+
+## Schema and generated data access
+
+- Goose migrations live in `internal/platform/db/migrations/*.sql` and are
+  embedded. Run `yueboard migrate up|down|status`; service startup does not
+  auto-migrate. `adoptBaseline` recognizes existing `users` and stamps version
+  1 without rerunning 00001. Actual column conversion begins at 00002.
+- Named SQL in `internal/modules/<mod>/queries/` generates that module's `store/`
+  via sqlc. Never hand-edit generated code or import another module's store.
+  Shared `plugins`, `settings` and `personal_access_tokens` stores belong in
+  the corresponding platform package.
+- Unmarked migrations must expand: add tables, nullable/defaulted columns,
+  indexes, functions or grants. `DROP TABLE|COLUMN|FUNCTION`, `RENAME`,
+  `ALTER … TYPE` and `SET NOT NULL` without a default require
+  `-- +yue contract-of: NNNNN` at the Up header, with NNNNN no greater than the
+  deployed `schema-compat.txt` floor. Advance that floor only after actual
+  successful deployment. `make check-migrations`, PG18 integration and runtime
+  `migrate up` enforce the same rule. The exemption set is capped at 83.
+- `test/fixtures/schema.sql` is the shared real-DDL source for sqlc and
+  integration. Update it with column migrations. `make generate` pins sqlc;
+  `make check-generated` rejects regeneration drift. Query native nullable
+  timestamps, preserve NULL through pgtype and convert epochs at response time.
+- Keep `resource.PlanResource`, `apptime` (Asia/Shanghai), the v1 envelope and
+  403-JSON logout semantics, and anti-GFW nginx-404 behavior. These are client
+  and domain contracts, not disposable PHP migration leftovers. A future owned
+  `/api/v3` requires coordinated client/token migration, separate from schema work.
+
+## Required workspace skills
+
+Do not split this file merely to reduce its apparent size; shared procedures
+already live in the workspace `.claude/skills/` and are linked for both agents.
+
+- `pg-safety`: migrations, grants, role manifests, cross-owner reads and monetary
+  eligibility. Required privileges exceed the statement verb: DELETE predicates
+  need SELECT, and `ON CONFLICT (a,b) DO UPDATE` needs table-level SELECT.
+- `release-chain`: default-branch pushes participate in the release process.
+- `guard-authoring`: guards, assertions and contract checks must detect faults.
+- Also use `node-lifecycle`, `fleet-diagnose`, `generated-blocks` and
+  `round-closeout` when their scope applies.
+
+## Incident lessons
+
+- pgx v5 `rows.Scan` type mismatches call `rows.fatal()` and silently truncate
+  the rowset. Match real column types, including nullable values and floating
+  monetary columns. Real-schema integration is essential.
+- Plugin configuration is JSON text in `plugins.config`, not `settings`.
+  `invitealias`/`emby` use `SELECT is_enabled, config FROM plugins WHERE code=$1`
+  with a 60-second process cache. Preserve permissive legacy bool/integer forms
+  such as `true`, `1`, `"1"` and `"3"` where the existing contract requires them.
+- PHP `preg_replace` without `/u` operates on bytes; Go regexp operates on runes.
+  `emby.toUsername` uses a byte loop for compatibility. Derived keys/hashes must
+  preserve the original `config('app.key')` string, including `base64:`. Compare
+  PHP `hash_hmac` output and verify the real external-service consumer.
+- Prefix package-level identifiers within modules (`ce`, `ia`, `emby`, etc.) to
+  avoid cross-file and future package-merging collisions.
+
+## Anti-GFW behavior
+
+Read `docs/anti-gfw.md` before changing `internal/platform/antigfw`. Active
+probing motivates `Server: nginx`, nginx-404 responses for invalid unauthenticated
+subscription/node tokens, probe-IP tarpits and optional `YUEBOARD_DECOY_HTML`.
+Do not expose endpoint fingerprints such as `token is error`.
+**API requests carrying Authorization still require JSON 403 for client logout.**
+Decoy 404 applies to unauthenticated subscription/node/unmatched routes.
+
+## Canonical node contract
+
+`proto/yuenode/v1/yuenode.proto` is canonical. The Node copy is an exact mirror,
+protected by `proto/CANONICAL.sha256`, `scripts/sync-proto.sh` and Go tests.
+Change Board first, synchronize Node, run `buf generate` on both sides and
+commit proto plus generated code in each repository. Ordinary builds consume
+tracked generated code and do not require buf.
+
+`scripts/ci/proto-gate.sh` runs lint and breaking checks against
+`proto/breaking-baseline.binpb`. Additive fields/RPCs are permitted. A wire break
+requires upgrading the complete affected fleet before accepting a new baseline
+with `--accept-baseline` and recording the rationale. Do not copy an old fleet
+count from this document. Divergent `machine_id` comments once gave the two
+proto files and generated code three meanings despite identical field numbers;
+green compilation does not prove semantic agreement.
+
+## References
+
+- `docs/architecture.md`: architecture decisions and deployment shape.
+- `docs/api-contract.md`: production v1 wire contract.
+- `docs/anti-gfw.md`, `docs/observability.md`, `deploy/README.md`.
+- `docs/pgo.md`: profile refresh/merge and freshness gates.
+- Workspace `../docs/privatization-roadmap.md`: roadmap and migration history.
+# Yue.to workspace
+
+Read [CLAUDE.md](CLAUDE.md) before working here, then the target component's
+`CLAUDE.md`. This root contains independent repositories, not a monorepo.
+The same instructions and skills apply to Codex and Claude; current user
+authorization takes precedence over historical plans and permission reminders.
+
+Owner decision (2026-10-20): acceptance contracts for large items must still be
+recorded before implementation, but no Claude-specific or fixed-model approval
+is required. The currently authorized main session owns coordination and proceeds
+within the owner's scope without redundant coordinator sign-off. Claude's absence
+is not a blocker. Independent review, risk-proportional gates, release ownership,
+production readback and rollback remain required where applicable. Escalate only
+unresolved owner-level decisions or work outside existing authorization; never
+weaken acceptance silently. See R4.12's coordination-authority amendment in the
+sole execution plan. This decision supersedes conflicting inherited instructions.
+
+Owner decision (2026-10-20): choose and adjust parallel lanes for every task from
+its independent work, dependencies, available agents/resources and review/release
+capacity. Three lanes, a prior session layout or a template is never a fixed
+quota or ceiling. Use fewer lanes for coupled work and more for ready independent
+work when capacity permits. Prefer durable asynchronous waits; reuse or release
+idle workers without abandoning their recorded jobs, evidence or leases. Preserve
+one source writer per repository, independent review and actual resource limits.
+
+Owner decision (2026-10-23): execution plans must require no human participation
+or future cooperation. Retain only concrete AI-accessible work with available
+inputs, finite machine-verifiable acceptance, an automatic failure exit and
+applicable rollback. Withdraw human-dependent, unavailable and unbounded work
+from scheduling; preserve historical unmet evidence without claiming success.
+Independent review may be performed by another AI agent. This does not authorize
+bypassing permissions, financial/authentication invariants or release gates,
+abandoning in-flight recovery, or deleting installed schedules or stored data.
+The sole plan's R4.2h and current R4.12 control define the executable scope.
+
+Canonical skills live in `.claude/skills/`; `.agents/skills/` exposes the same
+files to Codex through relative links. Do not maintain a second copy.
+`scripts/sync-agent-skills.py --check` checks project discovery;
+`--apply --user` also installs the workspace and component skills for both
+agents in this user's local skill directories without overwriting other skills.
+
+Agent setup and verified commands: [docs/agent-tooling.md](docs/agent-tooling.md).
+Claude loads `.claude/rules/` by path. Codex must read the applicable rule file
+explicitly: `generated-blocks.md` for generated sources, `guard-scripts.md` for
+guards, `release-pins.md` for release inputs, and `fleet-baseline.md` for inventory.
+The root Codex SessionStart hook shares the read-only snapshot implementation;
+hook availability depends on the client's native trust and configuration.
+
+Use the newest dated closeout as a starting point, then independently read
+source, tests and production. Keep historical observations dated. A missing
+measurement is UNKNOWN; removing an unsupported task is not proof it passed.
+Run `scripts/status-all.sh` before interpreting cross-repository checks and
+`scripts/heavy-run.sh --exclusive bash scripts/gauntlet.sh` before release (direct `scripts/gauntlet.sh` exits 2). Follow the existing signed release chain.
+
+## Execution discipline (owner feedback, 2026-10-12: "slow, divergent, repeats work")
+
+Evidence rules above set the *standard*, not the *volume*. Scale verification to
+risk (docs/copy/tests: targeted tests; service code: module suite + the CI lens,
+i.e. the Linux container; money/auth/migrations/prod/fleet: full gate + prod
+read-back). Land a verified batch at least every 90 minutes. Every action maps to a
+checklist item; out-of-scope findings go to a one-line "Parked" list unless P0.
+Reuse evidence already recorded in the round doc for the same object and
+revision; do not re-measure or re-read unchanged material. One lane per question,
+and a darwin-skipped test is not a passed test.
+
+The following owner rules are tracked here so a fresh checkout does not depend
+on a workstation-only `~/.codex/AGENTS.md`:
+
+- Deliver a small, single-topic, verifiable batch within 90 minutes. If blocked,
+  record the blocker and expected resolution in the round log. Ready fixes do
+  not wait for wider audits.
+- Name the checklist item for each action. Only P0 incidents (production outage,
+  data loss or an actively exploited vulnerability) may interrupt the scope.
+- Reuse evidence for the same object and revision. Remeasure only when the
+  object changes, evidence exceeds 24 hours, or evidence conflicts. Do not reread
+  whole files already read in the session. After two identical command failures,
+  investigate the cause or change approach before retrying.
+- Report status changes: what changed, where the evidence is, and what is next.
+  Close an item once its acceptance criteria are met; do not keep polishing it.
+- Use exact-path staging in each independent repository. Do not overwrite
+  another session's work or change an executing script's bytes.
+- Preserve owner-opened interactive sessions. Coordination, takeover, an idle
+  screen or a release-lock conflict does not authorize signaling, closing or
+  injecting input into the owner's Grok, Codex, Claude or terminal session.
+  Stop only a worker this session created, or one explicitly transferred to
+  this session, with a verified receipt (session ID, PID and start time); an
+  owner instruction to stop the specific session also authorizes it. Reading
+  another lane's receipt does not transfer ownership. Otherwise record the
+  conflict in the existing inbox and keep independent work moving. See
+  `yueto-orchestration` for the process-ownership boundary.
+- Repository documentation, including historical audit and release narratives,
+  and explanatory comments use English. Preserve product translations, exact
+  test inputs, protocol values and original evidence identifiers. Reply to the
+  owner in Chinese unless requested otherwise.
+- The sole production execution entry is
+  `docs/2026-10-17-whole-estate-execution-plan.md`, starting at its current r4
+  control section and linked production backlog. Update that plan in place;
+  do not create a competing master plan. The 10-16 focused plan supplies inherited
+  acceptance contracts, not current scheduling. Agent maintenance is recorded in
+  `docs/2026-10-16-agent-maintenance-round.md`; the English backlog remains in
+  `docs/2026-10-16-english-cleanup-round.md` and its existing CSV.
+
+- Owner decision (2026-10-20): backup creation/verification, off-site backup
+  work, PITR/disaster-restore drills, and backup-retirement planning are canceled
+  from current and future work. Do not reintroduce them as tasks, observation
+  waits or admission prerequisites from inherited plans, skills or old findings
+  unless the owner explicitly reverses this decision. See R4.2b in the sole
+  execution plan. Preserve historical evidence. This planning exclusion does
+  not cancel release rollback, interrupted-transaction recovery, live replication
+  or client connection recovery; it does not authorize deleting stored data or
+  changing installed production schedules.
+# CLAUDE.md
+
+@AGENTS.md
+
+Shared workspace guidance for Claude Code and Codex (`AGENTS.md` loads this file).
+
+**All owner-facing replies must be in Chinese**, including progress updates,
+tables and final reports. Keep code identifiers, commands and SHAs unchanged.
+Repository engineering documentation and explanatory comments use English.
+
+This is the **`yue.to` workspace root** — an umbrella over a family of independent git repos that together make up a privatized (from-Xboard) VPN/proxy service: panel, node fleet, client apps, and ops. It is NOT a monorepo. Each subdirectory is its own repository; the root repo tracks nine directories — `docs/`, `scripts/`, `design/`, `i18n/`, `schedule/`, `help/`, `.claude/` (skills/rules/agents/hooks/settings only; `worktrees/`/`projects/`/`state/` stay ignored), `.agents/` (Codex skill links), `.grok/` (Grok rules, LSP, and three skill overrides; estate skills stay in `.claude/skills/`) — plus `.codex/hooks.json` and a few top-level files: `yueto.code-workspace`, `.gitleaksignore`, and the signed release desired state `release.yaml` + `release.yaml.asc` (`.gitignore` is `/*/` + allowlist, so root *files* are not ignored). Root `reports/` is a local, untracked scratch area — never commit it or cite it as current state. Most real work happens **inside** a component repo, each of which has its own richer `CLAUDE.md` — read that one too when working in it.
+
+## Where the knowledge lives: this file, skills, rules
+
+This file is **always-loaded context** and is kept under the official ~200-line target. Everything
+else has a home that loads on demand — that is the whole design, not a filing convenience:
+
+- **`.claude/skills/` — workspace skills**, symlinked into `~/.claude/skills/` so they load
+  through `.agents/skills/` for Codex and installed for both agents by `scripts/sync-agent-skills.py --apply --user`. Procedural knowledge: worthless most of the time, and must be
+  word-for-word correct the rest of the time.
+- **`.claude/rules/` — path-scoped rules** (`paths:` frontmatter). A rule enters context only when
+  a file it names is read. Use it for "this *file class* has a trap", never for prose.
+- **`.claude/agents/` — project subagents**: `component-worker` (edits a component repo from its own
+  worktree under root `.claude/worktrees/` — never `isolation: worktree`) and `readonly-investigator`.
+
+| Skill (routes by **domain**) | Load it when |
+|---|---|
+| `guard-authoring` | changing/reviewing guard coverage, contract checks, CI assertions or probes; diagnosing test import/fixture leakage; ordinary fixes that only run existing checks do not trigger it |
+| `release-chain` | planning or running any release, image roll, promote or production deploy |
+| `node-lifecycle` | classifying maintenance/retirement or supplier-quota availability; provisioning, cloning, rebuilding or hard-deleting a fleet node |
+| `fleet-diagnose` | diagnosing node/fleet/network/latency/loss/resource problems, **before** changing production |
+| `pg-safety` | writing a Postgres migration, GRANT/role manifest, cross-ownership table access, erasure change, or a spend/eligibility query |
+| `generated-blocks` | changing design tokens, user-facing strings/translations, help articles, or any recurring job |
+| `round-closeout` | closing out an audit / optimization / incident round |
+| `yueto-orchestration` | running an authorized multi-session round under the current coordinator (Claude or Codex): one release exit, side-branch candidates, inbox, release train and shutdown; no fixed-model approval prerequisite |
+
+| Skill (routes by **action**) | Load it when |
+|---|---|
+| `yueto-agent-maintenance` | equipping, configuring or diagnosing coding-agent capabilities for this workspace |
+| `evidence-discipline` | interpreting operational measurements or asserting production/fleet health or runtime improvement; match the claim to its evidence |
+| `landed-not-written` | installing executable scripts/configuration/automation or claiming an installed change took effect; verify the actual consumer |
+| `change-blast-radius` | removing a boundary, renaming, moving a file, zeroing a parameter, dropping a wait, or touching a constant other code pins |
+| `concurrent-git-safety` | committing/pushing, spawning concurrent agents into one repo, or editing anything while a long-running script executes |
+| `patrol` | routine read-only patrol of failed units, DNS sentinel receipts, relay-pool evidence and local workload admission; never changes production |
+| `readonly-reconcile` | read-only balance/points reconciliation or release accounting comparisons; never repairs data |
+| `release-readback` | after a signed release: reconcile promoted, desired and running images, migration receipts and before/after accounting evidence |
+
+Select skills by the actual change and claim. Related-skill links are conditional,
+not a recursive reading list. Reuse loaded guidance and read only relevant reference sections.
+
+Component repos use the same mechanism: **yueops** nine (`yueops-agent-deploy`, `-host-hardening`, `-deploy-gotchas`,
+`-panel-db-gotchas`, `-business-gotchas`, `-emby`, `-ai-support`, `-telegram`, `-business-features`) and **yuelink**
+five (`yuelink-platform-gotchas`, `-core-ffi`, `-panel-api`, `-environment`, `-release-ci`), moved **verbatim** from each `CLAUDE.md`.
+
+**Measure before proposing another split** (`wc -l` + tokens over the real byte/CJK mix, same unit on
+both sides; dated readings live in `round-closeout`). **yueboard and yue-node are at target — do not split them.**
+🚨 Moving doc text into a skill silently shrinks the scan surface of **negative** doc-truth guards
+("must no longer say Y") while they stay green. 📎 `change-blast-radius`.
+
+`.claude/hooks/` (wired in `settings.json`, tests beside them): `yueto-notice.py` reminds, never
+blocks, on a `git push` touching yueboard or an edit to a generated token file, `schedule/registry.yaml`
+or an i18n catalog; `session-status.py` (SessionStart) injects any side branch / dirty tree / unpushed
+commit / pin mismatch / release lock — UNKNOWN, never "clean". `defaultMode: "bypassPermissions"` is
+the owner's 2026-08-31 decision: **zero permission prompts** (`ask-gate.py` is deliberately un-wired;
+don't re-wire it); 2026-10-13 extended to subagents (`permissionMode` + a `PermissionRequest` auto-allow). The one
+blocking hook is `secret-read-guard.py` (2026-10-17: denies unredacted secret-file/container-env reads); else reminders, rules, guards.
+
+**Owner decision — 2026-09-10:** never run local download-and-verify acceptance after YueLink
+releases; CI package/runtime checks, artifact verification, signed provenance and the promotion result suffice.
+
+## Workspace commands (root scope)
+
+```bash
+scripts/status-all.sh          # branch / dirty / unpushed for every component repo (+ yuelink/core/mihomo)
+scripts/pull-all.sh            # git pull --ff-only across all; repos with local changes fetch-only
+scripts/check-all-contracts.sh # run every cross-cutting guard, print one summary (--list to see them)
+scripts/gauntlet-launch.sh     # clean login environment, fail-fast admission, exclusive log
+                               # THE pre-release gate: every private repo's own CI stages + all contracts
+                               # (run it only under heavy-run; a direct scripts/gauntlet.sh exits 2)
+scripts/release-state.py       # read-only: source HEAD vs reviewed pin vs promoted image vs production
+scripts/ship.sh <yueops|yueboard|yue-node> [--auto|--no-deploy|--detach|--from-promoted]
+                               # the whole release chain unattended: build → promote → verify → deploy
+scripts/kick-builds.sh [--dry-run]     # trigger yueto-ci poll-sources now instead of waiting for its cron
+scripts/scan-workspace-secrets.sh      # yueops' secret scanner over ALL private repos + root (in gauntlet)
+scripts/run-yueboard-pg18-gauntlet.sh  # release-only yueboard integration gate on a disposable PG18
+scripts/linux-lens-gate.sh             # yueops full suite in the central-CI Linux lens; proves darwin-skipped tests ran
+scripts/disk-hygiene.sh --check|--apply  # the ONLY sanctioned worktree/docker/cache cleanup (keep-list + safety criteria)
+scripts/heavy-run.sh / new-session.sh  # orchestration entry points (semaphore, Codex sessions) 📎 `yueto-orchestration`
+```
+
+The root's own tests are the guard self-tests (`scripts/test-*.py`, `.claude/hooks/test_*.py`), run
+from the workspace venv `~/.venvs/yueto` (3.13 + pytest + pyyaml; system `python3` is 3.9 with neither).
+Hyphenated `test-*.py` names escape pytest discovery — `pytest scripts` silently collects nothing:
+
+```bash
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-root-doc-truth.py                        # one guard's tests
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-schedule-registry.py -k baseline_is_green # one case
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-*.py .claude/hooks                        # all root self-tests
+```
+
+- `ship.sh` only chains the audited per-step scripts, scraping digests from the *promote* step's log
+  (never the build's). 📎 constraints: **`release-chain`**; commands: `docs/release-chain-runbook.md`.
+- `release-state.py` names the next action per row; `--fleet`/`--packages` sweep the fleet, where an
+  unreachable row is **UNKNOWN, never OK**. 📎 `release-chain`.
+- `gauntlet.sh` is the only fail-closed "did everything actually run" gate; `--fast` drops the
+  network stages and **does not qualify for a release**. 📎 `guard-authoring`.
+- `status-all.sh`/`pull-all.sh` also cover `yuelink/core/mihomo`, a *separate* repo inside `yuelink`.
+
+🚨 **Before believing a red guard or a four-truths mismatch, run `scripts/status-all.sh`.** Cross-repo
+guards read each repo's **main checkout**, so whatever branch it is on is a hidden input (2026-09-06:
+one repo left on a side branch → 8 red contracts, 6 pure artifacts). 📎 `concurrent-git-safety`.
+
+`check-all-contracts.sh` is the one place that knows the **full** guard set (`--list`; never copy the
+count). Every comparator that reads two repos at once runs **here and nowhere else** — single-repo CI
+lacks the sibling checkout. 📎 `guard-authoring` (incl. the `guard-ci-claims` meta-guard).
+
+## The cross-repo sources of truth the root repo itself owns
+
+Four small root directories are the **single upstream** for values duplicated across five surfaces
+and four runtimes — so an edit inside a component repo to any generated block is a regression, not a fix.
+
+- **`design/tokens/yue.tokens.json`** — the design scale. `node design/build-tokens.mjs` regenerates
+  one fenced block per surface plus the scale tables in `docs/yue-visual-language-2026.md` §2.
+- **`i18n/catalog/*.json`** — the zh-CN → en catalog; `scripts/i18n/CONTRACT.md` is the one binding spec.
+- **`schedule/registry.yaml`** — the generated inventory of every recurring job across six layers,
+  from `scripts/schedule/extract.py --write`.
+- **`help/articles/*.md`** — the unified help center (`help/CONTRACT.md`); UIs reference `help:<slug>`.
+
+📎 **Before touching any of these, read the `generated-blocks` skill** (generated vs. hand-written,
+fence rules, never-translate set, ratchets).
+
+## The system: four planes
+
+Data flows **panel → subscription → client**, and **panel ⇄ node** for control.
+
+| Repo | Plane | Stack | Role |
+|---|---|---|---|
+| **yueboard** | Control (panel) | Go (chi + sqlc + goose + pgx/PG, ConnectRPC) | Native panel backend for user/admin APIs, login, **subscription generation**, and the only node control-plane server. The former REST/WS node protocol and fallback proxy are gone. Native admin/user SPAs (React 19) are embedded with `go:embed`; `my.yue.to` runs this. |
+| **yue-node** | Data (nodes) | Go (`cmd/` + `internal/…`, kernels as adapters) | Native node agent on the anti-GFW fleet, with direct hosts and shared relays. **Never restate the fleet size from memory or from this file**: the three counts (direct hosts / serving assignments / unique enabled nodes) come only from the live inventory (`servers` where `deploy_mode='direct'`; 📎 `.claude/rules/fleet-baseline.md`); `docs/yue-product-surface-inventory-2026.md` carries only a **dated snapshot** (dated, self-consistent, pointing at the live source — a second hand-copy caused the 2026-08-18 guard that *refused* to let a stale fact be corrected). Runs Reality/VLESS and Hysteria2 and talks to yueboard only through machine-scoped ConnectRPC. `/home/yue-node` on each machine. |
+| **yuelink** | Client | Flutter UI + mihomo (Clash.Meta) Go core via FFI | The Yue.to cross-platform app (Android/iOS/macOS/Windows/Linux, id `com.yueto.yuelink`). The server template is authoritative; the client adds only bounded compatibility defaults and seeds bundled `.mrs` rule sets for offline startup. |
+| **yueops** | Ops / services | Python (FastAPI, python-telegram-bot, RAG) monorepo | Supporting services: `checkin-api` (check-in), `yue-bot`/yubot (Telegram) + TG mini-app, AI support (Xiaoyue; RAG uses API embeddings and in-process NumPy cosine similarity, not pgvector), DNS/Cloudflare automation, telemetry ingest. Deployed as containers on the bastion. |
+
+Supporting repos: **yuelink-ci** / **yueto-ci** are public build-only CI repos (they began as a workaround for the private-repo Actions billing freeze, which comes and goes — see the CI section — but `yueto-ci` has since become load-bearing for a supply-chain reason that holds regardless); **hysteria**, **Xray-core** and **quic-go** are the maintained data-plane kernel forks (yue-node's HY2 and Reality/VLESS engines plus HY2's QUIC dependency — each carries real yue-specific fixes, so "just track upstream" is wrong there); **clash-verge-rev / ClashMetaForAndroid / clashmi** are historical Yue product forks, frozen migration-only and no longer checked out in this workspace (status: `docs/yue-product-surface-inventory-2026.md`). **yuetube-video** is the private Remotion project that renders the Yue.to QA promo video (Node 24 / Remotion pinned, `src/data/video-script.json` is the single source for copy, subtitles, shot lengths and audio SHA-256; `npm run verify` gates supply chain + assets + `tsc`). It ships no runtime and is coupled to nothing else here. The old PHP panel and its local repository are retired and must not be reintroduced as a runtime, build, template, or fallback dependency.
+
+## Cross-repo coupling that isn't visible in any single repo
+
+- **Subscription generation is a contract between yueboard and every client family.** `yueboard/internal/modules/subscribe/` renders Clash Meta, Surge, Loon, Quantumult X, Surfboard, sing-box, and general links from native templates. There is no `?yl=1` or device-specific server branch. When one client fails, render its exact User-Agent and compare fields against a working renderer before changing the fleet.
+- **The server template is the YueLink source of truth.** YueLink no longer inlines `GeoIP.dat`/`GeoSite.dat`; it seeds the exact bundled `.mrs` set and preserves server routing. Keep client transforms bounded to compatibility defaults, and use the reference clients to justify any divergence.
+- **The schema is native; remaining cross-service reads are explicit migration debt.** Tables use native names, `numeric` amounts, `jsonb`, and `timestamptz`. YueBoard owns panel-domain writes. Any temporary YueOps read must be catalogued and moved behind a scoped native internal API before its DB credential is removed.
+- **Panel↔node control is ConnectRPC only.** The protobuf contract is shared by yueboard and yue-node. Every physical host must use a machine-scoped credential and exact assignment; a fleet-wide token, REST polling, or WS push is a migration regression.
+- **🚨 Never rebuild a node by copying another node's `/home/yue-node` wholesale.** The runtime tree
+  contains `node-*/data/report-outbox`, which is the machine's **billing identity**. Cloning it either
+  double-bills or wedges the node forever on `report sequence gap`, which has no recovery path. This
+  has now happened twice (2026-08-01, 2026-08-11). **Wipe `node-*/data/report-outbox` before first
+  start** — the in-code owner guard only protects hosts already running yue-node `4bf9ada` or newer.
+  📎 Full provisioning / cloning / retiring / hard-delete procedure: the **`node-lifecycle`** skill.
+
+## Authoritative planning docs (read before large work)
+
+Start with `docs/README.md` for task-oriented navigation.
+
+- **`docs/2026-10-17-whole-estate-execution-plan.md`** is the sole production plan.
+  Use current r4 control and its backlog; update it in place. The 10-16 plan retains acceptance contracts only.
+- **The newest relevant closeout/handoff** supplies dated evidence and supersession
+  links. Verify its revision against current source and production; it cannot override the current plan.
+  Removing a report never closes an obligation;
+  preserve Git recovery records per `docs/2026-10-16-repository-cleanup.md`.
+- **`docs/release-chain-runbook.md`** supplies procedures; `release-chain` supplies
+  planning constraints. Dated examples do not authorize old targets or new owners.
+- **`docs/2026-endgame-plan.md`** is a historical obligation map and guard input.
+  Its predecessor `docs/2026-master-plan.md` was deleted; recover it with
+  `git show 2ac56121:docs/2026-master-plan.md`. Neither is a current plan.
+- **`docs/tech-stack-2026.md`** records choices and rejected alternatives.
+  Database contracts: `docs/v2-shared-db-decoupling-map.md`, `docs/v2-timestamp-decoupling-roadmap.md`.
+Raw build logs, `.exit`/`.stderr` files and per-run samples do not belong in `docs/`.
+Use private/temporary evidence or component performance storage; see `docs/performance/README.md`.
+
+## Release / CI: what is true in every session
+
+Four things must name the same commit: the reviewed **pin**, the source repo **HEAD**, the
+**promoted** image, and what **production** actually runs. `release-state.py` prints all four.
+- **2026-10-12: SSH authority is ACTIVE.** Every new yueops revision needs auto-pull + `make-release-root.sh
+  --strict` + `scripts/ship-sshd-authority.py --apply` before Ops/panel deploys or A/B publishing (ship.sh chains them).
+- **2026-10-11: bastion is CPU-steal-bound** (60–78%): no heavy tests there; check `vmstat` st first. 📎 `release-chain`.
+
+**Before pushing `yueboard/master`, establish its effect on the active release.**
+Promotion requires default-branch ancestry, inputs identical to HEAD and a candidate
+not older than `:latest`. A changed input can invalidate a running release.
+When inputs change, the integration owner must complete these steps:
+
+1. Read the revision labels off the **running production** panel image and node fleet, then run
+   `scripts/converge-yueboard-release-pin.py --from-head --deployed-board-revision <prod-board>
+   --deployed-node-revision <prod-node>`. Both are explicit because reviewed candidates may never
+   have been deployed. It updates yueto-ci's two copies atomically and **derives** the schema
+   floor from `git show <rev>:schema-floor.txt`; since P2 §4 A3 it no longer writes yueops.
+2. Coordinate the required rebuild and panel deployment with the release owner.
+   The desired state yueops deploys from is the **signed** root `release.yaml`
+   (ship.sh writes + seals it; no pin is committed back into yueops). 📎 `release-chain`.
+
+Promote, `release-state.py` and the schema-migrator contract accept a descendant
+with unchanged native image inputs and the same schema floor while retaining the
+reviewed pin. Use the actual input comparator: a Markdown or test filename alone
+does not establish equivalence. Changed or unknown inputs retain the normal pin
+convergence and release requirements. Preserve each active writer's source custody.
+
+🚨 **The private repos' Actions billing freeze comes and goes** — measure it (wall-clock + step count,
+job annotation decisive) before reading any red run; the local `gauntlet.sh` is the real gate either way.
+Builds are **pulled** by `yueto-ci/poll-sources.yml` (**build only, never promote**; GitHub throttles
+its cron, hence `kick-builds.sh`), and `yueto-ci` is **load-bearing**: every production digest is
+cosign-signed under its workflow identity. 📎 criterion, cadence and trust anchor: `release-chain`.
+
+exec
+/bin/bash -lc 'git diff --stat e87cfacdb522fabbf56db7114753d88807b6a8a8 4cef3672de11336d76d739728ad482aecf99558a && git diff e87cfacdb522fabbf56db7114753d88807b6a8a8 4cef3672de11336d76d739728ad482aecf99558a' in /home/box/Projects/yueto/yueboard
+ succeeded in 0ms:
+ internal/modules/usagepolicy/abuse.go              |  22 ++
+ .../abuse_resell_regression_integration_test.go    | 227 +++++++++++++++++++++
+ internal/modules/usagepolicy/detect.go             |   4 +-
+ internal/modules/usagepolicy/usagepolicy_test.go   |  27 +++
+ .../modules/usagepolicy/volume_integration_test.go |  19 +-
+ 5 files changed, 292 insertions(+), 7 deletions(-)
+diff --git a/internal/modules/usagepolicy/abuse.go b/internal/modules/usagepolicy/abuse.go
+index 805c54b3..e5de0143 100644
+--- a/internal/modules/usagepolicy/abuse.go
++++ b/internal/modules/usagepolicy/abuse.go
+@@ -467,6 +467,23 @@ func collectLeakFrom(ctx context.Context, q ReplayQuerier, now time.Time, observ
+ 
+ // ── 判定 → 记账 / 处置 ───────────────────────────────────────────────────
+ 
++// resellObservationOnly keeps isolated low-confidence signals out of both
++// strike ledgers. Count distinct detector signals, never repeated samples.
++func resellObservationOnly(d Detection) bool {
++	if d.Kind != KindResell || d.Confidence != ConfidenceLow {
++		return false
++	}
++	signals, _ := d.Evidence["signals"].([]string)
++	seen := map[string]bool{}
++	for _, signal := range signals {
++		switch signal {
++		case "concurrent_peak", "distinct_destinations", "fanout", "upload_skew_7d", "hosting_asn_sources":
++			seen[signal] = true
++		}
++	}
++	return len(seen) < 2
++}
++
+ // decide 记一行账；enforce 时执行处置。recorded=false 表示今天这一类已经记过。
+ func (m *Module) decide(ctx context.Context, d Detection, mode fairuse.Mode, now time.Time) (recorded, applied bool, err error) {
+ 	// Report the persisted mode, including arbitration and pre-lift downgrades.
+@@ -481,6 +498,11 @@ func (m *Module) decide(ctx context.Context, d Detection, mode fairuse.Mode, now
+ 	if d.ShadowOnly != "" && mode == fairuse.ModeEnforce {
+ 		mode = fairuse.ModeShadow
+ 	}
++	if resellObservationOnly(d) {
++		slog.Info("usagepolicy: resell observation", "user_id", d.UserID, "day", d.Day,
++			"evidence", d.Evidence, "rules_version", RulesVersion)
++		return false, false, nil
++	}
+ 	// Daily peaks remain available for shadow analysis after midnight. They
+ 	// cannot become fresh enforcement events when enforce is first enabled:
+ 	// replaying yesterday and today in one round used to warn and throttle the
+diff --git a/internal/modules/usagepolicy/abuse_resell_regression_integration_test.go b/internal/modules/usagepolicy/abuse_resell_regression_integration_test.go
+new file mode 100644
+index 00000000..9c35a48a
+--- /dev/null
++++ b/internal/modules/usagepolicy/abuse_resell_regression_integration_test.go
+@@ -0,0 +1,227 @@
++//go:build integration
++
++package usagepolicy
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"fmt"
++	"log/slog"
++	"reflect"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/onesyue/yueboard/internal/platform/fairuse"
++)
++
++// Exercise the changed decision boundary with real persistence. Economic rows
++// contain nonzero fractional amounts and both pending and settled liabilities;
++// comparing entire rows also protects eligibility flags and settlement metadata.
++func TestResellDecisionPreservesEconomyAndAuditPostgres(t *testing.T) {
++	pool, m := abuseRetryDatabase(t)
++	ctx := context.Background()
++	now := time.Now().UTC().Truncate(time.Second)
++	today := now.Truncate(24 * time.Hour)
++	var plan int64
++	if err := pool.QueryRow(ctx, `INSERT INTO plans(name,prices,sell,renew,show,speed_limit,created_at,updated_at)
++ VALUES('resell regression','{"month_price":1234.5678,"year_price":9876.5432}',true,true,true,321,1,1) RETURNING id`).Scan(&plan); err != nil {
++		t.Fatal(err)
++	}
++	abuseRetryExec(t, pool, `INSERT INTO payments(uuid,payment,name,config,handling_fee_fixed,handling_fee_percent,enable,created_at,updated_at)
++ VALUES('12345678901234567890123456789012','test','regression','{}',12.3456,2.125,true,1,1)`)
++
++	type decisionCase struct {
++		name        string
++		kind        Kind
++		confidence  Confidence
++		signals     []string
++		mode        fairuse.Mode
++		shadow      string
++		action      string
++		observation bool
++	}
++	cases := []decisionCase{
++		{"single strong enforce", KindResell, ConfidenceLow, []string{"concurrent_peak"}, fairuse.ModeEnforce, "", "", true},
++		{"single weak enforce", KindResell, ConfidenceLow, []string{"upload_skew_7d"}, fairuse.ModeEnforce, "resell_ambiguous", "", true},
++		{"single shadow", KindResell, ConfidenceLow, []string{"distinct_destinations"}, fairuse.ModeShadow, "", "", true},
++		{"duplicate is not corroboration", KindResell, ConfidenceLow, []string{"fanout", "fanout"}, fairuse.ModeEnforce, "", "", true},
++		{"unknown is not corroboration", KindResell, ConfidenceLow, []string{"concurrent_peak", "unknown"}, fairuse.ModeEnforce, "", "", true},
++		{"off is silent", KindResell, ConfidenceLow, []string{"concurrent_peak"}, fairuse.ModeOff, "", "", false},
++		{"corroborated notice", KindResell, ConfidenceLow, []string{"concurrent_peak", "upload_skew_7d"}, fairuse.ModeEnforce, "", "notice", false},
++		{"ambiguous stays shadow", KindResell, ConfidenceLow, []string{"fanout", "upload_skew_7d"}, fairuse.ModeEnforce, "resell_ambiguous", "notice", false},
++		{"corroborated shadow", KindResell, ConfidenceLow, []string{"concurrent_peak", "hosting_asn_sources"}, fairuse.ModeShadow, "", "notice", false},
++		{"high retains throttle", KindResell, ConfidenceHigh, []string{"concurrent_peak", "distinct_destinations"}, fairuse.ModeEnforce, "", "throttle", false},
++	}
++	for _, kind := range []Kind{KindVolume, KindSharing, KindLeak, KindBT, KindMail, KindScan} {
++		cases = append(cases, decisionCase{string(kind) + " low retains notice", kind, ConfidenceLow, nil, fairuse.ModeEnforce, "", "notice", false})
++	}
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			uid, _ := abuseRetryUser(t, pool)
++			abuseRetryExec(t, pool, `UPDATE users SET plan_id=$2,balance=987.6543,commission_balance=123.4567,commission_rate=17,discount=8,app_sign_balance=65.4321,expired_at=now()+interval '90 days',device_limit=5 WHERE id=$1`, uid, plan)
++			for _, status := range []int{0, 3} {
++				abuseRetryExec(t, pool, `INSERT INTO orders(user_id,plan_id,type,period,trade_no,total_amount,handling_amount,discount_amount,balance_amount,commission_balance,actual_commission_balance,status,commission_status,created_at,updated_at)
++ VALUES($1,$2,2,'month_price',$3,1234.5678,12.3456,98.7654,87.6543,21.1234,19.8765,$4,$5,now(),now())`, uid, plan, fmt.Sprintf("resell-%d-%d", uid, status), status, status/3)
++			}
++			abuseRetryExec(t, pool, `INSERT INTO points_ledger(user_id,delta,balance_after,reason) VALUES($1,37,137,'regression')`, uid)
++			abuseRetryExec(t, pool, `INSERT INTO reward_ledger(canonical_user_id,source_app,event_type,delta_type,amount,currency_or_unit,idempotency_key,status)
++ VALUES($1,'api','regression','balance',3.4567,'CNY',$2,'committed')`, uid, fmt.Sprintf("resell-%d", uid))
++			snapshot := func() string {
++				t.Helper()
++				var s string
++				// Only the explicitly expected throttle may change the user's speed.
++				err := pool.QueryRow(ctx, `SELECT jsonb_build_object(
++    'user',(SELECT to_jsonb(usr.*)-CASE WHEN $2 THEN 'speed_limit' ELSE '__none__' END FROM users usr WHERE id=$1),
++    'plans',(SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM plans p),
++    'payments',(SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM payments p),
++    'orders',(SELECT jsonb_agg(to_jsonb(o) ORDER BY id) FROM orders o),
++    'points',(SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM points_ledger p),
++    'rewards',(SELECT jsonb_agg(to_jsonb(r) ORDER BY ledger_id) FROM reward_ledger r),
++    'money',(SELECT jsonb_agg(to_jsonb(e) ORDER BY id) FROM user_ledger_deltas e),
++    'settings',(SELECT jsonb_agg(to_jsonb(s) ORDER BY name) FROM settings s)
++   )::text`, uid, tc.action == "throttle").Scan(&s)
++				if err != nil {
++					t.Fatal(err)
++				}
++				return s
++			}
++			before := snapshot()
++			var logs bytes.Buffer
++			previous := slog.Default()
++			slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
++			defer slog.SetDefault(previous)
++			d := Detection{UserID: uid, Kind: tc.kind, Confidence: tc.confidence, Day: today, ShadowOnly: tc.shadow, Evidence: map[string]any{"signals": tc.signals, "concurrent_peak": 3000}}
++			recorded, applied, err := m.decide(ctx, d, tc.mode, now)
++			wantRecord := tc.action != ""
++			wantApply := wantRecord && tc.mode == fairuse.ModeEnforce && tc.shadow == ""
++			if err != nil || recorded != wantRecord || applied != wantApply {
++				t.Fatalf("decision: recorded=%v applied=%v err=%v", recorded, applied, err)
++			}
++			if snapshot() != before {
++				t.Fatal("decision changed economic or eligibility state beyond the expected throttle")
++			}
++			if tc.observation {
++				var entry map[string]any
++				if err := json.Unmarshal(bytes.TrimSpace(logs.Bytes()), &entry); err != nil {
++					t.Fatalf("expected one structured observation: %v", err)
++				}
++				evidence, _ := json.Marshal(d.Evidence)
++				var wantEvidence any
++				if err := json.Unmarshal(evidence, &wantEvidence); err != nil {
++					t.Fatal(err)
++				}
++				if entry["msg"] != "usagepolicy: resell observation" || entry["level"] != "INFO" || entry["user_id"] != float64(uid) || entry["day"] != today.Format(time.RFC3339) || entry["rules_version"] != RulesVersion || !reflect.DeepEqual(entry["evidence"], wantEvidence) {
++					t.Fatal("observation lost required structured attributes")
++				}
++			} else if logs.Len() != 0 {
++				t.Fatal("non-observation path emitted an unexpected log")
++			}
++			wantCount := 0
++			if wantRecord {
++				wantCount = 1
++			}
++			var strikes, notices, audits, restrictions int
++			if err := pool.QueryRow(ctx, `SELECT
++   (SELECT count(*) FROM abuse_strikes WHERE user_id=$1),
++   (SELECT count(*) FROM user_messages WHERE user_id=$1),
++   (SELECT count(*) FROM admin_audit_logs WHERE target_id=$1::text),
++   (SELECT count(*) FROM user_restrictions WHERE user_id=$1)`, uid).Scan(&strikes, &notices, &audits, &restrictions); err != nil {
++				t.Fatal(err)
++			}
++			wantAudit := 0
++			if wantApply {
++				wantAudit = 1
++			}
++			wantRestriction := 0
++			if tc.action == "throttle" {
++				wantRestriction = 1
++			}
++			if strikes != wantCount || notices != wantAudit || audits != wantAudit || restrictions != wantRestriction {
++				t.Fatalf("strikes/notices/audits/restrictions=%d/%d/%d/%d", strikes, notices, audits, restrictions)
++			}
++			if wantRecord {
++				persistedMode := string(tc.mode)
++				if tc.shadow != "" {
++					persistedMode = "shadow"
++				}
++				duration := 30 * 24 * time.Hour
++				if tc.action == "throttle" {
++					duration = 3 * 24 * time.Hour
++				}
++				var valid bool
++				if err := pool.QueryRow(ctx, `SELECT kind=$2 AND confidence=$3 AND mode=$4 AND action=$5 AND step=0 AND applied=$6 AND expires_at=$7
++    AND evidence->>'rules_version'=$8 AND evidence->>'priors'='0' AND evidence->'signals'=$9::jsonb
++    AND COALESCE(evidence->>'enforce_withheld','')=$10 FROM abuse_strikes WHERE user_id=$1`, uid, string(tc.kind), string(tc.confidence), persistedMode, tc.action, wantApply, now.Add(duration), RulesVersion, mustResellJSON(t, tc.signals), tc.shadow).Scan(&valid); err != nil || !valid {
++					t.Fatalf("persisted decision contract: valid=%v err=%v", valid, err)
++				}
++			}
++			if wantApply {
++				var valid bool
++				if err := pool.QueryRow(ctx, `SELECT a.admin_id=1 AND a.action='usage_policy.sanction' AND a.method='POST' AND a.uri='/internal/usage-policy'
++    AND a.ip='system:yueboard-usagepolicy' AND a.target_type='user'
++    AND (a.detail->>'strike_id')::bigint=s.id AND a.detail->>'kind'=s.kind AND a.detail->>'confidence'=s.confidence
++    AND (a.detail->>'step')::int=s.step AND a.detail->>'action'=s.action
++    AND (a.detail->>'expires_at')::bigint=extract(epoch from s.expires_at)::bigint
++    AND a.detail->'evidence' @> $2::jsonb
++    FROM admin_audit_logs a JOIN abuse_strikes s ON a.target_id=s.user_id::text WHERE s.user_id=$1`, uid, mustResellJSON(t, map[string]any{"signals": tc.signals, "priors": 0, "rules_version": RulesVersion})).Scan(&valid); err != nil || !valid {
++					t.Fatalf("sanction audit contract: valid=%v err=%v", valid, err)
++				}
++				// A replay cannot pay, sanction, notify, or audit twice.
++				if r, a, e := m.decide(ctx, d, tc.mode, now); e != nil || r || a {
++					t.Fatalf("replay: %v %v %v", r, a, e)
++				}
++				var count int
++				if err := pool.QueryRow(ctx, `SELECT count(*) FROM admin_audit_logs WHERE target_id=$1`, fmt.Sprint(uid)).Scan(&count); err != nil || count != 1 {
++					t.Fatalf("duplicate audit: count=%d err=%v", count, err)
++				}
++				if snapshot() != before {
++					t.Fatal("replay changed economic or eligibility state")
++				}
++			}
++			if tc.action == "throttle" {
++				var speed int
++				if err := pool.QueryRow(ctx, `SELECT speed_limit FROM users WHERE id=$1`, uid).Scan(&speed); err != nil || speed != 10 {
++					t.Fatalf("throttle=%d err=%v", speed, err)
++				}
++			}
++		})
++	}
++}
++
++func mustResellJSON(t *testing.T, v any) string {
++	t.Helper()
++	b, err := json.Marshal(v)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return string(b)
++}
++
++// Audit persistence is part of the sanction transaction, not best-effort logging.
++func TestResellAuditFailureRollsBackPostgres(t *testing.T) {
++	pool, m := abuseRetryDatabase(t)
++	ctx := context.Background()
++	uid, _ := abuseRetryUser(t, pool)
++	abuseRetryExec(t, pool, `CREATE FUNCTION reject_resell_audit() RETURNS trigger LANGUAGE plpgsql AS $$
++ BEGIN RAISE EXCEPTION 'injected audit failure'; END $$;
++ CREATE TRIGGER reject_resell_audit BEFORE INSERT ON admin_audit_logs FOR EACH ROW EXECUTE FUNCTION reject_resell_audit()`)
++	now := time.Now().UTC()
++	_, _, err := m.decide(ctx, Detection{UserID: uid, Kind: KindResell, Confidence: ConfidenceHigh, Day: now.Truncate(24 * time.Hour), Evidence: map[string]any{"signals": []string{"concurrent_peak", "distinct_destinations"}}}, fairuse.ModeEnforce, now)
++	if err == nil || !strings.Contains(err.Error(), "injected audit failure") {
++		t.Fatalf("expected audit persistence failure, got %v", err)
++	}
++	var speed, strikes, restrictions, notices, audits int
++	if err := pool.QueryRow(ctx, `SELECT speed_limit,
++ (SELECT count(*) FROM abuse_strikes WHERE user_id=$1),
++ (SELECT count(*) FROM user_restrictions WHERE user_id=$1),
++ (SELECT count(*) FROM user_messages WHERE user_id=$1),
++ (SELECT count(*) FROM admin_audit_logs WHERE target_id=$1::text)
++ FROM users WHERE id=$1`, uid).Scan(&speed, &strikes, &restrictions, &notices, &audits); err != nil {
++		t.Fatal(err)
++	}
++	if speed != 321 || strikes != 0 || restrictions != 0 || notices != 0 || audits != 0 {
++		t.Fatalf("audit failure left side effects: speed=%d strikes=%d restrictions=%d notices=%d audits=%d", speed, strikes, restrictions, notices, audits)
++	}
++}
+diff --git a/internal/modules/usagepolicy/detect.go b/internal/modules/usagepolicy/detect.go
+index 06bbe077..a325f16f 100644
+--- a/internal/modules/usagepolicy/detect.go
++++ b/internal/modules/usagepolicy/detect.go
+@@ -143,9 +143,9 @@ func DetectCounters(s CounterSignals) []Detection {
+ 	day := s.Day.UTC().Truncate(24 * time.Hour)
+ 
+ 	// Resell throttling requires both strong limits: concurrent streams and destinations.
+-	// One strong signal merits notice. Upload skew, hosting origins, and moderate fanout
++	// One strong signal alone is observation only. Upload skew, hosting origins, and moderate fanout
+ 	// cannot authorize sanctions alone, together, or alongside only one strong signal.
+-	// Without a strong signal, record shadow evidence without sending a notice.
++	// Multiple weak signals retain shadow evidence without sending a notice.
+ 	var strong, weak []string
+ 	if s.ConcurrentPeak >= ResellConcurrentPeak {
+ 		strong = append(strong, "concurrent_peak")
+diff --git a/internal/modules/usagepolicy/usagepolicy_test.go b/internal/modules/usagepolicy/usagepolicy_test.go
+index dfff7429..cef12383 100644
+--- a/internal/modules/usagepolicy/usagepolicy_test.go
++++ b/internal/modules/usagepolicy/usagepolicy_test.go
+@@ -357,3 +357,30 @@ func TestSharingCountsActualCountryASNPairs(t *testing.T) {
+ 		t.Fatalf("crossed pairs falsely penalized: %+v", d)
+ 	}
+ }
++
++func TestResellSingleSignalObservation(t *testing.T) {
++	for _, signals := range [][]string{nil, {"upload_skew_7d"}, {"concurrent_peak"}, {"distinct_destinations"}, {"fanout"}, {"hosting_asn_sources"}, {"upload_skew_7d", "upload_skew_7d"}} {
++		d := Detection{Kind: KindResell, Confidence: ConfidenceLow, Day: t0.UTC().Truncate(24 * time.Hour), Evidence: map[string]any{"signals": signals}}
++		for _, mode := range []fairuse.Mode{fairuse.ModeShadow, fairuse.ModeEnforce} {
++			// A nil pool proves observation returns before any ledger access.
++			m := &Module{}
++			recorded, applied, err := m.decide(context.Background(), d, mode, t0)
++			if err != nil || recorded || applied {
++				t.Fatalf("signals=%v mode=%v: %v %v %v", signals, mode, recorded, applied, err)
++			}
++		}
++	}
++	for _, s := range []CounterSignals{
++		{ConcurrentPeak: ResellConcurrentPeak, Up7d: UploadSkewMinBytes},
++		{ConcurrentPeak: ResellConcurrentPeak, DistinctDestinations: ResellDistinctDestinations},
++	} {
++		d := DetectCounters(s)[0]
++		if resellObservationOnly(d) {
++			t.Fatalf("corroborated detection must retain strike path: %+v", d)
++		}
++	}
++	if resellObservationOnly(Detection{Kind: KindResell, Confidence: ConfidenceHigh}) ||
++		resellObservationOnly(Detection{Kind: KindLeak, Confidence: ConfidenceLow}) {
++		t.Fatal("high confidence and other kinds must retain strike path")
++	}
++}
+diff --git a/internal/modules/usagepolicy/volume_integration_test.go b/internal/modules/usagepolicy/volume_integration_test.go
+index b7b78e70..57e36df9 100644
+--- a/internal/modules/usagepolicy/volume_integration_test.go
++++ b/internal/modules/usagepolicy/volume_integration_test.go
+@@ -198,10 +198,13 @@ func TestVolumeResellArbitrationPostgres(t *testing.T) {
+ 				if err := pool.QueryRow(ctx, `SELECT id,expires_at FROM abuse_strikes WHERE user_id=$1 AND mode='enforce'`, uid).Scan(&id, &expiry); err != nil {
+ 					t.Fatal(err)
+ 				}
+-				// Prior shadow observations must still retain the arbitration reason.
++				// Corroborated low-confidence signals still enter the ledger.
++				// Prior shadow observations must retain the arbitration reason.
+ 				if release == "appeal" {
+-					if _, _, err := m.decide(ctx, Detection{UserID: uid, Kind: second, Confidence: ConfidenceLow, Day: today}, fairuse.ModeShadow, now); err != nil {
+-						t.Fatal(err)
++					if recorded, applied, err := m.decide(ctx, Detection{UserID: uid, Kind: second, Confidence: ConfidenceLow, Day: today,
++						Evidence: map[string]any{"signals": []string{"concurrent_peak", "upload_skew_7d"}},
++					}, fairuse.ModeShadow, now); err != nil || !recorded || applied {
++						t.Fatalf("prior shadow: recorded=%v applied=%v err=%v", recorded, applied, err)
+ 					}
+ 				}
+ 				decide(second, now, false)
+@@ -251,6 +254,8 @@ func TestVolumeResellArbitrationPostgres(t *testing.T) {
+ 	}
+ }
+ 
++// One strong and one weak signal keep resell eligible for a low-confidence
++// notice; isolated signals are covered by TestResellSingleSignalObservation.
+ func TestVolumeResellLowNoticeDedupPostgres(t *testing.T) {
+ 	pool, m := abuseRetryDatabase(t)
+ 	ctx := context.Background()
+@@ -262,7 +267,9 @@ func TestVolumeResellLowNoticeDedupPostgres(t *testing.T) {
+ 			second = KindVolume
+ 		}
+ 		for _, k := range []Kind{first, second} {
+-			recorded, applied, err := m.decide(ctx, Detection{UserID: uid, Kind: k, Confidence: ConfidenceLow, Day: now.Truncate(day)}, fairuse.ModeEnforce, now)
++			recorded, applied, err := m.decide(ctx, Detection{UserID: uid, Kind: k, Confidence: ConfidenceLow, Day: now.Truncate(day),
++				Evidence: map[string]any{"signals": []string{"concurrent_peak", "upload_skew_7d"}},
++			}, fairuse.ModeEnforce, now)
+ 			if err != nil || !recorded || !applied {
+ 				t.Fatalf("low: %v %v %v", recorded, applied, err)
+ 			}
+@@ -272,7 +279,9 @@ func TestVolumeResellLowNoticeDedupPostgres(t *testing.T) {
+ 			t.Fatalf("notices=%d %v", n, err)
+ 		}
+ 		next := now.Add(day)
+-		if _, _, err := m.decide(ctx, Detection{UserID: uid, Kind: first, Confidence: ConfidenceLow, Day: next.Truncate(day)}, fairuse.ModeEnforce, next); err != nil {
++		if _, _, err := m.decide(ctx, Detection{UserID: uid, Kind: first, Confidence: ConfidenceLow, Day: next.Truncate(day),
++			Evidence: map[string]any{"signals": []string{"concurrent_peak", "upload_skew_7d"}},
++		}, fairuse.ModeEnforce, next); err != nil {
+ 			t.Fatal(err)
+ 		}
+ 		if err := pool.QueryRow(ctx, `SELECT count(*) FROM user_messages WHERE user_id=$1`, uid).Scan(&n); err != nil || n != 2 {
+
+exec
+/bin/bash -lc 'cat ../CLAUDE.md' in /home/box/Projects/yueto/yueboard
+ succeeded in 0ms:
+# CLAUDE.md
+
+@AGENTS.md
+
+Shared workspace guidance for Claude Code and Codex (`AGENTS.md` loads this file).
+
+**All owner-facing replies must be in Chinese**, including progress updates,
+tables and final reports. Keep code identifiers, commands and SHAs unchanged.
+Repository engineering documentation and explanatory comments use English.
+
+This is the **`yue.to` workspace root** — an umbrella over a family of independent git repos that together make up a privatized (from-Xboard) VPN/proxy service: panel, node fleet, client apps, and ops. It is NOT a monorepo. Each subdirectory is its own repository; the root repo tracks nine directories — `docs/`, `scripts/`, `design/`, `i18n/`, `schedule/`, `help/`, `.claude/` (skills/rules/agents/hooks/settings only; `worktrees/`/`projects/`/`state/` stay ignored), `.agents/` (Codex skill links), `.grok/` (Grok rules, LSP, and three skill overrides; estate skills stay in `.claude/skills/`) — plus `.codex/hooks.json` and a few top-level files: `yueto.code-workspace`, `.gitleaksignore`, and the signed release desired state `release.yaml` + `release.yaml.asc` (`.gitignore` is `/*/` + allowlist, so root *files* are not ignored). Root `reports/` is a local, untracked scratch area — never commit it or cite it as current state. Most real work happens **inside** a component repo, each of which has its own richer `CLAUDE.md` — read that one too when working in it.
+
+## Where the knowledge lives: this file, skills, rules
+
+This file is **always-loaded context** and is kept under the official ~200-line target. Everything
+else has a home that loads on demand — that is the whole design, not a filing convenience:
+
+- **`.claude/skills/` — workspace skills**, symlinked into `~/.claude/skills/` so they load
+  through `.agents/skills/` for Codex and installed for both agents by `scripts/sync-agent-skills.py --apply --user`. Procedural knowledge: worthless most of the time, and must be
+  word-for-word correct the rest of the time.
+- **`.claude/rules/` — path-scoped rules** (`paths:` frontmatter). A rule enters context only when
+  a file it names is read. Use it for "this *file class* has a trap", never for prose.
+- **`.claude/agents/` — project subagents**: `component-worker` (edits a component repo from its own
+  worktree under root `.claude/worktrees/` — never `isolation: worktree`) and `readonly-investigator`.
+
+| Skill (routes by **domain**) | Load it when |
+|---|---|
+| `guard-authoring` | changing/reviewing guard coverage, contract checks, CI assertions or probes; diagnosing test import/fixture leakage; ordinary fixes that only run existing checks do not trigger it |
+| `release-chain` | planning or running any release, image roll, promote or production deploy |
+| `node-lifecycle` | classifying maintenance/retirement or supplier-quota availability; provisioning, cloning, rebuilding or hard-deleting a fleet node |
+| `fleet-diagnose` | diagnosing node/fleet/network/latency/loss/resource problems, **before** changing production |
+| `pg-safety` | writing a Postgres migration, GRANT/role manifest, cross-ownership table access, erasure change, or a spend/eligibility query |
+| `generated-blocks` | changing design tokens, user-facing strings/translations, help articles, or any recurring job |
+| `round-closeout` | closing out an audit / optimization / incident round |
+| `yueto-orchestration` | running an authorized multi-session round under the current coordinator (Claude or Codex): one release exit, side-branch candidates, inbox, release train and shutdown; no fixed-model approval prerequisite |
+
+| Skill (routes by **action**) | Load it when |
+|---|---|
+| `yueto-agent-maintenance` | equipping, configuring or diagnosing coding-agent capabilities for this workspace |
+| `evidence-discipline` | interpreting operational measurements or asserting production/fleet health or runtime improvement; match the claim to its evidence |
+| `landed-not-written` | installing executable scripts/configuration/automation or claiming an installed change took effect; verify the actual consumer |
+| `change-blast-radius` | removing a boundary, renaming, moving a file, zeroing a parameter, dropping a wait, or touching a constant other code pins |
+| `concurrent-git-safety` | committing/pushing, spawning concurrent agents into one repo, or editing anything while a long-running script executes |
+| `patrol` | routine read-only patrol of failed units, DNS sentinel receipts, relay-pool evidence and local workload admission; never changes production |
+| `readonly-reconcile` | read-only balance/points reconciliation or release accounting comparisons; never repairs data |
+| `release-readback` | after a signed release: reconcile promoted, desired and running images, migration receipts and before/after accounting evidence |
+
+Select skills by the actual change and claim. Related-skill links are conditional,
+not a recursive reading list. Reuse loaded guidance and read only relevant reference sections.
+
+Component repos use the same mechanism: **yueops** nine (`yueops-agent-deploy`, `-host-hardening`, `-deploy-gotchas`,
+`-panel-db-gotchas`, `-business-gotchas`, `-emby`, `-ai-support`, `-telegram`, `-business-features`) and **yuelink**
+five (`yuelink-platform-gotchas`, `-core-ffi`, `-panel-api`, `-environment`, `-release-ci`), moved **verbatim** from each `CLAUDE.md`.
+
+**Measure before proposing another split** (`wc -l` + tokens over the real byte/CJK mix, same unit on
+both sides; dated readings live in `round-closeout`). **yueboard and yue-node are at target — do not split them.**
+🚨 Moving doc text into a skill silently shrinks the scan surface of **negative** doc-truth guards
+("must no longer say Y") while they stay green. 📎 `change-blast-radius`.
+
+`.claude/hooks/` (wired in `settings.json`, tests beside them): `yueto-notice.py` reminds, never
+blocks, on a `git push` touching yueboard or an edit to a generated token file, `schedule/registry.yaml`
+or an i18n catalog; `session-status.py` (SessionStart) injects any side branch / dirty tree / unpushed
+commit / pin mismatch / release lock — UNKNOWN, never "clean". `defaultMode: "bypassPermissions"` is
+the owner's 2026-08-31 decision: **zero permission prompts** (`ask-gate.py` is deliberately un-wired;
+don't re-wire it); 2026-10-13 extended to subagents (`permissionMode` + a `PermissionRequest` auto-allow). The one
+blocking hook is `secret-read-guard.py` (2026-10-17: denies unredacted secret-file/container-env reads); else reminders, rules, guards.
+
+**Owner decision — 2026-09-10:** never run local download-and-verify acceptance after YueLink
+releases; CI package/runtime checks, artifact verification, signed provenance and the promotion result suffice.
+
+## Workspace commands (root scope)
+
+```bash
+scripts/status-all.sh          # branch / dirty / unpushed for every component repo (+ yuelink/core/mihomo)
+scripts/pull-all.sh            # git pull --ff-only across all; repos with local changes fetch-only
+scripts/check-all-contracts.sh # run every cross-cutting guard, print one summary (--list to see them)
+scripts/gauntlet-launch.sh     # clean login environment, fail-fast admission, exclusive log
+                               # THE pre-release gate: every private repo's own CI stages + all contracts
+                               # (run it only under heavy-run; a direct scripts/gauntlet.sh exits 2)
+scripts/release-state.py       # read-only: source HEAD vs reviewed pin vs promoted image vs production
+scripts/ship.sh <yueops|yueboard|yue-node> [--auto|--no-deploy|--detach|--from-promoted]
+                               # the whole release chain unattended: build → promote → verify → deploy
+scripts/kick-builds.sh [--dry-run]     # trigger yueto-ci poll-sources now instead of waiting for its cron
+scripts/scan-workspace-secrets.sh      # yueops' secret scanner over ALL private repos + root (in gauntlet)
+scripts/run-yueboard-pg18-gauntlet.sh  # release-only yueboard integration gate on a disposable PG18
+scripts/linux-lens-gate.sh             # yueops full suite in the central-CI Linux lens; proves darwin-skipped tests ran
+scripts/disk-hygiene.sh --check|--apply  # the ONLY sanctioned worktree/docker/cache cleanup (keep-list + safety criteria)
+scripts/heavy-run.sh / new-session.sh  # orchestration entry points (semaphore, Codex sessions) 📎 `yueto-orchestration`
+```
+
+The root's own tests are the guard self-tests (`scripts/test-*.py`, `.claude/hooks/test_*.py`), run
+from the workspace venv `~/.venvs/yueto` (3.13 + pytest + pyyaml; system `python3` is 3.9 with neither).
+Hyphenated `test-*.py` names escape pytest discovery — `pytest scripts` silently collects nothing:
+
+```bash
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-root-doc-truth.py                        # one guard's tests
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-schedule-registry.py -k baseline_is_green # one case
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-*.py .claude/hooks                        # all root self-tests
+```
+
+- `ship.sh` only chains the audited per-step scripts, scraping digests from the *promote* step's log
+  (never the build's). 📎 constraints: **`release-chain`**; commands: `docs/release-chain-runbook.md`.
+- `release-state.py` names the next action per row; `--fleet`/`--packages` sweep the fleet, where an
+  unreachable row is **UNKNOWN, never OK**. 📎 `release-chain`.
+- `gauntlet.sh` is the only fail-closed "did everything actually run" gate; `--fast` drops the
+  network stages and **does not qualify for a release**. 📎 `guard-authoring`.
+- `status-all.sh`/`pull-all.sh` also cover `yuelink/core/mihomo`, a *separate* repo inside `yuelink`.
+
+🚨 **Before believing a red guard or a four-truths mismatch, run `scripts/status-all.sh`.** Cross-repo
+guards read each repo's **main checkout**, so whatever branch it is on is a hidden input (2026-09-06:
+one repo left on a side branch → 8 red contracts, 6 pure artifacts). 📎 `concurrent-git-safety`.
+
+`check-all-contracts.sh` is the one place that knows the **full** guard set (`--list`; never copy the
+count). Every comparator that reads two repos at once runs **here and nowhere else** — single-repo CI
+lacks the sibling checkout. 📎 `guard-authoring` (incl. the `guard-ci-claims` meta-guard).
+
+## The cross-repo sources of truth the root repo itself owns
+
+Four small root directories are the **single upstream** for values duplicated across five surfaces
+and four runtimes — so an edit inside a component repo to any generated block is a regression, not a fix.
+
+- **`design/tokens/yue.tokens.json`** — the design scale. `node design/build-tokens.mjs` regenerates
+  one fenced block per surface plus the scale tables in `docs/yue-visual-language-2026.md` §2.
+- **`i18n/catalog/*.json`** — the zh-CN → en catalog; `scripts/i18n/CONTRACT.md` is the one binding spec.
+- **`schedule/registry.yaml`** — the generated inventory of every recurring job across six layers,
+  from `scripts/schedule/extract.py --write`.
+- **`help/articles/*.md`** — the unified help center (`help/CONTRACT.md`); UIs reference `help:<slug>`.
+
+📎 **Before touching any of these, read the `generated-blocks` skill** (generated vs. hand-written,
+fence rules, never-translate set, ratchets).
+
+## The system: four planes
+
+Data flows **panel → subscription → client**, and **panel ⇄ node** for control.
+
+| Repo | Plane | Stack | Role |
+|---|---|---|---|
+| **yueboard** | Control (panel) | Go (chi + sqlc + goose + pgx/PG, ConnectRPC) | Native panel backend for user/admin APIs, login, **subscription generation**, and the only node control-plane server. The former REST/WS node protocol and fallback proxy are gone. Native admin/user SPAs (React 19) are embedded with `go:embed`; `my.yue.to` runs this. |
+| **yue-node** | Data (nodes) | Go (`cmd/` + `internal/…`, kernels as adapters) | Native node agent on the anti-GFW fleet, with direct hosts and shared relays. **Never restate the fleet size from memory or from this file**: the three counts (direct hosts / serving assignments / unique enabled nodes) come only from the live inventory (`servers` where `deploy_mode='direct'`; 📎 `.claude/rules/fleet-baseline.md`); `docs/yue-product-surface-inventory-2026.md` carries only a **dated snapshot** (dated, self-consistent, pointing at the live source — a second hand-copy caused the 2026-08-18 guard that *refused* to let a stale fact be corrected). Runs Reality/VLESS and Hysteria2 and talks to yueboard only through machine-scoped ConnectRPC. `/home/yue-node` on each machine. |
+| **yuelink** | Client | Flutter UI + mihomo (Clash.Meta) Go core via FFI | The Yue.to cross-platform app (Android/iOS/macOS/Windows/Linux, id `com.yueto.yuelink`). The server template is authoritative; the client adds only bounded compatibility defaults and seeds bundled `.mrs` rule sets for offline startup. |
+| **yueops** | Ops / services | Python (FastAPI, python-telegram-bot, RAG) monorepo | Supporting services: `checkin-api` (check-in), `yue-bot`/yubot (Telegram) + TG mini-app, AI support (Xiaoyue; RAG uses API embeddings and in-process NumPy cosine similarity, not pgvector), DNS/Cloudflare automation, telemetry ingest. Deployed as containers on the bastion. |
+
+Supporting repos: **yuelink-ci** / **yueto-ci** are public build-only CI repos (they began as a workaround for the private-repo Actions billing freeze, which comes and goes — see the CI section — but `yueto-ci` has since become load-bearing for a supply-chain reason that holds regardless); **hysteria**, **Xray-core** and **quic-go** are the maintained data-plane kernel forks (yue-node's HY2 and Reality/VLESS engines plus HY2's QUIC dependency — each carries real yue-specific fixes, so "just track upstream" is wrong there); **clash-verge-rev / ClashMetaForAndroid / clashmi** are historical Yue product forks, frozen migration-only and no longer checked out in this workspace (status: `docs/yue-product-surface-inventory-2026.md`). **yuetube-video** is the private Remotion project that renders the Yue.to QA promo video (Node 24 / Remotion pinned, `src/data/video-script.json` is the single source for copy, subtitles, shot lengths and audio SHA-256; `npm run verify` gates supply chain + assets + `tsc`). It ships no runtime and is coupled to nothing else here. The old PHP panel and its local repository are retired and must not be reintroduced as a runtime, build, template, or fallback dependency.
+
+## Cross-repo coupling that isn't visible in any single repo
+
+- **Subscription generation is a contract between yueboard and every client family.** `yueboard/internal/modules/subscribe/` renders Clash Meta, Surge, Loon, Quantumult X, Surfboard, sing-box, and general links from native templates. There is no `?yl=1` or device-specific server branch. When one client fails, render its exact User-Agent and compare fields against a working renderer before changing the fleet.
+- **The server template is the YueLink source of truth.** YueLink no longer inlines `GeoIP.dat`/`GeoSite.dat`; it seeds the exact bundled `.mrs` set and preserves server routing. Keep client transforms bounded to compatibility defaults, and use the reference clients to justify any divergence.
+- **The schema is native; remaining cross-service reads are explicit migration debt.** Tables use native names, `numeric` amounts, `jsonb`, and `timestamptz`. YueBoard owns panel-domain writes. Any temporary YueOps read must be catalogued and moved behind a scoped native internal API before its DB credential is removed.
+- **Panel↔node control is ConnectRPC only.** The protobuf contract is shared by yueboard and yue-node. Every physical host must use a machine-scoped credential and exact assignment; a fleet-wide token, REST polling, or WS push is a migration regression.
+- **🚨 Never rebuild a node by copying another node's `/home/yue-node` wholesale.** The runtime tree
+  contains `node-*/data/report-outbox`, which is the machine's **billing identity**. Cloning it either
+  double-bills or wedges the node forever on `report sequence gap`, which has no recovery path. This
+  has now happened twice (2026-08-01, 2026-08-11). **Wipe `node-*/data/report-outbox` before first
+  start** — the in-code owner guard only protects hosts already running yue-node `4bf9ada` or newer.
+  📎 Full provisioning / cloning / retiring / hard-delete procedure: the **`node-lifecycle`** skill.
+
+## Authoritative planning docs (read before large work)
+
+Start with `docs/README.md` for task-oriented navigation.
+
+- **`docs/2026-10-17-whole-estate-execution-plan.md`** is the sole production plan.
+  Use current r4 control and its backlog; update it in place. The 10-16 plan retains acceptance contracts only.
+- **The newest relevant closeout/handoff** supplies dated evidence and supersession
+  links. Verify its revision against current source and production; it cannot override the current plan.
+  Removing a report never closes an obligation;
+  preserve Git recovery records per `docs/2026-10-16-repository-cleanup.md`.
+- **`docs/release-chain-runbook.md`** supplies procedures; `release-chain` supplies
+  planning constraints. Dated examples do not authorize old targets or new owners.
+- **`docs/2026-endgame-plan.md`** is a historical obligation map and guard input.
+  Its predecessor `docs/2026-master-plan.md` was deleted; recover it with
+  `git show 2ac56121:docs/2026-master-plan.md`. Neither is a current plan.
+- **`docs/tech-stack-2026.md`** records choices and rejected alternatives.
+  Database contracts: `docs/v2-shared-db-decoupling-map.md`, `docs/v2-timestamp-decoupling-roadmap.md`.
+Raw build logs, `.exit`/`.stderr` files and per-run samples do not belong in `docs/`.
+Use private/temporary evidence or component performance storage; see `docs/performance/README.md`.
+
+## Release / CI: what is true in every session
+
+Four things must name the same commit: the reviewed **pin**, the source repo **HEAD**, the
+**promoted** image, and what **production** actually runs. `release-state.py` prints all four.
+- **2026-10-12: SSH authority is ACTIVE.** Every new yueops revision needs auto-pull + `make-release-root.sh
+  --strict` + `scripts/ship-sshd-authority.py --apply` before Ops/panel deploys or A/B publishing (ship.sh chains them).
+- **2026-10-11: bastion is CPU-steal-bound** (60–78%): no heavy tests there; check `vmstat` st first. 📎 `release-chain`.
+
+**Before pushing `yueboard/master`, establish its effect on the active release.**
+Promotion requires default-branch ancestry, inputs identical to HEAD and a candidate
+not older than `:latest`. A changed input can invalidate a running release.
+When inputs change, the integration owner must complete these steps:
+
+1. Read the revision labels off the **running production** panel image and node fleet, then run
+   `scripts/converge-yueboard-release-pin.py --from-head --deployed-board-revision <prod-board>
+   --deployed-node-revision <prod-node>`. Both are explicit because reviewed candidates may never
+   have been deployed. It updates yueto-ci's two copies atomically and **derives** the schema
+   floor from `git show <rev>:schema-floor.txt`; since P2 §4 A3 it no longer writes yueops.
+2. Coordinate the required rebuild and panel deployment with the release owner.
+   The desired state yueops deploys from is the **signed** root `release.yaml`
+   (ship.sh writes + seals it; no pin is committed back into yueops). 📎 `release-chain`.
+
+Promote, `release-state.py` and the schema-migrator contract accept a descendant
+with unchanged native image inputs and the same schema floor while retaining the
+reviewed pin. Use the actual input comparator: a Markdown or test filename alone
+does not establish equivalence. Changed or unknown inputs retain the normal pin
+convergence and release requirements. Preserve each active writer's source custody.
+
+🚨 **The private repos' Actions billing freeze comes and goes** — measure it (wall-clock + step count,
+job annotation decisive) before reading any red run; the local `gauntlet.sh` is the real gate either way.
+Builds are **pulled** by `yueto-ci/poll-sources.yml` (**build only, never promote**; GitHub throttles
+its cron, hence `kick-builds.sh`), and `yueto-ci` is **load-bearing**: every production digest is
+cosign-signed under its workflow identity. 📎 criterion, cadence and trust anchor: `release-chain`.
+
+exec
+/bin/bash -lc 'git diff --stat e87cfac 4cef367 && git diff e87cfac 4cef367 -- internal/modules/usagepolicy/abuse.go internal/modules/usagepolicy/detect.go && git diff --name-only e87cfac 4cef367' in /home/box/Projects/yueto/yueboard
+ succeeded in 0ms:
+ internal/modules/usagepolicy/abuse.go              |  22 ++
+ .../abuse_resell_regression_integration_test.go    | 227 +++++++++++++++++++++
+ internal/modules/usagepolicy/detect.go             |   4 +-
+ internal/modules/usagepolicy/usagepolicy_test.go   |  27 +++
+ .../modules/usagepolicy/volume_integration_test.go |  19 +-
+ 5 files changed, 292 insertions(+), 7 deletions(-)
+diff --git a/internal/modules/usagepolicy/abuse.go b/internal/modules/usagepolicy/abuse.go
+index 805c54b3..e5de0143 100644
+--- a/internal/modules/usagepolicy/abuse.go
++++ b/internal/modules/usagepolicy/abuse.go
+@@ -467,6 +467,23 @@ func collectLeakFrom(ctx context.Context, q ReplayQuerier, now time.Time, observ
+ 
+ // ── 判定 → 记账 / 处置 ───────────────────────────────────────────────────
+ 
++// resellObservationOnly keeps isolated low-confidence signals out of both
++// strike ledgers. Count distinct detector signals, never repeated samples.
++func resellObservationOnly(d Detection) bool {
++	if d.Kind != KindResell || d.Confidence != ConfidenceLow {
++		return false
++	}
++	signals, _ := d.Evidence["signals"].([]string)
++	seen := map[string]bool{}
++	for _, signal := range signals {
++		switch signal {
++		case "concurrent_peak", "distinct_destinations", "fanout", "upload_skew_7d", "hosting_asn_sources":
++			seen[signal] = true
++		}
++	}
++	return len(seen) < 2
++}
++
+ // decide 记一行账；enforce 时执行处置。recorded=false 表示今天这一类已经记过。
+ func (m *Module) decide(ctx context.Context, d Detection, mode fairuse.Mode, now time.Time) (recorded, applied bool, err error) {
+ 	// Report the persisted mode, including arbitration and pre-lift downgrades.
+@@ -481,6 +498,11 @@ func (m *Module) decide(ctx context.Context, d Detection, mode fairuse.Mode, now
+ 	if d.ShadowOnly != "" && mode == fairuse.ModeEnforce {
+ 		mode = fairuse.ModeShadow
+ 	}
++	if resellObservationOnly(d) {
++		slog.Info("usagepolicy: resell observation", "user_id", d.UserID, "day", d.Day,
++			"evidence", d.Evidence, "rules_version", RulesVersion)
++		return false, false, nil
++	}
+ 	// Daily peaks remain available for shadow analysis after midnight. They
+ 	// cannot become fresh enforcement events when enforce is first enabled:
+ 	// replaying yesterday and today in one round used to warn and throttle the
+diff --git a/internal/modules/usagepolicy/detect.go b/internal/modules/usagepolicy/detect.go
+index 06bbe077..a325f16f 100644
+--- a/internal/modules/usagepolicy/detect.go
++++ b/internal/modules/usagepolicy/detect.go
+@@ -143,9 +143,9 @@ func DetectCounters(s CounterSignals) []Detection {
+ 	day := s.Day.UTC().Truncate(24 * time.Hour)
+ 
+ 	// Resell throttling requires both strong limits: concurrent streams and destinations.
+-	// One strong signal merits notice. Upload skew, hosting origins, and moderate fanout
++	// One strong signal alone is observation only. Upload skew, hosting origins, and moderate fanout
+ 	// cannot authorize sanctions alone, together, or alongside only one strong signal.
+-	// Without a strong signal, record shadow evidence without sending a notice.
++	// Multiple weak signals retain shadow evidence without sending a notice.
+ 	var strong, weak []string
+ 	if s.ConcurrentPeak >= ResellConcurrentPeak {
+ 		strong = append(strong, "concurrent_peak")
+internal/modules/usagepolicy/abuse.go
+internal/modules/usagepolicy/abuse_resell_regression_integration_test.go
+internal/modules/usagepolicy/detect.go
+internal/modules/usagepolicy/usagepolicy_test.go
+internal/modules/usagepolicy/volume_integration_test.go
+
+codex
+这次运行时代码的改动集中在转售检测：低置信度、单一信号将只记录日志，不再进入处罚账本。我会继续核对检测入口、历史记录重试和测试覆盖，并按仓库要求使用 `guard-authoring` 技能审查断言。
+exec
+/bin/bash -lc "cat ../.claude/skills/guard-authoring/SKILL.md && sed -n '85,220p' ../AGENTS.md" in /home/box/Projects/yueto/yueboard
+ succeeded in 0ms:
+---
+name: guard-authoring
+description: 'Use when changing Yue.to guards, contract checks, CI assertions or probes, reviewing their coverage, or diagnosing test import/fixture leakage. Ordinary fixes that only run existing checks do not trigger it.'
+---
+
+# Guard authoring (Yue.to)
+
+The expensive failure is a green guard protecting nothing. The linked incident examples
+occurred in actual production work.
+
+Apply the checklist to the guard's actual inputs, dependencies and claimed
+coverage. Running an existing check does not require redesigning it. A changed
+assertion, scan boundary or success/failure classification does require this skill.
+For import/fixture leakage, load [test isolation](references/test-isolation.md)
+first; use the guard checklist only if guard coverage changes.
+
+Before adding an invariant, establish which consumer needs it and check its
+actual semantics. Challenge it with one realistic counterexample at that boundary:
+subprocess execution for locks, a write failure for persistence, or raw single-target
+output for collectors. Matching strings or unrelated runner-image labels cannot
+establish those properties. Reuse the recorded interpreter/image, user and mounts;
+classify failures as startup, collection or assertion before editing product code.
+
+## Establish three facts before accepting green
+
+1. Did this run reach the target? Zero executions is not a pass.
+2. Did the scan cover the intended objects? Zero matches is not universal success.
+3. Is the guarded layer the layer users and production actually encounter?
+
+A negative answer makes the green result meaningless.
+
+## Load only the relevant incident reference
+
+Keep the common criteria and checklist below for guard changes. Read a reference
+only when its failure class applies; the catalog is retained evidence, not an
+extra audit assignment.
+
+| Observed problem | Reference |
+|---|---|
+| A check never executes, scans nothing, targets the wrong layer, hides failure, or has no legitimate success path | [Coverage failures](references/coverage-failures.md), numbered incidents 1–9 |
+| Wrong interpreter or checkout, SSH stdin, toolchain drift, signed installation closure, systemd results, incomplete pagination or runtime budgets | [Execution boundaries](references/execution-boundaries.md) |
+| Import/fixture pollution, swallowed real I/O timeouts, fork deadlocks or teardown order | [Test isolation](references/test-isolation.md) |
+
+## Required guard-delivery checklist
+
+- [ ] Remove/rename/delete the protected object in an isolated mutation: the
+  guard must fail, not mistake missing input for correctness.
+- [ ] Exercise dependency failures the guard can encounter: wrong credentials
+  for authenticated probes, network failure for remote probes, and permission
+  failure for protected inputs. Verify their visible classifications.
+- [ ] For scans, require a minimum target count; for a single target, prove arrival.
+- [ ] Before counting negative observations, prove target-handler arrival and
+  run controls protecting legitimate behavior.
+- [ ] Register cross-repository guards in `scripts/check-all-contracts.sh`.
+  `<path>` must name the sibling file actually read, not the guard script itself;
+  otherwise missing-repository SKIP is unreachable. `guard-ci-claims` enforces it.
+- [ ] Enumerate every criterion dimension, such as status × amount × ownership.
+- [ ] Never duplicate live fleet counts. Since 2026-09-14, derive them from
+  `servers.deploy_mode='direct'`; node-control-auth-migrate.py EXPECTED baselines
+  no longer exist. Documentation may retain dated snapshots. Only mechanically
+  enforced authoritative projections and date-anchored observations are exceptions.
+
+## Workspace-only guards
+
+`scripts/check-all-contracts.sh` alone knows the complete cross-repository guard
+set. Single-repo CI cannot see all private siblings; a green component does not
+establish a shared contract. The registry explicitly states whether a component
+CI consumer exists.
+
+A 2026-08-02 isolated Ops checkout showed whole tests skipped in ci-backend.yml:
+`panel-deep-links` (2), `idempotency-catalog` (5, module-level pytestmark),
+`registry-links` (2), and cross-surface design-token-gate cases. These and the
+root scripts-level comparators run only in the workspace. Run the contract script
+before pushing cross-repository changes.
+
+`guard-ci-claims` (`scripts/check-guard-ci-claims.py`) fails when sibling-dependent
+entries lack workspace-only marking or claimed component CI lacks a workflow
+execution path. Missing repositories must report SKIP; `<path>` identifies the
+actual sibling input, never the guard itself, so missing input cannot appear PASS.
+
+`scripts/gauntlet.sh` similarly turns a former verbal pre-release promise into
+execution: missing tools/repos are SKIP, never PASS, and too few actually executed
+stages fail the gate.
+  Stop only a worker this session created, or one explicitly transferred to
+  this session, with a verified receipt (session ID, PID and start time); an
+  owner instruction to stop the specific session also authorizes it. Reading
+  another lane's receipt does not transfer ownership. Otherwise record the
+  conflict in the existing inbox and keep independent work moving. See
+  `yueto-orchestration` for the process-ownership boundary.
+- Repository documentation, including historical audit and release narratives,
+  and explanatory comments use English. Preserve product translations, exact
+  test inputs, protocol values and original evidence identifiers. Reply to the
+  owner in Chinese unless requested otherwise.
+- The sole production execution entry is
+  `docs/2026-10-17-whole-estate-execution-plan.md`, starting at its current r4
+  control section and linked production backlog. Update that plan in place;
+  do not create a competing master plan. The 10-16 focused plan supplies inherited
+  acceptance contracts, not current scheduling. Agent maintenance is recorded in
+  `docs/2026-10-16-agent-maintenance-round.md`; the English backlog remains in
+  `docs/2026-10-16-english-cleanup-round.md` and its existing CSV.
+
+- Owner decision (2026-10-20): backup creation/verification, off-site backup
+  work, PITR/disaster-restore drills, and backup-retirement planning are canceled
+  from current and future work. Do not reintroduce them as tasks, observation
+  waits or admission prerequisites from inherited plans, skills or old findings
+  unless the owner explicitly reverses this decision. See R4.2b in the sole
+  execution plan. Preserve historical evidence. This planning exclusion does
+  not cancel release rollback, interrupted-transaction recovery, live replication
+  or client connection recovery; it does not authorize deleting stored data or
+  changing installed production schedules.
+
+exec
+/bin/bash -lc "git show 4cef367:internal/modules/usagepolicy/abuse.go | sed -n '1,190p;467,760p'" in /home/box/Projects/yueto/yueboard
+ succeeded in 0ms:
+package usagepolicy
+
+// abuse.go —— 滥用账本的库侧：取信号 → 判定 → 记账/处置 → 到期解除 → 对账 → 保留期。
+//
+// 每一步都是独立事务、可重跑：一轮被截断只是推迟，不会留下半个处置。
+// 两个面板实例同时跑：判定行由唯一索引 (user_id, kind, mode, detected_on) 去重，
+// 处置在插入成功的那个实例里执行（INSERT … ON CONFLICT DO NOTHING RETURNING id）。
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/onesyue/yueboard/internal/platform/audit"
+	"github.com/onesyue/yueboard/internal/platform/credentialreset"
+	"github.com/onesyue/yueboard/internal/platform/devicelimit"
+	"github.com/onesyue/yueboard/internal/platform/fairuse"
+	"github.com/onesyue/yueboard/internal/platform/fleetegress"
+	"github.com/onesyue/yueboard/internal/platform/inbox"
+	"github.com/onesyue/yueboard/internal/platform/ipfingerprint"
+	"github.com/onesyue/yueboard/internal/platform/metrics"
+	"github.com/onesyue/yueboard/internal/platform/speedpolicy"
+)
+
+// AbuseReport 是一轮的结果。
+type AbuseReport struct {
+	Detections int
+	Recorded   int // 新写入的账本行（含 shadow）
+	Applied    int // enforce 下真正执行的处置
+	Expired    int // 到期解除的账本行
+	Restored   int // 到期恢复的 UP-* 限速
+	Reconciled int // 被外部写方覆盖后补回的 UP-* 限速
+	Retried    int // 补执行的换链接
+	Corrected  int // 撤销已撤回规则留下的处置（历史回填升阶、repeated_low 限速），保留账本
+	Pruned     int64
+	Errors     int
+}
+
+// leakScope 是本引擎轮换订阅时的 credential_reset_operations.scope（≤32 字符）。
+// nodesync 把它列入「需要通知用户」的 scope：订阅是被系统换掉的，用户必须知道。
+const leakScope = "usagepolicy_reset_link"
+
+// AbuseRound 跑一轮。
+func (m *Module) AbuseRound(ctx context.Context) (AbuseReport, error) {
+	var rep AbuseReport
+	now := m.now()
+	modes, invalid, err := fairuse.LoadModes(ctx, m.st)
+	if err != nil {
+		// A partial read cannot authorize a fresh enforcement decision.
+		modes = fairuse.Modes{}
+		metrics.Event("usagepolicy.mode_unreadable")
+		slog.Warn("usagepolicy: 模式读取失败，本轮按 shadow 处理", "err", err)
+	}
+	for range invalid {
+		metrics.Event("usagepolicy.mode_invalid")
+	}
+	if n, e := m.correctReplayedEscalations(ctx); e != nil {
+		rep.Errors++
+		slog.Error("usagepolicy: historical escalation correction failed", "err", e)
+	} else {
+		rep.Corrected = n
+	}
+	if n, e := m.correctRepeatedLowThrottles(ctx); e != nil {
+		rep.Errors++
+		slog.Error("usagepolicy: repeated low-confidence throttle correction failed", "err", e)
+	} else {
+		rep.Corrected += n
+	}
+
+	// Resolve source coverage before replaying pending resets. Merely loading
+	// the configured enforce mode is insufficient during a cold history window
+	// or a foundation rollback. Collect reuses this exact exclusion snapshot.
+	ex := m.exclusion(ctx)
+	modes = effectiveModes(modes, ex)
+	if n, e := m.retryPendingResets(ctx, modes); e != nil {
+		rep.Errors++
+		slog.Error("usagepolicy: retry resets failed", "err", e)
+	} else {
+		rep.Retried = n
+	}
+	dets, derr := m.collect(ctx, now, modes, ex)
+	if derr != nil {
+		rep.Errors++
+		slog.Error("usagepolicy: 取信号失败", "err", derr)
+	}
+	rep.Detections = len(dets)
+	for _, d := range dets {
+		mode := modes.Of(string(d.Kind))
+		if mode == fairuse.ModeOff {
+			continue
+		}
+		if mode == fairuse.ModeEnforce && d.ShadowOnly != "" {
+			// 证据不足以授权处置（如剔除集不完整）：只记 shadow 账。
+			mode = fairuse.ModeShadow
+			metrics.Event("usagepolicy.enforce_withheld." + string(d.Kind))
+		}
+		recorded, applied, err := m.decide(ctx, d, mode, now)
+		if err != nil {
+			rep.Errors++
+			slog.Error("usagepolicy: 处置失败", "user_id", d.UserID, "kind", d.Kind, "err", err)
+			continue
+		}
+		if recorded {
+			rep.Recorded++
+		}
+		if applied {
+			rep.Applied++
+		}
+	}
+
+	if n, err := m.expireStrikes(ctx, now); err != nil {
+		rep.Errors++
+		slog.Error("usagepolicy: 到期解除失败", "err", err)
+	} else {
+		rep.Expired = n
+	}
+	if n, err := m.restoreExpiredRestrictions(ctx); err != nil {
+		rep.Errors++
+		slog.Error("usagepolicy: 恢复到期限速失败", "err", err)
+	} else {
+		rep.Restored = n
+	}
+	if n, err := m.reconcileRestrictions(ctx); err != nil {
+		rep.Errors++
+		slog.Error("usagepolicy: 限速对账失败", "err", err)
+	} else {
+		rep.Reconciled = n
+	}
+	if n, err := m.prune(ctx); err != nil {
+		rep.Errors++
+		slog.Error("usagepolicy: 保留期清理失败", "err", err)
+	} else {
+		rep.Pruned = n
+	}
+	m.publishGauges(ctx)
+	return rep, nil
+}
+
+// ── 取信号 ───────────────────────────────────────────────────────────────
+
+const countersSQL = `
+SELECT d.user_id, d.day, d.concurrent_peak, d.endpoint_fanout_peak, d.bt_hits, d.mail_port_attempts,
+       d.destination_registers,
+       COALESCE(w.up7, 0)::bigint, COALESCE(w.down7, 0)::bigint
+  FROM public.user_abuse_daily d
+  LEFT JOIN LATERAL (
+       SELECT sum(x.up_bytes) AS up7, sum(x.down_bytes) AS down7
+         FROM public.user_abuse_daily x
+        WHERE x.user_id = d.user_id AND x.day > d.day - 7 AND x.day <= d.day) w ON true
+ WHERE d.day >= $1::date`
+
+// PresenceSlotSQL inlines public.presence_day_slot(at) (00136): the UTC day
+// number of at modulo 16. Readers inline it instead of calling the function so
+// the session readers keep needing nothing beyond SELECT; the integration
+// suite proves it equals the function for every instant it samples.
+func PresenceSlotSQL(at string) string {
+	return "(((floor(extract(epoch FROM " + at + ") / 86400)::bigint % 16) + 16) % 16)::smallint"
+}
+
+// presenceSlotsSQL is the ring-pruning predicate for a window ending at the
+// clock expression now: the UTC days of each offset (callers pass the window's
+// days plus tomorrow, for writer clock skew).
+func presenceSlotsSQL(now string, offsets ...string) string {
+	slots := make([]string, len(offsets))
+	for i, offset := range offsets {
+		slots[i] = PresenceSlotSQL(strings.TrimSpace(now + " " + offset))
+	}
+	return "day_slot IN (" + strings.Join(slots, ", ") + ")"
+}
+
+// hostingSlotsSQL prunes the 24-hour hosting window to its ring slots.
+var hostingSlotsSQL = presenceSlotsSQL("statement_timestamp()", "+ interval '1 day'", "", "- interval '24 hours'")
+
+var hostingSessionsSQL = `
+SELECT user_id, count(*)::bigint
+  FROM public.presence_session_log
+ WHERE started_at > statement_timestamp() - interval '24 hours'
+   AND ` + hostingSlotsSQL + `
+   AND asn = ANY($1::bigint[])
+   AND device_key_kind='network' AND fingerprint_version=$3
+
+// ── 判定 → 记账 / 处置 ───────────────────────────────────────────────────
+
+// resellObservationOnly keeps isolated low-confidence signals out of both
+// strike ledgers. Count distinct detector signals, never repeated samples.
+func resellObservationOnly(d Detection) bool {
+	if d.Kind != KindResell || d.Confidence != ConfidenceLow {
+		return false
+	}
+	signals, _ := d.Evidence["signals"].([]string)
+	seen := map[string]bool{}
+	for _, signal := range signals {
+		switch signal {
+		case "concurrent_peak", "distinct_destinations", "fanout", "upload_skew_7d", "hosting_asn_sources":
+			seen[signal] = true
+		}
+	}
+	return len(seen) < 2
+}
+
+// decide 记一行账；enforce 时执行处置。recorded=false 表示今天这一类已经记过。
+func (m *Module) decide(ctx context.Context, d Detection, mode fairuse.Mode, now time.Time) (recorded, applied bool, err error) {
+	// Report the persisted mode, including arbitration and pre-lift downgrades.
+	defer func() {
+		if err == nil && recorded {
+			metrics.Event("usagepolicy.strike." + string(d.Kind) + "." + string(mode))
+		}
+	}()
+	if mode == fairuse.ModeOff {
+		return false, false, nil
+	}
+	if d.ShadowOnly != "" && mode == fairuse.ModeEnforce {
+		mode = fairuse.ModeShadow
+	}
+	if resellObservationOnly(d) {
+		slog.Info("usagepolicy: resell observation", "user_id", d.UserID, "day", d.Day,
+			"evidence", d.Evidence, "rules_version", RulesVersion)
+		return false, false, nil
+	}
+	// Daily peaks remain available for shadow analysis after midnight. They
+	// cannot become fresh enforcement events when enforce is first enabled:
+	// replaying yesterday and today in one round used to warn and throttle the
+	// same user immediately, without any new behavior after the warning.
+	if mode == fairuse.ModeEnforce && !d.Day.Equal(now.UTC().Truncate(24*time.Hour)) {
+		return false, false, nil
+	}
+	var priors int
+	if err := m.pool.QueryRow(ctx, fairuse.StrikePriorsSQL, d.UserID, string(d.Kind), string(mode), d.Day,
+		LadderWindow.Seconds()).Scan(&priors); err != nil {
+		return false, false, err
+	}
+	stepIdx, step := NextStep(d.Kind, d.Confidence, priors)
+	// Low confidence stays a notice. It does not throttle, reset the
+	// subscription, or halt delivery, and repeating it does not promote.
+	// Ambiguous resell evidence is marked ShadowOnly by the detector and is
+	// recorded without a notice. High confidence still climbs the ladder.
+	evidence := map[string]any{}
+	for k, v := range d.Evidence {
+		evidence[k] = v
+	}
+	evidence["priors"] = priors
+	evidence["rules_version"] = RulesVersion
+	if d.ShadowOnly != "" {
+		evidence["enforce_withheld"] = d.ShadowOnly
+	}
+	if step.Action == ActionDisableCredential && m.deps.DisableCredential == nil {
+		// P3 每设备凭据尚未上线：没有可停用的设备凭据。
+		step = fallbackForUnavailable(step)
+		evidence["credential_disable_unavailable"] = true
+	}
+	expires := now.Add(step.Duration)
+	var throttle *int32
+	if step.Action == ActionThrottle {
+		v := int32(ThrottleMbps)
+		throttle = &v
+	}
+	raw, err := json.Marshal(evidence)
+	if err != nil {
+		return false, false, err
+	}
+
+	if mode != fairuse.ModeEnforce {
+		var inserted bool
+		err := pgx.BeginFunc(ctx, m.pool, func(tx pgx.Tx) error {
+			if err := lockPolicyUser(ctx, tx, d.UserID); err != nil {
+				return err
+			}
+			var id int64
+			err := tx.QueryRow(ctx, fairuse.InsertStrikeSQL, d.UserID, string(d.Kind), string(d.Confidence), string(mode),
+				stepIdx, string(step.Action), d.Day, string(raw), throttle, expires).Scan(&id)
+			inserted = err == nil
+			return err
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, false, nil
+		}
+		return inserted, false, err
+	}
+
+	var strikeID int64
+	var postNotify, postDrop bool
+	err = pgx.BeginFunc(ctx, m.pool, func(tx pgx.Tx) error {
+		if err := lockPolicyUser(ctx, tx, d.UserID); err != nil {
+			return err
+		}
+		if (d.Kind == KindVolume || d.Kind == KindResell) && step.Action != ActionNotice {
+			var occupied bool
+			if err := tx.QueryRow(ctx, fairuse.OpenOtherVolumeResellSQL, d.UserID, string(d.Kind), now).Scan(&occupied); err != nil {
+				return err
+			}
+			if occupied {
+				mode = fairuse.ModeShadow
+				other := KindResell
+				if d.Kind == KindResell {
+					other = KindVolume
+				}
+				evidence["enforce_withheld"] = "superseded_by_open_" + string(other)
+				withheldRaw, err := json.Marshal(evidence)
+				if err != nil {
+					return err
+				}
+				err = tx.QueryRow(ctx, fairuse.InsertSupersededStrikeSQL, d.UserID, string(d.Kind), string(d.Confidence),
+					stepIdx, string(step.Action), d.Day, string(withheldRaw), throttle, expires).Scan(&strikeID)
+				recorded = err == nil
+				return err
+			}
+		}
+		if d.Kind == KindVolume && d.Confidence == ConfidenceHigh {
+			var withheld bool
+			if err := tx.QueryRow(ctx, fairuse.VolumePreLiftEvidenceSQL, d.UserID, d.Day).Scan(&withheld); err != nil {
+				return err
+			}
+			if withheld {
+				mode = fairuse.ModeShadow
+				evidence["enforce_withheld"] = "pre_lift_evidence"
+				withheldRaw, err := json.Marshal(evidence)
+				if err != nil {
+					return err
+				}
+				err = tx.QueryRow(ctx, fairuse.InsertStrikeSQL, d.UserID, string(d.Kind), string(ConfidenceLow), string(fairuse.ModeShadow),
+					0, string(ActionNotice), d.Day, string(withheldRaw), nil, now.Add(lowConfidenceStep.Duration)).Scan(&strikeID)
+				recorded = err == nil
+				return err
+			}
+		}
+		if err := tx.QueryRow(ctx, fairuse.InsertStrikeSQL, d.UserID, string(d.Kind), string(d.Confidence), string(mode),
+			stepIdx, string(step.Action), d.Day, string(raw), throttle, expires).Scan(&strikeID); err != nil {
+			return err
+		}
+		recorded = true
+		switch step.Action {
+		case ActionNotice:
+			applied = true
+		case ActionThrottle:
+			rid, note, err := m.applyThrottle(ctx, tx, d.UserID, d.Kind, strikeID, expires)
+			if err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, fairuse.StrikeAnnotateSQL, strikeID, rid, `{"throttle":"`+note+`"}`); err != nil {
+				return err
+			}
+			applied, postNotify = true, true
+		case ActionSuspend:
+			prior, err := m.applySuspend(ctx, tx, d.UserID)
+			if err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, fairuse.StrikeAnnotateSQL, strikeID, nil,
+				`{"prior_banned":`+strconv.FormatBool(prior)+`}`); err != nil {
+				return err
+			}
+			applied, postNotify, postDrop = true, !prior, !prior
+		case ActionResetLink:
+			// Record the pending decision, then atomically revalidate and
+			// rotate with the platform service in a new transaction below.
+		}
+		if applied {
+			if _, err := tx.Exec(ctx, fairuse.StrikeMarkAppliedSQL, strikeID); err != nil {
+				return err
+			}
+			msg := noticeMessage(d.UserID, strikeID, d.Kind, d.Confidence, step.Action, expires)
+			var noticeSent bool
+			if d.Kind == KindVolume || d.Kind == KindResell {
+				if err := tx.QueryRow(ctx, fairuse.VolumeResellNoticeSentSQL, d.UserID, d.Day, strikeID).Scan(&noticeSent); err != nil {
+					return err
+				}
+				msg.DedupeKey = "usage_policy:resell_volume:" + d.Day.UTC().Format("2006-01-02")
+			}
+			if !noticeSent {
+				if _, err := inbox.DeliverTx(ctx, tx, msg); err != nil {
+					return err
+				}
+			}
+		}
+		return audit.Record(ctx, tx, audit.Entry{
+			AdminID: systemActor, Action: audit.UsagePolicySanction, Method: "POST", URI: "/internal/usage-policy",
+			IP: "system:yueboard-usagepolicy", TargetType: "user", TargetID: strconv.FormatInt(d.UserID, 10),
+			Detail: map[string]any{"strike_id": strikeID, "kind": d.Kind, "confidence": d.Confidence,
+				"step": stepIdx, "action": step.Action, "expires_at": expires.Unix(), "evidence": evidence},
+		})
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, false, nil // 今天这一类已经记过（另一个实例或上一轮）
+	}
+	if err != nil {
+		return false, false, err
+	}
+	if postDrop && m.deps.DropUserPresence != nil {
+		if e := m.deps.DropUserPresence(ctx, d.UserID); e != nil {
+			slog.Warn("usagepolicy: 暂停后清在线租约失败", "user_id", d.UserID, "err", e)
+		}
+	}
+	if postNotify {
+		m.notifyUser(ctx, d.UserID)
+	}
+	if step.Action == ActionResetLink {
+		changed, err := m.resetLink(ctx, strikeID, d.UserID, d.Kind, expires)
+		if err != nil {
+			slog.Warn("usagepolicy: 换链接失败，下一轮重试", "strike_id", strikeID, "err", err)
+			metrics.Event("usagepolicy.reset_link_failed")
+			if step.Action == ActionResetLink {
+				return true, false, nil
+			}
+		} else if step.Action == ActionResetLink {
+			applied = changed
+		}
+	}
+	return recorded, applied, nil
+}
+
+func (m *Module) notifyUser(ctx context.Context, userID int64) {
+	if m.deps.NotifyUserChanged == nil {
+		return
+	}
+	if _, err := m.deps.NotifyUserChanged(ctx, userID); err != nil {
+		slog.Warn("usagepolicy: 通知节点用户变更失败（周期全量同步兜底）", "user_id", userID, "err", err)
+	}
+}
+
+// applyThrottle 在调用方事务里把用户限到 ThrottleMbps，返回 user_restrictions.id（nil = 未新设，
+// note 说明原因）。规则：
+//   - 有效限速本身 ≤ 10 Mbps：不设（限速没有意义）。有效限速 = 账号覆盖优先、其次套餐
+//     （speedpolicy.ResolveMbps，与节点快照同一口径；2026-10-11 复核 P2-7）。此前只看套餐：
+//     套餐 5M、覆盖 100M 的人逃过限速；套餐 100M、覆盖 5M 的人反而被写成 10M（限速把人放宽）。
+//     users.speed_limit 等于某条生效限速时可能只是镜像，此时只看套餐；否则它是真覆盖（第二轮复核）。
+//   - 已有本引擎的 UP-* 限速：顺延到 max(原到期, 新到期)，复用那一行。
+//   - 已有插件限速且 ≤ 10 Mbps：已经更严，不叠加。
+//   - 已有插件限速且 > 10 Mbps：标为 usagepolicy:superseded 让位（同一用户只留一条生效限速，
+//     否则两个写方的对账会互相覆盖 users.speed_limit）。
+func (m *Module) applyThrottle(ctx context.Context, tx pgx.Tx, userID int64, kind Kind, strikeID int64, expires time.Time) (*int64, string, error) {
+	var cur, plan *int64
+	if err := tx.QueryRow(ctx, `
+		SELECT u.speed_limit, p.speed_limit FROM public.users u
+		LEFT JOIN public.plans p ON p.id = u.plan_id
+		WHERE u.id = $1 FOR UPDATE OF u`, userID).Scan(&cur, &plan); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, "user_missing", nil
+		}
+		return nil, "", err
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id, tier, restricted_speed_mbps FROM public.user_restrictions
+		WHERE user_id = $1 AND status = 'active' ORDER BY id FOR UPDATE`, userID)
+	if err != nil {
+		return nil, "", err
+	}
+	type active struct {
+		id   int64
+		tier string
+		mbps int32
+	}
+	var list []active
+	for rows.Next() {
+		var a active
+		if err := rows.Scan(&a.id, &a.tier, &a.mbps); err != nil {
+			rows.Close()
+			return nil, "", err
+		}
+		list = append(list, a)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, "", err
+	}
+	activeMbps := make([]int32, 0, len(list))
+	for _, a := range list {
+		activeMbps = append(activeMbps, a.mbps)
+	}
+	if throttleIsMoot(cur, plan, activeMbps) {
+		return nil, "effective_at_or_below_throttle", nil
+	}
+	for _, a := range list {
+		if speedpolicy.IsPolicyTier(a.tier) {
+			if _, err := tx.Exec(ctx, `UPDATE public.user_restrictions
+
+exec
+/bin/bash -lc "git show 4cef367:internal/modules/usagepolicy/detect.go | sed -n '1,260p'; rg -n 'decide\\(|Evidence\\[\"signals\"\\]|json.Unmarshal|RulesVersion|abuseRetryDatabase' internal/modules/usagepolicy" in /home/box/Projects/yueto/yueboard
+ succeeded in 0ms:
+package usagepolicy
+
+// detect.go —— L4 滥用判定（纯函数；输入由 abuse.go 从库里取齐）。
+//
+// Volume uses upload volume for notices and requires an independent strong signal
+// for sanctions. Existing behavioral resell rules remain independent.
+//
+// 每条阈值都是**保守**取值，并在旁边写明它相对 2026-10-06 生产分布（设计文档 §0）
+// 的依据。拿不准的信号只给 low 置信度：low 只记账、只提醒，绝不处罚（设计 §2 L4
+// 「判定置信不足只提醒不处罚」），也不计入升级梯子。
+//
+// 隐私：判定只用计数、HyperLogLog 基数估计、来源国家/ASN 与来源摘要的个数，
+// 从不接触访问目的地。
+
+import (
+	"sort"
+	"time"
+
+	"github.com/onesyue/yueboard/internal/platform/devicelimit"
+)
+
+// Kind 是滥用类型（abuse_strikes.kind 的 CHECK 集合）。
+type Kind string
+
+const (
+	KindSharing Kind = "sharing" // 账号共享
+	KindVolume  Kind = "volume"  // Upload volume with independent behavioral corroboration.
+	KindResell  Kind = "resell"  // 转售 / 二次分发
+	KindLeak    Kind = "leak"    // 订阅泄露
+	KindBT      Kind = "bt"      // BT / PT
+	KindMail    Kind = "mail"    // 垃圾邮件
+	KindScan    Kind = "scan"    // 扫描
+)
+
+// Kinds 按展示顺序列出全部类型。
+var Kinds = []Kind{KindSharing, KindResell, KindVolume, KindLeak, KindBT, KindMail, KindScan}
+
+// Confidence 是判定置信度。
+type Confidence string
+
+const (
+	ConfidenceLow  Confidence = "low"
+	ConfidenceHigh Confidence = "high"
+)
+
+// Detection 是一次判定。Evidence 只放计数与阈值。
+type Detection struct {
+	UserID     int64
+	Kind       Kind
+	Confidence Confidence
+	Day        time.Time // UTC 日（abuse_strikes.detected_on）
+	Evidence   map[string]any
+	// ShadowOnly 非空 = 证据不足以授权任何处置（原因码）：即使该类是 enforce，
+	// 也只记一行 shadow 账，不发站内信、不进梯子。见 exclusion.go。
+	ShadowOnly string
+}
+
+// RulesVersion 写进每条证据，阈值或判据改动后历史判定仍可复核（审计 A7）。
+const RulesVersion = "2026-10-30.1"
+
+// ── 阈值 ────────────────────────────────────────────────────────────────
+
+const (
+	// ResellConcurrentPeak：单进程同时打开的代理流峰值（跨进程取最大）。
+	// 一台活跃的手机/电脑常态 50–300 条流，浏览器重度使用短时 ≤ 500；§0 测得
+	// 「同时在线去重后超设备上限 0 人」，即真实用户同时在线设备数都在上限内（常见 3–5），
+	// 人类上界约 5 × 300 = 1500。取 2 倍余量。
+	ResellConcurrentPeak = 3000
+	// ResellDistinctDestinations：一天内不同目的主机数（HyperLogLog 估计）。人类重度浏览
+	// 每天 2k–5k 个主机。各节点进程的盐不同，跨进程合并是**和的估计**（上界）：一天换
+	// 6 个进程的人最多被放大到 ~6 倍（≈30k）。取 60k，即在最坏放大下仍要 2 倍于人类上界。
+	ResellDistinctDestinations = 60_000
+	// ResellFanoutPerMinute：任一分钟内不同 主机:端口 的峰值。网页冷启动一次 50–150 个；
+	// 多人共用一个凭据时多个页面叠加。400 = 人类峰值约 3 倍；扫描另有更高的线（ScanFanout*）。
+	ResellFanoutPerMinute = 400
+	// UploadSkewMinBytes: seven-day upload exceeds download and reaches 20 GiB.
+	// Cloud backups, seeding, self-hosted services, and long voice calls can match.
+	// This ambiguous signal cannot authorize sanctions or upgrade one strong signal.
+	UploadSkewMinBytes = int64(20) << 30
+	// VolumeUploadMinBytes gates volume notices; sanctions also require a strong signal.
+	VolumeUploadMinBytes = int64(300) << 30
+	// HostingSessionsPerDay：24 小时内来自机房 ASN（YUEBOARD_USAGEPOLICY_HOSTING_ASNS）
+	// 的会话数。家宽/移动网用户来源不会是机房；≥3 次排除了一次性的云桌面/公司出口。
+	HostingSessionsPerDay = 3
+
+	// BTHitsHigh / BTHitsLow：一天内被识别并拦截的 BT 流数。真实 BT 客户端一启动就向
+	// 几十上百个 peer/tracker 发起连接，几十秒内就过 20；单条误判的流到不了这个量级。
+	// §0：两内核 L7 识别此前都不生效，这是一个新信号，所以 low 线设在 3（只提醒）。
+	BTHitsHigh = 20
+	BTHitsLow  = 3
+
+	// MailAttemptsHigh / Low：一天内被派往 25/465/587/2525 的流数。P1-D 起全队出站封
+	// 这四个端口，正常邮件客户端会对被拒的 SMTP 每 5–15 分钟重试一次 ≈ 每台设备每天
+	// 100–300 次。群发器每天上万。high 取 3000（≥10 台设备同时在重试也到不了），
+	// low 取 600（只提醒，常见原因是手机邮件 App 配了自建 SMTP）。
+	MailAttemptsHigh = 3000
+	MailAttemptsLow  = 600
+
+	// ScanFanoutHigh / Low：任一分钟不同 主机:端口 峰值。端口/主机扫描每分钟数千到数万；
+	// 人类上界见 ResellFanoutPerMinute（~150，叠加多人 ~400）。high 3000 是人类峰值 20 倍。
+	ScanFanoutHigh = 3000
+	ScanFanoutLow  = 1500
+	// ScanFanoutSaturation 是节点端点集合的上限（yue-node internal/usage/recorder.go
+	// FanoutCap）。到了它就是「计数器顶格」，不再有梯度：2026-10-07..10 生产 fanout≥3000
+	// 的 17 个用户日里 14 个恰好等于 4096，「扫描器」与 P2P/多设备 UDP 会话无法区分。
+	// 顶格读数只能给 low，不能单独、也不能作为 high 的主信号。
+	ScanFanoutSaturation = 4096
+
+	// LeakOriginsHigh / Low：24 小时内拉取同一订阅的不同来源（v4 /32、v6 /64，已剔除
+	// 本舰队出口）。面板的小时级守卫在 1 小时 4 个来源时已经隔离入口；正常用户一天里
+	// 家宽 + 移动网（CGNAT 换地址）+ 公司网，按 6 小时自动更新一次约 ≤ 8 个。
+	// low 12（只提醒），high 24（≈ 每小时一个新来源持续一整天，只有被公开分发才会这样）。
+	LeakOriginsHigh = 24
+	LeakOriginsLow  = 12
+
+	// SharingLocationsHigh counts concurrent sessions in distinct countries and ASNs.
+	// Compare the effective account/plan allowance enforced by nodes.
+	// Exceeding that limit at fewer than 3 locations merits notice; at least 3 is high.
+	// Direct and relayed traffic have previously appeared as separate locations.
+	SharingLocationsHigh = 3
+	SharingLocationsLow  = 2
+)
+
+// ── 计数类（转售 / BT / 邮件 / 扫描）────────────────────────────────────
+
+// CounterSignals 是一个用户一个 UTC 日的计数（来自 user_abuse_daily）与 7 天上传倒挂、
+// 机房来源会话数。
+type CounterSignals struct {
+	UserID               int64
+	Day                  time.Time
+	ConcurrentPeak       int64
+	FanoutPeak           int64
+	BTHits               int64
+	MailAttempts         int64
+	DistinctDestinations uint64
+	Up7d, Down7d         int64
+	HostingSessions      int64 // -1 = 未配置机房 ASN 名单（信号不可用）
+}
+
+// DetectCounters 判转售 / BT / 邮件 / 扫描。
+func DetectCounters(s CounterSignals) []Detection {
+	var out []Detection
+	day := s.Day.UTC().Truncate(24 * time.Hour)
+
+	// Resell throttling requires both strong limits: concurrent streams and destinations.
+	// One strong signal alone is observation only. Upload skew, hosting origins, and moderate fanout
+	// cannot authorize sanctions alone, together, or alongside only one strong signal.
+	// Multiple weak signals retain shadow evidence without sending a notice.
+	var strong, weak []string
+	if s.ConcurrentPeak >= ResellConcurrentPeak {
+		strong = append(strong, "concurrent_peak")
+	}
+	if s.DistinctDestinations >= ResellDistinctDestinations {
+		strong = append(strong, "distinct_destinations")
+	}
+	if s.FanoutPeak >= ResellFanoutPerMinute && s.FanoutPeak < ScanFanoutLow {
+		weak = append(weak, "fanout")
+	}
+	if s.Up7d > s.Down7d && s.Up7d >= UploadSkewMinBytes {
+		weak = append(weak, "upload_skew_7d")
+	}
+	if s.HostingSessions >= HostingSessionsPerDay {
+		weak = append(weak, "hosting_asn_sources")
+	}
+	signals := append(append([]string{}, strong...), weak...)
+	if len(signals) > 0 {
+		conf := ConfidenceLow
+		shadow := ""
+		if len(strong) >= 2 {
+			conf = ConfidenceHigh
+		} else if len(strong) == 0 {
+			shadow = "resell_ambiguous"
+		}
+		out = append(out, Detection{UserID: s.UserID, Kind: KindResell, Confidence: conf, Day: day, ShadowOnly: shadow,
+			Evidence: map[string]any{
+				"signals":                 signals,
+				"concurrent_peak":         s.ConcurrentPeak,
+				"distinct_destinations":   s.DistinctDestinations,
+				"distinct_is_upper_bound": true,
+				"fanout_per_minute_peak":  s.FanoutPeak,
+				"up_7d_bytes":             s.Up7d,
+				"down_7d_bytes":           s.Down7d,
+				"hosting_sessions_24h":    s.HostingSessions,
+			}})
+	}
+
+	if s.Up7d >= VolumeUploadMinBytes && s.Up7d > s.Down7d {
+		confidence, shadow := ConfidenceLow, ""
+		if len(strong) == 1 {
+			confidence = ConfidenceHigh
+		} else if len(strong) >= 2 {
+			// Resell already owns the sanction for this user/day.
+			shadow = "resell_high"
+		}
+		out = append(out, Detection{UserID: s.UserID, Kind: KindVolume, Confidence: confidence, Day: day, ShadowOnly: shadow,
+			Evidence: map[string]any{
+				"up_7d_bytes": s.Up7d, "down_7d_bytes": s.Down7d,
+				"upload_min_bytes": VolumeUploadMinBytes,
+				"strong_signals":   append([]string{}, strong...),
+				"concurrent_peak":  s.ConcurrentPeak, "concurrent_threshold": ResellConcurrentPeak,
+				"distinct_destinations": s.DistinctDestinations, "destinations_threshold": ResellDistinctDestinations,
+				"distinct_is_upper_bound": true,
+			}})
+	}
+
+	corroborates := func(c Confidence, ok bool) Confidence {
+		if c == ConfidenceHigh && !ok {
+			return ConfidenceLow
+		}
+		return c
+	}
+	if c, ok := grade(s.BTHits, BTHitsLow, BTHitsHigh); ok {
+		c = corroborates(c, s.FanoutPeak >= ResellFanoutPerMinute || s.ConcurrentPeak >= ResellConcurrentPeak)
+		out = append(out, Detection{UserID: s.UserID, Kind: KindBT, Confidence: c, Day: day,
+			Evidence: map[string]any{"bt_hits": s.BTHits, "high_threshold": BTHitsHigh, "fanout_peak": s.FanoutPeak, "concurrent_peak": s.ConcurrentPeak}})
+	}
+	if c, ok := grade(s.MailAttempts, MailAttemptsLow, MailAttemptsHigh); ok {
+		c = corroborates(c, s.FanoutPeak >= ResellFanoutPerMinute || s.ConcurrentPeak >= ResellConcurrentPeak)
+		out = append(out, Detection{UserID: s.UserID, Kind: KindMail, Confidence: c, Day: day,
+			Evidence: map[string]any{"mail_port_attempts": s.MailAttempts, "high_threshold": MailAttemptsHigh, "fanout_peak": s.FanoutPeak, "concurrent_peak": s.ConcurrentPeak}})
+	}
+	if d := detectScan(s, day); d != nil {
+		out = append(out, *d)
+	}
+	return out
+}
+
+// detectScan 判扫描（2026-10-10 重写，审计 A2）：
+//   - 计数顶格（≥ ScanFanoutSaturation）只给 low：顶格没有梯度，证明不了是扫描。
+//   - high 必须有**第二个与扫描相符的独立信号**：大量邮件端口尝试（非网页端口），
+//     或一天内不同目的主机数达到转售线（HLL 上界）。并发流峰值与 BT 命中不算——
+//     它们正是 P2P / 多设备的形状，不能用来区分扫描。
+//   - 处置梯子最高到限速（ladder.go），并可自助申诉（api.go appealableKind）。
+func detectScan(s CounterSignals, day time.Time) *Detection {
+	c, ok := grade(s.FanoutPeak, ScanFanoutLow, ScanFanoutHigh)
+	if !ok {
+		return nil
+	}
+	saturated := s.FanoutPeak >= ScanFanoutSaturation
+	var corroborating []string
+	if s.MailAttempts >= MailAttemptsLow {
+		corroborating = append(corroborating, "mail_port_attempts")
+	}
+	if s.DistinctDestinations >= ResellDistinctDestinations {
+		corroborating = append(corroborating, "distinct_destinations")
+	}
+	if c == ConfidenceHigh && (saturated || len(corroborating) == 0) {
+		c = ConfidenceLow
+	}
+	if corroborating == nil {
+		corroborating = []string{}
+	}
+	return &Detection{UserID: s.UserID, Kind: KindScan, Confidence: c, Day: day,
+		Evidence: map[string]any{"fanout_per_minute_peak": s.FanoutPeak, "high_threshold": ScanFanoutHigh,
+			"saturated": saturated, "saturation": ScanFanoutSaturation, "corroborating_signals": corroborating,
+			"concurrent_peak": s.ConcurrentPeak, "distinct_destinations": s.DistinctDestinations,
+			"mail_port_attempts": s.MailAttempts, "bt_hits": s.BTHits}}
+}
+
+func grade(v, low, high int64) (Confidence, bool) {
+internal/modules/usagepolicy/fairuse_20261010_test.go:205:func TestRulesVersionIsDated(t *testing.T) {
+internal/modules/usagepolicy/fairuse_20261010_test.go:206:	if _, err := time.Parse(time.DateOnly, strings.SplitN(RulesVersion, ".", 2)[0]); err != nil {
+internal/modules/usagepolicy/fairuse_20261010_test.go:207:		t.Fatalf("RulesVersion %q must start with a date", RulesVersion)
+internal/modules/usagepolicy/volume_integration_test.go:19:	pool, m := abuseRetryDatabase(t)
+internal/modules/usagepolicy/volume_integration_test.go:68:				recorded, applied, err := m.decide(ctx, d, fairuse.ModeEnforce, now)
+internal/modules/usagepolicy/volume_integration_test.go:112:			recorded, applied, err := m.decide(ctx, d, modes.Of("volume"), now)
+internal/modules/usagepolicy/volume_integration_test.go:126:	pool, m := abuseRetryDatabase(t)
+internal/modules/usagepolicy/volume_integration_test.go:154:			recorded, applied, err := m.decide(ctx, d, fairuse.ModeEnforce, now)
+internal/modules/usagepolicy/volume_integration_test.go:176:	pool, m := abuseRetryDatabase(t)
+internal/modules/usagepolicy/volume_integration_test.go:190:					recorded, applied, err := m.decide(ctx, Detection{UserID: uid, Kind: k, Confidence: ConfidenceHigh, Day: at.Truncate(day)}, fairuse.ModeEnforce, at)
+internal/modules/usagepolicy/volume_integration_test.go:195:				decide(first, now, true)
+internal/modules/usagepolicy/volume_integration_test.go:203:					if _, _, err := m.decide(ctx, Detection{UserID: uid, Kind: second, Confidence: ConfidenceLow, Day: today}, fairuse.ModeShadow, now); err != nil {
+internal/modules/usagepolicy/volume_integration_test.go:207:				decide(second, now, false)
+internal/modules/usagepolicy/volume_integration_test.go:242:				decide(second, now.Add(time.Second), true)
+internal/modules/usagepolicy/volume_integration_test.go:255:	pool, m := abuseRetryDatabase(t)
+internal/modules/usagepolicy/volume_integration_test.go:265:			recorded, applied, err := m.decide(ctx, Detection{UserID: uid, Kind: k, Confidence: ConfidenceLow, Day: now.Truncate(day)}, fairuse.ModeEnforce, now)
+internal/modules/usagepolicy/volume_integration_test.go:275:		if _, _, err := m.decide(ctx, Detection{UserID: uid, Kind: first, Confidence: ConfidenceLow, Day: next.Truncate(day)}, fairuse.ModeEnforce, next); err != nil {
+internal/modules/usagepolicy/usagepolicy_test.go:301:			recorded, applied, err := m.decide(context.Background(), Detection{
+internal/modules/usagepolicy/remediate_bounds_test.go:19:	if !slices.Equal(o.RulesVersions, []string{""}) {
+internal/modules/usagepolicy/remediate_bounds_test.go:20:		t.Fatalf("default rules-version filter must be the unversioned (pre-%s) strikes only, got %q", RulesVersion, o.RulesVersions)
+internal/modules/usagepolicy/remediate_bounds_test.go:22:	cur := RemediationOptions{Until: DefaultRemediationSince.Add(96 * time.Hour), RulesVersions: []string{RulesVersion}}
+internal/modules/usagepolicy/remediate_bounds_test.go:24:		t.Fatalf("condition selection must refuse the current rules version %s (use --ids)", RulesVersion)
+internal/modules/usagepolicy/remediate.go:19://     2026-10-10.1 起才写入）。现行 RulesVersion 不允许按条件选——它产出的处置要撤就
+internal/modules/usagepolicy/remediate.go:51:// PreVersionedRules 在 RulesVersions 里代表「证据没有 rules_version」（2026-10-10.1 之前的判据）。
+internal/modules/usagepolicy/remediate.go:55:// 否则按 Kinds + [Since, Until) + RulesVersions 条件。
+internal/modules/usagepolicy/remediate.go:62:	// RulesVersions 是允许的证据 rules_version；PreVersionedRules（""）= 没有该字段。
+internal/modules/usagepolicy/remediate.go:63:	// 缺省只选 PreVersionedRules；不得包含现行 RulesVersion。
+internal/modules/usagepolicy/remediate.go:64:	RulesVersions []string
+internal/modules/usagepolicy/remediate.go:171:	if len(o.RulesVersions) == 0 {
+internal/modules/usagepolicy/remediate.go:172:		o.RulesVersions = []string{PreVersionedRules}
+internal/modules/usagepolicy/remediate.go:174:	slices.Sort(o.RulesVersions)
+internal/modules/usagepolicy/remediate.go:175:	o.RulesVersions = slices.Compact(o.RulesVersions)
+internal/modules/usagepolicy/remediate.go:176:	if slices.Contains(o.RulesVersions, RulesVersion) {
+internal/modules/usagepolicy/remediate.go:177:		return fmt.Errorf("rules version %s is the current one: its strikes are not remediable by condition (use explicit ids)", RulesVersion)
+internal/modules/usagepolicy/remediate.go:210:	versions := o.RulesVersions
+internal/modules/usagepolicy/remediate.go:313:		sel["rules_versions"] = o.RulesVersions
+internal/modules/usagepolicy/repeated_low_correction_integration_test.go:24:	pool, m := abuseRetryDatabase(t)
+internal/modules/usagepolicy/repeated_low_correction_integration_test.go:115:	pool, m := abuseRetryDatabase(t)
+internal/modules/usagepolicy/repeated_low_correction_integration_test.go:138:	pool, m := abuseRetryDatabase(t)
+internal/modules/usagepolicy/abuse_retry_integration_test.go:25:func abuseRetryDatabase(t *testing.T) (*pgxpool.Pool, *Module) {
+internal/modules/usagepolicy/abuse_retry_integration_test.go:114:	pool, m := abuseRetryDatabase(t)
+internal/modules/usagepolicy/abuse_retry_integration_test.go:130:		recorded, applied, err := m.decide(ctx, Detection{UserID: uid, Kind: KindLeak, Confidence: ConfidenceLow, Day: now.UTC().Truncate(24 * time.Hour)}, fairuse.ModeEnforce, now)
+internal/modules/usagepolicy/abuse_retry_integration_test.go:206:		if recorded, applied, err := m.decide(ctx, Detection{UserID: uid, Kind: KindLeak, Confidence: ConfidenceLow, Day: now.UTC().Truncate(24 * time.Hour)}, fairuse.ModeEnforce, now); err != nil || !recorded || !applied {
+internal/modules/usagepolicy/abuse.go:107:		recorded, applied, err := m.decide(ctx, d, mode, now)
+internal/modules/usagepolicy/abuse.go:471:func (m *Module) decide(ctx context.Context, d Detection, mode fairuse.Mode, now time.Time) (recorded, applied bool, err error) {
+internal/modules/usagepolicy/abuse.go:506:	evidence["rules_version"] = RulesVersion
+internal/modules/usagepolicy/replay.go:6:// RulesVersion）重算判定，与 abuse_strikes 里的历史记录逐 (用户, 类型, 日) 比对，
+internal/modules/usagepolicy/replay.go:85:	RulesVersion string           `json:"rules_version"`
+internal/modules/usagepolicy/replay.go:133:	rep := ReplayReport{From: from.Format(time.DateOnly), To: to.Format(time.DateOnly), RulesVersion: RulesVersion,
+internal/modules/usagepolicy/detect.go:58:// RulesVersion 写进每条证据，阈值或判据改动后历史判定仍可复核（审计 A7）。
+internal/modules/usagepolicy/detect.go:59:const RulesVersion = "2026-10-30.1"
+
+exec
+/bin/bash -lc "git show 4cef367:internal/modules/usagepolicy/replay.go | sed -n '95,310p'; git show 4cef367:internal/modules/usagepolicy/abuse_retry_integration_test.go | sed -n '1,115p'; git show 4cef367:internal/modules/usagepolicy/abuse.go | sed -n '230,345p'" in /home/box/Projects/yueto/yueboard
+ succeeded in 0ms:
+type ReplayQuerier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+// replayKey 是 (用户, 类型, UTC 日)。
+type replayKey struct {
+	uid  int64
+	kind Kind
+	day  string
+}
+
+// replayOld 是一组历史记录（同 key 不同 mode 合并，取最高置信度）。
+type replayOld struct {
+	high        bool
+	sanctioning bool
+}
+
+// replayNew 是一个新判定。
+type replayNew struct {
+	high        bool
+	sanctioning bool
+}
+
+// ShadowReplay 跑回放。q 必须是只读事务（调用方保证）。
+func (m *Module) ShadowReplay(ctx context.Context, q ReplayQuerier, opts ReplayOptions) (ReplayReport, error) {
+	from := opts.From.UTC().Truncate(24 * time.Hour)
+	to := opts.To.UTC().Truncate(24 * time.Hour)
+	now := m.now().UTC()
+	if to.Before(from) {
+		return ReplayReport{}, fmt.Errorf("to %s is before from %s", to.Format(time.DateOnly), from.Format(time.DateOnly))
+	}
+	if days := int(to.Sub(from)/(24*time.Hour)) + 1; days > ReplayMaxDays {
+		return ReplayReport{}, fmt.Errorf("window is %d days, at most %d", days, ReplayMaxDays)
+	}
+	if to.After(now) {
+		to = now.Truncate(24 * time.Hour)
+	}
+	rep := ReplayReport{From: from.Format(time.DateOnly), To: to.Format(time.DateOnly), RulesVersion: RulesVersion,
+		EvaluatedAt: now.Unix(), Caveats: replayCaveats()}
+
+	// 剔除集：现在的 peer_ip ∪ 库存（库存从同一只读事务读）。
+	var peerKeys []string
+	peerOK := false
+	if m.fleet != nil {
+		peerKeys, peerOK = m.fleet.Keys(ctx)
+	}
+	raw, invErr := fleetegress.LoadInventory(ctx, q)
+	history, historyErr := fleetegress.LoadHistory(ctx, q, now)
+	ex := newExclusionState(fleetegress.ForReleasePhase(fleetegress.WithHistory(fleetegress.Assess(peerKeys, peerOK, raw, invErr, now), history, historyErr, now)), ipfingerprint.Secret())
+	rep.Exclusion = ReplayExclusion{Complete: ex.usable(), Reason: ex.reason(), Keys: len(ex.Keys), PeerKeys: ex.PeerKeys,
+		InventoryKeys: ex.InventoryKeys, Relays: ex.Relays, Directs: ex.Directs}
+	if !ex.secretOK {
+		rep.Caveats = append(rep.Caveats, "ip fingerprint secret unavailable: sharing could not exclude any fleet source")
+	}
+
+	old, err := replayLoadOld(ctx, q, from, to)
+	if err != nil {
+		return rep, fmt.Errorf("old strikes: %w", err)
+	}
+	dets, err := m.replayDetect(ctx, q, from, to, now, ex)
+	if err != nil {
+		return rep, err
+	}
+	fresh := map[replayKey]replayNew{}
+	for _, d := range dets {
+		k := replayKey{d.UserID, d.Kind, d.Day.UTC().Format(time.DateOnly)}
+		n := fresh[k]
+		n.high = n.high || d.Confidence == ConfidenceHigh
+		n.sanctioning = n.sanctioning || (d.Confidence == ConfidenceHigh && d.ShadowOnly == "")
+		fresh[k] = n
+	}
+	rep.Old, rep.New, rep.Diff = diffReplay(old, fresh, opts.Sample)
+	return rep, nil
+}
+
+func replayCaveats() []string {
+	return []string{
+		"sharing: two evaluation points per day (00:10 and 24:00 UTC, capped at now) instead of every 10 minutes; device limit uses the current plan/account value",
+		"fleet exclusion includes native writer observations from the last 48h; missing or warming coverage withholds enforcement. Older replay days remain approximate: history is retained 72h and current device limits/peer snapshot are used",
+		"leak: subscription_fetch_origins keeps only 24-48h, so leak is replayed for today only",
+		"counter kinds read user_abuse_daily (30-day retention); presence_session_log keeps 14 days, so sharing/hosting evidence older than that is absent",
+		"old side merges shadow and enforce rows of the same user/kind/day, taking the highest confidence",
+	}
+}
+
+const replayOldSQL = `
+SELECT user_id, kind, detected_on::text, confidence, mode, action, applied
+  FROM public.abuse_strikes
+ WHERE detected_on BETWEEN $1::date AND $2::date`
+
+func replayLoadOld(ctx context.Context, q ReplayQuerier, from, to time.Time) (map[replayKey]replayOld, error) {
+	rows, err := q.Query(ctx, replayOldSQL, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[replayKey]replayOld{}
+	for rows.Next() {
+		var uid int64
+		var kind, day, conf, mode, action string
+		var applied bool
+		if err := rows.Scan(&uid, &kind, &day, &conf, &mode, &action, &applied); err != nil {
+			return nil, err
+		}
+		k := replayKey{uid, Kind(kind), day}
+		o := out[k]
+		o.high = o.high || conf == string(ConfidenceHigh)
+		o.sanctioning = o.sanctioning || (mode == "enforce" && applied && action != string(ActionNotice))
+		out[k] = o
+	}
+	return out, rows.Err()
+}
+
+// replayCountersSQL 是 countersSQL 的按窗口版本。
+const replayCountersSQL = `
+SELECT d.user_id, d.day, d.concurrent_peak, d.endpoint_fanout_peak, d.bt_hits, d.mail_port_attempts,
+       d.destination_registers,
+       COALESCE(w.up7, 0)::bigint, COALESCE(w.down7, 0)::bigint
+  FROM public.user_abuse_daily d
+  LEFT JOIN LATERAL (
+       SELECT sum(x.up_bytes) AS up7, sum(x.down_bytes) AS down7
+         FROM public.user_abuse_daily x
+        WHERE x.user_id = d.user_id AND x.day > d.day - 7 AND x.day <= d.day) w ON true
+ WHERE d.day BETWEEN $1::date AND $2::date`
+
+// replayHostingSQL 是 hostingSessionsSQL 以 $4 为「现在」的版本。
+var replayHostingSQL = mustReplaceAll(hostingSessionsSQL, map[string]string{
+	"started_at > statement_timestamp() - interval '24 hours'": "started_at > $4::timestamptz - interval '24 hours' AND started_at <= $4::timestamptz",
+	hostingSlotsSQL: presenceSlotsSQL("$4::timestamptz", "+ interval '1 day'", "", "- interval '24 hours'"),
+})
+
+// replaySharingSQL 是生产共享查询以 $3 为「现在」的版本（同一份候选过滤与剔除）。
+func replaySharingSQL() string {
+	return mustReplaceAll(sharingSQL(), map[string]string{
+		"statement_timestamp()":        "$3::timestamptz",
+		"     AND country IS NOT NULL": "     AND started_at < $3::timestamptz\n     AND country IS NOT NULL",
+	})
+}
+
+// mustReplaceAll 替换每一个片段；任一片段找不到就 panic——生产查询改了形状时回放
+// 必须当场失败，而不是悄悄换成另一份判据。
+func mustReplaceAll(s string, repl map[string]string) string {
+	keys := make([]string, 0, len(repl))
+	for k := range repl {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	for _, old := range keys {
+		if !strings.Contains(s, old) {
+			panic("usagepolicy replay: production query no longer contains " + old)
+		}
+		s = strings.ReplaceAll(s, old, repl[old])
+	}
+	return s
+}
+
+func (m *Module) replayDetect(ctx context.Context, q ReplayQuerier, from, to, now time.Time, ex exclusionState) ([]Detection, error) {
+	var out []Detection
+	hostingOn := len(m.hostingASNs) > 0 && ex.usable()
+	hosting := map[string]map[int64]int64{}
+	if hostingOn {
+		for day := from; !day.After(to); day = day.Add(24 * time.Hour) {
+			at := day.Add(24 * time.Hour)
+			if at.After(now) {
+				at = now
+			}
+			counts := map[int64]int64{}
+			rows, err := q.Query(ctx, replayHostingSQL, m.hostingASNs, ex.digests, ipfingerprint.CurrentVersion, at)
+			if err != nil {
+				return nil, fmt.Errorf("hosting: %w", err)
+			}
+			for rows.Next() {
+				var uid, n int64
+				if err := rows.Scan(&uid, &n); err != nil {
+					rows.Close()
+					return nil, err
+				}
+				counts[uid] = n
+			}
+			rows.Close()
+			if err := rows.Err(); err != nil {
+				return nil, err
+			}
+			hosting[day.Format(time.DateOnly)] = counts
+		}
+	}
+
+	rows, err := q.Query(ctx, replayCountersSQL, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("counters: %w", err)
+	}
+	for rows.Next() {
+		var s CounterSignals
+		var cp, fp int32
+		var regs []byte
+		if err := rows.Scan(&s.UserID, &s.Day, &cp, &fp, &s.BTHits, &s.MailAttempts, &regs, &s.Up7d, &s.Down7d); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		s.ConcurrentPeak, s.FanoutPeak = int64(cp), int64(fp)
+		s.DistinctDestinations = estimateRegisters(regs)
+		s.HostingSessions = -1
+		if hostingOn {
+			s.HostingSessions = hosting[s.Day.UTC().Format(time.DateOnly)][s.UserID]
+		}
+		for _, d := range DetectCounters(s) {
+			capForExclusion(&d, ex)
+			out = append(out, d)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+//go:build integration
+
+package usagepolicy
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onesyue/yueboard/internal/platform/fairuse"
+	"github.com/onesyue/yueboard/internal/platform/settings"
+	"github.com/onesyue/yueboard/internal/platform/tokenvault"
+)
+
+// A private database uses the real fixture DDL without racing another package's
+// public schema. It also exercises the decision directly while the separately
+// gated fleet-history collector remains disabled in foundation builds.
+func abuseRetryDatabase(t *testing.T) (*pgxpool.Pool, *Module) {
+	t.Helper()
+	dsn := os.Getenv("YUEBOARD_TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("YUEBOARD_TEST_DATABASE_URL is required for PostgreSQL integration")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	adminConfig, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admin, err := pgx.ConnectConfig(ctx, adminConfig.ConnConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := "usagepolicy_retry_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	if _, err = admin.Exec(ctx, "CREATE DATABASE "+pgx.Identifier{name}.Sanitize()); err != nil {
+		admin.Close(ctx)
+		t.Fatal(err)
+	}
+	var pool *pgxpool.Pool
+	t.Cleanup(func() {
+		if pool != nil {
+			pool.Close()
+		}
+		cleanup, stop := context.WithTimeout(context.Background(), 10*time.Second)
+		defer stop()
+		if _, err := admin.Exec(cleanup, "DROP DATABASE "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
+			t.Errorf("drop owned test database: %v", err)
+		}
+		_ = admin.Close(cleanup)
+	})
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.ConnConfig.Database = name
+	cfg.MaxConns = 4
+	pool, err = pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixtures := os.Getenv("YUEBOARD_TEST_FIXTURES")
+	if fixtures == "" {
+		fixtures = filepath.Join("..", "..", "..", "test", "fixtures")
+	}
+	schema, err := os.ReadFile(filepath.Join(fixtures, "schema.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, string(schema)); err != nil {
+		t.Fatal(err)
+	}
+	vault, err := tokenvault.NewRandom()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(tokenvault.SetDefault(vault))
+	if _, err := pool.Exec(ctx, `INSERT INTO settings(name,value) VALUES('usage_policy_mode_leak','enforce')`); err != nil {
+		t.Fatal(err)
+	}
+	return pool, New(pool, settings.New(pool), Deps{})
+}
+
+func abuseRetryUser(t *testing.T, pool *pgxpool.Pool) (int64, string) {
+	t.Helper()
+	id := uuid.NewString()
+	sealed, err := tokenvault.Default().Seal(strings.ReplaceAll(uuid.NewString(), "-", ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var uid int64
+	err = pool.QueryRow(context.Background(), `INSERT INTO users(email,password,uuid,token_enc,token_bidx,token_key_id,speed_limit,balance,u,d,transfer_enable,created_at,updated_at)
+ VALUES($1,'unused',$2,$3,$4,$5,321,987,123,456,1099511627776,now(),now()) RETURNING id`, id+"@test.invalid", id, sealed.Enc, sealed.Bidx, sealed.KeyID).Scan(&uid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return uid, id
+}
+
+func abuseRetryExec(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) {
+	t.Helper()
+	if _, err := pool.Exec(context.Background(), sql, args...); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRepeatedLowCompanionResetPostgres(t *testing.T) {
+	pool, m := abuseRetryDatabase(t)
+	ctx := context.Background()
+  HAVING min(country) <> max(country) AND min(asn) <> max(asn)
+), spans AS (
+  SELECT d.user_id, s.country, s.asn, s.busy
+    FROM diverse d
+    -- Aggregate per candidate using the existing (user_id, started_at) index;
+    -- a second full-window hash aggregate spills on the measured large cohort.
+    CROSS JOIN LATERAL (
+      SELECT w.country, w.asn,
+             range_agg(tstzrange(w.started_at,
+               LEAST(COALESCE(w.ended_at, $3::timestamptz), $3::timestamptz), '[)')) AS busy
+        FROM win w
+       WHERE w.user_id = d.user_id AND w.asn > 0
+         AND LEAST(COALESCE(w.ended_at, $3::timestamptz), $3::timestamptz) > w.started_at
+       GROUP BY w.country, w.asn
+    ) s
+), cand AS (
+  SELECT DISTINCT a.user_id
+    FROM spans a
+    JOIN spans b ON b.user_id = a.user_id
+     AND b.country <> a.country AND b.asn <> a.asn
+   WHERE a.busy && b.busy
+)
+SELECT w.user_id, w.started_at, w.ended_at, w.country, w.asn, ` + "{{DEVICE_LIMIT}}" + `
+  FROM win w
+  JOIN cand c ON c.user_id = w.user_id
+  JOIN public.users u ON u.id = w.user_id
+  LEFT JOIN public.plans p ON p.id = u.plan_id`
+
+const leakOriginsSQL = `
+SELECT o.user_id, o.ip_fingerprint
+  FROM public.subscription_fetch_origins o
+ WHERE o.last_seen_at > statement_timestamp() - interval '24 hours'
+   AND o.secret_version = $1
+   AND o.user_id IN (
+       SELECT user_id FROM public.subscription_fetch_origins
+        WHERE last_seen_at > statement_timestamp() - interval '24 hours' AND secret_version = $1
+        GROUP BY user_id HAVING count(*) >= $2)`
+
+func sharingSQL() string {
+	return replaceOnce(sharingSessionsSQL, "{{DEVICE_LIMIT}}", devicelimit.SQL("u", "p")+" AS device_limit")
+}
+
+func replaceOnce(s, old, new string) string {
+	for i := 0; i+len(old) <= len(s); i++ {
+		if s[i:i+len(old)] == old {
+			return s[:i] + new + s[i+len(old):]
+		}
+	}
+	return s
+}
+
+func (m *Module) collect(ctx context.Context, now time.Time, modes fairuse.Modes, ex exclusionState) ([]Detection, error) {
+	var out []Detection
+	var errs []error
+	on := func(k Kind) bool { return modes.Of(string(k)) != fairuse.ModeOff }
+
+	if on(KindVolume) || on(KindResell) || on(KindBT) || on(KindMail) || on(KindScan) {
+		dets, err := m.collectCounters(ctx, now, ex)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("counters: %w", err))
+		}
+		for _, d := range dets {
+			if on(d.Kind) {
+				out = append(out, d)
+			}
+		}
+	}
+	if on(KindSharing) {
+		dets, err := m.collectSharing(ctx, now, ex)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("sharing: %w", err))
+		}
+		out = append(out, dets...)
+	}
+	if on(KindLeak) {
+		dets, err := m.collectLeak(ctx, now, out, ex)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("leak: %w", err))
+		}
+		out = append(out, dets...)
+	}
+	return out, errors.Join(errs...)
+}
+
+func (m *Module) collectCounters(ctx context.Context, now time.Time, ex exclusionState) ([]Detection, error) {
+	hosting := map[int64]int64{}
+	// 机房来源信号只在剔除集完整时可用：中转/节点出口本身就在机房 ASN 里。
+	hostingOn := len(m.hostingASNs) > 0 && ex.usable()
+	if hostingOn {
+		rows, err := m.pool.Query(ctx, hostingSessionsSQL, m.hostingASNs, ex.digests, ipfingerprint.CurrentVersion)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var uid, n int64
+			if err := rows.Scan(&uid, &n); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			hosting[uid] = n
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+	}
+	since := now.UTC().Truncate(24 * time.Hour).Add(-24 * time.Hour)
+	rows, err := m.pool.Query(ctx, countersSQL, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Detection
+	for rows.Next() {
+		var s CounterSignals
+		var cp, fp int32
+
+exec
+/bin/bash -lc "git show 4cef367:internal/modules/usagepolicy/replay.go | sed -n '1,95p;355,470p'; git show 4cef367:internal/modules/usagepolicy/abuse.go | sed -n '640,735p'; git show 4cef367:internal/modules/usagepolicy/exclusion.go | rg -n -A45 'func capForExclusion'; git diff --check e87cfacdb522fabbf56db7114753d88807b6a8a8 4cef3672de11336d76d739728ad482aecf99558a" in /home/box/Projects/yueto/yueboard
+ succeeded in 0ms:
+package usagepolicy
+
+// replay.go —— 只读影子回放（2026-10-10 封控专项 §2.3 / 批 3）。
+//
+// 对给定 UTC 日期窗口，用**当前代码**的判据（含完整剔除集、扫描顶格/第二信号、
+// RulesVersion）重算判定，与 abuse_strikes 里的历史记录逐 (用户, 类型, 日) 比对，
+// 输出新旧各多少、按 kind/confidence 汇总、以及谁会被降级/新增。
+//
+// 只读：调用方传入 READ ONLY 事务（cmd/yueboard usage-policy-replay 就是这样做的）；
+// 本文件不含任何写语句。输出只有 ID 与计数，不含地址、国家/ASN 明细或目的地。
+//
+// 近似与边界（写进报告 caveats，不能当作「回放 = 生产当时的判定」）：
+//   - 共享：生产每 10 分钟判一次、窗口 48h；回放每天取两个评估点（当日 00:10 与次日
+//     00:00，不晚于现在）的最大值，覆盖同一时间段。设备上限取**当前**套餐/账号值。
+//   - 剔除集用**现在**的 peer_ip 与库存：历史上换过 IP 的中转不会被剔除（偏保守=多报）。
+//   - 泄露：subscription_fetch_origins 只留最近 24–48 小时，只能回放「今天」。
+//   - 计数类（转售/BT/邮件/扫描）读 user_abuse_daily，保留 30 天。
+//   - 会话日志 presence_session_log 保留 14 天（00136 起按日分区整块删除）：
+//     窗口早于 14 天的共享/机房回放没有会话证据，只会少报。
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/onesyue/yueboard/internal/platform/fleetegress"
+	"github.com/onesyue/yueboard/internal/platform/ipfingerprint"
+)
+
+// ReplayMaxDays 是一次回放的最大窗口（与 user_abuse_daily 的 30 天保留期一致；会话日志只留 14 天）。
+const ReplayMaxDays = 31
+
+// ReplayOptions 是回放参数。From/To 是 UTC 日（含两端）。
+type ReplayOptions struct {
+	From, To time.Time
+	// Sample：每类最多列出多少个「旧判 high、新判不再 high」的用户 ID（0 = 不列）。
+	Sample int
+}
+
+// ReplayExclusion 是回放所用剔除集的摘要。
+type ReplayExclusion struct {
+	Complete      bool   `json:"complete"`
+	Reason        string `json:"reason,omitempty"`
+	Keys          int    `json:"keys"`
+	PeerKeys      int    `json:"peer_keys"`
+	InventoryKeys int    `json:"inventory_keys"`
+	Relays        int    `json:"relays"`
+	Directs       int    `json:"directs"`
+}
+
+// ReplayCount 是一组 (kind, confidence) 的用户日数与去重用户数。
+type ReplayCount struct {
+	Kind       string `json:"kind"`
+	Confidence string `json:"confidence"`
+	UserDays   int    `json:"user_days"`
+	Users      int    `json:"users"`
+	// 旧：其中 enforce 下真正执行了非提醒处置的用户日数。
+	// 新：其中可以授权处置的用户日数（high 且未被 ShadowOnly 拦下）。
+	Sanctioning int `json:"sanctioning"`
+}
+
+// ReplayKindDiff 是一类的新旧差异（按用户日）。
+type ReplayKindDiff struct {
+	Kind        string  `json:"kind"`
+	Old         int     `json:"old"`
+	New         int     `json:"new"`
+	Both        int     `json:"both"`
+	OldOnly     int     `json:"old_only"`
+	NewOnly     int     `json:"new_only"`
+	OldHigh     int     `json:"old_high"`
+	NewHigh     int     `json:"new_high"`
+	HighDemoted int     `json:"high_demoted"` // 旧 high → 新 low 或无
+	HighAdded   int     `json:"high_added"`   // 旧非 high → 新 high
+	Demoted     []int64 `json:"demoted_sample,omitempty"`
+}
+
+// ReplayReport 是回放结果。
+type ReplayReport struct {
+	From         string           `json:"from"`
+	To           string           `json:"to"`
+	RulesVersion string           `json:"rules_version"`
+	EvaluatedAt  int64            `json:"evaluated_at"`
+	Exclusion    ReplayExclusion  `json:"exclusion"`
+	Old          []ReplayCount    `json:"old"`
+	New          []ReplayCount    `json:"new"`
+	Diff         []ReplayKindDiff `json:"diff"`
+	Caveats      []string         `json:"caveats"`
+}
+
+// ReplayQuerier 是回放需要的只读查询能力（pgx.Tx 满足）。
+type ReplayQuerier interface {
+		limit    int64
+		sessions []Session
+	}
+	users := map[int64]*acc{}
+	var order []int64
+	for rows.Next() {
+		var uid, asn, limit int64
+		var start time.Time
+		var end *time.Time
+		var country string
+		if err := rows.Scan(&uid, &start, &end, &country, &asn, &limit); err != nil {
+			return nil, err
+		}
+		a := users[uid]
+		if a == nil {
+			a = &acc{limit: limit}
+			users[uid] = a
+			order = append(order, uid)
+		}
+		s := Session{Start: start, Country: country, ASN: asn}
+		if end != nil {
+			s.End = *end
+		}
+		a.sessions = append(a.sessions, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	slices.Sort(order)
+	var out []Detection
+	for _, uid := range order {
+		if d := DetectSharing(uid, users[uid].sessions, users[uid].limit, at); d != nil {
+			d.Day = day
+			capForExclusion(d, ex)
+			out = append(out, *d)
+		}
+	}
+	return out, nil
+}
+
+func (m *Module) replayLeak(ctx context.Context, q ReplayQuerier, now time.Time, observed []Detection, ex exclusionState) ([]Detection, error) {
+	today := now.Truncate(24 * time.Hour)
+	var sameDay []Detection
+	for _, d := range observed {
+		if d.Day.Equal(today) {
+			sameDay = append(sameDay, d)
+		}
+	}
+	return collectLeakFrom(ctx, q, now, sameDay, ex)
+}
+
+// diffReplay 是纯函数：把新旧两份 (用户, 类型, 日) 集合汇总成计数与差异。
+func diffReplay(old map[replayKey]replayOld, fresh map[replayKey]replayNew, sample int) (oldCounts, newCounts []ReplayCount, diffs []ReplayKindDiff) {
+	type agg struct {
+		days, sanction int
+		users          map[int64]bool
+	}
+	countOf := func(m map[[2]string]*agg, kind Kind, high bool, uid int64, sanctioning bool) {
+		conf := string(ConfidenceLow)
+		if high {
+			conf = string(ConfidenceHigh)
+		}
+		key := [2]string{string(kind), conf}
+		a := m[key]
+		if a == nil {
+			a = &agg{users: map[int64]bool{}}
+			m[key] = a
+		}
+		a.days++
+		a.users[uid] = true
+		if sanctioning {
+			a.sanction++
+		}
+	}
+	oldAgg, newAgg := map[[2]string]*agg{}, map[[2]string]*agg{}
+	perKind := map[Kind]*ReplayKindDiff{}
+	kd := func(k Kind) *ReplayKindDiff {
+		if perKind[k] == nil {
+			perKind[k] = &ReplayKindDiff{Kind: string(k)}
+		}
+		return perKind[k]
+	}
+	for k, o := range old {
+		countOf(oldAgg, k.kind, o.high, k.uid, o.sanctioning)
+		d := kd(k.kind)
+		d.Old++
+		if o.high {
+			d.OldHigh++
+		}
+		n, ok := fresh[k]
+		if ok {
+			d.Both++
+		} else {
+			d.OldOnly++
+		}
+		if o.high && (!ok || !n.high) {
+			d.HighDemoted++
+			if len(d.Demoted) < sample {
+				d.Demoted = append(d.Demoted, k.uid)
+			}
+		}
+	}
+	for k, n := range fresh {
+		countOf(newAgg, k.kind, n.high, k.uid, n.sanctioning)
+		d := kd(k.kind)
+		d.New++
+		if n.high {
+			d.NewHigh++
+		}
+		o, ok := old[k]
+		if !ok {
+			d.NewOnly++
+		}
+		if n.high && (!ok || !o.high) {
+			d.HighAdded++
+		}
+			// Record the pending decision, then atomically revalidate and
+			// rotate with the platform service in a new transaction below.
+		}
+		if applied {
+			if _, err := tx.Exec(ctx, fairuse.StrikeMarkAppliedSQL, strikeID); err != nil {
+				return err
+			}
+			msg := noticeMessage(d.UserID, strikeID, d.Kind, d.Confidence, step.Action, expires)
+			var noticeSent bool
+			if d.Kind == KindVolume || d.Kind == KindResell {
+				if err := tx.QueryRow(ctx, fairuse.VolumeResellNoticeSentSQL, d.UserID, d.Day, strikeID).Scan(&noticeSent); err != nil {
+					return err
+				}
+				msg.DedupeKey = "usage_policy:resell_volume:" + d.Day.UTC().Format("2006-01-02")
+			}
+			if !noticeSent {
+				if _, err := inbox.DeliverTx(ctx, tx, msg); err != nil {
+					return err
+				}
+			}
+		}
+		return audit.Record(ctx, tx, audit.Entry{
+			AdminID: systemActor, Action: audit.UsagePolicySanction, Method: "POST", URI: "/internal/usage-policy",
+			IP: "system:yueboard-usagepolicy", TargetType: "user", TargetID: strconv.FormatInt(d.UserID, 10),
+			Detail: map[string]any{"strike_id": strikeID, "kind": d.Kind, "confidence": d.Confidence,
+				"step": stepIdx, "action": step.Action, "expires_at": expires.Unix(), "evidence": evidence},
+		})
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, false, nil // 今天这一类已经记过（另一个实例或上一轮）
+	}
+	if err != nil {
+		return false, false, err
+	}
+	if postDrop && m.deps.DropUserPresence != nil {
+		if e := m.deps.DropUserPresence(ctx, d.UserID); e != nil {
+			slog.Warn("usagepolicy: 暂停后清在线租约失败", "user_id", d.UserID, "err", e)
+		}
+	}
+	if postNotify {
+		m.notifyUser(ctx, d.UserID)
+	}
+	if step.Action == ActionResetLink {
+		changed, err := m.resetLink(ctx, strikeID, d.UserID, d.Kind, expires)
+		if err != nil {
+			slog.Warn("usagepolicy: 换链接失败，下一轮重试", "strike_id", strikeID, "err", err)
+			metrics.Event("usagepolicy.reset_link_failed")
+			if step.Action == ActionResetLink {
+				return true, false, nil
+			}
+		} else if step.Action == ActionResetLink {
+			applied = changed
+		}
+	}
+	return recorded, applied, nil
+}
+
+func (m *Module) notifyUser(ctx context.Context, userID int64) {
+	if m.deps.NotifyUserChanged == nil {
+		return
+	}
+	if _, err := m.deps.NotifyUserChanged(ctx, userID); err != nil {
+		slog.Warn("usagepolicy: 通知节点用户变更失败（周期全量同步兜底）", "user_id", userID, "err", err)
+	}
+}
+
+// applyThrottle 在调用方事务里把用户限到 ThrottleMbps，返回 user_restrictions.id（nil = 未新设，
+// note 说明原因）。规则：
+//   - 有效限速本身 ≤ 10 Mbps：不设（限速没有意义）。有效限速 = 账号覆盖优先、其次套餐
+//     （speedpolicy.ResolveMbps，与节点快照同一口径；2026-10-11 复核 P2-7）。此前只看套餐：
+//     套餐 5M、覆盖 100M 的人逃过限速；套餐 100M、覆盖 5M 的人反而被写成 10M（限速把人放宽）。
+//     users.speed_limit 等于某条生效限速时可能只是镜像，此时只看套餐；否则它是真覆盖（第二轮复核）。
+//   - 已有本引擎的 UP-* 限速：顺延到 max(原到期, 新到期)，复用那一行。
+//   - 已有插件限速且 ≤ 10 Mbps：已经更严，不叠加。
+//   - 已有插件限速且 > 10 Mbps：标为 usagepolicy:superseded 让位（同一用户只留一条生效限速，
+//     否则两个写方的对账会互相覆盖 users.speed_limit）。
+func (m *Module) applyThrottle(ctx context.Context, tx pgx.Tx, userID int64, kind Kind, strikeID int64, expires time.Time) (*int64, string, error) {
+	var cur, plan *int64
+	if err := tx.QueryRow(ctx, `
+		SELECT u.speed_limit, p.speed_limit FROM public.users u
+		LEFT JOIN public.plans p ON p.id = u.plan_id
+		WHERE u.id = $1 FOR UPDATE OF u`, userID).Scan(&cur, &plan); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, "user_missing", nil
+		}
+		return nil, "", err
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id, tier, restricted_speed_mbps FROM public.user_restrictions
+		WHERE user_id = $1 AND status = 'active' ORDER BY id FOR UPDATE`, userID)
+	if err != nil {
+		return nil, "", err
+	}
+	type active struct {
+		id   int64
+		tier string
+94:func capForExclusion(d *Detection, ex exclusionState) {
+95-	if !sourceDependentKinds[d.Kind] || ex.usable() {
+96-		if d.Evidence != nil && sourceDependentKinds[d.Kind] {
+97-			ex.evidence(d.Evidence)
+98-		}
+99-		return
+100-	}
+101-	d.Confidence = ConfidenceLow
+102-	d.ShadowOnly = "fleet_exclusion_" + ex.reason()
+103-	if d.Evidence == nil {
+104-		d.Evidence = map[string]any{}
+105-	}
+106-	ex.evidence(d.Evidence)
+107-}
+108-
+109-type inventoryErr string
+110-
+111-func (e inventoryErr) Error() string { return string(e) }
+112-
+113-const errInventoryUnwired = inventoryErr("fleet egress inventory loader not wired")
+114-
+115-// effectiveModes applies the same source evidence gate before queued resets
+116-// and fresh detections. Persistent administrator settings remain unchanged.
+117-func effectiveModes(modes fairuse.Modes, ex exclusionState) fairuse.Modes {
+118-	if ex.usable() {
+119-		return modes
+120-	}
+121-	out := make(fairuse.Modes, len(modes))
+122-	for kind, mode := range modes {
+123-		out[kind] = mode
+124-	}
+125-	for kind := range sourceDependentKinds {
+126-		if out.Of(string(kind)) == fairuse.ModeEnforce {
+127-			out[string(kind)] = fairuse.ModeShadow
+128-		}
+129-	}
+130-	return out
+131-}
+
+codex
+已审查指定 diff，未修改文件。仅做静态审查，未运行测试。
+
+VERDICT: changes
+- [P2] `internal/modules/usagepolicy/abuse.go:501`：单信号过滤只在 `decide` 生效，`ShadowReplay` 仍直接把 `DetectCounters` 的全部结果纳入新账本对比。因此，仅触发 `concurrent_peak` 的用户实际不会入账，回放却仍计入 `New`／`Both`／`NewOnly`，无法准确反映本次规则调整。应在回放汇总前复用该过滤条件，并增加对应回归测试。
+tokens used
+40,722
+已审查指定 diff，未修改文件。仅做静态审查，未运行测试。
+
+VERDICT: changes
+- [P2] `internal/modules/usagepolicy/abuse.go:501`：单信号过滤只在 `decide` 生效，`ShadowReplay` 仍直接把 `DetectCounters` 的全部结果纳入新账本对比。因此，仅触发 `concurrent_peak` 的用户实际不会入账，回放却仍计入 `New`／`Both`／`NewOnly`，无法准确反映本次规则调整。应在回放汇总前复用该过滤条件，并增加对应回归测试。

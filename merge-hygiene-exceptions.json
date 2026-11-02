@@ -114,6 +114,18 @@
       "pr": 71,
       "reason": "Merged 2026-11-02 18:07 SGT at head 3412d74eb7739f7f851a941b0a37ab4157b86de4 (receipt backfill + enforcement). GitHub check 'policy tests + workflow lint' SUCCESS on that head; committed artifacts reviews/merge-receipts-20261102/enforcement-review.md, enforcement-policy.log, enforcement-targeted.log. Missing evidence: no merge-receipts/yueto-ci/71.json and no approving review recorded on the PR; the enforcement-review artifact was not verified to be bound to the final head 3412d74e.",
       "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueops",
+      "pr": 267,
+      "reason": "Post-merge independent Codex review of 9c63e04f3be50e115d319d01ced5dc694b22f4b6 returned CHANGES: [P2] tests/test_service_role_grants_20261102.py:277 CTE-name exclusion is not query-scoped, so a nested CTE shadowing a real table can hide a column-grant requirement (reviews/merge-receipts-20261102/yueops-267-review-changes.txt). Exact-head box parity passed (66 passed, 26 skipped; yueops-267.log). Missing evidence: an approving independent review. Follow-up fix branch cx/grants-cte-scope-1102. This registration records the unresolved finding, not a claim that it is fixed.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueops",
+      "pr": 273,
+      "reason": "Post-merge independent Codex review of 15b21d4d72c26d65fba9e7fe4a9eea017b362b27 returned CHANGES: [P2] scripts/rollout-yue-node-image.sh:3600 failure-ratio cap exits before emitting OWNER_HOLD_PARTIAL / failed-node SID summary (reviews/merge-receipts-20261102/yueops-273-review-changes.txt). Exact-head box parity passed (58 passed; yueops-273.log). Missing evidence: an approving independent review. Follow-up fix branch cx/rollout-cap-summary-1102. This registration records the unresolved finding, not a claim that it is fixed.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
     }
   ]
 }

@@ -1,0 +1,97 @@
+
+added 290 packages in 5s
+
+> yueops-frontend@4.0.0 build
+> node node_modules/typescript7/bin/tsc -b && vite build
+
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 5392 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                              1.88 kB │ gzip:   1.06 kB
+dist/assets/EntityLink-5mvoOEXf.css          0.13 kB │ gzip:   0.10 kB
+dist/assets/CopyButton-D25uIXSN.css          0.21 kB │ gzip:   0.14 kB
+dist/assets/StatTile-DN8TaHGu.css            0.31 kB │ gzip:   0.19 kB
+dist/assets/Reengage-DmJuz29N.css            0.35 kB │ gzip:   0.22 kB
+dist/assets/RefundConnect-DNNJmTck.css       0.37 kB │ gzip:   0.23 kB
+dist/assets/NodeSlo-C5q7hzgV.css             0.45 kB │ gzip:   0.25 kB
+dist/assets/LogDialog-Cm5zt13N.css           0.73 kB │ gzip:   0.41 kB
+dist/assets/AntiSpam-DvjN3xBM.css            0.75 kB │ gzip:   0.35 kB
+dist/assets/PageHeader-O91pZdl9.css          0.86 kB │ gzip:   0.34 kB
+dist/assets/RelatedActions-Ve73urFW.css      0.90 kB │ gzip:   0.42 kB
+dist/assets/ChickenRedeem-heXKHhi4.css       0.92 kB │ gzip:   0.42 kB
+dist/assets/PageNotices-hNTkO9Fy.css         1.02 kB │ gzip:   0.43 kB
+dist/assets/Release-CqiX24MS.css             1.23 kB │ gzip:   0.47 kB
+dist/assets/GamblingOverview-COe_woX7.css    1.24 kB │ gzip:   0.48 kB
+dist/assets/Telemetry-DSQfQitD.css           1.70 kB │ gzip:   0.61 kB
+dist/assets/LiveOps-tQD_mB9O.css             1.99 kB │ gzip:   0.64 kB
+dist/assets/Settings-BIK-LW_6.css            2.59 kB │ gzip:   0.88 kB
+dist/assets/Terminal-Dy9xA_mc.css            4.53 kB │ gzip:   1.21 kB
+dist/assets/Tasks-TgQeFpSm.css               4.89 kB │ gzip:   1.25 kB
+dist/assets/QualityOverview-Dx_yzAwU.css     6.11 kB │ gzip:   1.55 kB
+dist/assets/Shell-CUYTuf9R.css               6.81 kB │ gzip:   1.76 kB
+dist/assets/EmbyDashboard-TD02T5-h.css       7.42 kB │ gzip:   1.67 kB
+dist/assets/SupportOverview-kuFO--J_.css     7.52 kB │ gzip:   1.67 kB
+dist/assets/Dashboard-BhumYqNo.css           8.95 kB │ gzip:   2.08 kB
+dist/assets/Servers-DTORr1JO.css            10.95 kB │ gzip:   2.36 kB
+dist/assets/index-ZQiumR1M.css              43.67 kB │ gzip:   9.66 kB
+dist/assets/CopyButton-COeMQsJ2.js           0.25 kB │ gzip:   0.21 kB
+dist/assets/useVariants-BqbRuo93.js          0.41 kB │ gzip:   0.29 kB
+dist/assets/focus-BP2hnxBP.js                0.71 kB │ gzip:   0.42 kB
+dist/assets/rolldown-runtime-XKyaHtl9.js     0.72 kB │ gzip:   0.42 kB
+dist/assets/PageHeader-C7J1X11p.js           0.79 kB │ gzip:   0.40 kB
+dist/assets/RelatedActions-BUFCQ4_q.js       0.86 kB │ gzip:   0.44 kB
+dist/assets/EntityLink-DIP2OlKK.js           0.93 kB │ gzip:   0.52 kB
+dist/assets/format-DMcGlD2j.js               0.95 kB │ gzip:   0.50 kB
+dist/assets/BoardSso-MSs5bUCx.js             0.99 kB │ gzip:   0.62 kB
+dist/assets/PageNotices-4EihOLLq.js          1.10 kB │ gzip:   0.54 kB
+dist/assets/modal-BRZjbHNW.js                1.36 kB │ gzip:   0.74 kB
+dist/assets/LogDialog-ZTJi3T71.js            1.44 kB │ gzip:   0.92 kB
+dist/assets/RefundConnect-C9voyfzO.js        2.13 kB │ gzip:   1.16 kB
+dist/assets/useMutation-BbT9ea5K.js          2.37 kB │ gzip:   0.99 kB
+dist/assets/Input-Dz1vxIeM.js                2.51 kB │ gzip:   1.20 kB
+dist/assets/Reengage-c3kYRnro.js             3.35 kB │ gzip:   1.66 kB
+dist/assets/ContentDocs--KhOJx6t.js          3.78 kB │ gzip:   1.77 kB
+dist/assets/i18n-D4-z_CVk.js                 3.95 kB │ gzip:   1.77 kB
+dist/assets/NodeSlo-BVYTt10C.js              4.40 kB │ gzip:   1.74 kB
+dist/assets/divider-v2lxilLI.js              4.60 kB │ gzip:   1.75 kB
+dist/assets/useForm-Cp--Kh_1.js              4.72 kB │ gzip:   2.11 kB
+dist/assets/useTask-DDUsaHPq.js              4.95 kB │ gzip:   2.16 kB
+dist/assets/switch-0OhtLSMU.js               7.50 kB │ gzip:   2.59 kB
+dist/assets/Telemetry-D9yLr3cN.js            7.86 kB │ gzip:   3.25 kB
+dist/assets/useQuery-5hON5hy5.js             8.04 kB │ gzip:   2.98 kB
+dist/assets/Release-BCMW-R0S.js              8.26 kB │ gzip:   3.59 kB
+dist/assets/tag-_IZf7kjC.js                  8.46 kB │ gzip:   3.29 kB
+dist/assets/segmented-DxQeQ-fH.js            9.59 kB │ gzip:   3.68 kB
+dist/assets/input-B5baSvuM.js                9.75 kB │ gzip:   4.33 kB
+dist/assets/ChickenRedeem-DzMYgzfJ.js        9.77 kB │ gzip:   4.14 kB
+dist/assets/Shell-DbYmnx7-.js               10.15 kB │ gzip:   3.88 kB
+dist/assets/AntiSpam-DO351cL4.js            11.43 kB │ gzip:   4.41 kB
+dist/assets/radio-DTuoW3Aw.js               12.06 kB │ gzip:   4.19 kB
+dist/assets/Tasks-BP20XDHw.js               14.99 kB │ gzip:   5.83 kB
+dist/assets/TextArea-BlcCu64q.js            15.53 kB │ gzip:   5.80 kB
+dist/assets/style-C3BKPoy2.js               15.82 kB │ gzip:   3.76 kB
+dist/assets/typography-1E-4Ddjd.js          17.16 kB │ gzip:   6.75 kB
+dist/assets/EmbyDashboard-rIuFbzSz.js       17.46 kB │ gzip:   5.42 kB
+dist/assets/input-number-DuGdf-kY.js        19.38 kB │ gzip:   7.08 kB
+dist/assets/QualityOverview-DyTWOce5.js     19.77 kB │ gzip:   5.78 kB
+dist/assets/form-Cm2vMzC7.js                20.81 kB │ gzip:   7.80 kB
+dist/assets/GamblingOverview-Dr5qJ3wn.js    23.02 kB │ gzip:   6.77 kB
+dist/assets/Dashboard-Cg4gOPEs.js           26.55 kB │ gzip:   8.10 kB
+dist/assets/LiveOps-Cqxksg3C.js             27.97 kB │ gzip:  10.48 kB
+dist/assets/SupportOverview-rOYaAQ-p.js     31.43 kB │ gzip:   8.27 kB
+dist/assets/react-6EWlAYrx.js               39.38 kB │ gzip:  14.17 kB
+dist/assets/StatTile-CQK1uQFm.js            48.04 kB │ gzip:  14.87 kB
+dist/assets/dropdown-sHhSxcui.js            57.50 kB │ gzip:  17.44 kB
+dist/assets/select-DxzERi5X.js              70.32 kB │ gzip:  24.35 kB
+dist/assets/Settings-STQEYuFJ.js            70.75 kB │ gzip:  21.60 kB
+dist/assets/index-D462Gc5V.js               71.90 kB │ gzip:  24.72 kB
+dist/assets/api-YOkBFofv.js                107.60 kB │ gzip:  37.22 kB
+dist/assets/en-1e0VNeJn.js                 107.76 kB │ gzip:  43.58 kB
+dist/assets/table-DExpR71k.js              160.35 kB │ gzip:  50.30 kB
+dist/assets/Servers-qKRb5w25.js            194.26 kB │ gzip:  60.94 kB
+dist/assets/Terminal-XAeIkwY0.js           335.51 kB │ gzip:  85.01 kB
+dist/assets/antd-base-CBuckkG4.js          562.26 kB │ gzip: 183.09 kB
+
+✓ built in 1.45s
