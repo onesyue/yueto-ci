@@ -3,12 +3,16 @@
 Required merge order: c56159246c31ede8e24b40b8626b6a3c6b0b0137 -> #122 -> #256.
 The second seal names the first merge as its predecessor, including the exact
 intermediate pyproject and uv.lock blobs. Peel #256 first, then #122, before
-running any historical admission. Neither the historical skip baseline nor the
-miniapp seal (including its prior_baseline_sha256) is rewritten.
+running #131's deploy-AI-exit/site-devdeps admission and then historical
+admission. The #131 records, historical skip baseline and miniapp seal
+(including its prior_baseline_sha256) remain byte-identical.
 
 The records live in ops-shared-input-successors.json, following the miniapp
 separate-file pattern. Each new record binds the original skip baseline and the
 complete preceding successor file. Its canonical identity is pinned in policy.
+After integrating #131 from origin/master, #122 binds the complete master
+sidecar and #256 binds that sidecar plus #122. Only these two outer predecessor
+hashes and their pinned canonical identities change; source evidence is unchanged.
 Admission requires complete bundles, regular-file modes and the first-native
 source_revision pin. The planner additionally proves exact merge parent trees
 and ancestry. The checked-in first-native pin remains at master; qualification
@@ -68,3 +72,20 @@ and process-local Git configuration `commit.gpgsign=false` for test fixture
 commits. No repository Git configuration was changed. Negative policy tests
 cover partial bundles, mutated blobs/modes/pins, seal-chain tampering, unrelated
 history and whole-bundle reversions after a reviewed successor.
+
+## origin/master integration validation
+
+Integrated origin/master `32b399beade5b7f46f6298d0eeef603b10002301` into the
+worktree based on `077a1ee221a15f50ac495753bda4fb99ac7d04a6`.
+`git merge origin/master` refused to create ORIG_HEAD.lock because Git metadata
+is read-only; the resolution is unstaged, with no merge commit or push.
+All tests from both branches are retained byte-identically. Removing #256 and
+#122 from the sidecar reproduces master's sidecar bytes exactly; #131's validator
+functions and identity constants are also byte-identical.
+
+`python -m pytest -q tests`: **628 passed, 5177 subtests passed** (303.52s),
+using the same virtualenv, writable Go cache and process-local Git settings above.
+The qualification driver was rerun against the combined policy: pinned master,
+master + #122 and master + #122 + #256 all returned ADMISSION_ACCEPTED;
+master + #260 still returned ADMISSION_REJECTED. Results match
+`admission-results.json`. `git diff --check` passed.

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 168,
+  "head": "9ea36ccffc0a4a4d5a3eac568e053243e8ae4c2b",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "9ea36ccffc0a4a4d5a3eac568e053243e8ae4c2b",
+    "artifact": "reviews/merge-receipts-20261103/yueops-168.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T22:48:01Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "9ea36ccffc0a4a4d5a3eac568e053243e8ae4c2b",
+    "command": "TZ=UTC .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_relay_provider_hold_20261030.py tests/test_relay_coordinator_delivery_closure_20260905.py (merge with master)",
+    "log_sha256": "178c6dd1102115a0095aece0c176bc0589eab9b1ecdebbee104b055107ca56ef",
+    "ran_at": "2026-11-02T22:48:09Z",
+    "runner": "box"
+  }
+}

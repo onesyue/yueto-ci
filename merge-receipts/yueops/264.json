@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 264,
+  "head": "664867605a4258364e4bc0d45fc54d63444c9de1",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "664867605a4258364e4bc0d45fc54d63444c9de1",
+    "artifact": "reviews/merge-receipts-20261102/yueops-264.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T21:55:00Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "664867605a4258364e4bc0d45fc54d63444c9de1",
+    "command": "pytest tests/*{subscri,singbox,template,clash,mihomo}*.py excl. ai_variant_retired (paramiko missing): 1191 passed, 68 skipped",
+    "log_sha256": "8f5a3db9bea82c888a80df5460bd480e405b54c933b9116a4a6ae72fa74fddee",
+    "ran_at": "2026-11-02T21:52:57Z",
+    "runner": "box"
+  }
+}
