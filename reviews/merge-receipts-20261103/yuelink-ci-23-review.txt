@@ -1,0 +1,6 @@
+VERDICT: approve
+- `README.md:16`、`README.md:109`、`docs/flutter-coverage-pilot.md:182`：未发现可操作问题；文档与对应脚本及已记录的所有者决定一致。无代码、测试或工作流变更。
+tokens used
+16,963
+VERDICT: approve
+- `README.md:16`、`README.md:109`、`docs/flutter-coverage-pilot.md:182`：未发现可操作问题；文档与对应脚本及已记录的所有者决定一致。无代码、测试或工作流变更。

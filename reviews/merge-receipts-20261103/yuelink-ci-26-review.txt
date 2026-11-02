@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P2] `scripts/run-flutter-coverage.py:36`: Adding this entry to `ISOLATED` breaks execution for the frozen reviewed corpus. The unchanged plan omits it from `isolated`, so `grouped_plan()` rejects the equality check at line 88 before running tests. Preserve the frozen plan’s isolation contract separately from live-directory isolation.
+tokens used
+22,635
+VERDICT: changes
+- [P2] `scripts/run-flutter-coverage.py:36`: Adding this entry to `ISOLATED` breaks execution for the frozen reviewed corpus. The unchanged plan omits it from `isolated`, so `grouped_plan()` rejects the equality check at line 88 before running tests. Preserve the frozen plan’s isolation contract separately from live-directory isolation.
