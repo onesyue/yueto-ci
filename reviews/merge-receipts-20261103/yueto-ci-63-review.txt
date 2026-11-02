@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P2] `scripts/merge-hygiene-audit.py:97`: Status contexts with only postmerge records are silently discarded. With a passing premerge check, the audit reports clean despite missing merge-time evidence for that status context. Reproduced with postmerge success, pending, and failure statuses. Track observed status contexts and report missing premerge evidence, as the check-run logic does.
+tokens used
+27,029
+VERDICT: changes
+- [P2] `scripts/merge-hygiene-audit.py:97`: Status contexts with only postmerge records are silently discarded. With a passing premerge check, the audit reports clean despite missing merge-time evidence for that status context. Reproduced with postmerge success, pending, and failure statuses. Track observed status contexts and report missing premerge evidence, as the check-run logic does.

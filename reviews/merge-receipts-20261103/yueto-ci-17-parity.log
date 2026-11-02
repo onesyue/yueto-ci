@@ -1,0 +1,15 @@
+head=0d9603b384a158126d74416f75a79fadeda2995b ran_at=2026-11-02T17:49:54Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile tests/test_build_policy.py tests/test_ci_retry.py tests/test_hardening_20260927.py tests/test_poll_rearm_policy.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests && for f in scripts/ci-retry.sh scripts/freeze-build-plan.sh scripts/install-verified-buildx.sh scripts/install-verified-trivy.sh scripts/poll-rearm.sh ; do bash -n $f || exit 1; done && shellcheck -S error scripts/ci-retry.sh scripts/freeze-build-plan.sh scripts/install-verified-buildx.sh scripts/install-verified-trivy.sh scripts/poll-rearm.sh  && python3 -c 'import sys,yaml;[list(yaml.safe_load_all(open(f))) for f in sys.argv[1:]]' .github/workflows/build.yml .github/workflows/policy-ci.yml  && git diff --check 56e97e22f20137fad8396aa7cbf844bb8baceaa0 0d9603b384a158126d74416f75a79fadeda2995b
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+........................................... [  8%]
+............................................................................................ [ 27%]
+................................................................................................................... [ 51%]
+....................................................................................... [ 69%]
+.......................................................................................................... [ 90%]
+.......................................... [ 99%]
+..                                                                  [100%]
+487 passed, 3840 subtests passed in 208.99s (0:03:28)
+rc=0

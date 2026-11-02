@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P2] `scripts/ci-retry.sh:7`：4xx 正则匹配任意独立三位数字，会把 HTTPS 端口 `443` 误判为 HTTP 拒绝。已验证包含 `port 443 ... Connection timed out` 或 `:443: i/o timeout` 的错误立即停止，导致下载、签名和验证失去预期的瞬时故障重试。应限定 HTTP 状态码上下文，并补充含端口号的测试。
+tokens used
+24,825
+VERDICT: changes
+- [P2] `scripts/ci-retry.sh:7`：4xx 正则匹配任意独立三位数字，会把 HTTPS 端口 `443` 误判为 HTTP 拒绝。已验证包含 `port 443 ... Connection timed out` 或 `:443: i/o timeout` 的错误立即停止，导致下载、签名和验证失去预期的瞬时故障重试。应限定 HTTP 状态码上下文，并补充含端口号的测试。

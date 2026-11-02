@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P1] `merge-receipts/yueboard/95.json:11`：引用的 `reviews/merge-receipts-20261102/yueboard-95.md` 在指定 head 中不存在（已用 `git cat-file -e` 确认）。校验器要求审查文件存在且已提交，因此该收据会导致 premerge／合并审计失败，无法作为批准证据。请提交对应审查文件，或改为有效的已提交证据路径。
+tokens used
+25,952
+VERDICT: changes
+
+- [P1] `merge-receipts/yueboard/95.json:11`：引用的 `reviews/merge-receipts-20261102/yueboard-95.md` 在指定 head 中不存在（已用 `git cat-file -e` 确认）。校验器要求审查文件存在且已提交，因此该收据会导致 premerge／合并审计失败，无法作为批准证据。请提交对应审查文件，或改为有效的已提交证据路径。

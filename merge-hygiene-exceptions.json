@@ -714,6 +714,48 @@
       "pr": 166,
       "reason": "Backfilled independent review of exact head a0617e052e961b781db9372710e3008e991501a5 (2026-11-02T18:10:28Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-166-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueops-166-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 17,
+      "reason": "Backfilled independent review of exact head 0d9603b384a158126d74416f75a79fadeda2995b (2026-11-02T17:54:12Z). Codex review returned CHANGES: - [P2] `scripts/ci-retry.sh:7`：4xx 正则匹配任意独立三位数字，会把 HTTPS 端口 `443` 误判为 HTTP 拒绝。已验证包含 `port 443 ... Connection timed out` 或 `:443: i/o timeout` 的错误立即停止，导致下载、签名和验证失去预期的瞬时故障重试。应限定 HTTP 状态码上下文，并补充含端口号的测试。 - [P2] `scripts/ci-retry.sh:7`：4xx 正则匹配任意独立三位数字，会把 HTTPS 端口 `443` 误判为 HTTP 拒绝。已验证包含 `port 443 ... Connection timed out` 或 `:443: i/o timeout` 的错误立即停止，导致下载、签名和验证失去预期的瞬时故障重试。应限定 HTTP 状态码上下文，并补充含端口号的测试。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-17-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueto-ci-17-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 18,
+      "reason": "Backfilled independent review of exact head 1f932c39e8217fd10d731e4446e99b92c6d1ba56 (2026-11-02T17:49:53Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-18-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueto-ci-18-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 63,
+      "reason": "Backfilled independent review of exact head 2c58722903c6d368e2e401e8762fc5a3210b00c2 (2026-11-02T17:51:27Z). Codex review returned CHANGES: - [P2] `scripts/merge-hygiene-audit.py:97`: Status contexts with only postmerge records are silently discarded. With a passing premerge check, the audit reports clean despite missing merge-time evidence for that status context. Reproduced with postmerge success, pending, and failure statuses. Track observed status contexts and report missing premerge evidence, as the check-run logic does. - [P2] `scripts/merge-hygiene-audit.py:97`: Status contexts with only postmerge records are silently discarded. With a passing premerge check, the audit reports clean despite missing merge-time evidence for that status context. Reproduced with postmerge success, pending, and failure statuses. Track observed status contexts and report missing premerge evidence, as the check-run logic does.; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-63-parity.log) (reviews/merge-receipts-20261103/yueto-ci-63-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 86,
+      "reason": "Backfilled independent review of exact head 0149182395f708a173ac602c4e466704d1cf3f43 (2026-11-02T17:47:19Z). Codex review returned CHANGES: - [P1] `ops-first-native-successors.json:490`: 新 pin 的 `test_protocol_liveness_results_pull.py` 和 `test_status_tls_installer_20261027.py` 与保留的 `module_blobs` 不匹配。共享输入准入通过，但原生测试准入实测报错 `first native module source differs`，因此该 revision 仍无法通过完整校验。旧 pin 也存在此不匹配；本次换 pin 未解决它。请选择匹配的 revision，或独立审核并同步更新模块 seals。 - [P1] `ops-first-native-successors.json:490`: 新 pin 的 `test_protocol_liveness_results_pull.py` 和 `test_status_tls_installer_20261027.py` 与保留的 `module_blobs` 不匹配。共享输入准入通过，但原生测试准入实测报错 `first native module source differs`，因此该 revision 仍无法通过完整校验。旧 pin 也存在此不匹配；本次换 pin 未解决它。请选择匹配的 revision，或独立审核并同步更新模块 seals。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-86-parity.log) (reviews/merge-receipts-20261103/yueto-ci-86-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 95,
+      "reason": "Backfilled independent review of exact head ed2b8083b03714649ca9a36e107446418493e4b2 (2026-11-02T17:44:37Z). Codex review returned CHANGES: - [P1] `merge-receipts/yueboard/95.json:11`：引用的 `reviews/merge-receipts-20261102/yueboard-95.md` 在指定 head 中不存在（已用 `git cat-file -e` 确认）。校验器要求审查文件存在且已提交，因此该收据会导致 premerge／合并审计失败，无法作为批准证据。请提交对应审查文件，或改为有效的已提交证据路径。 - [P1] `merge-receipts/yueboard/95.json:11`：引用的 `reviews/merge-receipts-20261102/yueboard-95.md` 在指定 head 中不存在（已用 `git cat-file -e` 确认）。校验器要求审查文件存在且已提交，因此该收据会导致 premerge／合并审计失败，无法作为批准证据。请提交对应审查文件，或改为有效的已提交证据路径。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-95-parity.log) (reviews/merge-receipts-20261103/yueto-ci-95-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 104,
+      "reason": "Backfilled independent review of exact head 5f790f84f47f56bdaf572418a7961986aebf5c9b (2026-11-02T19:40:20Z). Codex review returned CHANGES: - [P2] `merge-receipts/yueboard/96.json:16`: The `pass` receipt lacks a complete successful command transcript. The referenced log reports `rc=0` despite package failures, stops the `./...` output without its final status, and appends two rerun summaries without commands or exit statuses. Preserve the actual phase-ordered command output and exit statuses, then update the hash; the current evidence cannot substantiate the claimed parity result. - [P2] `merge-receipts/yueboard/96.json:16`: The `pass` receipt lacks a complete successful command transcript. The referenced log reports `rc=0` despite package failures, stops the `./...` output without its final status, and appends two rerun summaries without commands or exit statuses. Preserve the actual phase-ordered command output and exit statuses, then update the hash; the current evidence cannot substantiate the claimed parity result.; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-104-parity.log) (reviews/merge-receipts-20261103/yueto-ci-104-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 107,
+      "reason": "Backfilled independent review of exact head b250d39c1f5bcf968d89952dfd08772f2ba07567 (2026-11-02T19:45:35Z). Codex review returned CHANGES: - [P2] `merge-receipts/yueops/283.json:17`: Parity is attributed to the exact PR head, but `reviews/merge-receipts-20261102/yueops-283.md:5` says tests ran on a local merge with `origin/master`. This lets the audit accept passing evidence from a different revision. Rerun the recorded command at the frozen PR head and update the log, hash, timestamp, and artifact. - [P2] `merge-receipts/yueops/283.json:17`: Parity is attributed to the exact PR head, but `reviews/merge-receipts-20261102/yueops-283.md:5` says tests ran on a local merge with `origin/master`. This lets the audit accept passing evidence from a different revision. Rerun the recorded command at the frozen PR head and update the log, hash, timestamp, and artifact.; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-107-parity.log) (reviews/merge-receipts-20261103/yueto-ci-107-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     }
   ]
 }

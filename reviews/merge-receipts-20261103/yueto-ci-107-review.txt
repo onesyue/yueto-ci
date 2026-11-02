@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P2] `merge-receipts/yueops/283.json:17`: Parity is attributed to the exact PR head, but `reviews/merge-receipts-20261102/yueops-283.md:5` says tests ran on a local merge with `origin/master`. This lets the audit accept passing evidence from a different revision. Rerun the recorded command at the frozen PR head and update the log, hash, timestamp, and artifact.
+tokens used
+18,251
+VERDICT: changes
+
+- [P2] `merge-receipts/yueops/283.json:17`: Parity is attributed to the exact PR head, but `reviews/merge-receipts-20261102/yueops-283.md:5` says tests ran on a local merge with `origin/master`. This lets the audit accept passing evidence from a different revision. Rerun the recorded command at the frozen PR head and update the log, hash, timestamp, and artifact.

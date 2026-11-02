@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P1] `ops-first-native-successors.json:490`: 新 pin 的 `test_protocol_liveness_results_pull.py` 和 `test_status_tls_installer_20261027.py` 与保留的 `module_blobs` 不匹配。共享输入准入通过，但原生测试准入实测报错 `first native module source differs`，因此该 revision 仍无法通过完整校验。旧 pin 也存在此不匹配；本次换 pin 未解决它。请选择匹配的 revision，或独立审核并同步更新模块 seals。
+tokens used
+31,277
+VERDICT: changes
+- [P1] `ops-first-native-successors.json:490`: 新 pin 的 `test_protocol_liveness_results_pull.py` 和 `test_status_tls_installer_20261027.py` 与保留的 `module_blobs` 不匹配。共享输入准入通过，但原生测试准入实测报错 `first native module source differs`，因此该 revision 仍无法通过完整校验。旧 pin 也存在此不匹配；本次换 pin 未解决它。请选择匹配的 revision，或独立审核并同步更新模块 seals。

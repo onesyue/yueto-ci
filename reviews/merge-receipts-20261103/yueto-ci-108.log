@@ -1,0 +1,17 @@
+head=04ad2272a6f9f7c6b0c0ed837f6eafc31435e3d6 ran_at=2026-11-02T19:24:50Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests && for f in merge-hygiene-exceptions.json merge-receipts/yueto-ci/101.json merge-receipts/yueto-ci/87.json merge-receipts/yueto-ci/91.json merge-receipts/yueto-ci/94.json merge-receipts/yueto-ci/97.json merge-receipts/yueto-ci/98.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check 2c2c7b2dd4e25314cecf9066b5b078ec1903eda8 04ad2272a6f9f7c6b0c0ed837f6eafc31435e3d6 -- . ':(exclude)reviews/'
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+............................................................. [  9%]
+......... [ 11%]
+.................... [ 14%]
+........................................................................................................................................................................ [ 41%]
+................................................................................................................................................................. [ 68%]
+................................................ [ 75%]
+............................ [ 80%]
+...................................................................... [ 91%]
+..................................................                              [100%]
+615 passed, 4612 subtests passed in 290.22s (0:04:50)
+rc=0

@@ -1,0 +1,17 @@
+head=2c58722903c6d368e2e401e8762fc5a3210b00c2 ran_at=2026-11-02T17:45:58Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/admission-precheck.py scripts/admission_diagnostics.py scripts/merge-hygiene-audit.py scripts/pytest-shards.py tests/test_admission_precheck.py tests/test_merge_hygiene_audit.py tests/test_pytest_shards.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests && for f in merge-hygiene-exceptions.json tests/fixtures/merge-hygiene/approved.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check 5d60c9af8d3da79d6f2c8f4ff051f5b79d5c043e 2c58722903c6d368e2e401e8762fc5a3210b00c2
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+............................................................. [ 10%]
+......... [ 11%]
+.................... [ 15%]
+....................................................................................................................................................... [ 40%]
+..................................................................................................... [ 58%]
+....................................................................................................... [ 75%]
+................................ [ 81%]
+............................. [ 86%]
+..................................................................................                                           [100%]
+588 passed, 4554 subtests passed in 284.92s (0:04:44)
+rc=0

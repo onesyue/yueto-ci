@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P2] `merge-receipts/yueboard/96.json:16`: The `pass` receipt lacks a complete successful command transcript. The referenced log reports `rc=0` despite package failures, stops the `./...` output without its final status, and appends two rerun summaries without commands or exit statuses. Preserve the actual phase-ordered command output and exit statuses, then update the hash; the current evidence cannot substantiate the claimed parity result.
+tokens used
+23,350
+VERDICT: changes
+
+- [P2] `merge-receipts/yueboard/96.json:16`: The `pass` receipt lacks a complete successful command transcript. The referenced log reports `rc=0` despite package failures, stops the `./...` output without its final status, and appends two rerun summaries without commands or exit statuses. Preserve the actual phase-ordered command output and exit statuses, then update the hash; the current evidence cannot substantiate the claimed parity result.

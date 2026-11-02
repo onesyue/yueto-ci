@@ -1,0 +1,6 @@
+VERDICT: approve
+- README.md:38 — Documentation changes match the existing workflows and validator. No correctness, security, secret exposure, weakened tests, or regression findings in the specified diff.
+tokens used
+15,291
+VERDICT: approve
+- README.md:38 — Documentation changes match the existing workflows and validator. No correctness, security, secret exposure, weakened tests, or regression findings in the specified diff.
