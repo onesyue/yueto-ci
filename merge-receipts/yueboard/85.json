@@ -15,9 +15,9 @@
   "parity": {
     "result": "pass",
     "head": "8568e76fbc77e563fa458ac5efaca47d7f875b46",
-    "command": "go vet -tags integration ./test/integration  && go test ",
-    "log_sha256": "28464f07797874d27f80f3431d3b40190e3138f6e006e59186a57df2f6bbe15a",
-    "ran_at": "2026-11-02T17:15:54Z",
+    "command": "go vet -tags integration ./test/integration (only test/integration, an integration-tagged package, changed; no go test target)",
+    "log_sha256": "9c837cf8ddcc030d6543c2d59d0ac224b06ec4f8ba587f7ef285b210c5f94f7e",
+    "ran_at": "2026-11-02T17:23:40Z",
     "runner": "box"
   }
 }
