@@ -205,12 +205,22 @@ def enforcement_cutoff(owner):
     return None
 
 
-def evidence_only(owner, repo, number):
+def evidence_only(owner, repo, base_sha, head_sha):
     if repo != "yueto-ci":
         return False
-    files = all_rows(f"repos/{owner}/yueto-ci/pulls/{number}/files")
-    if len(files) >= 3000:
-        raise ValueError("PR file list may be truncated; audit incomplete")
+    if any(not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha)
+           for sha in (base_sha, head_sha)):
+        raise ValueError("invalid PR base or head SHA")
+    # Compare uses the merge base of these immutable commits. The mutable PR
+    # files endpoint can describe another head even if a refetch sees A -> B -> A.
+    comparison = api(f"repos/{owner}/{repo}/compare/{base_sha}...{head_sha}")
+    if not isinstance(comparison, dict):
+        raise ValueError("invalid compare response; audit incomplete")
+    files = comparison.get("files")
+    total = comparison.get("total_commits")
+    if (not isinstance(files, list) or len(files) >= 300
+            or type(total) is not int or total < 0 or bool(total) != bool(files)):
+        raise ValueError("compare file evidence missing, truncated or inconsistent; audit incomplete")
 
     def allowed(path):
         return (isinstance(path, str) and ".." not in path.split("/")
@@ -243,7 +253,7 @@ def audit(owner, repos, cutoff, registered, now):
                     pr, all_rows(f'{prefix}/pulls/{pr["number"]}/reviews'),
                     all_rows(f"{prefix}/commits/{sha}/check-runs?filter=all", "check_runs"),
                     all_rows(f"{prefix}/commits/{sha}/statuses"))
-                only_evidence = evidence_only(owner, repo, pr["number"])
+                only_evidence = evidence_only(owner, repo, pr["base"]["sha"], sha)
                 if only_evidence:
                     reasons = [r for r in reasons if r not in (
                         "no_approving_review_at_merge", "no_check_evidence_at_merge")]
@@ -272,18 +282,18 @@ def premerge(owner, repo, number):
     pr = api(f"{prefix}/pulls/{number}")
     if pr["number"] != number or pr["state"] != "open" or pr.get("merged_at"):
         raise ValueError("premerge requires an open PR")
+    head_sha, base_sha = pr["head"]["sha"], pr["base"]["sha"]
     reviews = all_rows(f"{prefix}/pulls/{number}/reviews")
-    checks = all_rows(f'{prefix}/commits/{pr["head"]["sha"]}/check-runs?filter=all', "check_runs")
-    statuses = all_rows(f'{prefix}/commits/{pr["head"]["sha"]}/statuses')
+    checks = all_rows(f"{prefix}/commits/{head_sha}/check-runs?filter=all", "check_runs")
+    statuses = all_rows(f"{prefix}/commits/{head_sha}/statuses")
     # The historical audit can take minutes. Evaluate newly fetched checks at
     # observation time, not at the earlier start of that audit.
     now = datetime.now(timezone.utc)
     candidate = pr | {"merged_at": now.isoformat()}
-    only_evidence = evidence_only(owner, repo, number)
-    # The files endpoint is mutable, including between pagination requests.
-    # Bind its classification to the same head and base observed initially.
+    only_evidence = evidence_only(owner, repo, base_sha, head_sha)
+    # Reject refs that have moved since the initial capture as well.
     refreshed = api(f"{prefix}/pulls/{number}")
-    if any(refreshed[ref]["sha"] != pr[ref]["sha"] for ref in ("head", "base")):
+    if refreshed["head"]["sha"] != head_sha or refreshed["base"]["sha"] != base_sha:
         raise ValueError("PR head or base changed while fetching evidence; audit incomplete")
     evidence = receipt(repo, candidate)
     reasons = findings(candidate, reviews, checks, statuses)

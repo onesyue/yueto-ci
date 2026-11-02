@@ -48,7 +48,7 @@ if x.get('unavailable'): raise SystemExit(1)
 if e=='repos/onesyue/yueto-ci/pulls/71': result=x['anchor']
 elif '/pulls?' in e: result=[x['pr']]
 elif '/reviews?' in e: result=x['reviews']
-elif '/files?' in e: result=x['files']
+elif '/compare/' in e: result={{'files':x['files'], 'total_commits':1}}
 elif '/check-runs?' in e: result={{'check_runs':x['checks']}}
 elif '/statuses?' in e: result=x['statuses']
 elif e.endswith('/pulls/203'): result=x['pr']
