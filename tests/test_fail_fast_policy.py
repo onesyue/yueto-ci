@@ -76,7 +76,7 @@ class FailFastPolicyTest(unittest.TestCase):
         self.assertRegex(job, r"(?m)^    timeout-minutes: [1-5]$")
         self.assertTrue(self.jobs["publish"].startswith("\n    needs: [build, plan]\n"))
 
-    def test_async_alert_requires_admission_publication_and_red_validation(self) -> None:
+    def test_async_alert_requires_any_tag_written_and_red_validation(self) -> None:
         job = self.jobs["validation-alert"]
         notice, issue = job.split(
             "      - name: Open or update the single async validation alert\n", 1
@@ -107,12 +107,24 @@ class FailFastPolicyTest(unittest.TestCase):
             results = dict(zip(names, values))
             for tag_written, admission_rejected in itertools.product((False, True), repeat=2):
                 with self.subTest(**results, tag_written=tag_written, admission_rejected=admission_rejected):
-                    published = (results["plan"] == "success" and not admission_rejected
-                                 and results["publish"] == "success" and tag_written)
                     red = "failure" in (results["validate"], results["validation-evidence"])
-                    self.assertEqual(evaluate(issue_condition, results, tag_written, admission_rejected), published and red)
+                    self.assertEqual(evaluate(issue_condition, results, tag_written, admission_rejected), tag_written and red)
                     self.assertEqual(evaluate(notice_condition, results, tag_written, admission_rejected),
-                                     results["plan"] == "failure" or admission_rejected)
+                                     (results["plan"] == "failure" or admission_rejected) and not tag_written)
+
+        # A successful matrix row leaves its marker when another row fails.
+        # Either validation job failing must still open the rollback issue.
+        for failed_validation in ("validate", "validation-evidence"):
+            for outputs in (
+                {"yue-node": "tag-written", "yue-bot": ""},
+                {"yue-node": "", "yue-bot": "tag-written"},
+            ):
+                with self.subTest(partial_publish=outputs, failed_validation=failed_validation):
+                    results = dict.fromkeys(names, "success")
+                    results.update({"publish": "failure", failed_validation: "failure"})
+                    tag_written = '"tag-written"' in json.dumps(outputs)
+                    self.assertTrue(evaluate(issue_condition, results, tag_written, False))
+                    self.assertFalse(evaluate(notice_condition, results, tag_written, False))
 
         # This is the real matrix publisher, including its unconditional tag write.
         publisher = self.jobs["publish"]
@@ -164,7 +176,8 @@ class FailFastPolicyTest(unittest.TestCase):
                 self.assertEqual(promotion.returncode, 1)
                 self.assertEqual(output.read_text(), "yue-node=tag-written\n" if write_status == 0 else "")
                 # The truth-table test above verifies these exact marker states
-                # with publish=failure: neither marker state opens a rollback issue.
+                # with publish=failure: a written tag still opens a rollback issue
+                # when validation fails; an absent marker does not.
 
     def test_async_validation_alert_is_one_rolling_issue(self) -> None:
         alert = self.jobs["validation-alert"]

@@ -2684,8 +2684,9 @@ jobs:
     # Asynchronous validation (B1, 2026-10-30): a red validate or
     # validation-evidence no longer cancels the run or blocks publish, because
     # cancelling mid-retag could leave sha-*/latest half-moved. Instead it
-    # raises a visible alert issue after successful publication. Admission
-    # rejection gets a notice and summary instead. Runs no source code.
+    # raises a visible alert issue whenever any row wrote a tag, even if
+    # another row failed. Admission rejection gets a notice and summary only
+    # when no tag was written. Runs no source code.
     # Image names (yue-bot, yueops-web, checkin-api, etc.) are matrix rows
     # of publish, not separate job IDs. Wait for their publication result.
     needs: [plan, validate, validation-evidence, publish]
@@ -2696,12 +2697,12 @@ jobs:
       issues: write
     steps:
       - name: Report rejected admission without an issue
-        if: needs.plan.result == 'failure' || needs.plan.outputs.admission_rejected == 'true'
+        if: (needs.plan.result == 'failure' || needs.plan.outputs.admission_rejected == 'true') && !contains(toJSON(needs.publish.outputs), '"tag-written"')
         run: |
           echo "::notice::admission rejected"
           echo "admission rejected" >> "$GITHUB_STEP_SUMMARY"
       - name: Open or update the single async validation alert
-        if: needs.plan.result == 'success' && needs.plan.outputs.admission_rejected != 'true' && needs.publish.result == 'success' && contains(toJSON(needs.publish.outputs), '"tag-written"') && (needs.validate.result == 'failure' || needs.validation-evidence.result == 'failure')
+        if: contains(toJSON(needs.publish.outputs), '"tag-written"') && (needs.validate.result == 'failure' || needs.validation-evidence.result == 'failure')
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
