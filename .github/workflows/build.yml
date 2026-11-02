@@ -966,6 +966,16 @@ jobs:
           CGO_ENABLED: '1'
         run: |
           set -euo pipefail
+          # Economy contract pack (yueboard #37) diffs HEAD against
+          # merge-base(HEAD, origin/master). Releasing master makes that HEAD
+          # itself, so use the reviewed pre-merge master (first parent).
+          if [ -z "${YUEBOARD_CONTRACT_BASELINE:-}" ] \
+            && [ "$(git merge-base HEAD origin/master 2>/dev/null || true)" = "$(git rev-parse HEAD)" ] \
+            && git rev-parse --verify --quiet 'HEAD^1^{commit}' >/dev/null; then
+            YUEBOARD_CONTRACT_BASELINE="$(git rev-parse 'HEAD^1')"
+            export YUEBOARD_CONTRACT_BASELINE
+            echo "economy contract baseline: first parent $YUEBOARD_CONTRACT_BASELINE"
+          fi
           go build ./...
           mapfile -t go_files < <(
             git ls-files '*.go' | grep -v '/gen/' | grep -v 'noderpc/gen'
