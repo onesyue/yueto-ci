@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P2] `scripts/ship-sshd-authority.py:28`：新增执行依赖 `ship_remote.py`，但未将其加入 `scripts/lib/first-contract-transaction.py` 的 `EXECUTION_FILES`。签名资格校验因此允许遗漏该文件，修改其 SSH 执行逻辑也不会触发 `executed source drift`。请补入必需的源码校验清单，并增加篡改该文件时拒绝执行的测试。
+tokens used
+38,667
+VERDICT: changes
+- [P2] `scripts/ship-sshd-authority.py:28`：新增执行依赖 `ship_remote.py`，但未将其加入 `scripts/lib/first-contract-transaction.py` 的 `EXECUTION_FILES`。签名资格校验因此允许遗漏该文件，修改其 SSH 执行逻辑也不会触发 `executed source drift`。请补入必需的源码校验清单，并增加篡改该文件时拒绝执行的测试。

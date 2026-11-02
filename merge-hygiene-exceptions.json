@@ -282,6 +282,24 @@
       "pr": 73,
       "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head f20952b2c50b884f3fca8e3270c0d11a80417e50 on 2026-11-02T17:01:59Z; artifact reviews/merge-receipts-20261103/yueboard-73.md, log_sha256 10f846154aaf01461b6d4765f2755e09aecd571b7fcbca0cb9d96eac45cc077a",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto",
+      "pr": 41,
+      "reason": "Backfilled independent review of exact head 8698883cf0ddf26c86427bad01a9412d3c363dcc (2026-11-02T17:41:29Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-41-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueto-41-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto",
+      "pr": 45,
+      "reason": "Backfilled independent review of exact head 8163049dd263533728ddcf97731b70d509da9c97 (2026-11-02T17:41:44Z). Codex review returned CHANGES: - [P2] `scripts/ship-sshd-authority.py:28`：新增执行依赖 `ship_remote.py`，但未将其加入 `scripts/lib/first-contract-transaction.py` 的 `EXECUTION_FILES`。签名资格校验因此允许遗漏该文件，修改其 SSH 执行逻辑也不会触发 `executed source drift`。请补入必需的源码校验清单，并增加篡改该文件时拒绝执行的测试。 - [P2] `scripts/ship-sshd-authority.py:28`：新增执行依赖 `ship_remote.py`，但未将其加入 `scripts/lib/first-contract-transaction.py` 的 `EXECUTION_FILES`。签名资格校验因此允许遗漏该文件，修改其 SSH 执行逻辑也不会触发 `executed source drift`。请补入必需的源码校验清单，并增加篡改该文件时拒绝执行的测试。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-45-parity.log) (reviews/merge-receipts-20261103/yueto-45-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto",
+      "pr": 46,
+      "reason": "Backfilled independent review of exact head bded5c71eebae72ea07c63fe4c8c79351f7b1a4d (2026-11-02T17:42:03Z). Codex review returned CHANGES: - [P1] `scripts/ship-sshd-authority.py:102`：脱敏依赖关键词和地址格式，SQL 错误中未标记的敏感值（例如类型转换失败回显的输入）会原样进入 receipt 和 stderr。纯内存复现已确认；应采用允许列表，仅保留安全错误模板。 - [P2] `scripts/ship-sshd-authority.py:239`：原生 CLI 将拒绝 JSON 写入 stderr，这里却解析 stdout，导致实际失败详情被丢弃。新增测试同样模拟了错误的输出通道；应解析 stderr 中的结构化拒绝，并补充对应测试。 - [P1] `scripts/ship-sshd-authority.py:102`：脱敏依赖关键词和地址格式，SQL 错误中未标记的敏感值（例如类型转换失败回显的输入）会原样进入 receipt 和 stderr。纯内存复现已确认；应采用允许列表，仅保留安全错误模板。 - [P2] `scripts/ship-sshd-authority.py:239`：原生 CLI 将拒绝 JSON 写入 stderr，这里却解析 stdout，导致实际失败详情被丢弃。新增测试同样模拟了错误的输出通道；应解析 stderr 中的结构化拒绝，并补充对应测试。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-46-parity.log) (reviews/merge-receipts-20261103/yueto-46-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     }
   ]
 }

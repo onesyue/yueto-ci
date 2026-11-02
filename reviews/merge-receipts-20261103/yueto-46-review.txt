@@ -1,0 +1,8 @@
+VERDICT: changes
+- [P1] `scripts/ship-sshd-authority.py:102`：脱敏依赖关键词和地址格式，SQL 错误中未标记的敏感值（例如类型转换失败回显的输入）会原样进入 receipt 和 stderr。纯内存复现已确认；应采用允许列表，仅保留安全错误模板。
+- [P2] `scripts/ship-sshd-authority.py:239`：原生 CLI 将拒绝 JSON 写入 stderr，这里却解析 stdout，导致实际失败详情被丢弃。新增测试同样模拟了错误的输出通道；应解析 stderr 中的结构化拒绝，并补充对应测试。
+tokens used
+39,528
+VERDICT: changes
+- [P1] `scripts/ship-sshd-authority.py:102`：脱敏依赖关键词和地址格式，SQL 错误中未标记的敏感值（例如类型转换失败回显的输入）会原样进入 receipt 和 stderr。纯内存复现已确认；应采用允许列表，仅保留安全错误模板。
+- [P2] `scripts/ship-sshd-authority.py:239`：原生 CLI 将拒绝 JSON 写入 stderr，这里却解析 stdout，导致实际失败详情被丢弃。新增测试同样模拟了错误的输出通道；应解析 stderr 中的结构化拒绝，并补充对应测试。

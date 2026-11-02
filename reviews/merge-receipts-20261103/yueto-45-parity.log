@@ -1,0 +1,3 @@
+head=8163049dd263533728ddcf97731b70d509da9c97 ran_at=2026-11-02T17:40:43Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/lib/ship_remote.py scripts/ship-sshd-authority.py scripts/test-ship-errexit-and-lock.py scripts/test-ship-remote.py scripts/test-ship-sshd-authority.py  && for f in scripts/check-all-contracts.sh scripts/lib/ship-panel-native.sh scripts/ship.sh ; do bash -n $f || exit 1; done && shellcheck -S error scripts/check-all-contracts.sh scripts/lib/ship-panel-native.sh scripts/ship.sh  && git diff --check bed51154b4c81255857918f5f075c183b8363c58 8163049dd263533728ddcf97731b70d509da9c97
+rc=0

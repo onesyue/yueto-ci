@@ -1,0 +1,3 @@
+head=8d0e41ffa687d32b02daa9e88cae1985f8055f60 ran_at=2026-11-02T17:45:16Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/match-build-run.py scripts/test-ship-errexit-and-lock.py  && for f in scripts/test-ship-errexit-and-lock.py ; do /home/box/Projects/yueto/yueops/.venv/bin/python3 $f || exit 1; done && for f in scripts/lib/ship-ui.sh scripts/ship.sh ; do bash -n $f || exit 1; done && shellcheck -S error scripts/lib/ship-ui.sh scripts/ship.sh  && git diff --check 475439313abc2da035bda1ad41ab6f9f1d52c524 8d0e41ffa687d32b02daa9e88cae1985f8055f60
+rc=0
