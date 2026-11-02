@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 275,
+  "head": "84606276fba916a04d153482d90d7a9da96c0d7a",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "84606276fba916a04d153482d90d7a9da96c0d7a",
+    "artifact": "reviews/merge-receipts-20261102/yueops-275.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T13:49:56Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "84606276fba916a04d153482d90d7a9da96c0d7a",
+    "command": "TZ=UTC /home/box/Projects/yueto/yueops/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_generate_gitleaks_ledger.py tests/test_role_grant_manifest_generated.py",
+    "log_sha256": "0cf07d866ac71e89560f738af5f9603fb6cea28e46d00917301b0894174c0b4e",
+    "ran_at": "2026-11-02T13:52:01Z",
+    "runner": "box"
+  }
+}

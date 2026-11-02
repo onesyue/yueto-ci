@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 268,
+  "head": "8bce015faacb9c880b1f69434e156280f2c86c6e",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "8bce015faacb9c880b1f69434e156280f2c86c6e",
+    "artifact": "reviews/merge-receipts-20261102/yueops-268.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T13:53:02Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "8bce015faacb9c880b1f69434e156280f2c86c6e",
+    "command": "TZ=UTC /home/box/Projects/yueto/yueops/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_kb_policy_reconcile_20261102.py",
+    "log_sha256": "8ce6b405e81b177b707b98e7584b954ad29df0a0b026174d1abda9347808382a",
+    "ran_at": "2026-11-02T13:52:00Z",
+    "runner": "box"
+  }
+}

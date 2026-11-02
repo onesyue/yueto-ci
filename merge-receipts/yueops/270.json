@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 270,
+  "head": "1e8c44256916bb8f6c97ea6605d83b8387918bdc",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "1e8c44256916bb8f6c97ea6605d83b8387918bdc",
+    "artifact": "reviews/merge-receipts-20261102/yueops-270.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T13:40:45Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "1e8c44256916bb8f6c97ea6605d83b8387918bdc",
+    "command": "TZ=UTC /home/box/Projects/yueto/yueops/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_bot_jobs_no_sync_db_on_loop_20260928.py",
+    "log_sha256": "511ea822025b8d033d7c5b71cf911f651168ba0cfbe7b1cd7b7a895db0b99033",
+    "ran_at": "2026-11-02T13:51:55Z",
+    "runner": "box"
+  }
+}
