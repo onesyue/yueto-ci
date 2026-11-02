@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 218,
+  "head": "2e6f14e683ffa3872b29b9a5349b2229ad7edcc9",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "2e6f14e683ffa3872b29b9a5349b2229ad7edcc9",
+    "artifact": "reviews/merge-receipts-20261103/yueops-218.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T18:10:29Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "2e6f14e683ffa3872b29b9a5349b2229ad7edcc9",
+    "command": "/home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile telegram-bot/yue/support_core/agent_tools.py telegram-bot/yue/tools/subscription_diagnosis.py tests/test_subscription_diagnosis.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_subscription_diagnosis.py  && git diff --check 2d46ca0cded9520dcf7d1688a0bf3dc6ccbfcfc2 2e6f14e683ffa3872b29b9a5349b2229ad7edcc9",
+    "log_sha256": "e42545253c484cfaaf72d0f3d7bdd49149eb8af676aeac67ee2f5c95829d246c",
+    "ran_at": "2026-11-02T18:09:19Z",
+    "runner": "box"
+  }
+}

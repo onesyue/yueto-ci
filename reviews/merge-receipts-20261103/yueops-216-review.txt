@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P2] `telegram-bot/yue/support_core/navigation.py:17`：删除订阅导航后，Telegram 首次发送“订阅链接／订阅地址／获取订阅”会落入 `clarify_gate`，不再返回订阅指引：`resolve_local_actions` 只支持已认证的 WEB/YUEBOARD；裸词“订阅”更不匹配其关键词，所有渠道均受影响。应保留安全导航兜底，并恢复同步、流式回归覆盖。`tests/test_ai_no_human_navigation_20261102.py:57` 删除的正是 Telegram 用例，引用的凭据测试仅覆盖已认证 YUEBOARD 的同步“订阅链接”，无法替代。
+tokens used
+41,958
+VERDICT: changes
+- [P2] `telegram-bot/yue/support_core/navigation.py:17`：删除订阅导航后，Telegram 首次发送“订阅链接／订阅地址／获取订阅”会落入 `clarify_gate`，不再返回订阅指引：`resolve_local_actions` 只支持已认证的 WEB/YUEBOARD；裸词“订阅”更不匹配其关键词，所有渠道均受影响。应保留安全导航兜底，并恢复同步、流式回归覆盖。`tests/test_ai_no_human_navigation_20261102.py:57` 删除的正是 Telegram 用例，引用的凭据测试仅覆盖已认证 YUEBOARD 的同步“订阅链接”，无法替代。

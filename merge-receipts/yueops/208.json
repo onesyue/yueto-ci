@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 208,
+  "head": "84c37ed904d1bc0f1865f24ab2025f2bc2e5afe2",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "84c37ed904d1bc0f1865f24ab2025f2bc2e5afe2",
+    "artifact": "reviews/merge-receipts-20261103/yueops-208.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T18:12:19Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "84c37ed904d1bc0f1865f24ab2025f2bc2e5afe2",
+    "command": "/workspace/lane/yo-venv/bin/python -m py_compile scripts/converge-node-failure-notifications.py scripts/node-unit-failure.py tests/test_node_failure_convergence_20261101.py tests/test_node_failure_superseded.py  && /workspace/lane/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_node_failure_convergence_20261101.py tests/test_node_failure_superseded.py  && git diff --check 67fb445aadcc531f9b58409e4f8b8b1e9bc8f9bc 84c37ed904d1bc0f1865f24ab2025f2bc2e5afe2",
+    "log_sha256": "0f012b32531b74e0129de56a870e9f007c5db47b0a0bec8acdaedba2d1327733",
+    "ran_at": "2026-11-02T18:27:17Z",
+    "runner": "box"
+  }
+}

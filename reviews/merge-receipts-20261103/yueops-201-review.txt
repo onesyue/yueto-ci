@@ -1,0 +1,12 @@
+已核对指定 diff，确认 122 个归档脚本字节未变。只读复现了以下覆盖退化；未运行完整测试套件。
+
+VERDICT: changes
+
+- [P2] `tests/test_rollout_yueops_tuning_fleet_20260825.py:32`、`tests/test_rollout_yueops_tuning_fleet_20260827.py:37`：`ROOT` 改为临时历史目录后，两项工作区测试仍通过 `ROOT.parent/scripts/release-state.py` 定位真实消费者，导致工作区存在时也直接 SKIP，失去发布版本选择的回归覆盖。应保留独立的真实仓库路径用于工作区检查。
+tokens used
+85,288
+已核对指定 diff，确认 122 个归档脚本字节未变。只读复现了以下覆盖退化；未运行完整测试套件。
+
+VERDICT: changes
+
+- [P2] `tests/test_rollout_yueops_tuning_fleet_20260825.py:32`、`tests/test_rollout_yueops_tuning_fleet_20260827.py:37`：`ROOT` 改为临时历史目录后，两项工作区测试仍通过 `ROOT.parent/scripts/release-state.py` 定位真实消费者，导致工作区存在时也直接 SKIP，失去发布版本选择的回归覆盖。应保留独立的真实仓库路径用于工作区检查。
