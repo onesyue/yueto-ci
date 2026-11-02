@@ -1,0 +1,8 @@
+VERDICT: changes
+- [P1] `scripts/central-ddns.py:308`：`pool out` 会停止该主机全部 DDNS 更新，但地址上报仍会更新 `servers.ip`。动态 IP 变化后，reconciler 的记录地址一致性检查会阻断整个池，其他成员也无法自动摘除或恢复。应继续同步管理地址和禁用记录的地址，同时保持其禁用状态。
+- [P2] `scripts/endpoint-salt-dns-sync.py:1245`：IPv6 全池校验包含已出池成员，但第 1265 行仍访问仅含在池成员的 `candidates[sid]`。已用指定 head 的函数复现 `KeyError`：一个成员出池后，其他成员的 IPv6 DNS 更新失败。身份校验应读取 `registered[sid]`。
+tokens used
+83,457
+VERDICT: changes
+- [P1] `scripts/central-ddns.py:308`：`pool out` 会停止该主机全部 DDNS 更新，但地址上报仍会更新 `servers.ip`。动态 IP 变化后，reconciler 的记录地址一致性检查会阻断整个池，其他成员也无法自动摘除或恢复。应继续同步管理地址和禁用记录的地址，同时保持其禁用状态。
+- [P2] `scripts/endpoint-salt-dns-sync.py:1245`：IPv6 全池校验包含已出池成员，但第 1265 行仍访问仅含在池成员的 `candidates[sid]`。已用指定 head 的函数复现 `KeyError`：一个成员出池后，其他成员的 IPv6 DNS 更新失败。身份校验应读取 `registered[sid]`。

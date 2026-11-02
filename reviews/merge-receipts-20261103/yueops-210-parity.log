@@ -1,0 +1,6 @@
+head=4ecbf6435bf157034b9c2d587159678aec558729 ran_at=2026-11-02T18:39:49Z runner=box
+cmd: /workspace/lane/yo-venv/bin/python -m py_compile scripts/lib/ddns-check-inventory.py tests/test_fleet_fact_consumers.py tests/test_legacy_probe_exit_status_20261013.py  && /workspace/lane/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_fleet_fact_consumers.py tests/test_legacy_probe_exit_status_20261013.py  && for f in scripts/check-ddns.sh ; do bash -n $f || exit 1; done && shellcheck -S error scripts/check-ddns.sh  && git diff --check 77c1bce01d23c3fb0ce4910977150d281089290a 4ecbf6435bf157034b9c2d587159678aec558729
+......................                                                   [100%]
+22 passed in 1.12s
+tests/test_fleet_fact_consumers.py:77: new blank line at EOF.
+rc=2

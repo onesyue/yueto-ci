@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P1] `scripts/evening-speed-alert.py:104`：新增导入依赖 `psycopg`、PyYAML 和 Paramiko，但该 head 的 service 仍使用 `/usr/bin/python3`，未切换到项目 venv。原采集器明确避免系统 Python 的 Paramiko 依赖。缺少依赖时，默认定时任务会在采样前返回 UNKNOWN，停止全部吞吐监测。应同步修改 service 解释器，并增加入口验证。
+tokens used
+39,759
+VERDICT: changes
+
+- [P1] `scripts/evening-speed-alert.py:104`：新增导入依赖 `psycopg`、PyYAML 和 Paramiko，但该 head 的 service 仍使用 `/usr/bin/python3`，未切换到项目 venv。原采集器明确避免系统 Python 的 Paramiko 依赖。缺少依赖时，默认定时任务会在采样前返回 UNKNOWN，停止全部吞吐监测。应同步修改 service 解释器，并增加入口验证。

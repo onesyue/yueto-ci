@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P1] `scripts/check-ddns.sh:13`：裸调用 `python3` 会在未激活 venv 的堡垒机上使用系统 Python；新增 helper 导入的 `fleet_inventory → nodeauth` 依赖链需要系统环境缺少的 `httpx`（已有 `tests/test_fleet_inventory_interpreter_20261028.py:3` 记录）。因此正常执行脚本会在任何探测前退出 2。应明确使用部署 venv 的解释器，并增加真实解释器选择测试；当前测试替换了 `python3`，无法发现此回归。
+tokens used
+44,011
+VERDICT: changes
+
+- [P1] `scripts/check-ddns.sh:13`：裸调用 `python3` 会在未激活 venv 的堡垒机上使用系统 Python；新增 helper 导入的 `fleet_inventory → nodeauth` 依赖链需要系统环境缺少的 `httpx`（已有 `tests/test_fleet_inventory_interpreter_20261028.py:3` 记录）。因此正常执行脚本会在任何探测前退出 2。应明确使用部署 venv 的解释器，并增加真实解释器选择测试；当前测试替换了 `python3`，无法发现此回归。

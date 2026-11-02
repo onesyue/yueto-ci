@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 200,
+  "head": "2716ae84b0dd81a93815bdc5760984cdd985de70",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "2716ae84b0dd81a93815bdc5760984cdd985de70",
+    "artifact": "reviews/merge-receipts-20261103/yueops-200.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T18:14:39Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "2716ae84b0dd81a93815bdc5760984cdd985de70",
+    "command": "/workspace/lane/yo-venv/bin/python -m py_compile scripts/dns-scheduler/scheduler.py scripts/entry-latency-probe.py tests/test_dns_scheduler_ack_recovery_20261009.py tests/test_dns_scheduler_inventory_state.py tests/test_entry_latency_served_hosts_20261011.py tests/test_native_fleet_inventory.py yueops/fleet_inventory.py  && /workspace/lane/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_dns_scheduler_ack_recovery_20261009.py tests/test_dns_scheduler_inventory_state.py tests/test_entry_latency_served_hosts_20261011.py tests/test_native_fleet_inventory.py  && git diff --check 67fb445aadcc531f9b58409e4f8b8b1e9bc8f9bc 2716ae84b0dd81a93815bdc5760984cdd985de70",
+    "log_sha256": "a789f8076e996f0a03ff973b0a5dd698564473bd607cd76bdde195028d269139",
+    "ran_at": "2026-11-02T18:27:12Z",
+    "runner": "box"
+  }
+}

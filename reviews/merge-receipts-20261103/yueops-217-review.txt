@@ -1,0 +1,8 @@
+VERDICT: changes
+
+- [P2] `telegram-bot/yue/support_core/__init__.py:466` — Adding `sign_in` to the default has no effect under production configuration: `services/compose.production.yaml:134,154` overrides the intent list without it. Sign-in requests therefore bypass the agent and its required reward-history lookup. Update both overrides and test routing with the production configuration; the new test explicitly removes the override.
+tokens used
+50,004
+VERDICT: changes
+
+- [P2] `telegram-bot/yue/support_core/__init__.py:466` — Adding `sign_in` to the default has no effect under production configuration: `services/compose.production.yaml:134,154` overrides the intent list without it. Sign-in requests therefore bypass the agent and its required reward-history lookup. Update both overrides and test routing with the production configuration; the new test explicitly removes the override.

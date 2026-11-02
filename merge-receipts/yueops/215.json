@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 215,
+  "head": "88b8a6b13db07f6554aecf8e66fc29cafc7d801a",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "88b8a6b13db07f6554aecf8e66fc29cafc7d801a",
+    "artifact": "reviews/merge-receipts-20261103/yueops-215.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T18:10:39Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "88b8a6b13db07f6554aecf8e66fc29cafc7d801a",
+    "command": "/home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/daily-ops-digest.py tests/test_ai_quality_daily_monitor.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_ai_quality_daily_monitor.py  && git diff --check 832af91fabf7e96d3de222ace73a08bac3a370f4 88b8a6b13db07f6554aecf8e66fc29cafc7d801a",
+    "log_sha256": "c9ea7501aef98742c79002de922d85128a07d589a4931b97d4990cc51090ef06",
+    "ran_at": "2026-11-02T18:09:59Z",
+    "runner": "box"
+  }
+}

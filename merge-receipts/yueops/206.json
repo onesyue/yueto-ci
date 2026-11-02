@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 206,
+  "head": "2753b8343cb6ffa75767b9fe0f5b5364aa659862",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "2753b8343cb6ffa75767b9fe0f5b5364aa659862",
+    "artifact": "reviews/merge-receipts-20261103/yueops-206.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T18:13:32Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "2753b8343cb6ffa75767b9fe0f5b5364aa659862",
+    "command": "/home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile tests/test_direct_gfw_endpoint_epoch_20260915.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_direct_gfw_endpoint_epoch_20260915.py  && for f in scripts/direct-gfw-watch.sh ; do bash -n $f || exit 1; done && shellcheck -S error scripts/direct-gfw-watch.sh  && git diff --check 67fb445aadcc531f9b58409e4f8b8b1e9bc8f9bc 2753b8343cb6ffa75767b9fe0f5b5364aa659862",
+    "log_sha256": "3dfbcf5a865797ece10f91e7bfe1ca92a2078023d3d8be7c02520f9e974acb58",
+    "ran_at": "2026-11-02T18:12:12Z",
+    "runner": "box"
+  }
+}

@@ -1,0 +1,12 @@
+已审查指定 diff；所有改动的 Python 文件均通过语法解析。当前检出并非指定 head，未运行其测试套件。
+
+VERDICT: changes
+- [P2] `telegram-bot/yue/service/refund_connect.py:139`：退款提示更换翻译键，但未提供对应英文译文，导致英文用户原本可读的退款状态提示退回中文；回调和工单路径同样受影响。应同步投影英文翻译。
+- [P2] `tests/test_refund_connect_check_20261027.py:515`：将英文翻译断言改为接受中文回退，削弱了既有语言回归保护。应保留英文输出断言，并随新文案更新预期译文。
+tokens used
+50,151
+已审查指定 diff；所有改动的 Python 文件均通过语法解析。当前检出并非指定 head，未运行其测试套件。
+
+VERDICT: changes
+- [P2] `telegram-bot/yue/service/refund_connect.py:139`：退款提示更换翻译键，但未提供对应英文译文，导致英文用户原本可读的退款状态提示退回中文；回调和工单路径同样受影响。应同步投影英文翻译。
+- [P2] `tests/test_refund_connect_check_20261027.py:515`：将英文翻译断言改为接受中文回退，削弱了既有语言回归保护。应保留英文输出断言，并随新文案更新预期译文。
