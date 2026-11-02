@@ -462,6 +462,24 @@
       "pr": 49,
       "reason": "Backfilled independent review of exact head 133421aaaf3a78686c0b3e47859a777889d2812e (2026-11-02T17:58:24Z). Codex review approved; exact-head box parity: FAIL/not runnable (rc=97) (reviews/merge-receipts-20261103/yuelink-49-parity.log) (reviews/merge-receipts-20261103/yuelink-49-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 9,
+      "reason": "Backfilled independent review of exact head e0e6dff9c9fb5ce0a4be340689bbcdab69f31b67 (2026-11-02T19:09:58Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-9-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueto-ci-9-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 13,
+      "reason": "Backfilled independent review of exact head b6e1e78850201acbff313d932a680f18d1396fc3 (2026-11-02T19:05:44Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-13-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueto-ci-13-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 14,
+      "reason": "Backfilled independent review of exact head 607241c15af4f4d135ef4ba66cb3bca4310e76a0 (2026-11-02T19:01:43Z). Codex review approved; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-14-parity.log); evidence produced >24h after merge, outside the receipt window (reviews/merge-receipts-20261103/yueto-ci-14-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     }
   ]
 }
