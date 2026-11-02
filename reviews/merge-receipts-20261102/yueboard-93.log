@@ -1,0 +1,5 @@
+yueboard#93 head=09c3a21a32663d485aa72699e4ec8b2b918bb645 rc=0 ran_at=2026-11-02T15:57:30Z cmd=go vet ./cmd/yueboard/... ./internal/platform/featureflag/... ./internal/modules/subscribe/... && go test -count=1 -skip TestRegistryMatchesYueopsWhenSiblingExists ./cmd/yueboard/... ./internal/platform/featureflag/... ./internal/modules/subscribe/...
+ok  	github.com/onesyue/yueboard/cmd/yueboard	0.278s
+ok  	github.com/onesyue/yueboard/internal/platform/featureflag	0.003s
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	0.656s
+NOTE: TestRegistryMatchesYueopsWhenSiblingExists is a workspace-only sibling guard (skips in CI); it already fails on master 42eeeaea since #89 (yueops flags.py lacks yue.portal.device-limit-enforce); follow-up yueops PR.
