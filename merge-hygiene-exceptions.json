@@ -96,6 +96,24 @@
       "pr": 55,
       "reason": "No attributable independent Codex approval or passing exact-head local CI parity found for merged head cec3f9bb423f46918904d744cf7e70728db934f3. GitHub PR reviews and issue comments are empty; matching artifact filenames were absent in /workspace, /tmp and /home/box/Projects/yueto/reviews. The PR description lists unresolved guard defects: heredoc force-push bypass, rm -rf docs allowed, SQL text false positives, Bash-only coverage and a design conflict. No fix or approval is claimed. See reviews/merge-receipts-20261102/yueto-55.md. Missing evidence: independent approval and passing exact-head local parity.",
       "approver": "owner 2026-11-02 explicit continuation: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 86,
+      "reason": "Merged 2026-11-02 17:54 SGT at head 0bbe8593547746391c728ac1129ae0e244b7c5cc. Independent read-only Codex review found no defects against origin/master 59443949 (box /workspace/fan1102/yueboard-86.review.txt). Box yt-premerge parity: go-vet, go-test, migrations pass; only failure TestOpenPullRequestMigrationNumbers (open PRs #76/#87 both at 00152) is identical on origin/master; parity log sha256 f216743db471c9846b975c556e49cb98e05448ac9148156d6a6e2a3fd419f276. Missing evidence: no committed merge-receipts/yueboard/86.json (artifacts live on box only), pre-push hook not installed, full PostgreSQL schemagate not run, no GitHub check runs.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueto",
+      "pr": 58,
+      "reason": "Merged 2026-11-02 17:38 SGT at head 6822ab47d2cb84fe801c774fb4b63a41cfe4f6bf; docs-only change to docs/2026-endgame-plan.md. Missing evidence: no Codex review, no local parity log, no GitHub check runs, no PR comment receipt. Merged as a plan/log update without the receipt gate; registered here truthfully rather than backfilled.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 71,
+      "reason": "Merged 2026-11-02 18:07 SGT at head 3412d74eb7739f7f851a941b0a37ab4157b86de4 (receipt backfill + enforcement). GitHub check 'policy tests + workflow lint' SUCCESS on that head; committed artifacts reviews/merge-receipts-20261102/enforcement-review.md, enforcement-policy.log, enforcement-targeted.log. Missing evidence: no merge-receipts/yueto-ci/71.json and no approving review recorded on the PR; the enforcement-review artifact was not verified to be bound to the final head 3412d74e.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
     }
   ]
 }
