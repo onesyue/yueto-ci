@@ -1,0 +1,156 @@
+import importlib.util
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location("hygiene", ROOT / "scripts/merge-hygiene-audit.py")
+AUDIT = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(AUDIT)
+
+
+class MergeHygieneAudit(unittest.TestCase):
+    def setUp(self):
+        self.fixture = json.loads((ROOT / "tests/fixtures/merge-hygiene/approved.json").read_text())
+
+    def findings(self):
+        return AUDIT.findings(**self.fixture)
+
+    def test_clean(self):
+        self.assertEqual(self.findings(), [])
+
+    def test_no_late_self_bot_or_dismissed_approval(self):
+        for change in ({"submitted_at": "2026-11-02T11:00:00Z"}, {"state": "DISMISSED"},
+                       {"user": {"login": "author"}}, {"user": {"login": "bot", "type": "Bot"}}):
+            with self.subTest(change=change):
+                original = self.fixture["reviews"][0]
+                self.fixture["reviews"] = [original | change]
+                self.assertIn("no_approving_review_at_merge", self.findings())
+                self.fixture["reviews"] = [original]
+        self.fixture["reviews"].append(self.fixture["reviews"][0] | {
+            "id": 2, "state": "CHANGES_REQUESTED", "submitted_at": "2026-11-02T09:45:00Z"})
+        self.assertIn("no_approving_review_at_merge", self.findings())
+
+    def test_failing_pending_and_late_success_checks(self):
+        check = self.fixture["checks"][0]
+        for change, expected in (({"conclusion": "failure"}, "nonpassing"),
+                                 ({"conclusion": "cancelled"}, "nonpassing"),
+                                 ({"status": "queued", "completed_at": None}, "pending"),
+                                 ({"completed_at": "2026-11-02T11:00:00Z"}, "pending")):
+            with self.subTest(change=change):
+                self.fixture["checks"] = [check | change]
+                self.assertIn(f"check_{expected}_at_merge:policy", self.findings())
+
+    def test_postmerge_rerun_does_not_hide_failure(self):
+        check = self.fixture["checks"][0]
+        self.fixture["checks"] = [check | {"conclusion": "failure"}, check | {
+            "id": 2, "started_at": "2026-11-02T11:00:00Z", "completed_at": "2026-11-02T11:30:00Z"}]
+        self.assertIn("check_nonpassing_at_merge:policy", self.findings())
+        self.fixture["checks"][1].update(started_at="2026-11-02T09:40:00Z",
+                                          completed_at="2026-11-02T09:50:00Z")
+        self.assertEqual(self.findings(), [])
+
+    def test_independent_suites_with_shared_name_preserve_failure(self):
+        check = self.fixture["checks"][0]
+        failed = check | {"conclusion": "failure"}
+        success = check | {"id": 2, "check_suite": {"id": 20},
+                           "started_at": "2026-11-02T09:40:00Z"}
+        for checks in ([failed, success], [success, failed]):
+            self.fixture["checks"] = checks
+            self.assertIn("check_nonpassing_at_merge:policy", self.findings())
+
+    def test_missing_suite_identity_cannot_supersede_failure(self):
+        check = self.fixture["checks"][0]
+        check.pop("check_suite")
+        self.fixture["checks"] = [check | {"conclusion": "failure"}, check | {
+            "id": 2, "started_at": "2026-11-02T09:40:00Z"}]
+        self.assertIn("check_nonpassing_at_merge:policy", self.findings())
+
+    def test_queued_rerun_before_merge_with_postmerge_start(self):
+        check = self.fixture["checks"][0]
+        for started in (None, "2026-11-02T10:10:00Z"):
+            with self.subTest(started=started):
+                self.fixture["checks"] = [check, check | {
+                    "id": 2, "created_at": "2026-11-02T09:50:00Z",
+                    "started_at": started, "completed_at": "2026-11-02T10:20:00Z"}]
+                self.assertIn("check_pending_at_merge:policy", self.findings())
+
+    def test_rest_rerun_without_creation_time_cannot_certify_old_success(self):
+        check = self.fixture["checks"][0]
+        for started in (None, "2026-11-02T10:10:00Z"):
+            with self.subTest(started=started):
+                self.fixture["checks"] = [check, check | {
+                    "id": 2, "started_at": started,
+                    "completed_at": "2026-11-02T10:20:00Z"}]
+                self.assertIn("check_history_unavailable:policy", self.findings())
+
+    def test_proven_postmerge_creation_preserves_premerge_success(self):
+        check = self.fixture["checks"][0]
+        self.fixture["checks"] = [check, check | {
+            "id": 2, "created_at": "2026-11-02T10:05:00Z",
+            "started_at": "2026-11-02T10:10:00Z",
+            "completed_at": "2026-11-02T10:20:00Z"}]
+        self.assertEqual(self.findings(), [])
+
+    def test_status_history_uses_merge_time_not_current_combined_status(self):
+        status = self.fixture["statuses"][0]
+        for state in ("pending", "failure", "error"):
+            self.fixture["statuses"] = [status | {"state": state}, status | {
+                "id": 2, "created_at": "2026-11-02T11:00:00Z"}]
+            self.assertIn("status_nonpassing_at_merge:external-ci", self.findings())
+
+    def test_missing_history_fails_closed(self):
+        self.fixture.update(checks=[], statuses=[])
+        self.assertIn("no_check_evidence_at_merge", self.findings())
+
+    def test_overwritten_rerun_is_unknown_even_with_green_status(self):
+        self.fixture["checks"][0].update(started_at="2026-11-02T11:00:00Z",
+                                          completed_at="2026-11-02T11:30:00Z")
+        self.assertIn("check_history_unavailable:policy", self.findings())
+
+    def test_exception_requires_reason_approver_and_exact_pr(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "exceptions.json"
+            entry = {"repo": "yueops", "pr": 203, "reason": "incident recovery", "approver": "operator"}
+            path.write_text(json.dumps({"schema": 1, "exceptions": [entry]}))
+            self.assertEqual(AUDIT.exceptions(path), {("yueops", 203): entry})
+            for bad in (entry | {"reason": " "}, entry | {"approver": ""}, entry | {"pr": "*"}):
+                path.write_text(json.dumps({"schema": 1, "exceptions": [bad]}))
+                with self.assertRaises(ValueError):
+                    AUDIT.exceptions(path)
+
+    def test_pagination_and_head_sha_endpoints(self):
+        fixture = self.fixture
+        pr = fixture["pr"]
+        seen = []
+        def api(endpoint):
+            seen.append(endpoint)
+            if "/pulls?" in endpoint:
+                return [pr | {"merged_at": None}] * 100 if endpoint.endswith("&page=1") else [pr]
+            if "/reviews?" in endpoint:
+                return []
+            if "/check-runs?" in endpoint:
+                return {"check_runs": fixture["checks"]}
+            return fixture["statuses"]
+        with patch.object(AUDIT, "api", side_effect=api):
+            rows = AUDIT.audit("onesyue", ["yueops"], AUDIT.timestamp("2026-11-02T00:00:00Z"), {},
+                               AUDIT.timestamp("2026-11-03T00:00:00Z"))
+        self.assertEqual(len(rows), 1)
+        self.assertIsNone(rows[0]["exception"])
+        self.assertTrue(any("filter=all" in url and pr["head"]["sha"] in url for url in seen))
+        self.assertTrue(any("page=2" in url for url in seen))
+
+    def test_exit_codes_and_machine_output(self):
+        import contextlib
+        import io
+        for rows, expected in (([], 0), ([{"exception": None}], 1), ([{"exception": {"reason": "registered"}}], 0)):
+            with patch("sys.argv", ["audit", "--format", "json"]), patch.object(AUDIT, "audit", return_value=rows):
+                with contextlib.redirect_stdout(io.StringIO()) as output:
+                    self.assertEqual(AUDIT.main(), expected)
+                self.assertTrue(json.loads(output.getvalue())["complete"])
+        with patch("sys.argv", ["audit", "--format", "json"]), patch.object(AUDIT, "audit", side_effect=ValueError("secret")):
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(AUDIT.main(), 2)
+            self.assertNotIn("secret", output.getvalue())

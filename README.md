@@ -334,3 +334,57 @@ It is digest-pinned and uses a different image variant from the Alpine helpers;
 changing its tag to Alpine while retaining that digest would mislabel the bytes.
 `python3 -m unittest discover -s tests -p 'test_postgres_image_pin.py'` rejects
 service-pin removal, mutable replacements and unreviewed digest changes.
+
+### Admission precheck and merge hygiene
+
+Run shared-input admission from a trusted, reviewed **yueto-ci** checkout before
+requesting a build (the source checkout needs the sealed successor history):
+
+```sh
+python3 scripts/admission-precheck.py --repo yueops --source ../yueops --base "$BASE_SHA" --head "$HEAD_SHA"
+```
+
+The precheck reads committed Git trees without checking out or executing Ops
+code. It calls the build planner's exact shared-input selector, ancestry proof
+and admission validator, including `ops-shared-input-successors.json`,
+`ops-first-native-successors.json` and historical reviewed seals. A changed
+packaging file or shared helper is accepted only if the existing sealed policy
+admits that complete tree. Even an unchanged base/head is validated. Exit codes:
+**0** admitted, **1** rejected, **2** invalid input or unavailable local evidence.
+A rejection names the changed inputs and the seal requirement in `reviews/`.
+This checks shared-input admission only; it does not certify all build gates.
+
+The build workflow's `pytest-shards.py expand` emits a single-line
+`ADMISSION_REJECTED: <reason>` Actions error annotation and step summary on
+rejection. Ship callers can surface that reason instead of reporting “no build
+found”. Existing JSON rejection diagnostics remain available.
+
+```sh
+python3 scripts/merge-hygiene-audit.py --hours 24
+python3 scripts/merge-hygiene-audit.py --hours 24 --format json
+```
+
+The audit uses the authenticated `gh api` client and defaults to all seven repos:
+`yueops`, `yueboard`, `yueto`, `yueto-ci`, `yuelink`, `yuelink-ci`, `yue-node`.
+The credential must be able to read PRs, reviews, checks and statuses in each
+repo. It paginates closed PRs and head-commit evidence, looking for absent human
+approval, nonpassing or pending checks/statuses **at merge time**. Later reruns
+and status successes cannot erase an observed violation. Successful, neutral and
+skipped completed check runs follow GitHub's passing conclusions. Missing check
+evidence is a finding. Check attempts supersede earlier runs only within the
+same app, check suite and job name; runs without suite identity stay independent.
+Creation timestamps establish queue timing when available. A postmerge execution
+start without creation timing is ambiguous even if an older run passed.
+API/input failures exit **2** (incomplete), never clean.
+JSON goes to stdout with `complete`, `findings`, and an `unregistered` count;
+text is the default. Unregistered findings exit **1**, clean or explicitly
+registered findings exit **0**.
+
+`merge-hygiene-exceptions.json` starts empty. Each exact exception requires
+`repo`, integer `pr`, nonempty `reason`, and `approver`; no wildcards. Exceptions
+remain visible in both output formats and must be reviewed as policy changes.
+GitHub does not retain every overwritten check-run state or review dismissal
+state in these REST responses. Ambiguous/missing evidence is reported
+conservatively; this retrospective audit cannot prove branch protection or
+replace required reviews/checks. These scripts do not add DB schema/grant,
+version/tag or live-ship verification gates; those remain separate checks.
