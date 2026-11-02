@@ -2,8 +2,8 @@
 """Audit merged PRs via gh api. Exit 0 clean/registered, 1 unregistered, 2 incomplete.
 
 GitHub REST exposes current check runs, not a complete history of overwritten
-runs or dismissed reviews. Missing/ambiguous evidence fails closed. This audit
-is retrospective and does not replace required reviews/checks in branch rules.
+runs or dismissed reviews. Missing/ambiguous evidence fails closed. Committed Codex/parity receipts can satisfy missing evidence, never red checks.
+This retrospective audit does not override GitHub branch rules.
 """
 import argparse
 from datetime import datetime, timedelta, timezone
@@ -127,6 +127,71 @@ def exceptions(path):
     return result
 
 
+# Receipt schema 1 is deliberately closed: misspelled or additional fields fail
+# rather than silently weakening the evidence contract.
+def committed_text(path):
+    relative = path.relative_to(ROOT).as_posix()
+    committed = subprocess.run(["git", "show", f"HEAD:{relative}"], cwd=ROOT,
+                               capture_output=True, text=True)
+    if committed.returncode or committed.stdout != path.read_text():
+        raise ValueError("receipt and review must match committed evidence")
+    return committed.stdout
+
+
+def receipt(repo, pr):
+    path = ROOT / "merge-receipts" / repo / f'{pr["number"]}.json'
+    if not path.exists() and not path.is_symlink():
+        return None
+    contents = committed_text(path)
+    def exact(value, keys):
+        if not isinstance(value, dict) or set(value) != set(keys.split()):
+            raise ValueError("invalid receipt schema")
+    def nonempty(value):
+        return isinstance(value, str) and bool(value.strip())
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate receipt key")
+            result[key] = value
+        return result
+    value = json.loads(contents, object_pairs_hook=unique)
+    exact(value, "schema repo pr head review parity backfilled")
+    review, parity = value["review"], value["parity"]
+    exact(review, "tool verdict reviewed_head artifact reviewer reviewed_at")
+    exact(parity, "result head command log_sha256 ran_at runner")
+    sha = pr["head"]["sha"]
+    if (type(value["schema"]) is not int or value["schema"] != 1
+            or value["repo"] != repo or type(value["pr"]) is not int
+            or value["pr"] != pr["number"] or type(value["backfilled"]) is not bool
+            or not isinstance(value["head"], str)
+            or not re.fullmatch(r"[0-9a-fA-F]{40}", value["head"])
+            or value["head"] != sha or review["reviewed_head"] != sha
+            or parity["head"] != sha or review["tool"] != "codex"
+            or review["verdict"] != "approve" or not nonempty(review["reviewer"])
+            or review["reviewer"].strip().casefold() == pr["user"]["login"].casefold()
+            or parity["result"] != "pass" or not nonempty(parity["command"])
+            or parity["runner"] not in ("box", "yueto-ci", "mac-5f08d00f")
+            or not isinstance(parity["log_sha256"], str)
+            or not re.fullmatch(r"[0-9a-fA-F]{64}", parity["log_sha256"])
+            or not nonempty(review["artifact"])):
+        raise ValueError("invalid receipt evidence")
+    artifact = Path(review["artifact"])
+    if (artifact.is_absolute() or ".." in artifact.parts
+            or not (ROOT / artifact).resolve().is_relative_to(ROOT.resolve())
+            or not (ROOT / artifact).is_file()):
+        raise ValueError("review artifact must exist inside repository")
+    committed_text(ROOT / artifact)
+    merged = timestamp(pr["merged_at"])
+    for when in (review["reviewed_at"], parity["ran_at"]):
+        if not isinstance(when, str):
+            raise ValueError("receipt time must be an ISO timezone timestamp")
+        moment = timestamp(when)
+        if moment > merged + timedelta(hours=24) or (moment > merged and not value["backfilled"]):
+            raise ValueError("receipt outside evidence window or unmarked backfill")
+    return value
+
+
 def audit(owner, repos, cutoff, registered, now):
     results = []
     for repo in repos:
@@ -142,10 +207,17 @@ def audit(owner, repos, cutoff, registered, now):
                     pr, all_rows(f'{prefix}/pulls/{pr["number"]}/reviews'),
                     all_rows(f"{prefix}/commits/{sha}/check-runs?filter=all", "check_runs"),
                     all_rows(f"{prefix}/commits/{sha}/statuses"))
-                if reasons:
+                evidence = receipt(repo, pr)
+                satisfied = []
+                if evidence:
+                    satisfied = [r for r in reasons if r in (
+                        "no_approving_review_at_merge", "no_check_evidence_at_merge")]
+                    reasons = [r for r in reasons if r not in satisfied]
+                if reasons or evidence:
                     results.append({"repo": repo, "pr": pr["number"], "url": pr["html_url"],
                                     "head": sha, "merged_at": pr["merged_at"], "findings": reasons,
-                                    "exception": registered.get((repo, pr["number"]))})
+                                    "exception": registered.get((repo, pr["number"])),
+                                    "receipt": evidence, "satisfied_by_receipt": satisfied})
             if batch and timestamp(batch[-1]["updated_at"]) < cutoff:
                 break
     return results
@@ -166,7 +238,9 @@ def main():
         rows = audit(args.owner, args.repos, now - timedelta(hours=args.hours),
                      exceptions(args.exceptions), now)
         result = {"schema": 1, "complete": True, "findings": rows,
-                  "unregistered": sum(r["exception"] is None for r in rows)}
+                  "unregistered": sum(r["exception"] is None
+                                      and not (r.get("receipt") and not r["findings"])
+                                      for r in rows)}
     except (ValueError, OSError, KeyError, TypeError):
         # Never turn inaccessible private repositories or malformed evidence into green.
         result = {"schema": 1, "complete": False,
@@ -177,6 +251,12 @@ def main():
         print(result["error"])
     else:
         for row in rows:
+            if row.get("receipt"):
+                print(f'RECEIPT {row["url"]}: head={row["head"]} '
+                      f'backfilled={str(row["receipt"]["backfilled"]).lower()} '
+                      f'satisfies={", ".join(row["satisfied_by_receipt"]) or "supplemental evidence"}')
+                if not row["findings"]:
+                    continue
             state = "REGISTERED" if row["exception"] else "UNREGISTERED"
             print(f'{state} {row["url"]}: {", ".join(row["findings"])}')
             if row["exception"]:

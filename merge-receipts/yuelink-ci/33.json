@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yuelink-ci",
+  "pr": 33,
+  "head": "55d66b6dd0ddca2f35b9d256d98e0668f0f38db1",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "55d66b6dd0ddca2f35b9d256d98e0668f0f38db1",
+    "artifact": "reviews/merge-receipts-20261102/yuelink-ci-33.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T06:52:28Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "55d66b6dd0ddca2f35b9d256d98e0668f0f38db1",
+    "command": "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+    "log_sha256": "426063b5e2829f7d20c6576ac31a4ff9453f2ae0c1541d0d4cbb1038ce0bd06f",
+    "ran_at": "2026-11-02T06:52:28Z",
+    "runner": "box"
+  }
+}

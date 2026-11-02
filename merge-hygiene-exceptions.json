@@ -1,4 +1,35 @@
 {
   "schema": 1,
-  "exceptions": []
+  "exceptions": [
+    {
+      "repo": "yueops",
+      "pr": 259,
+      "reason": "Exact-head independent Codex review approved on 2026-11-02 (reviews/merge-receipts-20261102/yueops-259.md), but no attributable passing local parity log for 0e61718e33122859f0c9f2b699d638e8c76c69f0 was found in PR comments or searched review/run logs. Full YueOps suites were skipped on this box under the authorized heavy-suite exception; no Mac/SSH run performed. Missing evidence: passing local CI parity log, not human approval.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 67,
+      "reason": "Fresh independent Codex review of 4ce45b2e032b5341ac9ac6ad78d3bffbca1521c8 returned CHANGES: P1 recovery closes unresolved alerts for unrelated targets or newer revisions (reviews/merge-receipts-20261102/yueto-ci-67.md). Missing evidence: an approving independent review; test results cannot substitute for that approval. This registration records the unresolved finding, not a claim that it is fixed.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yue-node",
+      "pr": 22,
+      "reason": "Exact-head independent Codex review approved for 2b646df88c3f949185c06c4cc1267c22962426f7. This historical head has no scripts/premerge.sh; its own GOMAXPROCS=2 GOFLAGS=\"-mod=vendor -p=1\" make test was attempted twice and failed with no space left on device during Go race builds (filesystem inode exhaustion). Missing evidence: passing exact-head local parity. The older /workspace/yn22-premerge.log lacks an independently verifiable head binding and was not substituted. Failed first-run log SHA256 c2f6573d3f6576a04108eb026327ae95cad04806dbc7c59db578e796bea0e749.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueto",
+      "pr": 47,
+      "reason": "Exact-head independent Codex review approved for 7292b6705a42c2c7e1025e9a946bbe96db45446e. Repository-owned bash scripts/check-all-contracts.sh failed (exit 1): release-chain-drivers asserted that release completion did not reflect actual process-group isolation; initial Python checks also lacked pytest, and 95 cross-repository checks were skipped because sibling checkouts are absent. A retry with the locked pytest environment encountered inode exhaustion and was stopped without a pass. Missing evidence: a passing local parity log; fast-check was not reached after the failed contract gate. Original failed-run log SHA256 9c9a0d0ef879da0feeea3ac0da2b8b8508a4fcc1d3b0e23a834a9e9a28825302. No full multi-repository fixture was fabricated.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueto",
+      "pr": 50,
+      "reason": "Exact-head independent Codex review approved for 5225f4d636ea61c4b9ae685473b95dbf8d3a05b8. Repository-owned bash scripts/check-all-contracts.sh failed (exit 1): release-chain-drivers asserted that release completion did not reflect actual process-group isolation; initial Python checks also lacked pytest, and 95 cross-repository checks were skipped because sibling checkouts are absent. Missing evidence: a passing local parity log; fast-check was not reached after the failed contract gate. Original failed-run log SHA256 2a2bc455004ea62e9d6b374c0ef27305c5d77ab362404a2be58a8fae13fa0d1b. No full multi-repository fixture was fabricated.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    }
+  ]
 }
