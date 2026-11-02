@@ -18,3 +18,6 @@ Reviewed all seven diffs independently against local source context. Read-only t
 At `.github/workflows/build.yml:2717–2719`, recovery closes every open issue matching the shared alert title without checking its target or source revision. Validation covers the selected target, and workflow concurrency is partitioned by target/ref. Consequently, a successful YueBoard run can close an unresolved YueOps alert; an older successful run can also close an alert raised by a newer failing revision.
 
 Track unresolved failures by target and revision/run ordering. Close an alert only when successful validation actually supersedes the failures it represents, with concurrent updates protected.
+
+
+Fresh local parity ran on a detached worktree at the exact PR head. Command: `python3 -m unittest discover -s tests -p 'test_*.py' -v`. Completion: 2026-11-02T08:27:43.428291+00:00. Exit 0; actual output and suite skips are committed alongside this review as `yuelink-ci-31.log`.
