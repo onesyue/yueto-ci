@@ -371,7 +371,11 @@ repo. It paginates closed PRs and head-commit evidence, looking for absent human
 approval, nonpassing or pending checks/statuses **at merge time**. Later reruns
 and status successes cannot erase an observed violation. Successful, neutral and
 skipped completed check runs follow GitHub's passing conclusions. Missing check
-evidence is a finding. API/input failures exit **2** (incomplete), never clean.
+evidence is a finding. Check attempts supersede earlier runs only within the
+same app, check suite and job name; runs without suite identity stay independent.
+Creation timestamps establish queue timing when available. A postmerge execution
+start without creation timing is ambiguous even if an older run passed.
+API/input failures exit **2** (incomplete), never clean.
 JSON goes to stdout with `complete`, `findings`, and an `unregistered` count;
 text is the default. Unregistered findings exit **1**, clean or explicitly
 registered findings exit **0**.

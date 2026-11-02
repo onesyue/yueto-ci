@@ -62,23 +62,33 @@ def findings(pr, reviews, checks, statuses):
                and r["user"].get("type") != "Bot" for login, r in latest_reviews.items()):
         reasons.append("no_approving_review_at_merge")
 
-    # Check-run list uses filter=all. Select the latest attempt that existed at
-    # merge per app/name; a later successful rerun must not erase a red merge.
+    # Only checks from the same app/suite/name can replace one another.
+    # Without suite identity, preserve each run rather than hide an independent
+    # failure. REST started_at is execution time, not queue creation time.
     latest_checks = {}
-    observed_checks = set()
+    observed_checks = {}
     for check in checks:
-        key = (check["app"]["id"], check["name"])
-        observed_checks.add(key)
-        started = check.get("started_at") or check.get("created_at")
-        if not started:
+        suite = (check.get("check_suite") or {}).get("id")
+        identity = ("suite", suite) if suite is not None else ("run", check["id"])
+        key = (check["app"]["id"], identity, check["name"])
+        observed_checks[key] = check["name"]
+        created = check.get("created_at")
+        started = check.get("started_at")
+        if created:
+            existed = timestamp(created)
+        elif started and timestamp(started) <= merged:
+            existed = timestamp(started)
+        else:
+            # Even an older green run cannot establish whether this attempt
+            # was queued at merge. Do not suppress this ambiguity by key.
             reasons.append("check_history_unavailable:" + check["name"])
             continue
-        if timestamp(started) > merged:
+        if existed > merged:
             continue
-        if key not in latest_checks or (timestamp(started), check["id"]) > latest_checks[key][0]:
-            latest_checks[key] = ((timestamp(started), check["id"]), check)
-    for _, name in observed_checks - latest_checks.keys():
-        reasons.append("check_history_unavailable:" + name)
+        if key not in latest_checks or (existed, check["id"]) > latest_checks[key][0]:
+            latest_checks[key] = ((existed, check["id"]), check)
+    for key in observed_checks.keys() - latest_checks.keys():
+        reasons.append("check_history_unavailable:" + observed_checks[key])
     latest_statuses = {}
     for status in statuses:
         created = timestamp(status["created_at"])

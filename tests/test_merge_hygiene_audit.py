@@ -52,6 +52,48 @@ class MergeHygieneAudit(unittest.TestCase):
                                           completed_at="2026-11-02T09:50:00Z")
         self.assertEqual(self.findings(), [])
 
+    def test_independent_suites_with_shared_name_preserve_failure(self):
+        check = self.fixture["checks"][0]
+        failed = check | {"conclusion": "failure"}
+        success = check | {"id": 2, "check_suite": {"id": 20},
+                           "started_at": "2026-11-02T09:40:00Z"}
+        for checks in ([failed, success], [success, failed]):
+            self.fixture["checks"] = checks
+            self.assertIn("check_nonpassing_at_merge:policy", self.findings())
+
+    def test_missing_suite_identity_cannot_supersede_failure(self):
+        check = self.fixture["checks"][0]
+        check.pop("check_suite")
+        self.fixture["checks"] = [check | {"conclusion": "failure"}, check | {
+            "id": 2, "started_at": "2026-11-02T09:40:00Z"}]
+        self.assertIn("check_nonpassing_at_merge:policy", self.findings())
+
+    def test_queued_rerun_before_merge_with_postmerge_start(self):
+        check = self.fixture["checks"][0]
+        for started in (None, "2026-11-02T10:10:00Z"):
+            with self.subTest(started=started):
+                self.fixture["checks"] = [check, check | {
+                    "id": 2, "created_at": "2026-11-02T09:50:00Z",
+                    "started_at": started, "completed_at": "2026-11-02T10:20:00Z"}]
+                self.assertIn("check_pending_at_merge:policy", self.findings())
+
+    def test_rest_rerun_without_creation_time_cannot_certify_old_success(self):
+        check = self.fixture["checks"][0]
+        for started in (None, "2026-11-02T10:10:00Z"):
+            with self.subTest(started=started):
+                self.fixture["checks"] = [check, check | {
+                    "id": 2, "started_at": started,
+                    "completed_at": "2026-11-02T10:20:00Z"}]
+                self.assertIn("check_history_unavailable:policy", self.findings())
+
+    def test_proven_postmerge_creation_preserves_premerge_success(self):
+        check = self.fixture["checks"][0]
+        self.fixture["checks"] = [check, check | {
+            "id": 2, "created_at": "2026-11-02T10:05:00Z",
+            "started_at": "2026-11-02T10:10:00Z",
+            "completed_at": "2026-11-02T10:20:00Z"}]
+        self.assertEqual(self.findings(), [])
+
     def test_status_history_uses_merge_time_not_current_combined_status(self):
         status = self.fixture["statuses"][0]
         for state in ("pending", "failure", "error"):

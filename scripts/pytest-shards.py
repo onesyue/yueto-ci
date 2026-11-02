@@ -90,9 +90,20 @@ def encoded(value):
                       separators=(",", ":")).encode()
 
 
+class EvidenceUnavailable(ValueError):
+    """Local Git history cannot establish the admission policy's ancestry."""
+
+
 def git(source, *args):
-    return subprocess.check_output(["git", "-C", str(source), *args],
-                                   stderr=subprocess.PIPE)
+    try:
+        return subprocess.check_output(["git", "-C", str(source), *args],
+                                       stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as error:
+        # merge-base exit 1 means proven non-ancestry; higher codes mean the
+        # proof could not run (for example a missing sealed predecessor).
+        if args[:2] == ("merge-base", "--is-ancestor") and error.returncode != 1:
+            raise EvidenceUnavailable("local ancestry evidence unavailable") from None
+        raise
 
 
 def safe_module(name):

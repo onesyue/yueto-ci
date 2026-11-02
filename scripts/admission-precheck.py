@@ -35,6 +35,8 @@ def precheck(source, base, head):
         successor = POLICY.estate_successor_proof(baseline, source, head)
         POLICY.admit_shared_inputs(baseline, common, after, source_revision=head,
                                    estate_successor_of=successor)
+    except POLICY.EvidenceUnavailable:
+        raise
     except ValueError as error:
         changed = sorted(p for p in before.keys() | after.keys() if before.get(p) != after.get(p))
         # Discovery may itself reject a deletion/symlink. Derive diagnostic paths

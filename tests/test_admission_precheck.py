@@ -1,6 +1,7 @@
 import contextlib
 import importlib.util
 import io
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -69,6 +70,33 @@ class AdmissionPrecheck(unittest.TestCase):
                                     "--base", self.base, "--head", revision]):
                 with contextlib.redirect_stderr(io.StringIO()):
                     self.assertEqual(PRE.main(), 2)
+
+    def test_present_commits_missing_sealed_predecessor_are_input_error(self):
+        # Use the actual sealed baseline and real Git: base/head exist, but
+        # this isolated repository has none of the sealed predecessor objects.
+        baseline = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
+        with patch.object(PRE.POLICY, "skip_baseline", return_value=baseline):
+            with patch("sys.argv", ["precheck", "--repo", "yueops", "--source", str(self.source),
+                                    "--base", self.base, "--head", self.base]):
+                with contextlib.redirect_stderr(io.StringIO()) as output:
+                    self.assertEqual(PRE.main(), 2)
+                self.assertIn("ADMISSION_ERROR:", output.getvalue())
+                self.assertNotIn("ADMISSION_REJECTED:", output.getvalue())
+
+    def test_available_nonancestor_remains_policy_rejection(self):
+        self.git("checkout", "--orphan", "unrelated")
+        (self.source / "pyproject.toml").write_text("unrelated history")
+        unrelated = self.commit()
+        with self.assertRaises(subprocess.CalledProcessError) as caught:
+            PRE.POLICY.git(self.source, "merge-base", "--is-ancestor", self.base, unrelated)
+        self.assertEqual(caught.exception.returncode, 1)
+        with patch.object(PRE.POLICY, "reviewed_estate_input_transition",
+                          return_value=(self.baseline, {"source_after": self.base})):
+            with patch("sys.argv", ["precheck", "--repo", "yueops", "--source", str(self.source),
+                                    "--base", self.base, "--head", unrelated]):
+                with contextlib.redirect_stderr(io.StringIO()) as output:
+                    self.assertEqual(PRE.main(), 1)
+                self.assertIn("ADMISSION_REJECTED:", output.getvalue())
 
     def test_cli_rejection_exit_and_marker(self):
         (self.source / "pyproject.toml").write_text("unsealed")
