@@ -2,22 +2,22 @@
   "schema": 1,
   "repo": "yueto",
   "pr": 53,
-  "head": "ca3260e283df82e2bcbd395fd0107d0797fecbdd",
+  "head": "d70595e82450ad36808ef459b5b5343ab338ec26",
   "backfilled": false,
   "review": {
     "tool": "codex",
     "verdict": "approve",
-    "reviewed_head": "ca3260e283df82e2bcbd395fd0107d0797fecbdd",
+    "reviewed_head": "d70595e82450ad36808ef459b5b5343ab338ec26",
     "artifact": "reviews/merge-receipts-20261102/yueto-53.md",
     "reviewer": "codex",
-    "reviewed_at": "2026-11-02T13:40:54Z"
+    "reviewed_at": "2026-11-02T17:04:57Z"
   },
   "parity": {
     "result": "pass",
-    "head": "ca3260e283df82e2bcbd395fd0107d0797fecbdd",
-    "command": "TZ=UTC /tmp/yci-venv/bin/python -m pytest -q -p no:cacheprovider scripts/test-observer-install-owners.py scripts/test-schedule-registry.py scripts/test-root-selftests-ledger.py",
-    "log_sha256": "f3ee7b4b956edb6a66eb422a6b1e7271f945608ec3f4c7ba3f41d1edc50ad690",
-    "ran_at": "2026-11-02T13:57:54Z",
+    "head": "d70595e82450ad36808ef459b5b5343ab338ec26",
+    "command": "check-schedule-registry + pytest schedule/observer tests vs master",
+    "log_sha256": "be660b1c6ed17f3c6e01b029aa70cf29670782989db4d532fe6adfc8e8fe0031",
+    "ran_at": "2026-11-02T17:15:40Z",
     "runner": "box"
   }
 }

@@ -1,0 +1,3 @@
+yueto #60 @ c73efaaa parity vs master (box)
+check-schedule-registry: no new findings vs master; referral entry migrated to systemd (yueops 284c8a02c)
+pytest PR-touched tests: PR 11 failed/303 passed vs master 48 failed+36 errors/260 passed; PR failures subset of master pre-existing
