@@ -1,0 +1,10 @@
+已完成指定提交差异的只读审查；未修改文件或运行测试。
+
+VERDICT: changes
+- [P1] `internal/modules/nodesync/yueops_scope.go:62`：`observe` 获准访问 `/internal/yueops/nodes`，但该端点原样返回 `servers.protocol_settings`，其中可包含 Reality `private_key`。因此仅持观察权限的主机也能读取节点私钥，违反凭据读取应独立授权的边界。应对观察响应脱敏，或将完整配置读取放入独立 scope，并增加私钥不可见的测试。
+tokens used
+57,491
+已完成指定提交差异的只读审查；未修改文件或运行测试。
+
+VERDICT: changes
+- [P1] `internal/modules/nodesync/yueops_scope.go:62`：`observe` 获准访问 `/internal/yueops/nodes`，但该端点原样返回 `servers.protocol_settings`，其中可包含 Reality `private_key`。因此仅持观察权限的主机也能读取节点私钥，违反凭据读取应独立授权的边界。应对观察响应脱敏，或将完整配置读取放入独立 scope，并增加私钥不可见的测试。

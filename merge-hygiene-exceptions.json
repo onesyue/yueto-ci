@@ -132,6 +132,156 @@
       "pr": 52,
       "reason": "Two independent Codex reviews of exact head 4cef3672de11336d76d739728ad482aecf99558a disagree: the Mac review approved (reviews/merge-receipts-20261102/yueboard-52.md) but the box review returned CHANGES: [P2] ShadowReplay at internal/modules/usagepolicy/abuse.go:501 does not apply the single-signal filter (reviews/merge-receipts-20261102/yueboard-52-box-review.txt). Exact-head box parity passed (yueboard-52.log). Because #52's head as merged contained that defect, no receipt is claimed for it. Resolution recorded separately: the fix merged as yueboard #92 (96d6241d) with its own approving review and parity (merge-receipts/yueboard/92.json).",
       "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 5,
+      "reason": "Backfilled independent Codex review of exact head 16019be83f64277f5d462c74d0fea413490de43d (2026-11-02T17:09:10Z) returned CHANGES: - [P2] `internal/modules/nodesync/fair_use_stopgap.go:59` — Zero-rate traffic bypasses fair-use enforcement. Ingestion’s `scaleTraffic` stores zero billed bytes when `rate == 0`; dividing those counters by 1 cannot recover actual usage. The new test seeds nonzero zero-rate counters that ingestion cannot produce. Preserve raw per-user counters and test through ingestion. - [P2] `internal/modules/nodesync/fair_use_stopgap.go:175` — `context.WithoutCancel(ctx)` removes both the reconciliation deadline and shutdown cancellation before database-backed notification. Pool exhaustion or a stalled query can indefinitely block the promoter loop, stopping subsequent expiry and reconciliation passes. Give this notification a bounded timeout. - [P2] `internal/modules/nodesync/fair_use_stopgap.go:59` — Zero-rate traffic bypasses fair-use enforcement. Ingestion’s `scaleTraffic` stores zero billed bytes (reviews/merge-receipts-20261103/yueboard-5-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 6,
+      "reason": "Backfilled independent Codex review of exact head 2f9a2598d54c2eca7bcca95d147337224f75bffb (2026-11-02T17:05:23Z) returned CHANGES: - [P1] `internal/modules/nodesync/yueops_scope.go:62`：`observe` 获准访问 `/internal/yueops/nodes`，但该端点原样返回 `servers.protocol_settings`，其中可包含 Reality `private_key`。因此仅持观察权限的主机也能读取节点私钥，违反凭据读取应独立授权的边界。应对观察响应脱敏，或将完整配置读取放入独立 scope，并增加私钥不可见的测试。 - [P1] `internal/modules/nodesync/yueops_scope.go:62`：`observe` 获准访问 `/internal/yueops/nodes`，但该端点原样返回 `servers.protocol_settings`，其中可包含 Reality `private_key`。因此仅持观察权限的主机也能读取节点私钥，违反凭据读取应独立授权的边界。应对观察响应脱敏，或将完整配置读取放入独立 scope，并增加私钥不可见的测试。 (reviews/merge-receipts-20261103/yueboard-6-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 12,
+      "reason": "Backfilled independent Codex review of exact head 9794c77a03ae7888c67022ec3acf4c28413a3e6f (2026-11-02T17:00:54Z) returned CHANGES: - [P2] `internal/platform/statuspage/statuspage.go:154`：`net.ParseIP` 无法识别 `127.1`、`0x7f.0.0.1` 等浏览器支持的 IPv4 写法，因此这些地址通过公网 URL 校验，并可进入工单及 AI 回复。已验证浏览器 URL 解析将其归一化为 `127.0.0.1`。应拒绝这些非标准 IP 表示，并补充回归测试。 - [P2] `internal/platform/statuspage/statuspage.go:154`：`net.ParseIP` 无法识别 `127.1`、`0x7f.0.0.1` 等浏览器支持的 IPv4 写法，因此这些地址通过公网 URL 校验，并可进入工单及 AI 回复。已验证浏览器 URL 解析将其归一化为 `127.0.0.1`。应拒绝这些非标准 IP 表示，并补充回归测试。 (reviews/merge-receipts-20261103/yueboard-12-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 19,
+      "reason": "Backfilled independent Codex review of exact head efd9487ecf3547cd6d523f10f8b9a5cda40baf7a (2026-11-02T17:06:58Z) returned CHANGES: - [P2] `internal/platform/db/lock_safety.go:319`：`NO TRANSACTION` 会直接跳过 ADD/VALIDATE 同事务检查，但同一个 `DO $$ BEGIN ... END $$` 内的两项操作仍处于同一事务。此类迁移会被放行，ADD 获取的强锁却会持续覆盖整个 VALIDATE 扫描。应识别语句块的事务边界并补充测试。 - [P2] `internal/platform/db/lock_safety.go:276`：临时表与永久表共用规范化名称。例如 `CREATE TEMP TABLE users (id bigint); CREATE INDEX ix ON public.users(id);` 会将已有的 `public.users` 误判为新表，放行阻塞写入的普通索引构建。应区分临时 schema 与 `public`，并补充同名表测试。 - [P2] `internal/platform/db/lock_safety.go:319`：`NO TRANSACTION` 会直接跳过 ADD/VALIDATE 同事务检查，但同一个 `DO $$ BEGIN ... END $$` 内的两项操作仍处于同一事务。此类迁移会被放行，ADD 获取的强锁却会持续覆盖整个 VALIDATE 扫描。应识别语句块的事务边界并补充测试。 - [P2] `internal/platform/db/lock_safety.go:276`：临时表与永久表共用规范化名称。例如 `CREATE TEMP TABLE users (id bigint); CREATE INDEX ix ON public.users(id);` 会将已有的 `public.users` 误判为新表，放行阻塞写入的普通索引构建。应区分临时 schema 与 `public`，并补充同名表测试。 (reviews/merge-receipts-20261103/yueboard-19-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 20,
+      "reason": "Backfilled independent Codex review of exact head 7f12f37d1ab957b1b9019321fc7272edec21f243 (2026-11-02T17:03:44Z) returned CHANGES: - [P2] `docs/adr/0004-backup-freshness-is-the-slo.md:3`：将备份与每周恢复演练标为 accepted，且 `docs/adr/README.md:11` 明确将其纳入工作队列，违反 `../AGENTS.md` 中所有者于 2026-10-20 取消此类工作的决定。应保留历史证据并撤出执行队列，或记录所有者明确撤销取消决定的依据。 - [P2] `docs/adr/0004-backup-freshness-is-the-slo.md:3`：将备份与每周恢复演练标为 accepted，且 `docs/adr/README.md:11` 明确将其纳入工作队列，违反 `../AGENTS.md` 中所有者于 2026-10-20 取消此类工作的决定。应保留历史证据并撤出执行队列，或记录所有者明确撤销取消决定的依据。 (reviews/merge-receipts-20261103/yueboard-20-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 31,
+      "reason": "Backfilled independent Codex review of exact head 00e3067a9aa50e1aed153cebc178bd9498ea64d7 (2026-11-02T16:59:27Z) returned CHANGES: - [P1] `internal/platform/db/migrations_pg18_integration_test.go:5145`：新增循环错误地要求 `Ready()` 拒绝版本 151，但此提交的实际 schema floor 就是 151，因此 PostgreSQL 集成测试必然失败。应仅拒绝低于 151 的版本，并将第 5153 行的成功用例从 152 改为 151。 - [P1] `internal/platform/db/migrations_pg18_integration_test.go:5145`：新增循环错误地要求 `Ready()` 拒绝版本 151，但此提交的实际 schema floor 就是 151，因此 PostgreSQL 集成测试必然失败。应仅拒绝低于 151 的版本，并将第 5153 行的成功用例从 152 改为 151。 (reviews/merge-receipts-20261103/yueboard-31-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 37,
+      "reason": "Backfilled independent Codex review of exact head f3c952bf1e9ff4e489d14f9959f605e16ff0f0a7 (2026-11-02T17:06:23Z) returned CHANGES: - [P1] `internal/platform/goldenfile/economy_pack_test.go:48`：新增测试无条件要求完整 Git 历史及可信基线，但现有 `.github/workflows/ci.yml` 仍使用默认浅克隆，且未设置 `YUEBOARD_CONTRACT_BASELINE`，导致正常 CI 单元测试失败。需同步配置完整历史和可信基线；仅取消浅克隆仍无法解决合并后 HEAD=origin/master 的拒绝路径。 - [P2] `cmd/economy-contract-pack/main_test.go:7`：新增结构体未经过 gofmt；只读 `gofmt -d` 已确认差异，会触发现有 CI 格式检查失败。 - [P1] `internal/platform/goldenfile/economy_pack_test.go:48`：新增测试无条件要求完整 Git 历史及可信基线，但现有 `.github/workflows/ci.yml` 仍使用默认浅克隆，且未设置 `YUEBOARD_CONTRACT_BASELINE`，导致正常 CI 单元测试失败。需同步配置完整历史和可信基线；仅取消浅克隆仍无法解决合并后 HEAD=origin/master 的拒绝路径。 - [P2] `cmd/economy-contract-pack/main_test.go:7`：新增结构体未经过 gofmt；只读 `gofmt -d` 已确认差异，会触发现有 CI 格式检查失败。 (reviews/merge-receipts-20261103/yueboard-37-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 47,
+      "reason": "Backfilled independent Codex review of exact head dbabc6c5da9a1807be0fe829bd976ce61fbbda3c (2026-11-02T17:05:16Z) returned CHANGES: - [P1] `test/fixtures/schema.sql:5070`：仅将迁移账本推进到 148，未加入新审计表、函数及触发器。集成测试初始化只加载 fixture，不执行迁移，因此新增测试会因 `server_visibility_audit` 不存在而失败；账本却错误地声明迁移已应用。需同步完整 DDL。 - [P2] `test/integration/server_visibility_audit_integration_test.go:102`：伪造审计记录测试遗漏必填的 `db_user`、`application_name` 和 `txid`。即使运行角色错误地获得 INSERT 权限，该语句仍因 NOT NULL 约束失败，使权限检查虚假通过。应提供完整合法记录，并断言权限拒绝的 SQLSTATE。 - [P1] `test/fixtures/schema.sql:5070`：仅将迁移账本推进到 148，未加入新审计表、函数及触发器。集成测试初始化只加载 fixture，不执行迁移，因此新增测试会因 `server_visibility_audit` 不存在而失败；账本却错误地声明迁移已应用。需同步完整 DDL。 - [P2] `test/integration/server_visibility_audit_integration_test.go:102`：伪造审计记录测试遗漏必填的 `db_user`、`application_name` 和 `txid`。即使运行角色错误地获得 INSERT 权限，该语句仍因 NOT NULL 约束失败，使权限检查虚假通过。应提供完整合法记录，并断言权限拒绝的 SQLSTATE。 (reviews/merge-receipts-20261103/yueboard-47-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 50,
+      "reason": "Backfilled independent Codex review of exact head 876b882f008d6576752b9828862ea85078c8dd4b (2026-11-02T16:59:26Z) returned CHANGES: - [P2] `internal/modules/admin/payment.go:355`、`:462`：直接记录 JSON 解码错误可能泄露配置值。若损坏配置包含超出 `float64` 范围的数字字段（例如误存为数字的长凭据），`json.Unmarshal` 返回的错误包含完整数字原文，而 PostgreSQL `jsonb` 可以保存此类数字。应仅记录错误类别及位置，并增加数字溢出场景的日志脱敏测试。 - [P2] `internal/modules/admin/payment.go:355`、`:462`：直接记录 JSON 解码错误可能泄露配置值。若损坏配置包含超出 `float64` 范围的数字字段（例如误存为数字的长凭据），`json.Unmarshal` 返回的错误包含完整数字原文，而 PostgreSQL `jsonb` 可以保存此类数字。应仅记录错误类别及位置，并增加数字溢出场景的日志脱敏测试。 (reviews/merge-receipts-20261103/yueboard-50-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 58,
+      "reason": "Backfilled independent Codex review of exact head d89ebfde6d374dea66985d7f5385b4d0329bb794 (2026-11-02T17:05:57Z) returned CHANGES: - [P2] `internal/modules/admin/scoped_token.go:193`：功能关闭或来源 IP 不在白名单时仍返回 API JSON 404，与未知路径的 nginx 伪装 404 明显不同。无凭据探测者因此可以识别新增管理入口，即使功能未启用，违反现有抗探测约定。此处及第 197 行应使用统一伪装响应，并增加正文与 Content-Type 的断言；现有测试仅检查状态码，无法发现此问题。 - [P2] `internal/modules/admin/scoped_token.go:193`：功能关闭或来源 IP 不在白名单时仍返回 API JSON 404，与未知路径的 nginx 伪装 404 明显不同。无凭据探测者因此可以识别新增管理入口，即使功能未启用，违反现有抗探测约定。此处及第 197 行应使用统一伪装响应，并增加正文与 Content-Type 的断言；现有测试仅检查状态码，无法发现此问题。 (reviews/merge-receipts-20261103/yueboard-58-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 64,
+      "reason": "Backfilled independent Codex review of exact head 4d3c5ebf17c73ee553af1dc0e53fde65ad65ea7b (2026-11-02T17:04:24Z) returned CHANGES: - [P1] `internal/modules/user/register_device.go:32`：查询未排除已知碰撞及占位 HWID。现有设备身份逻辑明确将这些值视为不能识别设备，并保留其观察记录；新查询会把不同设备的账号合并计数，达到默认阈值后错误拒绝正常注册。应复用 `IsKnownPlaceholderHWID` 和 `NonCollidingSQL` 排除这些值，并增加对应测试。 - [P1] `internal/modules/user/register_device.go:32`：查询未排除已知碰撞及占位 HWID。现有设备身份逻辑明确将这些值视为不能识别设备，并保留其观察记录；新查询会把不同设备的账号合并计数，达到默认阈值后错误拒绝正常注册。应复用 `IsKnownPlaceholderHWID` 和 `NonCollidingSQL` 排除这些值，并增加对应测试。 (reviews/merge-receipts-20261103/yueboard-64-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 65,
+      "reason": "Backfilled independent Codex review of exact head e2c17a002c424df9db2ebb5f9cf50eedd52509d0 (2026-11-02T17:01:50Z) returned CHANGES: - [P1] `internal/platform/nativeproto/vless.go:46` — Disabling XHTTP admission also blocks accounting for existing XHTTP nodes: `ReportAccounting → authAccounting → getServer` reaches this predicate and returns `NotFound`. Running nodes and queued traffic reports cannot flush after rollback, including during disabled-node accounting grace. Separate configuration admission from accounting validation and add a rollback regression test. - [P1] `internal/platform/nativeproto/vless.go:46` — Disabling XHTTP admission also blocks accounting for existing XHTTP nodes: `ReportAccounting → authAccounting → getServer` reaches this predicate and returns `NotFound`. Running nodes and queued traffic reports cannot flush after rollback, including during disabled-node accounting grace. Separate configuration admission from accounting validation and add a rollback regression test. (reviews/merge-receipts-20261103/yueboard-65-review.txt). Exact-head box parity: FAIL (reviews/merge-receipts-20261103/yueboard-65-parity.log). Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 67,
+      "reason": "Backfilled independent Codex review of exact head 75e7c40f4598715fe3f16f16540695125bb95b9b (2026-11-02T17:01:15Z) returned CHANGES: - [P1] `internal/platform/nativeproto/vless.go:46`：关闭 XHTTP 准入开关也会阻断已有节点的计费上报。`authAccounting → authNodeMode → getServer → validateNativeProtocolSettings` 调用此谓词，导致合法 XHTTP 节点返回 `NotFound`，无法清空待上报流量，连禁用节点的计费宽限期也失效。应将准入开关限制在保存、订阅及配置下发路径，已有节点的计费鉴权仅校验配置形状和既有权限。 - [P1] `internal/platform/nativeproto/vless.go:46`：关闭 XHTTP 准入开关也会阻断已有节点的计费上报。`authAccounting → authNodeMode → getServer → validateNativeProtocolSettings` 调用此谓词，导致合法 XHTTP 节点返回 `NotFound`，无法清空待上报流量，连禁用节点的计费宽限期也失效。应将准入开关限制在保存、订阅及配置下发路径，已有节点的计费鉴权仅校验配置形状和既有权限。 (reviews/merge-receipts-20261103/yueboard-67-review.txt). Exact-head box parity: FAIL (reviews/merge-receipts-20261103/yueboard-67-parity.log). Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 70,
+      "reason": "Backfilled independent Codex review of exact head 7298093179d651b53fc6cd399422d112faea4240 (2026-11-02T17:01:54Z) returned CHANGES: - [P2] `internal/modules/user/abuse_limits.go:128-129`：JSON 编码后的设备标识仍会被底层 `authattempt.Normalize` 转为小写，违反现有 HWID 区分大小写的语义。同一 IP 下，`AbCdEf0123456789` 注册满三次后，会错误阻止不同设备 `abcdef0123456789` 注册。应在构造桶键时保留大小写区别，例如先对原始配对编码计算摘要，并补充大小写不同设备的隔离测试。 - [P2] `internal/modules/user/abuse_limits.go:128-129`：JSON 编码后的设备标识仍会被底层 `authattempt.Normalize` 转为小写，违反现有 HWID 区分大小写的语义。同一 IP 下，`AbCdEf0123456789` 注册满三次后，会错误阻止不同设备 `abcdef0123456789` 注册。应在构造桶键时保留大小写区别，例如先对原始配对编码计算摘要，并补充大小写不同设备的隔离测试。 (reviews/merge-receipts-20261103/yueboard-70-review.txt). Exact-head box parity: pass. Missing evidence: an approving independent review with passing parity; no receipt is claimed. This registration records the finding, not a claim it is fixed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 17,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 8e8d491420143a0a4fb5980d4141a5f8c5239af8 on 2026-11-02T17:05:25Z; artifact reviews/merge-receipts-20261103/yueboard-17.md, log_sha256 73eaa014753021af92c88a5ba82c070bc066d2ac11c9a4f780f7a63012bca7bd",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 38,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 03b13c1e57a6e56adb8318734e7fe7be25692246 on 2026-11-02T17:06:01Z; artifact reviews/merge-receipts-20261103/yueboard-38.md, log_sha256 d7c0ff133e2365c67dbe1d0cebd99e311c0a999d484a80a2eb0d58c5a692a42e",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 39,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 462068c3a4f9f628e16a94b6a36c39dba7de80d8 on 2026-11-02T17:04:26Z; artifact reviews/merge-receipts-20261103/yueboard-39.md, log_sha256 08d8e4c81eaa2639dffcffb89574acf901988ebb9de707ec7c64d592443ff8bc",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 45,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head b6d811d8a5890c27f3288caae48949ffe7adaddf on 2026-11-02T17:04:56Z; artifact reviews/merge-receipts-20261103/yueboard-45.md, log_sha256 dcc9c7946209e29dbaf383fc2ce9e69e1219c44d0e37a884a194a15d900b64fa",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 46,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 8c1b920be9b645d3f6cb69f186a40f1721f03de4 on 2026-11-02T17:06:22Z; artifact reviews/merge-receipts-20261103/yueboard-46.md, log_sha256 5a22b5c20f49a6ee85af830a59d88467388ca768283980214a468ab0ecc5c6d8",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 54,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 5340ac9c137068f4f199a8853c0996543d4624fe on 2026-11-02T17:06:26Z; artifact reviews/merge-receipts-20261103/yueboard-54.md, log_sha256 f231eac588514ef584e12f220ae459b768483be317ddffe85a17bf6fdca67a8a",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 63,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 3ad259f2f2eda2972e845a157ad368e25072bfa0 on 2026-11-02T17:02:39Z; artifact reviews/merge-receipts-20261103/yueboard-63.md, log_sha256 827c23d7c78e70739756491e60052d2dd3b927ef8985fa7ab57170a2a3fa14b3",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 66,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head d5764cbc5b8a4cbcd45b6e7023f0cd27e3ae168b on 2026-11-02T17:02:55Z; artifact reviews/merge-receipts-20261103/yueboard-66.md, log_sha256 260f264dc369441b340d29738d47f099a15b18bf6eecf10692a5fbf88956393d",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 68,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head e2521d692ec082fed4e8e7ce664f6a1f1cfd4d9e on 2026-11-02T17:00:33Z; artifact reviews/merge-receipts-20261103/yueboard-68.md, log_sha256 ca205030bce67de442f2cd37d1e842e735c22f7febc0aa508ffbc62601cf28f9",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 69,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 49d1fe552c5ee15fb58493259451af87e6a74f04 on 2026-11-02T17:01:18Z; artifact reviews/merge-receipts-20261103/yueboard-69.md, log_sha256 5d30b1a922da8a56a205a1d4ac442f786be6fad11e87bcf459fedb6f42ef0211",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 73,
+      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head f20952b2c50b884f3fca8e3270c0d11a80417e50 on 2026-11-02T17:01:59Z; artifact reviews/merge-receipts-20261103/yueboard-73.md, log_sha256 10f846154aaf01461b6d4765f2755e09aecd571b7fcbca0cb9d96eac45cc077a",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     }
   ]
 }

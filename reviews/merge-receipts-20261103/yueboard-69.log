@@ -1,0 +1,4 @@
+head=49d1fe552c5ee15fb58493259451af87e6a74f04 ran_at=2026-11-02T17:01:18Z runner=box
+cmd: go vet -tags integration ./internal/modules/user  && go test ./internal/modules/user 
+ok  	github.com/onesyue/yueboard/internal/modules/user	0.256s
+rc=0

@@ -1,0 +1,5 @@
+head=d5764cbc5b8a4cbcd45b6e7023f0cd27e3ae168b ran_at=2026-11-02T17:02:55Z runner=box
+cmd: go vet -tags integration ./cmd/economy-contract-pack ./internal/modules/nodesync  && go test ./cmd/economy-contract-pack ./internal/modules/nodesync 
+ok  	github.com/onesyue/yueboard/cmd/economy-contract-pack	0.007s
+ok  	github.com/onesyue/yueboard/internal/modules/nodesync	11.045s
+rc=0

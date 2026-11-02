@@ -1,0 +1,5 @@
+head=876b882f008d6576752b9828862ea85078c8dd4b ran_at=2026-11-02T17:15:55Z runner=box
+cmd: go vet -tags integration ./internal/modules/admin ./internal/modules/order ./test/integration  && go test ./internal/modules/admin ./internal/modules/order 
+ok  	github.com/onesyue/yueboard/internal/modules/admin	1.425s
+ok  	github.com/onesyue/yueboard/internal/modules/order	0.096s
+rc=0

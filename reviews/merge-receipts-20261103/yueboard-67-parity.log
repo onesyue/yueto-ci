@@ -1,0 +1,12 @@
+head=75e7c40f4598715fe3f16f16540695125bb95b9b ran_at=2026-11-02T16:59:50Z runner=box
+cmd: go vet -tags integration ./internal/modules/admin ./internal/modules/nodesync ./internal/modules/subscribe ./internal/platform/nativeproto  && go test ./internal/modules/admin ./internal/modules/nodesync ./internal/modules/subscribe ./internal/platform/nativeproto 
+ok  	github.com/onesyue/yueboard/internal/modules/admin	1.399s
+2026/11/03 01:00:02 INFO node presence generation requires reconciliation procedure=/yuenode.v1.NodeControlPlane/ReportDevices code=failed_precondition reason=user elapsed_ms=0 suppressed_since_last=0 err="failed_precondition: node generations require reconciliation: user generation requires reconciliation"
+--- FAIL: TestYueOpsRouteScopesCoverEveryInternalRoute (0.00s)
+    yueops_scoped_token_test.go:27: internal.go registers 77 yueops routes, scope map has 74
+FAIL
+FAIL	github.com/onesyue/yueboard/internal/modules/nodesync	12.084s
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	1.180s
+ok  	github.com/onesyue/yueboard/internal/platform/nativeproto	0.035s
+FAIL
+rc=1

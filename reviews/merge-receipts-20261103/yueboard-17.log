@@ -1,0 +1,4 @@
+head=8e8d491420143a0a4fb5980d4141a5f8c5239af8 ran_at=2026-11-02T17:05:25Z runner=box
+cmd: go vet -tags integration ./internal/modules/nodesync  && go test ./internal/modules/nodesync 
+ok  	github.com/onesyue/yueboard/internal/modules/nodesync	10.955s
+rc=0

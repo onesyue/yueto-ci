@@ -1,0 +1,14 @@
+已审阅指定 diff；未修改文件或执行写入型测试。
+
+VERDICT: changes
+
+- [P1] `test/fixtures/schema.sql:5070`：仅将迁移账本推进到 148，未加入新审计表、函数及触发器。集成测试初始化只加载 fixture，不执行迁移，因此新增测试会因 `server_visibility_audit` 不存在而失败；账本却错误地声明迁移已应用。需同步完整 DDL。
+- [P2] `test/integration/server_visibility_audit_integration_test.go:102`：伪造审计记录测试遗漏必填的 `db_user`、`application_name` 和 `txid`。即使运行角色错误地获得 INSERT 权限，该语句仍因 NOT NULL 约束失败，使权限检查虚假通过。应提供完整合法记录，并断言权限拒绝的 SQLSTATE。
+tokens used
+36,985
+已审阅指定 diff；未修改文件或执行写入型测试。
+
+VERDICT: changes
+
+- [P1] `test/fixtures/schema.sql:5070`：仅将迁移账本推进到 148，未加入新审计表、函数及触发器。集成测试初始化只加载 fixture，不执行迁移，因此新增测试会因 `server_visibility_audit` 不存在而失败；账本却错误地声明迁移已应用。需同步完整 DDL。
+- [P2] `test/integration/server_visibility_audit_integration_test.go:102`：伪造审计记录测试遗漏必填的 `db_user`、`application_name` 和 `txid`。即使运行角色错误地获得 INSERT 权限，该语句仍因 NOT NULL 约束失败，使权限检查虚假通过。应提供完整合法记录，并断言权限拒绝的 SQLSTATE。

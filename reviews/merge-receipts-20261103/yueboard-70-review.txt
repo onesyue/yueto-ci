@@ -1,0 +1,10 @@
+已审查指定 diff，未修改文件。未运行测试；`git diff --check` 通过。
+
+VERDICT: changes
+- [P2] `internal/modules/user/abuse_limits.go:128-129`：JSON 编码后的设备标识仍会被底层 `authattempt.Normalize` 转为小写，违反现有 HWID 区分大小写的语义。同一 IP 下，`AbCdEf0123456789` 注册满三次后，会错误阻止不同设备 `abcdef0123456789` 注册。应在构造桶键时保留大小写区别，例如先对原始配对编码计算摘要，并补充大小写不同设备的隔离测试。
+tokens used
+42,701
+已审查指定 diff，未修改文件。未运行测试；`git diff --check` 通过。
+
+VERDICT: changes
+- [P2] `internal/modules/user/abuse_limits.go:128-129`：JSON 编码后的设备标识仍会被底层 `authattempt.Normalize` 转为小写，违反现有 HWID 区分大小写的语义。同一 IP 下，`AbCdEf0123456789` 注册满三次后，会错误阻止不同设备 `abcdef0123456789` 注册。应在构造桶键时保留大小写区别，例如先对原始配对编码计算摘要，并补充大小写不同设备的隔离测试。

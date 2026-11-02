@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 82,
+  "head": "8c73dcff7b8650371324337117637fdad51ea0d1",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "8c73dcff7b8650371324337117637fdad51ea0d1",
+    "artifact": "reviews/merge-receipts-20261103/yueboard-82.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T17:00:31Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "8c73dcff7b8650371324337117637fdad51ea0d1",
+    "command": "pnpm install --frozen-lockfile --ignore-scripts && cd web-admin && pnpm run typecheck && pnpm run test && cd ../web && pnpm run typecheck && pnpm run test",
+    "log_sha256": "df6650fdc7d47018cf7e293fde7182b4e7caf0080935ebe797970c0ba73d5115",
+    "ran_at": "2026-11-02T17:26:26Z",
+    "runner": "box"
+  }
+}

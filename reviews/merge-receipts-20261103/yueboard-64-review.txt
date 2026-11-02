@@ -1,0 +1,12 @@
+已审查指定 base→head 的全部改动，未修改文件或运行测试。
+
+VERDICT: changes
+
+- [P1] `internal/modules/user/register_device.go:32`：查询未排除已知碰撞及占位 HWID。现有设备身份逻辑明确将这些值视为不能识别设备，并保留其观察记录；新查询会把不同设备的账号合并计数，达到默认阈值后错误拒绝正常注册。应复用 `IsKnownPlaceholderHWID` 和 `NonCollidingSQL` 排除这些值，并增加对应测试。
+tokens used
+33,779
+已审查指定 base→head 的全部改动，未修改文件或运行测试。
+
+VERDICT: changes
+
+- [P1] `internal/modules/user/register_device.go:32`：查询未排除已知碰撞及占位 HWID。现有设备身份逻辑明确将这些值视为不能识别设备，并保留其观察记录；新查询会把不同设备的账号合并计数，达到默认阈值后错误拒绝正常注册。应复用 `IsKnownPlaceholderHWID` 和 `NonCollidingSQL` 排除这些值，并增加对应测试。

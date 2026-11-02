@@ -1,0 +1,12 @@
+Reviewed the exact diff read-only. Tests were not run.
+
+VERDICT: changes
+
+- [P1] `internal/platform/nativeproto/vless.go:46` — Disabling XHTTP admission also blocks accounting for existing XHTTP nodes: `ReportAccounting → authAccounting → getServer` reaches this predicate and returns `NotFound`. Running nodes and queued traffic reports cannot flush after rollback, including during disabled-node accounting grace. Separate configuration admission from accounting validation and add a rollback regression test.
+tokens used
+68,718
+Reviewed the exact diff read-only. Tests were not run.
+
+VERDICT: changes
+
+- [P1] `internal/platform/nativeproto/vless.go:46` — Disabling XHTTP admission also blocks accounting for existing XHTTP nodes: `ReportAccounting → authAccounting → getServer` reaches this predicate and returns `NotFound`. Running nodes and queued traffic reports cannot flush after rollback, including during disabled-node accounting grace. Separate configuration admission from accounting validation and add a rollback regression test.

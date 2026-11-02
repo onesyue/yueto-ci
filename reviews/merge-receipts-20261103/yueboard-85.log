@@ -1,0 +1,3 @@
+head=8568e76fbc77e563fa458ac5efaca47d7f875b46 ran_at=2026-11-02T17:23:40Z runner=box
+cmd: go vet -tags integration ./test/integration
+rc=0

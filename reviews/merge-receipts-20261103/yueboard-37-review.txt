@@ -1,0 +1,12 @@
+已审阅指定 diff；九份快照与原始夹具完全一致，校验和匹配。未修改文件，未运行测试套件。
+
+VERDICT: changes
+- [P1] `internal/platform/goldenfile/economy_pack_test.go:48`：新增测试无条件要求完整 Git 历史及可信基线，但现有 `.github/workflows/ci.yml` 仍使用默认浅克隆，且未设置 `YUEBOARD_CONTRACT_BASELINE`，导致正常 CI 单元测试失败。需同步配置完整历史和可信基线；仅取消浅克隆仍无法解决合并后 HEAD=origin/master 的拒绝路径。
+- [P2] `cmd/economy-contract-pack/main_test.go:7`：新增结构体未经过 gofmt；只读 `gofmt -d` 已确认差异，会触发现有 CI 格式检查失败。
+tokens used
+40,936
+已审阅指定 diff；九份快照与原始夹具完全一致，校验和匹配。未修改文件，未运行测试套件。
+
+VERDICT: changes
+- [P1] `internal/platform/goldenfile/economy_pack_test.go:48`：新增测试无条件要求完整 Git 历史及可信基线，但现有 `.github/workflows/ci.yml` 仍使用默认浅克隆，且未设置 `YUEBOARD_CONTRACT_BASELINE`，导致正常 CI 单元测试失败。需同步配置完整历史和可信基线；仅取消浅克隆仍无法解决合并后 HEAD=origin/master 的拒绝路径。
+- [P2] `cmd/economy-contract-pack/main_test.go:7`：新增结构体未经过 gofmt；只读 `gofmt -d` 已确认差异，会触发现有 CI 格式检查失败。

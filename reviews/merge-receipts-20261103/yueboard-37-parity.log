@@ -1,0 +1,6 @@
+head=f3c952bf1e9ff4e489d14f9959f605e16ff0f0a7 ran_at=2026-11-02T17:05:19Z runner=box
+cmd: go vet -tags integration ./cmd/economy-contract-pack ./internal/platform/contractpack ./internal/platform/goldenfile  && go test ./cmd/economy-contract-pack ./internal/platform/contractpack ./internal/platform/goldenfile 
+ok  	github.com/onesyue/yueboard/cmd/economy-contract-pack	0.002s
+?   	github.com/onesyue/yueboard/internal/platform/contractpack	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/goldenfile	0.598s
+rc=0

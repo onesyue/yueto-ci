@@ -1,0 +1,6 @@
+head=dbabc6c5da9a1807be0fe829bd976ce61fbbda3c ran_at=2026-11-02T17:04:07Z runner=box
+cmd: go vet -tags integration ./internal/modules/admin ./internal/modules/nodesync ./internal/platform/visibilityaudit ./test/integration  && go test ./internal/modules/admin ./internal/modules/nodesync ./internal/platform/visibilityaudit 
+ok  	github.com/onesyue/yueboard/internal/modules/admin	0.684s
+ok  	github.com/onesyue/yueboard/internal/modules/nodesync	11.040s
+ok  	github.com/onesyue/yueboard/internal/platform/visibilityaudit	0.003s
+rc=0

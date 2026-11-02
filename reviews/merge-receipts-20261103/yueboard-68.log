@@ -1,0 +1,4 @@
+head=e2521d692ec082fed4e8e7ce664f6a1f1cfd4d9e ran_at=2026-11-02T17:00:33Z runner=box
+cmd: go vet -tags integration ./internal/modules/resettrafficcron ./test/integration  && go test ./internal/modules/resettrafficcron 
+ok  	github.com/onesyue/yueboard/internal/modules/resettrafficcron	0.010s
+rc=0

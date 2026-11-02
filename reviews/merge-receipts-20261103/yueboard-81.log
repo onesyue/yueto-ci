@@ -1,0 +1,4 @@
+head=0611f2fe79570261ed9a442bd57bfdd9c353399d ran_at=2026-11-02T17:25:48Z runner=box
+cmd: go mod verify && go build ./... && go vet ./...
+all modules verified
+rc=0
