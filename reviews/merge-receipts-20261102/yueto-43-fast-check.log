@@ -1,0 +1,6 @@
+SKIP bash-n (no sh)
+SKIP python (no py)
+SKIP tests (no related tests)
+STEP secrets-changed rc=0 secs=1 cmd=env SECRET_SCAN_STATE_DIR=/home/box/Projects/yueto/.claude/state/coord/fastcheck/runs/root.R7I1yKKT/secret-state SECRET_SCAN_ROOT=/home/box/Projects/yueto bash /tmp/yt-premerge-zobiqveg/source/scripts/scan-secrets-changed.sh --repo . --sha 85ac012db4efa1ad11fe74d1d760620df87f4b92
+tests_selected=0 total_secs=7
+FASTCHECK-RESULT rc=0 repo=root sha=85ac012db4efa1ad11fe74d1d760620df87f4b92 at 2026-11-02 16:14:33 +0800

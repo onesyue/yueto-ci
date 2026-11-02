@@ -30,6 +30,72 @@
       "pr": 50,
       "reason": "Exact-head independent Codex review approved for 5225f4d636ea61c4b9ae685473b95dbf8d3a05b8. Repository-owned bash scripts/check-all-contracts.sh failed (exit 1): release-chain-drivers asserted that release completion did not reflect actual process-group isolation; initial Python checks also lacked pytest, and 95 cross-repository checks were skipped because sibling checkouts are absent. Missing evidence: a passing local parity log; fast-check was not reached after the failed contract gate. Original failed-run log SHA256 2a2bc455004ea62e9d6b374c0ef27305c5d77ab362404a2be58a8fae13fa0d1b. No full multi-repository fixture was fabricated.",
       "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueto",
+      "pr": 43,
+      "reason": "Independent Codex approved exact head c66811a93a544d762495d97640e7722219e85ea8 after merge. Backfilled local yt-premerge evidence (/workspace/yt43-premerge.log, committed with baseline logs in reviews/merge-receipts-20261102/yueto-43.md): fast-check PASS; contracts FAIL, exit 1, with identical failing-label set to then-origin/master d7f79431beef2baf04db251072bd609a5300bf1c. Log binds integration merge 85ac012db4efa1ad11fe74d1d760620df87f4b92 (PR head plus master), not the exact PR head. Missing evidence: passing exact-head contract parity; no all-green receipt is claimed.",
+      "approver": "owner 2026-11-02 explicit continuation: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 263,
+      "reason": "Independent Codex approved exact head 6974c7b4d341146a47e7e0c9abe47e3c17e9ef7f; see reviews/merge-receipts-20261102/yueops-263.md. Exact-head yt-premerge failed (exit 1): ordinary and native admission exit 4 because central source pin is 17ad41f7, not the reviewed head; admission-precheck exit 2. No pin override used. Missing evidence: passing local parity. Original command log SHA256 3b01073989d161fc433e37e061dce165d3196bd15eae5f37d3621bda0344e7ed.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto",
+      "pr": 57,
+      "reason": "Independent Codex requested changes: native helper worktrees are not removed by yt-premerge cleanup. Head cd80751bda1da3649c7547cb964f2cc59590f1d2; review artifact reviews/merge-receipts-20261102/yueto-57.md. Exact-head yt-premerge failed (exit 1), contracts and fast-check both exit 1. System Python lacks pytest; additional cross-repository failures include signed release/native admission and source-contract mismatches. Main sibling checkouts are not all on default branches; no baseline equivalence or passing exact-head parity is claimed. Original command log SHA256 6e02d258598b22ec36b65127a628338fc2a53334a74e5cf309cc1267c49a2185.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto",
+      "pr": 56,
+      "reason": "Independent Codex approved the merged diff. Head eec7cb48f50bc5099513429199eee6dfee7b3d33; review artifact reviews/merge-receipts-20261102/yueto-56.md. Exact-head yt-premerge failed (exit 1), contracts and fast-check both exit 1. System Python lacks pytest; additional cross-repository failures include signed release/native admission and source-contract mismatches. Main sibling checkouts are not all on default branches; no baseline equivalence or passing exact-head parity is claimed. Original command log SHA256 d69c00e535b071b74592774b7775ebbb58cbe00769e9840dd5e541f3223962ee.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto",
+      "pr": 52,
+      "reason": "Independent Codex requested changes: non-strict lock inventory enumeration can fail open, and the lock check/ledger write is not atomic with release acquisition. Exact-head yt-premerge exited 1: contracts and fast-check failed, including missing pytest and cross-repository contract mismatches. No approval or passing parity is claimed. Head a64adbb3905b70a2e56e31f2c0e42f868e78bbaa. See reviews/merge-receipts-20261102/yueto-52.md. Original command log SHA256 bc5ed78fce33c372e7ebd642649c737b0ec1815c2bb9a7290ee8f7555be0fd5f.",
+      "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 257,
+      "reason": "Historical independent Codex review found no introduced defects at merged head 063b4016d425436d2067e1f572788d09b336191d; source verdict head matches GitHub REST. Exact-head yt-premerge failed: ops-ci=4 and ops-native=4 (central CI pin 17ad41f7 mismatch), admission-precheck=2 (missing required CLI arguments). Source records baseline-identical failures; full CI suites were not reached. READY was conditional on a baseline exception, not passing parity. Missing evidence: passing local CI parity. Original parity log SHA256 f9b19da87e5b4daf0d73fffbca4922cae9b3042ac60d94e8ceb4b257c8943258. See reviews/merge-receipts-20261102/yueops-257.md.",
+      "approver": "owner 2026-11-02 explicit continuation: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 165,
+      "reason": "Historical independent Codex review found no introduced defects at merged head 9fadc37bf965af3efae322a33559b73656b5c9ef; source verdict head matches GitHub REST. Exact-head yt-premerge failed: ops-ci=4 and ops-native=4 (central CI pin 17ad41f7 mismatch), admission-precheck=2 (missing required CLI arguments). Source records baseline-identical failures; full CI suites were not reached. READY was conditional on a baseline exception, not passing parity. Missing evidence: passing local CI parity. Original parity log SHA256 af0e96a42b7ff5b9d074a794077a5ab3bf0b3336b756830e86f96b44094cc87f. See reviews/merge-receipts-20261102/yueops-165.md.",
+      "approver": "owner 2026-11-02 explicit continuation: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 195,
+      "reason": "Historical independent Codex review found no introduced defects at merged head de93e49d0a502e75fdd2649eb44da1b42dd4d226; source verdict head matches GitHub REST. Exact-head yt-premerge failed: ops-ci=4 and ops-native=4 (central CI pin 17ad41f7 mismatch), admission-precheck=2 (missing required CLI arguments). Source records baseline-identical failures; full CI suites were not reached. READY was conditional on a baseline exception, not passing parity. Missing evidence: passing local CI parity. Original parity log SHA256 ac5fda31094683c62ac49db1ba305a1f8cfe7a680727fe23595cbd746d109258. See reviews/merge-receipts-20261102/yueops-195.md.",
+      "approver": "owner 2026-11-02 explicit continuation: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueops",
+      "pr": 196,
+      "reason": "Historical independent Codex review found no introduced defects at merged head a6e59a88ec4b69bd8c8091372a223ff618d8502d; source verdict head matches GitHub REST. Exact-head yt-premerge failed: ops-ci=4 and ops-native=4 (central CI pin 17ad41f7 mismatch), admission-precheck=2 (missing required CLI arguments). Source records baseline-identical failures; full CI suites were not reached. READY was conditional on a baseline exception, not passing parity. Missing evidence: passing local CI parity. Original parity log SHA256 c154bf8d34761300a6402e17b11328e7c0e7748a117e6b68720190175b72632e. See reviews/merge-receipts-20261102/yueops-196.md.",
+      "approver": "owner 2026-11-02 explicit continuation: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto",
+      "pr": 54,
+      "reason": "No attributable independent Codex approval or passing exact-head local CI parity found for merged head a14be9f382f97b8724a2d8dea7d8939d57e116f7. GitHub PR reviews and issue comments are empty; matching artifact filenames were absent in /workspace, /tmp and /home/box/Projects/yueto/reviews. The PR description says this is retention of a previously performed billing-traffic reset and requires an explicit owner decision before execution; that historical assertion is not head-bound test evidence. See reviews/merge-receipts-20261102/yueto-54.md. Missing evidence: independent approval and passing exact-head local parity.",
+      "approver": "owner 2026-11-02 explicit continuation: truthful exception if evidence cannot be produced"
+    },
+    {
+      "repo": "yueto",
+      "pr": 55,
+      "reason": "No attributable independent Codex approval or passing exact-head local CI parity found for merged head cec3f9bb423f46918904d744cf7e70728db934f3. GitHub PR reviews and issue comments are empty; matching artifact filenames were absent in /workspace, /tmp and /home/box/Projects/yueto/reviews. The PR description lists unresolved guard defects: heredoc force-push bypass, rm -rf docs allowed, SQL text false positives, Bash-only coverage and a design conflict. No fix or approval is claimed. See reviews/merge-receipts-20261102/yueto-55.md. Missing evidence: independent approval and passing exact-head local parity.",
+      "approver": "owner 2026-11-02 explicit continuation: truthful exception if evidence cannot be produced"
     }
   ]
 }

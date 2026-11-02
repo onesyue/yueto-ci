@@ -1,0 +1,31 @@
+head=620bcaeb5e473db9205072f13f5251f5cea0a591
+command=GOMAXPROCS=2 bash scripts/premerge.sh HEAD^ && GOMAXPROCS=2 GOFLAGS="-mod=vendor -p=1" go test ./internal/gateretry -count=1
+started_at=2026-11-02T08:43:37.838712+00:00
+............
+----------------------------------------------------------------------
+Ran 12 tests in 7.880s
+
+OK
+ok  	github.com/onesyue/yue-node/internal/forkledger	0.013s
+ok  	github.com/onesyue/yue-node/scripts	0.982s
+vulnerability gate contract tests: ok
+OK: mirror == pinned digest (8928bc9a384d43c821a48f4b1fdb79a60afd1e6b829c14ca2efe7d0c08623557); canonical checkout not present, digest-only check
+sh scripts/check-profile-deps.sh
+profile dependency boundaries verified
+bash scripts/verify-fork-tags.sh
+transport attempt=1 elapsed=843.873252ms reason=success
+transport attempt=1 elapsed=591.323826ms reason=success
+transport attempt=1 elapsed=621.584501ms reason=success
+transport attempt=1 elapsed=674.845017ms reason=success
+transport attempt=1 elapsed=434.293302ms reason=success
+fork tag verification passed: quic-go=1 hysteria=2 xray-core=1 reality=1 signer=D9D3C6E59E7465BD07C2177142239A996FDA9F55
+premerge: hy2: 2 affected packages
+ok  	github.com/onesyue/yue-node/internal/gateretry	0.126s
+ok  	github.com/onesyue/yue-node/scripts	0.778s
+premerge: vless: 2 affected packages
+ok  	github.com/onesyue/yue-node/internal/gateretry	0.114s
+ok  	github.com/onesyue/yue-node/scripts	0.754s
+premerge: passed (local evidence only)
+ok  	github.com/onesyue/yue-node/internal/gateretry	0.127s
+
+exit=0

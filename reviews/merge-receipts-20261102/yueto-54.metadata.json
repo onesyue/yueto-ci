@@ -1,0 +1,12 @@
+{
+  "repo": "yueto",
+  "pr": 54,
+  "head": "a14be9f382f97b8724a2d8dea7d8939d57e116f7",
+  "merge_commit": "1831d43ab66237bb3a04d06c91f2df2b664e7582",
+  "merged_at": "2026-11-02T09:28:46Z",
+  "verified_at": "2026-11-02T10:00:16.456513+00:00",
+  "source": "https://github.com/onesyue/yueto/pull/54",
+  "body": "分支清理 2026-11-02：该分支有 master 中没有的提交（按 diff 内容核对，不是只看 SHA），Codex 只读复核结论 OPEN_PR。\n- 新增幂等的活跃用户流量重置脚本、完成通知、测试和审计收据。据记录一次性重置已完成（15,209 用户，153 批），无需重跑；本 PR 只为留存实现和证据。\n- **会直接改用户计费流量和额度周期：没有 Jim 明确决定，不得合并或执行。**",
+  "review_count": 0,
+  "comment_count": 0
+}

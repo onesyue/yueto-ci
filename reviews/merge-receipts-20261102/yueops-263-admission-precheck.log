@@ -1,0 +1,3 @@
+usage: admission-precheck.py [-h] --repo {yueops} [--source SOURCE]
+                             --base BASE --head HEAD
+admission-precheck.py: error: the following arguments are required: --repo, --base, --head

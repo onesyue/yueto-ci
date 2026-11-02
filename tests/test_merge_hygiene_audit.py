@@ -13,6 +13,9 @@ spec.loader.exec_module(AUDIT)
 
 class MergeHygieneAudit(unittest.TestCase):
     def setUp(self):
+        activation = patch.object(AUDIT, "enforcement_cutoff", return_value=None)
+        activation.start()
+        self.addCleanup(activation.stop)
         self.fixture = json.loads((ROOT / "tests/fixtures/merge-hygiene/approved.json").read_text())
 
     def findings(self):
@@ -158,6 +161,9 @@ class MergeHygieneAudit(unittest.TestCase):
 
 class MergeReceipts(unittest.TestCase):
     def setUp(self):
+        activation = patch.object(AUDIT, "enforcement_cutoff", return_value=None)
+        activation.start()
+        self.addCleanup(activation.stop)
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)

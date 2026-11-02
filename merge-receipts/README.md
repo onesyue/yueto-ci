@@ -54,4 +54,9 @@ Valid receipts remove only `no_approving_review_at_merge` and
 and satisfied findings. Any remaining findings still produce their own
 UNREGISTERED/REGISTERED line and retain the existing exit-code semantics.
 Malformed or inaccessible receipts produce audit incomplete (exit 2), even if
-an exception exists. Existing exception registration is unchanged.
+an exception exists. After yueto-ci #71 merges, every PR merged strictly later
+requires a valid receipt; exceptions cannot waive any of its findings, including
+red or pending checks. The activation PR and older PRs retain historical rules.
+See the root README for the lane premerge command and companion evidence flow.
+`--premerge <repo> <pr>` requires committed, non-backfilled evidence for the live
+open PR head even before activation.

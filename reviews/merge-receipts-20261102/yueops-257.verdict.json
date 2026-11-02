@@ -1,0 +1,10 @@
+{
+  "repo": "onesyue/yueops",
+  "pr": 257,
+  "verdict": "READY",
+  "head_sha": "063b4016d425436d2067e1f572788d09b336191d",
+  "reason": "Normal signed merge of origin/master a122c50a96775a7d2c1192b22fad040ad392b0c7 plus signed generated-manifest refresh pushed to cx/gates-ops. Independent read-only codex exec final review found no defects; 26 targeted tests, Ruff, shell syntax and diff checks pass. Required yt-premerge exits 1 with ONLY baseline-identical failures: ops-ci=4 and ops-native=4 (public CI source pin 17ad41f7 differs from tested SHA), admission-precheck=2 (runner omits required --repo/--base/--head). All three component logs match origin/master baseline after normalizing tested SHA only. READY uses the user-authorized baseline exception; full role/native suites were not reached. PR remains open and unmerged.",
+  "review_artifact": "/workspace/fan1102/yueops-257.review.txt",
+  "parity_log": "/workspace/fan1102/yueops-257.parity.log",
+  "parity_log_sha256": "f9b19da87e5b4daf0d73fffbca4922cae9b3042ac60d94e8ceb4b257c8943258"
+}

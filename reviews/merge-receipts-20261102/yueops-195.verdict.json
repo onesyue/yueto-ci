@@ -1,0 +1,10 @@
+{
+  "repo": "onesyue/yueops",
+  "pr": 195,
+  "verdict": "READY",
+  "head_sha": "de93e49d0a502e75fdd2649eb44da1b42dd4d226",
+  "reason": "Normal signed master merge pushed to PR branch; independent read-only codex exec found no defects; 37 targeted tests passed. Accepted under the user-authorized identical-master-failure exception: candidate and origin/master 76db75f90ec3a04a7070a9ed5a4d6b65cfbc59bf both fail ops-ci=4 and ops-native=4 (CI source pin 17ad41f7 mismatch), admission-precheck=2 (yt-premerge invocation missing required --repo/--base/--head). Diagnostics match after substituting candidate SHA; full CI suites did not execute. PR remains OPEN; no merge or closure. Worktree removed.",
+  "review_artifact": "/workspace/fan1102/yueops-195.review.txt",
+  "parity_log": "/workspace/fan1102/yueops-195.parity.log",
+  "parity_log_sha256": "ac5fda31094683c62ac49db1ba305a1f8cfe7a680727fe23595cbd746d109258"
+}

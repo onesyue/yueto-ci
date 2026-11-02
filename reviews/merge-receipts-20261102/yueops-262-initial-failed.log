@@ -1,0 +1,64 @@
+head=7152b72f4b98196ba9563b014bdcbf778965ca6b
+command=TZ=UTC /tmp/merge-receipt-evidence/policy-venv/bin/python -m pytest -q tests/test_ai_bot_fixes_20260916.py tests/test_every_repo_unit_is_installed_somewhere.py
+started_at=2026-11-02T08:40:40.893827+00:00
+...........................................FF.............               [100%]
+=================================== FAILURES ===================================
+_____ test_anti_spam_digest_escapes_excerpts_and_uses_link_preview_options _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9acdacbf50>
+
+    def test_anti_spam_digest_escapes_excerpts_and_uses_link_preview_options(monkeypatch):
+>       import service.group_anti_spam as gas
+
+tests/test_ai_bot_fixes_20260916.py:443: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+telegram-bot/yue/service/group_anti_spam.py:76: in <module>
+    from config.db_connect import get_cursor
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    import contextvars
+    import logging
+    import os
+    import threading
+    import time
+    from contextlib import contextmanager
+    
+>   import psycopg_pool
+E   ModuleNotFoundError: No module named 'psycopg_pool'
+
+telegram-bot/yue/config/db_connect.py:8: ModuleNotFoundError
+_______________ test_digest_truncation_never_cuts_inside_a_line ________________
+
+    def test_digest_truncation_never_cuts_inside_a_line():
+>       from service.group_anti_spam import _join_html_lines_within
+
+tests/test_ai_bot_fixes_20260916.py:470: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+telegram-bot/yue/service/group_anti_spam.py:76: in <module>
+    from config.db_connect import get_cursor
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    import contextvars
+    import logging
+    import os
+    import threading
+    import time
+    from contextlib import contextmanager
+    
+>   import psycopg_pool
+E   ModuleNotFoundError: No module named 'psycopg_pool'
+
+telegram-bot/yue/config/db_connect.py:8: ModuleNotFoundError
+=============================== warnings summary ===============================
+../policy-venv/lib/python3.13/site-packages/_pytest/config/__init__.py:1464
+  /tmp/merge-receipt-evidence/policy-venv/lib/python3.13/site-packages/_pytest/config/__init__.py:1464: PytestConfigWarning: Unknown config option: asyncio_mode
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_ai_bot_fixes_20260916.py::test_anti_spam_digest_escapes_excerpts_and_uses_link_preview_options
+FAILED tests/test_ai_bot_fixes_20260916.py::test_digest_truncation_never_cuts_inside_a_line
+2 failed, 56 passed, 1 warning in 1.05s
+
+exit=1

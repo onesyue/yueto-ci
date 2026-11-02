@@ -1,0 +1,2 @@
+NOTE: yueto-ci pin 17ad41f7 != 6974c7b4
+real CI would REJECT at plan; set YT_ASSUME_PIN=1 for a local-only override

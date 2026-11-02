@@ -1,0 +1,546 @@
+── 并行执行 106 项守卫（8 条泳道）──
+
+══ i18n combined failure ══
+i18n root cause: generated output modified outside generation (生成物被手改或独立修改): yueboard/web/src/i18n/en.json; generated output modified outside generation (生成物被手改或独立修改): yueboard/web-admin/src/i18n/en.json; generated output modified outside generation (生成物被手改或独立修改): yueboard/packages/ui/src/i18n/en.json; generated output modified outside generation (生成物被手改或独立修改): yueboard/internal/platform/i18n/locales/en.json; generated output modified outside generation (生成物被手改或独立修改): yueops/telegram-bot/yue/i18n/en.json; generated output modified outside generation (生成物被手改或独立修改): yueops/telegram-bot/yue/miniapp/src/i18n/en.json; generated output modified outside generation (生成物被手改或独立修改): yueops/frontend/src/core/i18n/en.json
+  i18n-catalogs: 退出码 1，用时 5s
+i18n 目录守卫（键＝中文原文；缺翻回退中文，故只 WARN）
+
+  ✓  yueboard-ui        PASS 目录    94 条 · 源码用到    28 条 · 缺翻    0 · 孤儿   66
+  ✓  yueboard-web       PASS 目录  1423 条 · 源码用到  1272 条 · 缺翻    0 · 孤儿  151
+  ✓  yueboard-admin     PASS 目录  1894 条 · 源码用到  1795 条 · 缺翻    0 · 孤儿   99 · 无可译内容 1
+  ✗  yueboard-go        FAIL 目录   990 条 · 源码用到   531 条 · 缺翻    7 · 孤儿  466 · wire fence 27
+        ❌ English-only apiresp 未翻译/未 fence：yueboard/internal/modules/admin/scoped_token.go:193: 'not found'
+        ❌ English-only apiresp 未翻译/未 fence：yueboard/internal/modules/admin/scoped_token.go:197: 'not found'
+        ❌ English-only apiresp 未翻译/未 fence：yueboard/internal/modules/admin/scoped_token.go:243: 'not found'
+  ✓  yueops-bot         PASS 目录  3656 条 · 源码用到  1286 条 · 缺翻   25 · 孤儿 2395 · 无可译内容 52
+  ✓  yueops-miniapp     PASS 目录  2868 条 · 源码用到  2336 条 · 缺翻    0 · 孤儿  532 · 无可译内容 1
+  ✓  yueops-checkin     PASS 目录    50 条 · 源码用到    13 条 · 缺翻    0 · 孤儿   37
+  ✓  yueops-web         PASS 目录    59 条 · 源码用到    10 条 · 缺翻    0 · 孤儿   49
+  ✓  yueops-console     PASS 目录  1363 条 · 源码用到  1199 条 · 缺翻    5 · 孤儿  169
+
+汇总：9 条已检 / 0 条 SKIP（缺席不算通过） · 结构性错误 1 条 · 待翻 37 条
+
+  i18n-catalogs-generated: 退出码 1，用时 0s
+
+══ root-selftests 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ root-selftests-slow 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ root-selftests-ledger 失败日志（尾 60 行）══
+台账缺少文件：scripts/test-release-drift.py
+台账缺少文件：scripts/test-ship-admission-and-readback.py
+台账缺少文件：scripts/test-ship-root-no-implicit-detach.py
+台账缺少文件：scripts/test-yt-premerge.py
+
+══ agent-tooling 失败日志（尾 60 行）══
+OK: canonical skills discoverable through all requested links
+/usr/bin/python3: No module named pytest
+
+══ reality-invocation-completion 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ yueboard-migration-sequence 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ pg18-skip-guard 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ observer-install-owners 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ client-diag-stages 失败日志（尾 60 行）══
+client-diag-stages PASS: {'dart_files': 549, 'producer_calls': 22, 'producer_files': 3, 'current_stages': 13, 'stored_stages': 17}
+/usr/bin/python3: No module named pytest
+
+══ mihomo-ledger-agreement 失败日志（尾 60 行）══
+mihomo-ledger-agreement: FAIL
+  node candidate differs from client candidate 6d60af5d01c4a21aadba9bd4fb2d431242324b8d
+  node git pin differs from client candidate 6d60af5d01c4a21aadba9bd4fb2d431242324b8d
+  node patch inventory differs from client commit inventory
+
+══ guard-ci-claims 失败日志（尾 60 行）══
+守卫 CI 归属标注 FAILED：
+  - root-selftests: 命令跑的是工作区 scripts/ 下的跨仓比较器（天然需要多个私有仓同时在场，任何单仓 CI 都跑不了），描述必须写明它是工作区/发版前门禁。
+  - root-selftests-slow: 命令跑的是工作区 scripts/ 下的跨仓比较器（天然需要多个私有仓同时在场，任何单仓 CI 都跑不了），描述必须写明它是工作区/发版前门禁。
+  - root-selftests-ledger: 命令跑的是工作区 scripts/ 下的跨仓比较器（天然需要多个私有仓同时在场，任何单仓 CI 都跑不了），描述必须写明它是工作区/发版前门禁。
+  - ops-native-source-admission: 命令跑的是 yueto-ci 仓里的东西，但 yueto-ci/.github/workflows/ 里找不到任何执行它的痕迹，描述也没标工作区专属——这正是「看起来有 CI 保护」的形状。要么接进那个仓的 CI，要么如实标注。
+
+修法二选一：把它接进真正会跑的 CI，或如实标注它只在工作区跑。不许留一句「看起来有 CI 保护」的假话。
+
+══ release-in-flight-lock 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ release-chain-drivers 失败日志（尾 60 行）══
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.004s
+
+OK
+Traceback (most recent call last):
+  File "/tmp/yt-premerge-mc3xh7fq/source/scripts/test-release-chain-drivers.py", line 587, in <module>
+    check(_exec_detached(ship), "detached release remained in its launcher's process group")
+          ~~~~~~~~~~~~~~^^^^^^
+  File "/tmp/yt-premerge-mc3xh7fq/source/scripts/test-release-chain-drivers.py", line 568, in _exec_detached
+    assert completed() == isolated, "release completion did not reflect actual process-group isolation"
+           ^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: release completion did not reflect actual process-group isolation
+
+══ toolchain-pin-agreement 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ typescript-pin-agreement 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ release-state-probes 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ release-state-yuelink 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ release-state-packages 失败日志（尾 60 行）══
+[release-state-packages] PASS: required={'direct': '2026.11.02.1', 'relay': '2026.10.11.1'}
+/usr/bin/python3: No module named pytest
+
+══ fleet-host-native-patch 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ fleet-host-patch-hy2-only 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ release-state-hy2-only 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ release-state-inputs 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ ops-native-source-admission 失败日志（尾 60 行）══
+native module mode or blob changed: tests/test_protocol_liveness_results_pull.py
+
+══ input-fingerprint-vendored 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ relay-native-retire-prepared 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ subscribe-template-drift 失败日志（尾 60 行）══
+FAIL: 订阅模板在仓库与生产之间漂移了：
+  clash      en     仓库 412443f86c8a ≠ 生产 2628673933ce
+  clash      zh-CN  仓库 9d83557ad2f5 ≠ 生产 f93e9a608dc4
+  clashmeta  en     仓库 6e82dc090309 ≠ 生产 bf90fbba8db5
+  clashmeta  zh-CN  仓库 21cf12689f42 ≠ 生产 f2161a93a479
+  singbox    en     仓库 81d97e377e54 ≠ 生产 673154ac949e
+  stash      en     仓库 c200a1487edd ≠ 生产 846fa9ed145c
+  stash      zh-CN  仓库 ed66910e6c38 ≠ 生产 79593d580ab2
+  surfboard  en     仓库 3181ca40fa5d ≠ 生产 067929e3d53a
+  surfboard  zh-CN  仓库 9648df768153 ≠ 生产 1b37075fa7c4
+  surge      en     仓库 79698903e970 ≠ 生产 c7dce09156d0
+  surge      zh-CN  仓库 83a8e992bae4 ≠ 生产 a8d060f3574b
+
+  这意味着仓库与用户此刻拿到的那份不一致。
+
+  🚨 先判方向，别急着 apply。两边**都可能**有对方没有的内容：
+     2026-09-08 实测就是双向的——仓库有 09-03 的 QUIC 修复（被 admin
+     覆盖），库里有 09-07 的台湾恢复（被一次单向 sync 覆盖，生产回退
+     40 分钟）。任何一侧单向 apply 都在毁东西。正确动作是三方合并：
+       base=上次两边一致的仓库版本 / theirs=库里当前 / mine=仓库当前
+       git merge-file <mine> <base> <theirs>
+     合并后逐份复核两边的改动都还在，再 sync。
+     这件事已经自动化了 —— 在 bastion 上跑：
+       cd /opt/yueops && MIGRATION_DB_USER=root \
+         MIGRATION_DB_PASSWORD="$PANEL_PGPASSWORD" \
+         python3 scripts/pull-subscribe-templates.py --merge
+     （它自动定位 base：仓库历史里最新的、内容曾经上线过的那个版本）
+
+  先查是谁写的、以及写了什么：
+    ssh bastion "... psql ... -c \"SELECT name, source, created_at FROM subscribe_template_revisions ORDER BY created_at DESC LIMIT 12;\""
+  确认合并结果正确之后再收敛：
+    # zh-CN 六行（在 bastion 上，注意 root ↔ PANEL_PGPASSWORD 配对）
+    MIGRATION_DB_USER=root MIGRATION_DB_PASSWORD="$PANEL_PGPASSWORD" \
+      python3 /opt/yueops/scripts/sync-subscribe-templates.py --apply
+    # en 六行（本机）
+    python3 scripts/i18n/apply-db-content.py --host 66.55.76.208 --only subscribe_templates --apply
+
+══ root-doc-truth 失败日志（尾 60 行）══
+FAIL: 事实卡记的 mihomo fork master=1a083cada1a41fce91e29a13e10da23efb4a15de ≠ 真 checkout 的 6d60af5d01c4a21aadba9bd4fb2d431242324b8d
+
+══ doc-path-truth 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ coverage-tracker 失败日志（尾 60 行）══
+OK coverage-tracker: 1551 rows valid
+/usr/bin/python3: No module named pytest
+
+══ brand-sources 失败日志（尾 60 行）══
+ok      yueboard/internal/platform/brand/brand.g.go
+ok      yueboard/packages/ui/src/brand.g.ts
+ok      yueops/packages/yue-web-kit/src/brand.g.ts
+ok      yueops/site/src/lib/brand.g.ts
+ok      yueops/yueops/brand_g.py
+ok      yuelink/lib/core/brand.g.dart
+brand sources: all 6 targets match design/sources/brand.json
+FAIL brand-literals: new hard-coded brand URLs; import the generated constants (Go internal/platform/brand, TS brand.g.ts, Python yueops/brand_g.py, Dart lib/core/brand.g.dart):
+  ✗ yueboard: https://app.xn--jdu596h.com 0 -> 1
+  ✗ yueboard: https://my.yue.to 3 -> 4
+  ✗ yueops: https://yue.to 46 -> 47
+
+══ wire-envelope-client 失败日志（尾 60 行）══
+scripts/check-all-contracts.sh: line 491: flutter: command not found
+
+══ fanout-cap-agreement 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ yuelink-board-golden 失败日志（尾 60 行）══
+yuelink-board-golden: FAIL（1 处）
+  [sums] SHA256SUMS: 登记集合与副本集合不等（只在 SUMS：['VERSION', 'manifest.json']；只在目录：[]）
+修法（先确认面板那份是 Go 测试重生成的，而不是手改的）：
+  cp yueboard/docs/contracts/yueboard-*.golden.json yuelink/test/contracts/yueboard/
+  # 面板已删掉的夹具：同时 git rm yuelink/test/contracts/yueboard/<那个文件>
+  (cd yuelink/test/contracts/yueboard && shasum -a 256 yueboard-*.golden.json > SHA256SUMS)
+  # 更新 yuelink/test/contracts/yueboard/README.md 的来源 revision 列，然后：
+  (cd yuelink && flutter test test/contracts/)
+  # 生产解析器跟不上新形状就修解析器；两仓分别提交，YueLink 与 Board 同批落地。
+
+══ proto-dead-fields 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ stash-dns-native-policy 失败日志（尾 60 行）══
+PASS: TestFleetACLStashDNSContract executed with Board resolvers and Ops production policy
+PASS: TestFleetXrayPolicyStashDNSContract executed with Board resolvers and Ops production policy
+/usr/bin/python3: No module named pytest
+
+══ stash-template-import 失败日志（尾 60 行）══
+Traceback (most recent call last):
+  File "/tmp/yt-premerge-mc3xh7fq/source/scripts/check-stash-template-contract.py", line 32, in <module>
+    raise SystemExit(check())
+                     ~~~~~^^
+  File "/tmp/yt-premerge-mc3xh7fq/source/scripts/check-stash-template-contract.py", line 26, in check
+    raise ValueError("Stash DNS policies differ between zh-CN and en")
+ValueError: Stash DNS policies differ between zh-CN and en
+
+══ subscription-default-layout 失败日志（尾 60 行）══
+PASS: 12 default templates; full node choices, order, defaults, references, locale parity and DNS domain-only feeds
+/usr/bin/python3: No module named pytest
+
+══ yueboard-node-wire 失败日志（尾 60 行）══
+/tmp/yt-premerge-mc3xh7fq/source/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+ERROR: found no collectors for /home/box/Projects/yueto/yueops/tests/test_yueboard_internal.py::test_node_wire_fields_match_pinned_yueboard_contract
+
+
+==================================== ERRORS ====================================
+_______________ ERROR collecting tests/test_yueboard_internal.py _______________
+ImportError while importing test module '/home/box/Projects/yueto/yueops/tests/test_yueboard_internal.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_yueboard_internal.py:12: in <module>
+    from yueops import nodeauth
+yueops/nodeauth.py:20: in <module>
+    import paramiko
+E   ModuleNotFoundError: No module named 'paramiko'
+1 error in 0.36s
+
+══ quic-reject-client-server 失败日志（尾 60 行）══
+scripts/check-all-contracts.sh: line 491: flutter: command not found
+
+══ ai-client-matrix 失败日志（尾 60 行）══
+check-ai-client-matrix: FAIL
+  ✗ yueboard 移除客户端家族 ['clash', 'clashmi', 'flclash', 'hiddify', 'karing', 'koala', 'loon', 'meta', 'mihomo', 'nekobox', 'nyanpasu', 'quantumult', 'sfa', 'sfi', 'sfm', 'sing box', 'sing-box', 'stash', 'surfboard', 'surge', 'verge'] —— AI 侧矩阵还在宣称支持
+
+同步三处后重跑：yueops prompt.py _CLIENT_SUPPORT_MATRIX（矩阵文案）、yueops intent.py _CLIENT_KW（意图词表）、生产 kb_documents 客户端文档。
+YueLink UI 漂移需同时复核真实页面接线、yuelink_ui_facts 共享事实与三个模型消费者。
+
+══ yueboard-schema-migrator 失败日志（尾 60 行）══
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', '-C', '/home/box/Projects/yueto/yueboard', 'status', '--porcelain=v1', '--untracked-files=all']' returned non-zero exit status 128.
+
+/usr/lib/python3.13/subprocess.py:577: CalledProcessError
+1 failed, 80 passed in 15.55s
+
+══ release-pin-converger-behavior 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ client-support-policy 失败日志（尾 60 行）══
+client-support-policy: 12 projections verified
+/usr/bin/python3: No module named pytest
+
+══ help-center-generated 失败日志（尾 60 行）══
+DRIFT yueops/telegram-bot/yue/miniapp/src/help/articles.g.json（与生成结果不一致）
+help: 生成块漂移——只改 help/articles 再跑 python3 help/build-help.py --write，绝不手改生成文件
+help: 23 篇文章（46 个语言文件）校验通过
+
+══ language-switch-contract 失败日志（尾 60 行）══
+language switch contract: FAIL
+  - missing contract source: yueops/telegram-bot/yue/miniapp/src/views/Language.tsx
+  - yueops/telegram-bot/yue/miniapp/src/views/Language.tsx lost language contract anchor: '<LanguagePill {...language} />'
+  - yueops/telegram-bot/yue/miniapp/src/views/Language.tsx lost language contract anchor: 'useLanguagePreference()'
+  - yueops/telegram-bot/yue/yueboard_internal.py lost language contract anchor: 'path = "/internal/yueops/telegram/locale"'
+  - yueops/telegram-bot/yue/yueboard_internal.py lost language contract anchor: '"source_epoch": epoch'
+  - yueops/telegram-bot/yue/yueboard_internal.py lost language contract anchor: '"update_id": native_update_id'
+  - yueops/telegram-bot/yue/yueboard_internal.py lost language contract anchor: '"observed_revision": observed'
+  - yueops/telegram-bot/yue/yueboard_internal.py lost language contract anchor: '"locale_state_revision"'
+  - yueops/telegram-bot/yue/yueboard_internal.py lost language contract anchor: 'if set(data) != expected_fields'
+  - yueops/telegram-bot/yue/yueboard_internal.py lost language contract anchor: 'or locale_state_revision <= observed'
+
+══ page-consistency-contract 失败日志（尾 60 行）══
+[page-consistency-contract] FAIL: 5 violation(s)
+  - workspace repositories lost inventoried surfaces: Xray-core, hysteria, quic-go, yuetube-video
+  - missing consistency source: yuetube-video/package.json
+  - yuetube-video/package.json is not a valid offline-media manifest
+  - yueops/tests/test_yueops_surface_consistency_20260821.py lost consistency anchor: 'test_miniapp_inventory_is_39_routes_37_views_and_uses_shared_shell'
+  - Telegram Mini App route/view inventory drifted; review every new or removed route
+
+══ schedule-registry 失败日志（尾 60 行）══
+schedule registry: FAIL
+  - 代码里有、注册表没有: bot:telegram-bot/yue/init_task/init_time_job.py:_referral_clawback_job
+  - 代码里有、注册表没有: systemd:yueops.systemd:yueops-release-root-clean-watch-all
+  - 代码里有、注册表没有: systemd:yueops.systemd:yueops-release-root-clean-watch-hot
+  - 代码里有、注册表没有: systemd:yueops.units:heavy-share-reset
+  - 代码里有、注册表没有: systemd:yueops:checkin-api-5xx-watch
+  - 代码里有、注册表没有: systemd:yueops:evening-speed-alert
+  - 代码里有、注册表没有: systemd:yueops:merged-not-live-watch
+  - 代码里有、注册表没有: systemd:yueops:node-class-health-guard
+  - 代码里有、注册表没有: systemd:yueops:panel-api-5xx-watch
+  - 代码里有、注册表没有: systemd:yueops:panel-payment-notify-5xx-watch
+  - 代码里有、注册表没有: systemd:yueops:user-api-5xx-watch
+  - 注册表有、代码里没有: systemd:yueops:gso-canary-guard
+  - apscheduler:checkin-api/main.py:_cleanup_ai_rate: on_failure 漂移 注册表='scheduler-receipt-alert' 代码='none'
+  - apscheduler:checkin-api/main.py:_cleanup_ai_rate: liveness 漂移 注册表='runtime-receipt-readyz' 代码='none'
+  - apscheduler:checkin-api/main.py:_drain_panel_ledger: on_failure 漂移 注册表='scheduler-receipt-alert' 代码='none'
+  - apscheduler:checkin-api/main.py:_drain_panel_ledger: liveness 漂移 注册表='runtime-receipt-readyz' 代码='none'
+  - apscheduler:checkin-api/main.py:_refresh_faq_cache: on_failure 漂移 注册表='scheduler-receipt-alert' 代码='none'
+  - apscheduler:checkin-api/main.py:_refresh_faq_cache: liveness 漂移 注册表='runtime-receipt-readyz' 代码='none'
+  - apscheduler:checkin-api/main.py:_ticket_worker: on_failure 漂移 注册表='scheduler-receipt-alert' 代码='none'
+  - apscheduler:checkin-api/main.py:_ticket_worker: liveness 漂移 注册表='runtime-receipt-readyz' 代码='none'
+  - apscheduler:checkin-api/main.py:clear_app_sign#1: on_failure 漂移 注册表='scheduler-receipt-alert' 代码='none'
+  - apscheduler:checkin-api/main.py:clear_app_sign#1: liveness 漂移 注册表='runtime-receipt-readyz' 代码='none'
+  - apscheduler:checkin-api/main.py:clear_app_sign#2: on_failure 漂移 注册表='scheduler-receipt-alert' 代码='none'
+  - apscheduler:checkin-api/main.py:clear_app_sign#2: liveness 漂移 注册表='runtime-receipt-readyz' 代码='none'
+  - apscheduler:checkin-api/main.py:retry_streak_settlements: on_failure 漂移 注册表='scheduler-receipt-alert' 代码='none'
+  - apscheduler:checkin-api/main.py:retry_streak_settlements: liveness 漂移 注册表='runtime-receipt-readyz' 代码='none'
+  - systemd:yueops:protocol-liveness-results-pull: cadence 漂移 注册表='OnUnitActiveSec=60s ; OnBootSec=30s' 代码='OnUnitActiveSec=60s ; OnBootSec=30s ; OnActiveSec=30s'
+  - systemd:yueops:protocol-liveness-results-pull: on_failure 漂移 注册表='protocol-liveness-results-unavailable.service' 代码='yue-tg-notify@%n.service'
+  - bot job_queue 周期任务数 42 超过 ratchet 41（冻结新增，改用 systemd timer 调 BFF）
+  修法：改完代码后 `python3 scripts/schedule/extract.py --write`，并给新条目补 on_failure/liveness。
+
+══ release-orchestration 失败日志（尾 60 行）══
+/tmp/yt-premerge-mc3xh7fq/source/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+
+==================================== ERRORS ====================================
+________ ERROR collecting tests/test_release_orchestration_20260831.py _________
+ImportError while importing test module '/home/box/Projects/yueto/yueops/tests/test_release_orchestration_20260831.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_release_orchestration_20260831.py:27: in <module>
+    from web.api import release as release_api  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web/api/release.py:32: in <module>
+    from ..audit import write_audit
+web/audit.py:19: in <module>
+    from .auth import require_role
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 1.28s
+
+══ release-yaml-projection-parity 失败日志（尾 60 行）══
+  SOURCE CHECK：允许已评审后继源码；不证明镜像已发布或生产已部署
+  OK    yueops/scripts/yue-node.image 已退役（不存在）
+  OK    yueops/scripts/yue-node.image.revision 已退役（不存在）
+  OK    yueops/scripts/yueboard.image 已退役（不存在）
+  OK    yueops/scripts/yueboard-schema-release.env 已退役（不存在）
+  OK    yueboard reviewed pin == desired cc0de351345d
+  已退役投影检查：4/4 份；reviewed pin 比较 1；漂移 0
+  GHCR：--offline，未比对（记录完整性与时效性未验证）
+/usr/bin/python3: No module named pytest
+
+══ release-yaml-signature 失败日志（尾 60 行）══
+  OK    release.yaml.asc 有效，schema 2，desired generation 313：由 CEF96E9A4ECB741C78329CA3FE2659E6AC769954（主钥 D9D3C6E59E7465BD07C2177142239A996FDA9F55）签出
+/usr/bin/python3: No module named pytest
+
+══ root-self-test-hygiene 失败日志（尾 60 行）══
+/usr/bin/python3: No module named pytest
+
+══ 跨仓契约汇总 ══
+  FAIL  root-selftests           退出码 1，用时 0s
+  FAIL  root-selftests-slow      退出码 1，用时 0s
+  FAIL  root-selftests-ledger    退出码 1，用时 0s
+  FAIL  agent-tooling            退出码 1，用时 0s
+  FAIL  reality-invocation-completion 退出码 1，用时 0s
+  FAIL  yueboard-migration-sequence 退出码 1，用时 0s
+  FAIL  pg18-skip-guard          退出码 1，用时 0s
+  FAIL  observer-install-owners  退出码 1，用时 0s
+  FAIL  client-diag-stages       退出码 1，用时 0s
+  FAIL  mihomo-ledger-agreement  退出码 1，用时 0s
+  SKIP  workspace-status-truth   仓未 checkout（Xray-core/.git, hysteria/.git, quic-go/.git, yuetube-video/.git）
+  PASS  vanity-alias-links       0s
+  FAIL  guard-ci-claims          退出码 1，用时 0s
+  FAIL  release-in-flight-lock   退出码 1，用时 0s
+  FAIL  release-chain-drivers    退出码 1，用时 1s
+  FAIL  toolchain-pin-agreement  退出码 1，用时 0s
+  SKIP  supply-chain-pins        仓未 checkout（yuetube-video/.github/dependabot.yml）
+  FAIL  typescript-pin-agreement 退出码 1，用时 0s
+  PASS  period-vocabulary        0s
+  FAIL  release-state-probes     退出码 1，用时 0s
+  FAIL  release-state-yuelink    退出码 1，用时 0s
+  FAIL  release-state-packages   退出码 1，用时 0s
+  FAIL  fleet-host-native-patch  退出码 1，用时 0s
+  FAIL  fleet-host-patch-hy2-only 退出码 1，用时 0s
+  FAIL  release-state-hy2-only   退出码 1，用时 0s
+  FAIL  release-state-inputs     退出码 1，用时 0s
+  PASS  lens-report-projection   0s
+  FAIL  ops-native-source-admission 退出码 1，用时 0s
+  FAIL  input-fingerprint-vendored 退出码 1，用时 0s
+  FAIL  relay-native-retire-prepared 退出码 1，用时 0s
+  PASS  relay-native-maintenance 15s
+  FAIL  subscribe-template-drift 退出码 1，用时 2s
+  FAIL  root-doc-truth           退出码 1，用时 0s
+  FAIL  doc-path-truth           退出码 1，用时 0s
+  PASS  design-tokens            0s
+  PASS  web-core-vendored        1s
+  PASS  design-tokens-generated  1s
+  FAIL  coverage-tracker         退出码 1，用时 0s
+  FAIL  brand-sources            退出码 1，用时 1s
+  PASS  design-tokens-yueboard   1s
+  PASS  responsive               0s
+  PASS  entry-bucket-capacity    1s
+  PASS  registry-links           0s
+  PASS  panel-deep-links         1s
+  PASS  template-infra-direct    1s
+  PASS  telegram-bind-closure    0s
+  PASS  idempotency-catalog      0s
+  PASS  design-token-gate        5s
+  PASS  wire-envelope-server     2s
+  FAIL  wire-envelope-client     退出码 127，用时 0s
+  PASS  yuelink-import-boundary  0s
+  PASS  surface-runtime-standards 0s
+  PASS  speed-limit-ladder       0s
+  FAIL  fanout-cap-agreement     退出码 1，用时 0s
+  PASS  wire-envelope-cross      0s
+  PASS  connection-attempt-wire  0s
+  FAIL  yuelink-board-golden     退出码 1，用时 0s
+  FAIL  proto-dead-fields        退出码 1，用时 0s
+  PASS  native-node-yue-node     0s
+  FAIL  stash-dns-native-policy  退出码 1，用时 4s
+  FAIL  stash-template-import    退出码 1，用时 0s
+  FAIL  subscription-default-layout 退出码 1，用时 1s
+  PASS  subscription-native-layout 2s
+  PASS  native-node-yueops       1s
+  FAIL  yueboard-node-wire       退出码 4，用时 0s
+  PASS  native-node-yueboard     0s
+  PASS  device-identity-yuelink  0s
+  FAIL  quic-reject-client-server 退出码 127，用时 0s
+  PASS  unit-transfer-enable     0s
+  FAIL  ai-client-matrix         退出码 1，用时 0s
+  PASS  refund-reason-codes      0s
+  PASS  subscribe-renderer-parity 3s
+  PASS  vless-encryption-capability 4s
+  PASS  miniapp-auth-e2e         2s
+  PASS  yueops-db-write-boundary 5s
+  PASS  yueops-db-read-ratchet   11s
+  PASS  yueops-panel-table-universe 0s
+  PASS  payment-outbox-boundary  1s
+  PASS  origin-spread-contract   0s
+  PASS  capability-error-strings 0s
+  PASS  epoch-timestamptz-migration 3s
+  PASS  yueboard-release-pin     0s
+  PASS  release-pin-projection-parity 1s
+  PASS  privacy-no-source-ip     1s
+  PASS  managed-direct-domains   0s
+  PASS  fleet-acl-kernel-parse   20s
+  PASS  acl-policy-disclosure    2s
+  PASS  yueops-journald-retention 1s
+  SKIP  xray-mph-compaction-equivalence 仓未 checkout（Xray-core/common/geodata/strmatcher）
+  PASS  node-abuser-watch-retired 0s
+  PASS  datetime-hygiene         8s
+  FAIL  yueboard-schema-migrator 退出码 1，用时 16s
+  PASS  yueboard-runtime-acl     2s
+  FAIL  release-pin-converger-behavior 退出码 1，用时 0s
+  FAIL  i18n: 2 guard failure(s); see combined root cause above
+  FAIL  client-support-policy    退出码 1，用时 0s
+  FAIL  help-center-generated    退出码 1，用时 0s
+  PASS  i18n-infonode-exclusion  0s
+  FAIL  language-switch-contract 退出码 1，用时 7s
+  FAIL  page-consistency-contract 退出码 1，用时 2s
+  PASS  hy2-obfs-client-contract 0s
+  FAIL  schedule-registry        退出码 1，用时 2s
+  FAIL  release-orchestration    退出码 2，用时 2s
+  FAIL  release-yaml-projection-parity 退出码 1，用时 1s
+  FAIL  release-yaml-signature   退出码 1，用时 0s
+  PASS  claude-rules             0s
+  PASS  skill-frontmatter        0s
+  FAIL  root-self-test-hygiene   退出码 1，用时 0s
+
+  跑了 106 项 · 失败 53 项 · 跳过 3 项
+  跳过的项是因为对应的仓不在这个 checkout 里，或 pytest 整模块跳过（被测对象缺席）——全量校验请在完整工作区跑。
+
+契约被破坏。上面每条守卫的输出都写了确切的修法；放宽守卫不是修法。
+运行 scripts/regen-generated.sh

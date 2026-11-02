@@ -1,0 +1,15 @@
+repo=yueto ref=a64adbb3905b70a2e56e31f2c0e42f868e78bbaa workers=2 logs=/tmp/yt-premerge-dp04l8il
+sibling=yueops ref=17ad41f7ea1e442388bc52da2c4d7a7042a89554
+sibling=yueboard ref=cc0de351345d9d84b1269d8b0bd46102e44e8c12
+sibling=yuelink ref=ea6d4bc32e1bc9c4bc870775cb9ed0a4b0919cf7
+sibling=yuelink-ci ref=1882b67f405452e573286f24fbbe7b13c7735eaf
+sibling=yueto-ci ref=a3a155fc29267f1660db5eb82dcc59f6f98e9b91
+sibling=yue-node ref=7445d9fc04b03c714f9c7eba9e52d1dae5200d51
+contracts: FAIL (log: /tmp/yt-premerge-dp04l8il/contracts.log)
+fast-check: FAIL (log: /tmp/yt-premerge-dp04l8il/fast-check.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+contracts                    FAIL     1
+fast-check                   FAIL     128
+Private logs: /tmp/yt-premerge-dp04l8il
