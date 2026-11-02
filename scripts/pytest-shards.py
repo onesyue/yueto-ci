@@ -1786,10 +1786,64 @@ def admit_first_native_helper(common, files, source_revision):
     return {p: v for p, v in common.items() if p != path}, files
 
 
+MINIAPP_MEMBERSHIP_TRANSITION_SHA256 = "ca92f22e6699afa5e9dd48457b79968d8cfb540a43c6e2f7d715158423703638"
+MINIAPP_MEMBERSHIP_INPUT = "tests/_miniapp_source.py"
+
+
+def reviewed_miniapp_membership_transition():
+    """Codex-reviewed successor of one shared input, kept outside the sealed skip baseline.
+
+    The record follows the historical transition format (plus a reviewer label);
+    storing it separately leaves every sealed prior_baseline_sha256 untouched.
+    """
+    value = read_json(ROOT / "ops-shared-input-successors.json")
+    record = value.get("reviewed_miniapp_membership_transition")
+    require(value.get("schema") == 1 and isinstance(record, dict) and set(record) == {
+        "schema", "reviewer", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "source_freeze_sha256",
+        "qualification_receipt_sha256", "changes",
+    } and record["schema"] == 1, "invalid miniapp membership transition")
+    require(sha(encoded(record)) == MINIAPP_MEMBERSHIP_TRANSITION_SHA256,
+            "unreviewed miniapp membership transition identity")
+    require(record["prior_baseline_sha256"] == sha((ROOT / "ops-pytest-skip-baseline.json").read_bytes()),
+            "miniapp membership transition changed historical baseline")
+    require(all(re.fullmatch(r"[0-9a-f]{64}", record[k]) and record[k] != "0" * 64
+                for k in ("independent_review_sha256", "source_freeze_sha256",
+                          "qualification_receipt_sha256")),
+            "miniapp membership review or qualification missing")
+    changes = record["changes"]
+    require(set(changes) == {MINIAPP_MEMBERSHIP_INPUT}, "unreviewed miniapp membership paths")
+    change = changes[MINIAPP_MEMBERSHIP_INPUT]
+    require(set(change) == {"before_blob", "after_blob", "mode", "source"}
+            and SHA.fullmatch(change["before_blob"]) and SHA.fullmatch(change["after_blob"])
+            and change["before_blob"] != change["after_blob"] and change["mode"] == "100644"
+            and change["source"] == record["source_after"] != record["source_before"],
+            "invalid miniapp membership blob, mode or source")
+    return record
+
+
+def admit_miniapp_membership(common, files, source_revision):
+    """Swap the reviewed after-blob back to its predecessor, only at the signed release pin."""
+    if not isinstance(common, dict) or MINIAPP_MEMBERSHIP_INPUT not in common:
+        return common, files
+    change = reviewed_miniapp_membership_transition()["changes"][MINIAPP_MEMBERSHIP_INPUT]
+    if common[MINIAPP_MEMBERSHIP_INPUT] != change["after_blob"]:
+        return common, files
+    require(source_revision == first_native_policy()["source_revision"],
+            "miniapp membership successor requires the signed release pin")
+    common = dict(common) | {MINIAPP_MEMBERSHIP_INPUT: change["before_blob"]}
+    if files is not None:
+        require(files.get(MINIAPP_MEMBERSHIP_INPUT) == (change["mode"], change["after_blob"]),
+                "miniapp membership input mode or tree changed")
+        files = dict(files) | {MINIAPP_MEMBERSHIP_INPUT: (change["mode"], change["before_blob"])}
+    return common, files
+
+
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
     common, files = admit_first_native_helper(common, files, source_revision)
+    common, files = admit_miniapp_membership(common, files, source_revision)
     baseline, security = reviewed_npm_security_transition(baseline)
     if security is not None:
         require(isinstance(common, dict), "npm security inputs must be a mapping")

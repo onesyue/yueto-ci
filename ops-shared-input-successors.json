@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "reviewed_miniapp_membership_transition": {
+    "schema": 1,
+    "reviewer": "Codex (codex-cli 0.166.0, independent, read-only sandbox)",
+    "prior_baseline_sha256": "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d",
+    "source_before": "6e21e7b313cf829b374f4d1f429bb633115ba020",
+    "source_after": "54f9d8250b61cd75ddde7a4ab301f0e05e6da467",
+    "independent_review_sha256": "ee90b2ba7bd370b600a798391590d3ee73e2084af88ccb4a1ff1cb082513dc65",
+    "source_freeze_sha256": "87741af32e440bd466838ee4b31aade52b40f3992ad49986b1a06617a786c4bd",
+    "qualification_receipt_sha256": "ab7758d5a37ecf7b57331135e903e9ce9b403761d934a1d261b1844d3061fc43",
+    "changes": {
+      "tests/_miniapp_source.py": {
+        "before_blob": "11f219d4fedc809863f4cd5d747a34cce6abd0ad",
+        "after_blob": "4ab8f017a00cf63f3d0f2f208d8fd37cb6c152f4",
+        "mode": "100644",
+        "source": "54f9d8250b61cd75ddde7a4ab301f0e05e6da467"
+      }
+    }
+  }
+}
