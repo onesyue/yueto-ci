@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 271,
+  "head": "38e630fd4cd8fb6887a8eaf2f63bb5894a888402",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "38e630fd4cd8fb6887a8eaf2f63bb5894a888402",
+    "artifact": "reviews/merge-receipts-20261102/yueops-271.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T14:36:07Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "38e630fd4cd8fb6887a8eaf2f63bb5894a888402",
+    "command": "python3 -m pytest -q -p no:randomly tests/test_authority_failure_detail_20261028.py tests/test_credential_gitleaks_evidence_20260822.py tests/test_node_service_observe_install_gate_20260926.py tests/test_orphan_table_inventory_20260920.py tests/test_users_secret_columns_least_privilege_20260923.py",
+    "log_sha256": "df176d4e90f248c0802f6e71043f29ffe4f6e14158aa3b1bf91635cf7fd385d7",
+    "ran_at": "2026-11-02T14:36:28Z",
+    "runner": "box"
+  }
+}
