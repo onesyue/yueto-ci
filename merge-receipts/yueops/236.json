@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 236,
+  "head": "85d816e1895393a7301e4703d554c8b84a190de3",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "85d816e1895393a7301e4703d554c8b84a190de3",
+    "artifact": "reviews/merge-receipts-20261102/yueops-236.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T15:41:08Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "85d816e1895393a7301e4703d554c8b84a190de3",
+    "command": "cd telegram-bot/yue/miniapp && npm ci --ignore-scripts --no-audit --no-fund && npm run build --if-present",
+    "log_sha256": "74f786765225ea06d2eb59de82dd6e15a31958d6349501c9d9a90f486be80a76",
+    "ran_at": "2026-11-02T14:20:29Z",
+    "runner": "box"
+  }
+}

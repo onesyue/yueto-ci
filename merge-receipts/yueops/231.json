@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 231,
+  "head": "af53fb7e8884e8edacf675956e7c5c6abc386e96",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "af53fb7e8884e8edacf675956e7c5c6abc386e96",
+    "artifact": "reviews/merge-receipts-20261102/yueops-231.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T16:56:39Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "af53fb7e8884e8edacf675956e7c5c6abc386e96",
+    "command": "for t in debbuild acmebuild verifytools; do docker build --progress=plain --no-cache --target $t -f services/yueops-web/Dockerfile .; echo \"$t rc=$?\"; done",
+    "log_sha256": "7f5c017c3645ac3ce4dbc788b9155078ea60b8344fa2be1daf645ad021918222",
+    "ran_at": "2026-11-02T16:59:33Z",
+    "runner": "box"
+  }
+}

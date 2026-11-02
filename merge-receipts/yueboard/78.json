@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 78,
+  "head": "845fb839c77cc8f5d4cfd10f3df7efadb20751d1",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "845fb839c77cc8f5d4cfd10f3df7efadb20751d1",
+    "artifact": "reviews/merge-receipts-20261102/yueboard-78.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T15:50:25Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "845fb839c77cc8f5d4cfd10f3df7efadb20751d1",
+    "command": "go vet ./internal/modules/subscribe/ && go test ./internal/modules/subscribe/ && python3 -m pytest -q scripts/ci/test_renumber_migration.py 2>&1 || /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q scripts/ci/test_renumber_migration.py",
+    "log_sha256": "04bc8c56345ca896fbff8d46c51462e9cf3e5db125cf03c1ab6698aa7639c6e5",
+    "ran_at": "2026-11-02T15:49:27Z",
+    "runner": "box"
+  }
+}

@@ -1,0 +1,103 @@
+go: downloading golang.org/x/crypto v0.57.0
+go: downloading go.yaml.in/yaml/v3 v3.0.5
+go: downloading connectrpc.com/validate v0.7.0
+go: downloading connectrpc.com/connect v1.21.0
+go: downloading google.golang.org/genproto/googleapis/rpc v0.0.0-20260921155816-b14227669459
+go: downloading golang.org/x/net v0.60.0
+go: downloading github.com/andybalholm/brotli v1.2.5
+go: downloading github.com/klauspost/compress v1.20.1
+go: downloading go.opentelemetry.io/otel v1.46.0
+go: downloading go.opentelemetry.io/otel/trace v1.46.0
+go: downloading golang.org/x/image v0.46.0
+go: downloading github.com/sethvargo/go-retry v0.4.0
+go: downloading go.opentelemetry.io/otel/metric v1.46.0
+go: downloading google.golang.org/genproto/googleapis/api v0.0.0-20260921155816-b14227669459
+go: downloading github.com/fxamacker/cbor/v2 v2.9.4
+go: downloading golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba
+ok  	github.com/onesyue/yueboard/internal/modules/nodesync	13.592s
+?   	github.com/onesyue/yueboard/internal/platform/actionledger	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/antigfw	0.154s
+ok  	github.com/onesyue/yueboard/internal/platform/apiresp	3.122s
+ok  	github.com/onesyue/yueboard/internal/platform/apptime	0.003s
+ok  	github.com/onesyue/yueboard/internal/platform/audit	1.151s
+ok  	github.com/onesyue/yueboard/internal/platform/auth	0.046s
+?   	github.com/onesyue/yueboard/internal/platform/auth/store	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/authattempt	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/brand	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/commission	0.019s
+ok  	github.com/onesyue/yueboard/internal/platform/commissiontier	0.037s
+?   	github.com/onesyue/yueboard/internal/platform/commissiontier/store	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/controltoken	0.006s
+ok  	github.com/onesyue/yueboard/internal/platform/credentialreset	1.433s
+?   	github.com/onesyue/yueboard/internal/platform/dailyclaim	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/db	1.940s
+ok  	github.com/onesyue/yueboard/internal/platform/dbreserve	0.030s
+ok  	github.com/onesyue/yueboard/internal/platform/devicecount	3.238s
+ok  	github.com/onesyue/yueboard/internal/platform/deviceidentity	0.011s
+ok  	github.com/onesyue/yueboard/internal/platform/devicelimit	0.015s
+ok  	github.com/onesyue/yueboard/internal/platform/economy	0.279s
+ok  	github.com/onesyue/yueboard/internal/platform/emailaddr	0.023s
+ok  	github.com/onesyue/yueboard/internal/platform/entitlement	0.004s
+ok  	github.com/onesyue/yueboard/internal/platform/entrypath	0.005s
+ok  	github.com/onesyue/yueboard/internal/platform/entryretire	0.026s
+ok  	github.com/onesyue/yueboard/internal/platform/entrysalt	0.180s
+ok  	github.com/onesyue/yueboard/internal/platform/envflag	0.014s
+?   	github.com/onesyue/yueboard/internal/platform/epochtz	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/errcode	0.011s
+ok  	github.com/onesyue/yueboard/internal/platform/fairuse	0.050s
+ok  	github.com/onesyue/yueboard/internal/platform/featureflag	0.016s
+ok  	github.com/onesyue/yueboard/internal/platform/fleetegress	0.032s
+?   	github.com/onesyue/yueboard/internal/platform/funnel	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/goldenfile	0.530s
+ok  	github.com/onesyue/yueboard/internal/platform/growthtransport	0.009s
+ok  	github.com/onesyue/yueboard/internal/platform/httpencoding	0.022s
+ok  	github.com/onesyue/yueboard/internal/platform/i18n	0.031s
+ok  	github.com/onesyue/yueboard/internal/platform/idempotency	0.328s
+ok  	github.com/onesyue/yueboard/internal/platform/inbox	0.020s
+ok  	github.com/onesyue/yueboard/internal/platform/internalauth	0.030s
+ok  	github.com/onesyue/yueboard/internal/platform/ipfingerprint	0.030s
+ok  	github.com/onesyue/yueboard/internal/platform/ipgeo	0.015s
+ok  	github.com/onesyue/yueboard/internal/platform/mail	0.635s
+ok  	github.com/onesyue/yueboard/internal/platform/mailtheme	0.054s
+ok  	github.com/onesyue/yueboard/internal/platform/metrics	0.326s
+ok  	github.com/onesyue/yueboard/internal/platform/money	0.011s
+ok  	github.com/onesyue/yueboard/internal/platform/nativeproto	0.030s
+ok  	github.com/onesyue/yueboard/internal/platform/nodeservice	0.012s
+ok  	github.com/onesyue/yueboard/internal/platform/onlinestate	0.004s
+ok  	github.com/onesyue/yueboard/internal/platform/orderfulfill	0.017s
+ok  	github.com/onesyue/yueboard/internal/platform/ordertype	0.898s
+ok  	github.com/onesyue/yueboard/internal/platform/otelobs	0.031s
+?   	github.com/onesyue/yueboard/internal/platform/outagecomp	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/outbox	0.016s
+ok  	github.com/onesyue/yueboard/internal/platform/passwordhash	3.969s
+ok  	github.com/onesyue/yueboard/internal/platform/paymethod	0.055s
+ok  	github.com/onesyue/yueboard/internal/platform/period	1.057s
+ok  	github.com/onesyue/yueboard/internal/platform/pluginconfig	0.012s
+ok  	github.com/onesyue/yueboard/internal/platform/pluginsecret	1.749s
+?   	github.com/onesyue/yueboard/internal/platform/promocode	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/quotaidentity	0.028s
+ok  	github.com/onesyue/yueboard/internal/platform/ratelimit	0.207s
+ok  	github.com/onesyue/yueboard/internal/platform/referencelock	0.027s
+?   	github.com/onesyue/yueboard/internal/platform/reminderrules	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/resetschedule	1.491s
+ok  	github.com/onesyue/yueboard/internal/platform/resource	0.082s
+ok  	github.com/onesyue/yueboard/internal/platform/safego	1.019s
+ok  	github.com/onesyue/yueboard/internal/platform/secureurl	0.014s
+ok  	github.com/onesyue/yueboard/internal/platform/serverroute	0.010s
+ok  	github.com/onesyue/yueboard/internal/platform/settings	0.044s
+ok  	github.com/onesyue/yueboard/internal/platform/speedpolicy	0.031s
+ok  	github.com/onesyue/yueboard/internal/platform/subscribeurl	0.094s
+ok  	github.com/onesyue/yueboard/internal/platform/ticketattachment	0.047s
+ok  	github.com/onesyue/yueboard/internal/platform/ticketcategory	0.007s
+ok  	github.com/onesyue/yueboard/internal/platform/tickettext	0.007s
+ok  	github.com/onesyue/yueboard/internal/platform/tokenvault	0.592s
+ok  	github.com/onesyue/yueboard/internal/platform/toolchain	0.670s
+ok  	github.com/onesyue/yueboard/internal/platform/totp	0.020s
+ok  	github.com/onesyue/yueboard/internal/platform/tracectx	0.031s
+?   	github.com/onesyue/yueboard/internal/platform/trafficledger	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/typedsearch	0.007s
+ok  	github.com/onesyue/yueboard/internal/platform/upstream	0.556s
+?   	github.com/onesyue/yueboard/internal/platform/user360	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/verify	0.021s
+ok  	github.com/onesyue/yueboard/internal/platform/withdrawpolicy	0.004s
+ok  	github.com/onesyue/yueboard/internal/platform/withdrawrisk	0.062s

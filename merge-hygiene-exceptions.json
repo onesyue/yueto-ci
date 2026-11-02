@@ -114,6 +114,24 @@
       "pr": 71,
       "reason": "Merged 2026-11-02 18:07 SGT at head 3412d74eb7739f7f851a941b0a37ab4157b86de4 (receipt backfill + enforcement). GitHub check 'policy tests + workflow lint' SUCCESS on that head; committed artifacts reviews/merge-receipts-20261102/enforcement-review.md, enforcement-policy.log, enforcement-targeted.log. Missing evidence: no merge-receipts/yueto-ci/71.json and no approving review recorded on the PR; the enforcement-review artifact was not verified to be bound to the final head 3412d74e.",
       "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueops",
+      "pr": 267,
+      "reason": "Post-merge independent Codex review of 9c63e04f3be50e115d319d01ced5dc694b22f4b6 returned CHANGES: [P2] tests/test_service_role_grants_20261102.py:277 CTE-name exclusion is not query-scoped, so a nested CTE shadowing a real table can hide a column-grant requirement (reviews/merge-receipts-20261102/yueops-267-review-changes.txt). Exact-head box parity passed (66 passed, 26 skipped; yueops-267.log). Missing evidence: an approving independent review. Follow-up fix branch cx/grants-cte-scope-1102. This registration records the unresolved finding, not a claim that it is fixed. Update 2026-11-03: the follow-up fix yueops #281 merged (489a1f8e) and resolved the original finding, but the resolution review (reviews/merge-receipts-20261102/yueops-267-resolution-review-changes.txt) found a second P2: qualified-column alias misattribution at tests/test_service_role_grants_20261102.py:306 (a false positive that fails closed). Fix in progress on cx/grants-alias-scope-1103.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueops",
+      "pr": 273,
+      "reason": "Post-merge independent Codex review of 15b21d4d72c26d65fba9e7fe4a9eea017b362b27 returned CHANGES: [P2] failure-cap exit skipped the owner-hold summary (reviews/merge-receipts-20261102/yueops-273-review-changes.txt). Exact-head box parity passed (yueops-273.log). Missing evidence: an approving independent review of #273's own head; none exists, so no receipt is claimed. Resolution recorded separately: the fix merged as yueops #282 (475a669b), and a resolution review covering #273+#282 together approved (reviews/merge-receipts-20261102/yueops-273.md). This registration records that #273's head as merged contained the defect.",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 52,
+      "reason": "Two independent Codex reviews of exact head 4cef3672de11336d76d739728ad482aecf99558a disagree: the Mac review approved (reviews/merge-receipts-20261102/yueboard-52.md) but the box review returned CHANGES: [P2] ShadowReplay at internal/modules/usagepolicy/abuse.go:501 does not apply the single-signal filter (reviews/merge-receipts-20261102/yueboard-52-box-review.txt). Exact-head box parity passed (yueboard-52.log). Because #52's head as merged contained that defect, no receipt is claimed for it. Resolution recorded separately: the fix merged as yueboard #92 (96d6241d) with its own approving review and parity (merge-receipts/yueboard/92.json).",
+      "approver": "xiaoming su 2026-11-02 15:36 no-human-approval decision"
     }
   ]
 }
