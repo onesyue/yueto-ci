@@ -15,9 +15,9 @@
   "parity": {
     "result": "pass",
     "head": "5ac7132669ce7019047e3dfde6881b6c8d7c9f4f",
-    "command": "none (no Go packages changed); git diff --check ffa6cfcba03b2f225635f79627a34ae740879967 5ac7132669ce7019047e3dfde6881b6c8d7c9f4f",
-    "log_sha256": "210fad64868fd3eea1a1244fc86777b754e8dca7d530fe1850cf4458c66970dd",
-    "ran_at": "2026-11-02T16:57:53Z",
+    "command": "pnpm install --frozen-lockfile --ignore-scripts",
+    "log_sha256": "78420ee1b312ed6bb3c074f2175eacbc00e33e6a2af3235cf499eb08d6bb2d2f",
+    "ran_at": "2026-11-02T17:26:21Z",
     "runner": "box"
   }
 }

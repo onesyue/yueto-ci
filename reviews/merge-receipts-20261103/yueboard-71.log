@@ -1,3 +1,24 @@
-head=5ac7132669ce7019047e3dfde6881b6c8d7c9f4f ran_at=2026-11-02T16:57:53Z runner=box
-cmd: none (no Go packages changed); git diff --check ffa6cfcba03b2f225635f79627a34ae740879967 5ac7132669ce7019047e3dfde6881b6c8d7c9f4f
+head=5ac7132669ce7019047e3dfde6881b6c8d7c9f4f ran_at=2026-11-02T17:26:21Z runner=box
+cmd: pnpm install --frozen-lockfile --ignore-scripts
+! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-11.27.1.tgz
+Scope: all 6 workspace projects
+? Verifying lockfile against supply-chain policies (391 entries)...
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +285
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 285, reused 99, downloaded 0, added 0
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: /home/box/.local/share/pnpm/store/v11
+  Virtual store is at:             node_modules/.pnpm
+✓ Lockfile passes supply-chain policies (391 entries in 2s)
+Progress: resolved 285, reused 196, downloaded 83, added 49
+Progress: resolved 285, reused 196, downloaded 89, added 285, done
+
+devDependencies:
++ oxfmt 0.70.0
++ oxlint 1.85.0
++ oxlint-tsgolint 7.0.2002
+
+Done in 3.5s using pnpm v11.27.1
 rc=0
