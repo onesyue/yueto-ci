@@ -1,0 +1,8 @@
+VERDICT: changes
+- [P2] `docs/RUNBOOK.md:172` — The SQL exception permits leaving maintenance without the quota, reachability, TLS and UDP/443 checks enforced by `web/api/servers.py:129–139`. Require the existing pool recovery procedure before changing maintenance to direct; approval, CAS and post-change observation do not establish readiness.
+- [P2] `docs/RUNBOOK.md:178` — Stopping the timer does not stop an already-running reconciler. It can overwrite the manually inserted withdrawal state from its in-memory snapshot, leaving recovery stuck. Require waiting for the service to finish and holding `/run/lock/yueops-direct-pool-dns.lock` during the state update, then explicitly restart the timer.
+tokens used
+32,171
+VERDICT: changes
+- [P2] `docs/RUNBOOK.md:172` — The SQL exception permits leaving maintenance without the quota, reachability, TLS and UDP/443 checks enforced by `web/api/servers.py:129–139`. Require the existing pool recovery procedure before changing maintenance to direct; approval, CAS and post-change observation do not establish readiness.
+- [P2] `docs/RUNBOOK.md:178` — Stopping the timer does not stop an already-running reconciler. It can overwrite the manually inserted withdrawal state from its in-memory snapshot, leaving recovery stuck. Require waiting for the service to finish and holding `/run/lock/yueops-direct-pool-dns.lock` during the state update, then explicitly restart the timer.

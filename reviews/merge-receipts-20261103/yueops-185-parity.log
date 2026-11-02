@@ -1,0 +1,9 @@
+head=9ebe0740823391f5a526961c6f0abb8b7dc06315 ran_at=2026-11-02T18:14:51Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile tests/test_ipv6_egress_guard_20261010.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_ipv6_egress_guard_20261010.py  && for f in scripts/audit-ipv6-egress.sh ; do bash -n $f || exit 1; done && shellcheck -S error scripts/audit-ipv6-egress.sh  && git diff --check efd30ac3d588639a0c4339cc8fe7ec7495e15317 9ebe0740823391f5a526961c6f0abb8b7dc06315
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+.........................................................                [100%]
+57 passed in 5.72s
+rc=0

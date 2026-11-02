@@ -1,0 +1,3 @@
+head=7f150ae3960b8c48c01d693ff3164d8a6b6d3dea ran_at=2026-11-02T18:14:42Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile telegram-bot/yue/service/yue_games.py tests/_miniapp_source.py  && git diff --check 67fb445aadcc531f9b58409e4f8b8b1e9bc8f9bc 7f150ae3960b8c48c01d693ff3164d8a6b6d3dea
+rc=0

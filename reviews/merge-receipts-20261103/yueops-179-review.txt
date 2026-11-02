@@ -1,0 +1,10 @@
+已审查指定 diff；目标提交的 34 个 URL 用例及配置刷新内存校验通过。未修改文件，未运行完整测试套件。
+
+VERDICT: changes
+- [P2] `telegram-bot/yue/service/miniapp_membership_hint.py:63`：新增设置名 `miniapp_membership_purchase_hint` 不在当前 YueBoard 的 `yueOpsReadableSettings` 白名单中，读取会返回 400，异常被吞掉后始终展示默认文案，后台配置无法生效。需配套加入服务端白名单并覆盖真实接口契约；现有测试模拟读取成功，未发现此问题。
+tokens used
+56,371
+已审查指定 diff；目标提交的 34 个 URL 用例及配置刷新内存校验通过。未修改文件，未运行完整测试套件。
+
+VERDICT: changes
+- [P2] `telegram-bot/yue/service/miniapp_membership_hint.py:63`：新增设置名 `miniapp_membership_purchase_hint` 不在当前 YueBoard 的 `yueOpsReadableSettings` 白名单中，读取会返回 400，异常被吞掉后始终展示默认文案，后台配置无法生效。需配套加入服务端白名单并覆盖真实接口契约；现有测试模拟读取成功，未发现此问题。
