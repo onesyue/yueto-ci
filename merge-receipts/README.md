@@ -55,8 +55,18 @@ and satisfied findings. Any remaining findings still produce their own
 UNREGISTERED/REGISTERED line and retain the existing exit-code semantics.
 Malformed or inaccessible receipts produce audit incomplete (exit 2), even if
 an exception exists. After yueto-ci #71 merges, every PR merged strictly later
-requires a valid receipt; exceptions cannot waive any of its findings, including
+requires a valid receipt unless evidence-only (below); exceptions cannot waive any of its findings, including
 red or pending checks. The activation PR and older PRs retain historical rules.
 See the root README for the lane premerge command and companion evidence flow.
 `--premerge <repo> <pr>` requires committed, non-backfilled evidence for the live
-open PR head even before activation.
+open PR head even before activation, except for evidence-only PRs.
+
+An **evidence-only** PR in `yueto-ci` adds or modifies files exclusively under
+`merge-receipts/` or `reviews/merge-receipts-*/`. These PRs stop the
+receipt-of-receipt chain: both the audit and `--premerge` waive the receipt
+requirement and only the missing approval/check-evidence findings. They still
+need normal branch rules; red, pending and unknown checks remain findings.
+Clean rows include `"evidence_only": true` and print as `EVIDENCE-ONLY`.
+Mixed source/evidence PRs, removed or renamed files, and other repositories use
+normal rules. File lists are paginated; API errors, lists of 3,000 or more files,
+or a previous filename outside the allowed paths make the audit incomplete.

@@ -205,6 +205,35 @@ def enforcement_cutoff(owner):
     return None
 
 
+def evidence_only(owner, repo, base_sha, head_sha):
+    if repo != "yueto-ci":
+        return False
+    if any(not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha)
+           for sha in (base_sha, head_sha)):
+        raise ValueError("invalid PR base or head SHA")
+    # Compare uses the merge base of these immutable commits. The mutable PR
+    # files endpoint can describe another head even if a refetch sees A -> B -> A.
+    comparison = api(f"repos/{owner}/{repo}/compare/{base_sha}...{head_sha}")
+    if not isinstance(comparison, dict):
+        raise ValueError("invalid compare response; audit incomplete")
+    files = comparison.get("files")
+    total = comparison.get("total_commits")
+    if (not isinstance(files, list) or len(files) >= 300
+            or type(total) is not int or total < 0 or bool(total) != bool(files)):
+        raise ValueError("compare file evidence missing, truncated or inconsistent; audit incomplete")
+
+    def allowed(path):
+        return (isinstance(path, str) and ".." not in path.split("/")
+                and re.fullmatch(r"(?:merge-receipts/|reviews/merge-receipts-[^/]+/).+", path)
+                is not None)
+
+    for entry in files:
+        if "previous_filename" in entry and not allowed(entry["previous_filename"]):
+            raise ValueError("previous filename outside evidence paths; audit incomplete")
+    return bool(files) and all(entry["status"] in ("added", "modified")
+                               and allowed(entry["filename"]) for entry in files)
+
+
 def audit(owner, repos, cutoff, registered, now):
     enforced_since = enforcement_cutoff(owner)
     # Post-activation violations cannot age out through --hours or a quiet repo.
@@ -224,6 +253,10 @@ def audit(owner, repos, cutoff, registered, now):
                     pr, all_rows(f'{prefix}/pulls/{pr["number"]}/reviews'),
                     all_rows(f"{prefix}/commits/{sha}/check-runs?filter=all", "check_runs"),
                     all_rows(f"{prefix}/commits/{sha}/statuses"))
+                only_evidence = evidence_only(owner, repo, pr["base"]["sha"], sha)
+                if only_evidence:
+                    reasons = [r for r in reasons if r not in (
+                        "no_approving_review_at_merge", "no_check_evidence_at_merge")]
                 evidence = receipt(repo, pr)
                 satisfied = []
                 if evidence:
@@ -231,13 +264,14 @@ def audit(owner, repos, cutoff, registered, now):
                         "no_approving_review_at_merge", "no_check_evidence_at_merge")]
                     reasons = [r for r in reasons if r not in satisfied]
                 required = enforced_since is not None and timestamp(pr["merged_at"]) > enforced_since
-                if required and not evidence:
+                if required and not evidence and not only_evidence:
                     reasons.append("required_merge_receipt_missing")
-                if reasons or evidence:
+                if reasons or evidence or only_evidence:
                     results.append({"repo": repo, "pr": pr["number"], "url": pr["html_url"],
                                     "head": sha, "merged_at": pr["merged_at"], "findings": reasons,
                                     "exception": None if required else registered.get((repo, pr["number"])),
-                                    "receipt": evidence, "satisfied_by_receipt": satisfied})
+                                    "receipt": evidence, "satisfied_by_receipt": satisfied,
+                                    **({"evidence_only": True} if only_evidence else {})})
             if batch and timestamp(batch[-1]["updated_at"]) < cutoff:
                 break
     return results
@@ -248,13 +282,19 @@ def premerge(owner, repo, number):
     pr = api(f"{prefix}/pulls/{number}")
     if pr["number"] != number or pr["state"] != "open" or pr.get("merged_at"):
         raise ValueError("premerge requires an open PR")
+    head_sha, base_sha = pr["head"]["sha"], pr["base"]["sha"]
     reviews = all_rows(f"{prefix}/pulls/{number}/reviews")
-    checks = all_rows(f'{prefix}/commits/{pr["head"]["sha"]}/check-runs?filter=all', "check_runs")
-    statuses = all_rows(f'{prefix}/commits/{pr["head"]["sha"]}/statuses')
+    checks = all_rows(f"{prefix}/commits/{head_sha}/check-runs?filter=all", "check_runs")
+    statuses = all_rows(f"{prefix}/commits/{head_sha}/statuses")
     # The historical audit can take minutes. Evaluate newly fetched checks at
     # observation time, not at the earlier start of that audit.
     now = datetime.now(timezone.utc)
     candidate = pr | {"merged_at": now.isoformat()}
+    only_evidence = evidence_only(owner, repo, base_sha, head_sha)
+    # Reject refs that have moved since the initial capture as well.
+    refreshed = api(f"{prefix}/pulls/{number}")
+    if refreshed["head"]["sha"] != head_sha or refreshed["base"]["sha"] != base_sha:
+        raise ValueError("PR head or base changed while fetching evidence; audit incomplete")
     evidence = receipt(repo, candidate)
     reasons = findings(candidate, reviews, checks, statuses)
     if evidence:
@@ -263,11 +303,15 @@ def premerge(owner, repo, number):
             raise ValueError("premerge evidence must already exist and not be backfilled")
         reasons = [r for r in reasons if r not in (
             "no_approving_review_at_merge", "no_check_evidence_at_merge")]
-    else:
+    elif not only_evidence:
         reasons.append("required_merge_receipt_missing")
+    if only_evidence:
+        reasons = [r for r in reasons if r not in (
+            "no_approving_review_at_merge", "no_check_evidence_at_merge")]
     return {"repo": repo, "pr": number, "url": pr["html_url"], "head": pr["head"]["sha"],
             "merged_at": None, "findings": reasons, "exception": None,
-            "receipt": evidence, "satisfied_by_receipt": []}
+            "receipt": evidence, "satisfied_by_receipt": [],
+            **({"evidence_only": True} if only_evidence else {})}
 
 
 def main():
@@ -293,7 +337,8 @@ def main():
             rows.append(premerge(args.owner, args.premerge[0], int(args.premerge[1])))
         result = {"schema": 1, "complete": True, "findings": rows,
                   "unregistered": sum(r["exception"] is None
-                                      and not (r.get("receipt") and not r["findings"])
+                                      and not ((r.get("receipt") or r.get("evidence_only"))
+                                               and not r["findings"])
                                       for r in rows)}
     except (ValueError, OSError, KeyError, TypeError):
         # Never turn inaccessible private repositories or malformed evidence into green.
@@ -305,6 +350,9 @@ def main():
         print(result["error"])
     else:
         for row in rows:
+            if row.get("evidence_only") and not row["findings"]:
+                print(f'EVIDENCE-ONLY {row["url"]}')
+                continue
             if row.get("receipt"):
                 print(f'RECEIPT {row["url"]}: head={row["head"]} '
                       f'backfilled={str(row["receipt"]["backfilled"]).lower()} '

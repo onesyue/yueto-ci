@@ -22,6 +22,9 @@ class ReceiptEnforcement(unittest.TestCase):
         self.now = datetime.now(timezone.utc) - timedelta(minutes=5)
         self.merged = self.now - timedelta(days=3)
         self.fixture = json.loads((ROOT / 'tests/fixtures/merge-hygiene/approved.json').read_text())
+        # Initial and refetched PR responses must include stable head/base refs.
+        self.fixture['pr']['base'] = {'sha': 'c'*40}
+        self.fixture['files'] = [{'filename': 'scripts/x.py', 'status': 'modified'}]
         self.fixture['pr'].update(merged_at=self.merged.isoformat(), updated_at=self.merged.isoformat())
         for row in self.fixture['reviews']:
             row['submitted_at'] = (self.merged - timedelta(minutes=3)).isoformat()
@@ -45,6 +48,7 @@ if x.get('unavailable'): raise SystemExit(1)
 if e=='repos/onesyue/yueto-ci/pulls/71': result=x['anchor']
 elif '/pulls?' in e: result=[x['pr']]
 elif '/reviews?' in e: result=x['reviews']
+elif '/compare/' in e: result={{'files':x['files'], 'total_commits':1}}
 elif '/check-runs?' in e: result={{'check_runs':x['checks']}}
 elif '/statuses?' in e: result=x['statuses']
 elif e.endswith('/pulls/203'): result=x['pr']
