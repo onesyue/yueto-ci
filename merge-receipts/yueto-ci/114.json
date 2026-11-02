@@ -15,9 +15,9 @@
   "parity": {
     "result": "pass",
     "head": "930aabeaa05fdf98cc113210cd41be6e0023c175",
-    "command": "git worktree at 930aabeaa05fdf98cc113210cd41be6e0023c175: TZ=UTC python -m pytest -q -p no:cacheprovider tests && json.tool on changed *.json && git diff --check c05c356fa3d49bb189b543445d7cf4f3d2443ee3 930aabeaa05fdf98cc113210cd41be6e0023c175 -- . ':(exclude)reviews/'",
-    "log_sha256": "ad6d3255cd52f0701f14d8bcc7ac770073b2f5c2b2244bf947ef340ce26effe5",
-    "ran_at": "2026-11-02T21:23:04Z",
+    "command": "clean git worktree at 930aabeaa05fdf98cc113210cd41be6e0023c175: TZ=UTC python -m pytest -q -p no:cacheprovider tests && json.tool on changed *.json && git diff --check c05c356fa3d49bb189b543445d7cf4f3d2443ee3 930aabeaa05fdf98cc113210cd41be6e0023c175 -- . ':(exclude)reviews/' && echo PARITY_COMMAND_OK",
+    "log_sha256": "3960599bf987c227a740aed8860618b3038e162058479b4fbc59fd657af9bfee",
+    "ran_at": "2026-11-02T21:39:16Z",
     "runner": "box"
   }
 }

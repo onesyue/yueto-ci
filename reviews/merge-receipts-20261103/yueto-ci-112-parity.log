@@ -11,34 +11,5 @@ The event loop scope for asynchronous fixtures will default to the "fixture" cac
 ............................ [ 80%]
 ...................................................................... [ 91%]
 ..................................................                              [100%]
-615 passed, 4612 subtests passed in 309.77s (0:05:09)
-e 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest/__main__.py", line 9, in <module>
-    raise SystemExit(_console_main())
-                     ~~~~~~~~~~~~~^^
-  File "/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/_pytest/config/__init__.py", line 286, in _console_main
-    code = _main(prog=_get_prog_name(sys.argv))
-  File "/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/_pytest/config/__init__.py", line 262, in _main
-    ret: ExitCode | int = config.hook.pytest_cmdline_main(config=config)
-                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
-  File "/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pluggy/_caller.py", line 197, in __call__
-    return self._hookexec(
-           ~~~~~~~~~~~~~~^
-        self.name, self._hookimpls.copy(), call_kwargs, firstresult
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pluggy/_manager.py", line 183, in _hookexec
-    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
-           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pluggy/_execution.py", line 195, in _multicall
-    raise exception
-  File "/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pluggy/_execution.py", line 147, in _multicall
-    res = hook_impl.function(*args)
-  File "/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/_pytest/main.py", line 380, in pytest_cmdline_main
-    return wrap_session(config, _main)
-  File "/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/_pytest/main.py", line 365, in wrap_session
-    os.chdir(session.startpath)
-    ~~~~~~~~^^^^^^^^^^^^^^^^^^^
-FileNotFoundError: [Errno 2] No such file or directory: '/workspace/lane/wt/bf3-yueto-ci-112'
+615 passed, 4612 subtests passed in 288.96s (0:04:48)
+PARITY_COMMAND_OK

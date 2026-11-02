@@ -11,4 +11,5 @@ The event loop scope for asynchronous fixtures will default to the "fixture" cac
 ............................ [ 80%]
 ...................................................................... [ 91%]
 ..................................................                              [100%]
-615 passed, 4612 subtests passed in 298.09s (0:04:58)
+615 passed, 4612 subtests passed in 288.86s (0:04:48)
+PARITY_COMMAND_OK
