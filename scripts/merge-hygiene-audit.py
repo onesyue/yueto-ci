@@ -192,7 +192,24 @@ def receipt(repo, pr):
     return value
 
 
+def enforcement_cutoff(owner):
+    # This PR is the immutable activation anchor, not the caller's wall clock.
+    # A failed lookup must never silently restore the historical exception policy.
+    anchor = api("repos/onesyue/yueto-ci/pulls/71")
+    if anchor["number"] != 71 or anchor["base"]["repo"]["full_name"] != "onesyue/yueto-ci":
+        raise ValueError("invalid receipt policy activation anchor")
+    if anchor.get("merged_at"):
+        return timestamp(anchor["merged_at"])
+    if anchor["state"] != "open":
+        raise ValueError("receipt policy activation PR closed without merge")
+    return None
+
+
 def audit(owner, repos, cutoff, registered, now):
+    enforced_since = enforcement_cutoff(owner)
+    # Post-activation violations cannot age out through --hours or a quiet repo.
+    if enforced_since is not None:
+        cutoff = min(cutoff, enforced_since)
     results = []
     for repo in repos:
         prefix = f"repos/{owner}/{repo}"
@@ -213,14 +230,44 @@ def audit(owner, repos, cutoff, registered, now):
                     satisfied = [r for r in reasons if r in (
                         "no_approving_review_at_merge", "no_check_evidence_at_merge")]
                     reasons = [r for r in reasons if r not in satisfied]
+                required = enforced_since is not None and timestamp(pr["merged_at"]) > enforced_since
+                if required and not evidence:
+                    reasons.append("required_merge_receipt_missing")
                 if reasons or evidence:
                     results.append({"repo": repo, "pr": pr["number"], "url": pr["html_url"],
                                     "head": sha, "merged_at": pr["merged_at"], "findings": reasons,
-                                    "exception": registered.get((repo, pr["number"])),
+                                    "exception": None if required else registered.get((repo, pr["number"])),
                                     "receipt": evidence, "satisfied_by_receipt": satisfied})
             if batch and timestamp(batch[-1]["updated_at"]) < cutoff:
                 break
     return results
+
+
+def premerge(owner, repo, number):
+    prefix = f"repos/{owner}/{repo}"
+    pr = api(f"{prefix}/pulls/{number}")
+    if pr["number"] != number or pr["state"] != "open" or pr.get("merged_at"):
+        raise ValueError("premerge requires an open PR")
+    reviews = all_rows(f"{prefix}/pulls/{number}/reviews")
+    checks = all_rows(f'{prefix}/commits/{pr["head"]["sha"]}/check-runs?filter=all', "check_runs")
+    statuses = all_rows(f'{prefix}/commits/{pr["head"]["sha"]}/statuses')
+    # The historical audit can take minutes. Evaluate newly fetched checks at
+    # observation time, not at the earlier start of that audit.
+    now = datetime.now(timezone.utc)
+    candidate = pr | {"merged_at": now.isoformat()}
+    evidence = receipt(repo, candidate)
+    reasons = findings(candidate, reviews, checks, statuses)
+    if evidence:
+        if evidence["backfilled"] or any(timestamp(evidence[part][field]) > now
+                for part, field in (("review", "reviewed_at"), ("parity", "ran_at"))):
+            raise ValueError("premerge evidence must already exist and not be backfilled")
+        reasons = [r for r in reasons if r not in (
+            "no_approving_review_at_merge", "no_check_evidence_at_merge")]
+    else:
+        reasons.append("required_merge_receipt_missing")
+    return {"repo": repo, "pr": number, "url": pr["html_url"], "head": pr["head"]["sha"],
+            "merged_at": None, "findings": reasons, "exception": None,
+            "receipt": evidence, "satisfied_by_receipt": []}
 
 
 def main():
@@ -230,13 +277,20 @@ def main():
     parser.add_argument("--hours", type=int, default=24)
     parser.add_argument("--exceptions", type=Path, default=ROOT / "merge-hygiene-exceptions.json")
     parser.add_argument("--format", choices=("json", "text"), default="text")
+    parser.add_argument("--premerge", nargs=2, metavar=("REPO", "PR"),
+                        help="also require committed evidence and passing current checks for an open PR")
     args = parser.parse_args()
+    if args.premerge and (args.premerge[0] not in REPOS or not args.premerge[1].isdigit()
+                          or int(args.premerge[1]) <= 0):
+        parser.error("--premerge requires a supported repo and positive PR number")
     if args.hours <= 0 or not re.fullmatch(r"[A-Za-z0-9-]+", args.owner):
         parser.error("positive --hours and valid GitHub --owner required")
     now = datetime.now(timezone.utc)
     try:
         rows = audit(args.owner, args.repos, now - timedelta(hours=args.hours),
                      exceptions(args.exceptions), now)
+        if args.premerge:
+            rows.append(premerge(args.owner, args.premerge[0], int(args.premerge[1])))
         result = {"schema": 1, "complete": True, "findings": rows,
                   "unregistered": sum(r["exception"] is None
                                       and not (r.get("receipt") and not r["findings"])

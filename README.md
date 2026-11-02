@@ -380,7 +380,7 @@ JSON goes to stdout with `complete`, `findings`, and an `unregistered` count;
 text is the default. Unregistered findings exit **1**, clean or explicitly
 registered findings exit **0**.
 
-`merge-hygiene-exceptions.json` starts empty. Each exact exception requires
+Historical `merge-hygiene-exceptions.json` entries require
 `repo`, integer `pr`, nonempty `reason`, and `approver`; no wildcards. Exceptions
 remain visible in both output formats and must be reviewed as policy changes.
 GitHub does not retain every overwritten check-run state or review dismissal
@@ -388,3 +388,49 @@ state in these REST responses. Ambiguous/missing evidence is reported
 conservatively; this retrospective audit cannot prove branch protection or
 replace required reviews/checks. These scripts do not add DB schema/grant,
 version/tag or live-ship verification gates; those remain separate checks.
+
+### Attach merge receipts from each lane
+
+Receipt enforcement activates at the actual `merged_at` of
+[yueto-ci PR #71](https://github.com/onesyue/yueto-ci/pull/71), queried through
+GitHub's API on every audit. An unavailable or invalid activation record exits
+**2**, never disables enforcement. While #71 is open the historical policy
+remains active. PRs merged strictly after that cutoff require a valid committed
+`merge-receipts/<repo>/<pr>.json`, even with approving GitHub reviews and green
+checks. Exceptions cannot waive any finding for those PRs. Historical exceptions
+and #71 itself retain the prior rules. The audit scans back to activation even
+when `--hours` is shorter, so an unreceipted merge cannot age out of the gate.
+No workflow, scheduled job or paid Actions dispatch is added.
+
+Before merging a lane's candidate:
+
+1. Freeze its final PR **head SHA**. Obtain an independent read-only Codex review
+   of that exact diff, with an `approve` verdict, and run local parity, for example
+   `YUETO_ROOT=/home/box/Projects/yueto /home/box/Projects/yueto/scripts/yt-premerge <repo> <head>`.
+   Preserve the actual command-output log and its `sha256sum`; describe any scope
+   limitations in the review artifact. A failed review or parity run blocks merge.
+2. In a dedicated yueto-ci evidence checkout, commit the review artifact, parity
+   log and receipt using the [schema](merge-receipts/README.md). Use
+   `backfilled: false` and the actual review/run timestamps. The receipt's review
+   and parity heads both equal the frozen candidate head. Evidence must already
+   match Git HEAD; staging alone is insufficient.
+3. From that evidence checkout, run
+   `python3 scripts/merge-hygiene-audit.py --premerge <repo> <pr>`.
+   This runs the historical audit plus the candidate gate. It reads the live open
+   PR head and checks, requires a committed receipt, rejects backfills/future
+   evidence, and never waives red, pending or unknown checks. Any nonzero exit
+   blocks merge. Rerun after any head/check change and use GitHub's expected-head
+   merge option and normal branch protections to prevent a head race.
+4. Publish the evidence through the normal reviewed yueto-ci PR process together
+   with the lane's merge handoff. Run the audit again from the evidence checkout
+   after the source merge and retain the receipt on yueto-ci master. For a
+   yueto-ci source PR, keep its receipt in a **separate companion evidence
+   commit/PR**: putting a receipt for a commit into that same commit changes its
+   hash. Never regenerate a receipt for an unreviewed new head to solve this.
+
+The gate is a local authenticated command; lanes must invoke it in addition to
+repository parity. It does not install GitHub branch protection or modify the
+external `yt-premerge` program. Existing hosted policy CI tests the gate behavior
+without private-repository credentials. After activation, missing evidence must
+be produced before a lane proceeds; new post-cutoff PR exceptions are not a
+remediation. An emergency or failed check remains visible and fails the audit.
