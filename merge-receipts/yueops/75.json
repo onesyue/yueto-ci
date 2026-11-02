@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 75,
+  "head": "0e0428d633ba164d069802bb397226b031f47fc7",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "0e0428d633ba164d069802bb397226b031f47fc7",
+    "artifact": "reviews/merge-receipts-20261103/yueops-75.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T21:42:26Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "0e0428d633ba164d069802bb397226b031f47fc7",
+    "command": "TZ=UTC /home/box/Projects/yueto/yueops/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_host_locale_reconcile.py tests/test_host_locale_timeout_contract.py (on merge with c5615924)",
+    "log_sha256": "f696107a5da40b2000b261d50b5e35ddbd88b0dc4fed5af4b84205aaf2e21108",
+    "ran_at": "2026-11-02T22:21:55Z",
+    "runner": "box"
+  }
+}
