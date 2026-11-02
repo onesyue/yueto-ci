@@ -1,0 +1,7 @@
+repo=yueto-ci ref=d51396f0e3edf7a4910155945f7d86a637be8d6b workers=2 logs=/tmp/yt-premerge-0b2g6ulz
+policy-tests: PASS (log: /tmp/yt-premerge-0b2g6ulz/policy-tests.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+policy-tests                 PASS     0
+Private logs: /tmp/yt-premerge-0b2g6ulz
