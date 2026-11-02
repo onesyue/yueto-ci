@@ -70,3 +70,35 @@ Clean rows include `"evidence_only": true` and print as `EVIDENCE-ONLY`.
 Mixed source/evidence PRs, removed or renamed files, and other repositories use
 normal rules. File lists are paginated; API errors, lists of 3,000 or more files,
 or a previous filename outside the allowed paths make the audit incomplete.
+
+## Write or repair a receipt after merge
+
+Use `scripts/write-merge-receipt.py` from this checkout to fetch the merged PR
+from `onesyue` and bind the receipt to its actual `head.sha`:
+
+```sh
+python3 scripts/write-merge-receipt.py \
+  --repo yueops --pr 75 \
+  --review-artifact reviews/merge-receipts-20261102/yueops-75.md \
+  --reviewed-head "$REVIEWED_HEAD" --reviewed-at "$REVIEWED_AT" \
+  --parity-log reviews/merge-receipts-20261102/yueops-75.log \
+  --parity-head "$PARITY_HEAD" --parity-command 'python3 -m pytest -q' \
+  --ran-at "$RAN_AT" --runner box --verdict approve --result pass
+```
+
+Supply the actual evidence heads and timezone-bearing timestamps. If a master
+merge-in changed the PR head, redo the review and parity at the merged head;
+never relabel old evidence with the new SHA. The writer refuses unmerged PRs,
+head mismatches, missing/outside-repository evidence files, and timestamps more
+than 24 hours after merge. It hashes the parity log's original bytes and sets
+`backfilled` when either evidence timestamp is after `merged_at`. The reviewer
+defaults to `codex`; use `--reviewer` to specify another independent reviewer.
+
+Use `--dry-run` to print the JSON without changing checkout files. Existing
+receipts require `--replace`, which overwrites without creating a backup; the
+previous committed version remains in git history. Before writing, the writer
+runs the audit's `receipt()` validation against a temporary snapshot of the
+proposed evidence. This checks the prospective contents, not git commitment:
+commit the receipt and review artifact through the companion evidence flow
+before running the normal audit, which still requires exact committed contents.
+This post-merge writer does not replace the premerge gate described above.
