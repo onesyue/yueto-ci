@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto-ci",
+  "pr": 123,
+  "head": "cbd0c2d0816ecc1c8058efb662f0fe1bc44cc411",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "cbd0c2d0816ecc1c8058efb662f0fe1bc44cc411",
+    "artifact": "reviews/merge-receipts-20261103/yueto-ci-123-review-g.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T22:16:04Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "cbd0c2d0816ecc1c8058efb662f0fe1bc44cc411",
+    "command": "clean git worktree: python3 -m pytest -q -p no:cacheprovider tests && for f in $(git diff --name-only 2280ef3005e1f8229955904ac33262a8f4b47ed9 cbd0c2d0816ecc1c8058efb662f0fe1bc44cc411 -- '*.json'); do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check 2280ef3005e1f8229955904ac33262a8f4b47ed9 cbd0c2d0816ecc1c8058efb662f0fe1bc44cc411 -- . ':(exclude)reviews/' && echo PARITY_COMMAND_OK",
+    "log_sha256": "9e973ec53afb35f052a68376a45a028d0a5686737684dd6b2ce29295b2249023",
+    "ran_at": "2026-11-02T22:15:10Z",
+    "runner": "box"
+  }
+}
