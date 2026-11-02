@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "PASS_STATIC_SHARED_INPUT_QUALIFICATION_ONLY",
+  "source_revision": "5c24bd0785b4ed7602a606c5f5c0dfe6a5b533d5",
+  "full_execution_gate": "NOT_RUN; native and build gates remain required",
+  "manifest_only_expected_devdependency_pins": true,
+  "importer_specifiers_match": true,
+  "all_snapshot_edges_resolve": true,
+  "all_packages_integrity_only": true,
+  "package_count": 292,
+  "snapshot_count": 292
+}

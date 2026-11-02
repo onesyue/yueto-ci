@@ -17,5 +17,47 @@
         "source": "54f9d8250b61cd75ddde7a4ab301f0e05e6da467"
       }
     }
+  },
+  "reviewed_deploy_ai_exit_transition": {
+    "schema": 1,
+    "reviewer": "Codex main agent (source review independent of PR authors)",
+    "prior_baseline_sha256": "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d",
+    "source_before": "c56159246c31ede8e24b40b8626b6a3c6b0b0137",
+    "source_after": "da87a61ee7654bf70a0cc0a842236dbd1f721dec",
+    "independent_review_sha256": "3e30ac19b311b44751726d166d3f620394e93846f7e222846bcab443ed99ee14",
+    "source_freeze_sha256": "ed893f4e704d358bfcf0758c28fc274abbca7be0056836100a92791a3afa0d26",
+    "qualification_receipt_sha256": "a60fe2d50d9f18e5b18cfe8aeb179006ed997c42820e67a9f3aabb3d8bb6b670",
+    "changes": {
+      "tests/_deploy_source.py": {
+        "before_blob": "2f25d1493a71f7b1b1f973e23976ead18c7a63de",
+        "after_blob": "777adfb7efe0ce0a6302dc62473f52d2061af507",
+        "mode": "100644",
+        "source": "da87a61ee7654bf70a0cc0a842236dbd1f721dec"
+      }
+    }
+  },
+  "reviewed_site_devdeps_transition": {
+    "schema": 1,
+    "reviewer": "Codex main agent (source review independent of PR authors)",
+    "prior_baseline_sha256": "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d",
+    "source_before": "c56159246c31ede8e24b40b8626b6a3c6b0b0137",
+    "source_after": "b8c60bbc0f620ca75579479c20bb0243520d6582",
+    "independent_review_sha256": "d5ea52ed1534310dcd1894d412b399b2576a4cb5b858b54240baf3ad79e448dc",
+    "source_freeze_sha256": "fdbaab847ca2c50077c6478d56f14c7ad50923577250c68f511d3e1bc0eaec6d",
+    "qualification_receipt_sha256": "a035c501b5c8874eaac1ccce856aad1f64c6c9634f2e0faf3fa5efe9b921c761",
+    "changes": {
+      "site/package.json": {
+        "before_blob": "2cc812e7954c8d81402ab23a29cf906adcfabe18",
+        "after_blob": "09ceb094c9286134cce8e770196ce70159a5bec6",
+        "mode": "100644",
+        "source": "b8c60bbc0f620ca75579479c20bb0243520d6582"
+      },
+      "site/pnpm-lock.yaml": {
+        "before_blob": "c9c258f64244c7c83820119dcfa3cf6fe5950617",
+        "after_blob": "7c8c8e810e68bbd7705a377819e5d96eda538961",
+        "mode": "100644",
+        "source": "b8c60bbc0f620ca75579479c20bb0243520d6582"
+      }
+    }
   }
 }
