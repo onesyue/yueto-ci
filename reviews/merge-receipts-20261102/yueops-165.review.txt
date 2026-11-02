@@ -1,0 +1,7 @@
+**PASS — no remaining defects** in `ba5b0ba6..9fadc37b`, reusing the prior review’s unchanged-scope evidence.
+
+- Both installers now use `hash-object --no-filters`, closing the reported unsigned policy/helper clean-filter bypass.
+- LA telemetry now allows 300 seconds, matching the existing unit and accommodating the script’s 270-second budget.
+- Staging still requires verified `inactive/dead` states before writes, refusing running oneshots and failed state queries.
+
+No regressions found. Read-only inspection only; no tests, network access, or edits performed.

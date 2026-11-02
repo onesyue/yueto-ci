@@ -1,0 +1,51 @@
+repo=yueops ref=a6e59a88ec4b69bd8c8091372a223ff618d8502d workers=2 logs=/tmp/yt-premerge-bdkfqp5r
+ops-ci: FAIL (log: /tmp/yt-premerge-bdkfqp5r/ops-ci.log)
+ops-native: FAIL (log: /tmp/yt-premerge-bdkfqp5r/ops-native.log)
+admission-precheck: FAIL (log: /tmp/yt-premerge-bdkfqp5r/admission-precheck.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+ops-ci                       FAIL     4
+ops-native                   FAIL     4
+admission-precheck           FAIL     2
+Private logs: /tmp/yt-premerge-bdkfqp5r
+
+BASELINE RUN
+repo=yueops ref=76db75f90ec3a04a7070a9ed5a4d6b65cfbc59bf workers=2 logs=/tmp/yt-premerge-ap9xiuav
+ops-ci: FAIL (log: /tmp/yt-premerge-ap9xiuav/ops-ci.log)
+ops-native: FAIL (log: /tmp/yt-premerge-ap9xiuav/ops-native.log)
+admission-precheck: FAIL (log: /tmp/yt-premerge-ap9xiuav/admission-precheck.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+ops-ci                       FAIL     4
+ops-native                   FAIL     4
+admission-precheck           FAIL     2
+Private logs: /tmp/yt-premerge-ap9xiuav
+
+ops-ci: candidate and baseline identical after replacing tested SHA: True
+CANDIDATE
+NOTE: yueto-ci pin is 17ad41f7, not a6e59a88: real CI REJECTS this ref at plan until the signed pin bump.
+
+BASELINE
+NOTE: yueto-ci pin is 17ad41f7, not 76db75f9: real CI REJECTS this ref at plan until the signed pin bump.
+
+ops-native: candidate and baseline identical after replacing tested SHA: True
+CANDIDATE
+NOTE: yueto-ci pin 17ad41f7 != a6e59a88
+real CI would REJECT at plan; set YT_ASSUME_PIN=1 for a local-only override
+
+BASELINE
+NOTE: yueto-ci pin 17ad41f7 != 76db75f9
+real CI would REJECT at plan; set YT_ASSUME_PIN=1 for a local-only override
+
+admission-precheck: candidate and baseline identical after replacing tested SHA: True
+CANDIDATE
+usage: admission-precheck.py [-h] --repo {yueops} [--source SOURCE]
+                             --base BASE --head HEAD
+admission-precheck.py: error: the following arguments are required: --repo, --base, --head
+
+BASELINE
+usage: admission-precheck.py [-h] --repo {yueops} [--source SOURCE]
+                             --base BASE --head HEAD
+admission-precheck.py: error: the following arguments are required: --repo, --base, --head

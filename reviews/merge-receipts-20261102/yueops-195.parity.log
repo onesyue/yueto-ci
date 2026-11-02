@@ -1,0 +1,64 @@
+repo=yueops ref=de93e49d0a502e75fdd2649eb44da1b42dd4d226 workers=2 logs=/tmp/yt-premerge-s2u7de7k
+ops-ci: FAIL (log: /tmp/yt-premerge-s2u7de7k/ops-ci.log)
+ops-native: FAIL (log: /tmp/yt-premerge-s2u7de7k/ops-native.log)
+admission-precheck: FAIL (log: /tmp/yt-premerge-s2u7de7k/admission-precheck.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+ops-ci                       FAIL     4
+ops-native                   FAIL     4
+admission-precheck           FAIL     2
+Private logs: /tmp/yt-premerge-s2u7de7k
+
+=== Exact gate diagnostics ===
+
+ops-ci
+NOTE: yueto-ci pin is 17ad41f7, not de93e49d: real CI REJECTS this ref at plan until the signed pin bump.
+
+ops-native
+NOTE: yueto-ci pin 17ad41f7 != de93e49d
+real CI would REJECT at plan; set YT_ASSUME_PIN=1 for a local-only override
+
+admission-precheck
+usage: admission-precheck.py [-h] --repo {yueops} [--source SOURCE]
+                             --base BASE --head HEAD
+admission-precheck.py: error: the following arguments are required: --repo, --base, --head
+
+=== origin/master baseline ===
+repo=yueops ref=76db75f90ec3a04a7070a9ed5a4d6b65cfbc59bf workers=2 logs=/tmp/yt-premerge-zaqcxvl_
+ops-ci: FAIL (log: /tmp/yt-premerge-zaqcxvl_/ops-ci.log)
+ops-native: FAIL (log: /tmp/yt-premerge-zaqcxvl_/ops-native.log)
+admission-precheck: FAIL (log: /tmp/yt-premerge-zaqcxvl_/admission-precheck.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+ops-ci                       FAIL     4
+ops-native                   FAIL     4
+admission-precheck           FAIL     2
+Private logs: /tmp/yt-premerge-zaqcxvl_
+
+ops-ci
+NOTE: yueto-ci pin is 17ad41f7, not 76db75f9: real CI REJECTS this ref at plan until the signed pin bump.
+
+ops-native
+NOTE: yueto-ci pin 17ad41f7 != 76db75f9
+real CI would REJECT at plan; set YT_ASSUME_PIN=1 for a local-only override
+
+admission-precheck
+usage: admission-precheck.py [-h] --repo {yueops} [--source SOURCE]
+                             --base BASE --head HEAD
+admission-precheck.py: error: the following arguments are required: --repo, --base, --head
+
+Comparison: all three gate diagnostics identical after substituting candidate short SHA. Both runs exit 1. No pin override. Full CI suites not executed because admission failed.
+
+=== Targeted tests ===
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+.....................................                                    [100%]
+37 passed in 2.41s
+
+Independent read-only codex exec: exit 0; no defects found. Signed merge commit verified with git %G? = G.
+
+Remote verified: PR OPEN at de93e49d0a502e75fdd2649eb44da1b42dd4d226; master unchanged at 76db75f90ec3a04a7070a9ed5a4d6b65cfbc59bf. Normal push succeeded. Requested worktree removed.

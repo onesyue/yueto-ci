@@ -1,0 +1,9 @@
+No defects introduced by this diff.
+
+Reviewed candidate `a6e59a88ec4b69bd8c8091372a223ff618d8502d` against base `76db75f90ec3a04a7070a9ed5a4d6b65cfbc59bf`.
+
+- The sole change, [README.md:307](/workspace/fan1102/wt-yueops-196/scripts/subscribe-templates/README.md:307), correctly updates the Clash-family timeout to `5000`. This matches the catalog at `scripts/subscribe-rule-catalog.json:797`, renderer at `scripts/_subscribe_reliability.py:176`, and Clash templates.
+- Checked probe exceptions: AI groups use ChatGPT trace with expected status `200`; service-bootstrap probes use Cloudflare every 60 seconds; Stash omits group timeout keys.
+- Existing documentation inaccuracies remain: the adjacent `timeout=3` claim disagrees with Surge/Surfboard’s `timeout=5`, and the general probe description omits those exceptions. Both predate this diff.
+
+Read-only source review only; no edits, tests, network, secrets, database/production access, or other agents.

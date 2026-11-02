@@ -1,0 +1,10 @@
+{
+  "repo": "onesyue/yueops",
+  "pr": 196,
+  "verdict": "READY",
+  "head_sha": "a6e59a88ec4b69bd8c8091372a223ff618d8502d",
+  "reason": "Signed normal merges of master completed and candidate pushed to PR branch; PR remains OPEN. Independent read-only codex exec review found no introduced defects at this exact head. Required yt-premerge ran with YT_PAR=2: ops-ci exit 4 and ops-native exit 4 (central CI source pin 17ad41f7 mismatch), admission-precheck exit 2 (runner supplies incompatible CLI arguments). All three failures are identical to origin/master baseline 76db75f90ec3a04a7070a9ed5a4d6b65cfbc59bf after normalizing only tested SHA. No additional candidate failures; READY under the requested baseline-failure exception, not a claim that test suites executed. Reviewer noted pre-existing adjacent documentation inaccuracies outside this one-line change. Signature verified; remote head and master confirmed after push.",
+  "review_artifact": "/workspace/fan1102/yueops-196.review.txt",
+  "parity_log": "/workspace/fan1102/yueops-196.parity.log",
+  "parity_log_sha256": "c154bf8d34761300a6402e17b11328e7c0e7748a117e6b68720190175b72632e"
+}

@@ -1,0 +1,12 @@
+{
+  "repo": "yueto",
+  "pr": 55,
+  "head": "cec3f9bb423f46918904d744cf7e70728db934f3",
+  "merge_commit": "ca963333fe3a3fecc593dcd8e1b37fc0da9627fe",
+  "merged_at": "2026-11-02T09:28:25Z",
+  "verified_at": "2026-11-02T10:00:16.456513+00:00",
+  "source": "https://github.com/onesyue/yueto/pull/55",
+  "body": "分支清理 2026-11-02：该分支有 master 中没有的提交（按 diff 内容核对，不是只看 SHA），Codex 只读复核结论 OPEN_PR。\n- 新增 Bash hook，拦截付款/删除/改写历史类命令。master 现在只有防读密钥的 hook。\n- 合并前要修：heredoc 里的强推漏拦、`rm -rf docs` 被放行、只打印 SQL 文本却被误拦；只覆盖 Bash 工具；'只能用户终端操作'的设计和自动化原则冲突。",
+  "review_count": 0,
+  "comment_count": 0
+}

@@ -1,0 +1,23 @@
+repo=yueops ref=9fadc37bf965af3efae322a33559b73656b5c9ef workers=2 logs=/tmp/yt-premerge-14y8l6sz
+ops-ci: FAIL (log: /tmp/yt-premerge-14y8l6sz/ops-ci.log)
+ops-native: FAIL (log: /tmp/yt-premerge-14y8l6sz/ops-native.log)
+admission-precheck: FAIL (log: /tmp/yt-premerge-14y8l6sz/admission-precheck.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+ops-ci                       FAIL     4
+ops-native                   FAIL     4
+admission-precheck           FAIL     2
+Private logs: /tmp/yt-premerge-14y8l6sz
+
+===== ops-ci detailed output =====
+NOTE: yueto-ci pin is 17ad41f7, not 9fadc37b: real CI REJECTS this ref at plan until the signed pin bump.
+
+===== ops-native detailed output =====
+NOTE: yueto-ci pin 17ad41f7 != 9fadc37b
+real CI would REJECT at plan; set YT_ASSUME_PIN=1 for a local-only override
+
+===== admission-precheck detailed output =====
+usage: admission-precheck.py [-h] --repo {yueops} [--source SOURCE]
+                             --base BASE --head HEAD
+admission-precheck.py: error: the following arguments are required: --repo, --base, --head

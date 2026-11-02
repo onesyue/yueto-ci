@@ -1,0 +1,10 @@
+{
+  "repo": "onesyue/yueops",
+  "pr": 165,
+  "verdict": "READY",
+  "head_sha": "9fadc37bf965af3efae322a33559b73656b5c9ef",
+  "reason": "Normal signed merge of origin/master a122c50a96775a7d2c1192b22fad040ad392b0c7; signed fixes pushed to integ/ga17-p0-tail-20261031. Signed policy/helper bytes verified without clean filters; inactive/dead checks reject running oneshots; LA telemetry timeout restored to 300s. Separate read-only codex exec review PASS after full review and delta re-review. yt-premerge failures match the origin/master baseline exactly after SHA normalization: ops-ci=4 and ops-native=4 (CI source pin mismatch), admission-precheck=2 (premerge CLI mismatch). Accepted only under the requested baseline-failure exception; full CI suites were not reached. Targeted tests and real-signature mutation checks passed. PR remains OPEN; no merge or close; requested worktree removed.",
+  "review_artifact": "/workspace/fan1102/yueops-165.review.txt",
+  "parity_log": "/workspace/fan1102/yueops-165.parity.log",
+  "parity_log_sha256": "af0e96a42b7ff5b9d074a794077a5ab3bf0b3336b756830e86f96b44094cc87f"
+}
