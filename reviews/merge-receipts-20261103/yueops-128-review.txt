@@ -1,0 +1,16 @@
+已审查指定 base→head 的全部差异及相关引用；未发现正确性、安全、秘密泄露或测试削弱问题。仅做只读静态审查，未运行测试。
+
+VERDICT: approve
+
+- `site/src/components/DownloadPage.astro:166`：入口移除与中英文静态页面一致，无残留导入。
+- `scripts/validate-yue-site-tree.py:202`：白名单收紧，其他 URL 安全检查保留。
+- `tests/test_yue_site_atomic_deployer.py:923`：保留有效页面校验，并覆盖原例外链接被拒绝的场景。
+tokens used
+40,354
+已审查指定 base→head 的全部差异及相关引用；未发现正确性、安全、秘密泄露或测试削弱问题。仅做只读静态审查，未运行测试。
+
+VERDICT: approve
+
+- `site/src/components/DownloadPage.astro:166`：入口移除与中英文静态页面一致，无残留导入。
+- `scripts/validate-yue-site-tree.py:202`：白名单收紧，其他 URL 安全检查保留。
+- `tests/test_yue_site_atomic_deployer.py:923`：保留有效页面校验，并覆盖原例外链接被拒绝的场景。

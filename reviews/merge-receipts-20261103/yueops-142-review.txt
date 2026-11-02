@@ -1,0 +1,10 @@
+仅审查了指定两个提交之间的差异；未修改文件，未运行测试。
+
+VERDICT: changes
+- [P1] `telegram-bot/yue/checkin_membership.py:9`：会员查询迁入使用 `app_checkin` 的事务，但此 head 未提供相应授权迁移；现有 `080_membership.sql` 仅授权 `app_yue_bot`。缺少 `miniapp_membership`、`membership_settings` 的 SELECT 权限会使 Mini App 签到返回 503，包括非会员。请补充最小权限迁移，并用实际受限角色验证。
+tokens used
+97,208
+仅审查了指定两个提交之间的差异；未修改文件，未运行测试。
+
+VERDICT: changes
+- [P1] `telegram-bot/yue/checkin_membership.py:9`：会员查询迁入使用 `app_checkin` 的事务，但此 head 未提供相应授权迁移；现有 `080_membership.sql` 仅授权 `app_yue_bot`。缺少 `miniapp_membership`、`membership_settings` 的 SELECT 权限会使 Mini App 签到返回 503，包括非会员。请补充最小权限迁移，并用实际受限角色验证。

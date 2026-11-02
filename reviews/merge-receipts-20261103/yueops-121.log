@@ -1,0 +1,3 @@
+head=2f98dffd894b6cbbc854fa30a1a934ffa4d2a560 ran_at=2026-11-02T17:54:05Z runner=box
+cmd: for f in contracts/openapi/yueops-web.v1.json telegram-bot/yue/i18n/en.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check 5e4d5c96a11e645073e622c40e8be9038476a043 2f98dffd894b6cbbc854fa30a1a934ffa4d2a560
+rc=0

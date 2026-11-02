@@ -1,0 +1,76 @@
+head=5739bf87085cf4f4cf782dea65c082589f7d301e ran_at=2026-11-02T18:36:52Z runner=box
+cmd: /workspace/lane/yo-venv/bin/python -m py_compile scripts/miniapp-route-inventory.py telegram-bot/yue/menu/home.py telegram-bot/yue/service/language_pack.py telegram-bot/yue/service/message_outbox.py telegram-bot/yue/service/miniapp_core_routes.py telegram-bot/yue/service/miniapp_home_state.py telegram-bot/yue/service/miniapp_util.py telegram-bot/yue/service/yue_inbox.py telegram-bot/yue/sticker/handler.py tests/_miniapp_source.py tests/test_ai_plan_change_policy_20260922.py tests/test_automation_install_unit_lists_resolve_20260828.py tests/test_bot_async_no_sync_io_20261004.py tests/test_bot_fixture_module_lifecycle_20261008.py tests/test_bot_handler_io_concurrency_20261012.py tests/test_gift_ledger_writers_20261005.py tests/test_language_switch_contract_20260821.py tests/test_message_outbox_backlog_never_floods_20261006.py tests/test_midautumn_retirement_boundaries.py tests/test_miniapp_level_20261101.py tests/test_miniapp_native_hard_cut_20260729.py tests/test_ops_alert_pg_w1.py tests/test_paid_order_excludes_refunds_20260917.py tests/test_panel_ledger_outbox_20261011.py tests/test_retired_page_entries_20261101.py tests/test_tg_zero_payment_guards_20260923.py tests/test_yueops_surface_consistency_20260821.py  && /workspace/lane/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_ai_plan_change_policy_20260922.py tests/test_automation_install_unit_lists_resolve_20260828.py tests/test_bot_async_no_sync_io_20261004.py tests/test_bot_fixture_module_lifecycle_20261008.py tests/test_bot_handler_io_concurrency_20261012.py tests/test_gift_ledger_writers_20261005.py tests/test_language_switch_contract_20260821.py tests/test_message_outbox_backlog_never_floods_20261006.py tests/test_midautumn_retirement_boundaries.py tests/test_miniapp_level_20261101.py tests/test_miniapp_native_hard_cut_20260729.py tests/test_ops_alert_pg_w1.py tests/test_paid_order_excludes_refunds_20260917.py tests/test_panel_ledger_outbox_20261011.py tests/test_retired_page_entries_20261101.py tests/test_tg_zero_payment_guards_20260923.py tests/test_yueops_surface_consistency_20260821.py  && for f in scripts/automation-2026/install.sh ; do bash -n $f || exit 1; done && shellcheck -S error scripts/automation-2026/install.sh  && for f in contracts/openapi/yue-bot.v1.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && python3 -c 'import sys,yaml;[list(yaml.safe_load_all(open(f))) for f in sys.argv[1:]]' docs/advisory-locks.yaml  && git diff --check 67fb445aadcc531f9b58409e4f8b8b1e9bc8f9bc 5739bf87085cf4f4cf782dea65c082589f7d301e
+.......s................................................................ [ 22%]
+........ssssss.......................................F...........sssssss [ 44%]
+ssssssssss...s...........................ssssssss...............ssssssss [ 66%]
+sssssssssss...............................ss.s.sss.ss.ssss.............. [ 88%]
+......................................                                   [100%]
+=================================== FAILURES ===================================
+______ test_two_deferred_workers_reverse_completion_only_latest_repaints _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb3199e95c0>
+
+    @pytest.mark.asyncio
+    async def test_two_deferred_workers_reverse_completion_only_latest_repaints(monkeypatch):
+        """The per-user lock spans persistence through repaint; final UI is newest."""
+        handler = _load_handler()
+        loop = asyncio.get_running_loop()
+        old_release = loop.create_future()
+        entered: list[str | None] = []
+        state = {"locale": None, "revision": 0}
+    
+        async def deferred(_telegram_id, locale):
+            entered.append(locale)
+            if locale == handler.ZH:
+                await old_release
+                state.update(locale=handler.ZH, revision=7301)
+                return {"locale": handler.ZH, "locale_state_revision": 7301}
+            state.update(locale=handler.EN, revision=7302)
+            return {"locale": handler.EN, "locale_state_revision": 7302}
+    
+        async def no_retitle(*_args, **_kwargs):
+            return None
+    
+        monkeypatch.setattr(handler, "_persist_user_locale", deferred)
+        monkeypatch.setattr(handler, "_retitle_menu_button", no_retitle)
+        monkeypatch.setattr(handler, "lang_of", lambda _update: handler.ZH)
+        monkeypatch.setattr(
+            handler,
+            "user_locale_state",
+            lambda *_args, **_kwargs: (state["locale"], state["revision"]),
+        )
+    
+        old_query = _FakeQuery("botlang:set:zh-CN")
+        new_query = _FakeQuery("botlang:set:en")
+        old_update = SimpleNamespace(
+            update_id=7301,
+            callback_query=old_query,
+            effective_user=SimpleNamespace(id=987654, language_code="zh-CN"),
+            effective_chat=None,
+        )
+        new_update = SimpleNamespace(
+            update_id=7302,
+            callback_query=new_query,
+            effective_user=SimpleNamespace(id=987654, language_code="zh-CN"),
+            effective_chat=None,
+        )
+    
+        old_task = asyncio.create_task(
+            handler.bot_language_set(old_update, SimpleNamespace())
+        )
+        await asyncio.sleep(0)
+        new_task = asyncio.create_task(
+            handler.bot_language_set(new_update, SimpleNamespace())
+        )
+        await asyncio.sleep(0)
+>       assert entered == [handler.ZH]
+E       AssertionError: assert [] == ['zh-CN']
+E         
+E         Right contains one more item: 'zh-CN'
+E         Use -v to get more diff
+
+tests/test_language_switch_contract_20260821.py:586: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_language_switch_contract_20260821.py::test_two_deferred_workers_reverse_completion_only_latest_repaints
+1 failed, 261 passed, 64 skipped in 26.95s
+rc=1

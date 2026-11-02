@@ -1,0 +1,14 @@
+仅审查指定 diff，未修改文件或运行测试。以下行号为删除前版本。
+
+VERDICT: changes
+
+- [P1] `telegram-bot/yue/service/campaign_midautumn_jobs.py:542`：删除退款奖励收回的唯一执行链路。已有 `revoke_failed` 欠款在余额恢复后，以及历史获奖订单后续退款时，都不再自动收回奖励。应保留结算执行者，直到有明确的清零及后续退款处理依据；新增未付款订单查询测试不能覆盖此问题。
+- [P2] `telegram-bot/yue/service/campaign_midautumn_jobs.py:391`：删除 `_dispatch_admin_reports` 会遗留 `campaign_push_log` 中尚未提交到告警 outbox 的持久化报表。新增测试直接向下游 outbox 入队，未覆盖这一阶段。应保留转发器或提供可靠迁移，确保待发送报表不会永久滞留。
+tokens used
+69,650
+仅审查指定 diff，未修改文件或运行测试。以下行号为删除前版本。
+
+VERDICT: changes
+
+- [P1] `telegram-bot/yue/service/campaign_midautumn_jobs.py:542`：删除退款奖励收回的唯一执行链路。已有 `revoke_failed` 欠款在余额恢复后，以及历史获奖订单后续退款时，都不再自动收回奖励。应保留结算执行者，直到有明确的清零及后续退款处理依据；新增未付款订单查询测试不能覆盖此问题。
+- [P2] `telegram-bot/yue/service/campaign_midautumn_jobs.py:391`：删除 `_dispatch_admin_reports` 会遗留 `campaign_push_log` 中尚未提交到告警 outbox 的持久化报表。新增测试直接向下游 outbox 入队，未覆盖这一阶段。应保留转发器或提供可靠迁移，确保待发送报表不会永久滞留。

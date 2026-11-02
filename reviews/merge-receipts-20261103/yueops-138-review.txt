@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P1] `scripts/evening-speed-alert.py:182`：`YUE_ALERT_PRIORITY=P2` 将晚高峰告警送入次日 09:00 早报队列，而早报仅汇总来源、标题和次数，不展示主机及测速正文。因此连续两轮低速后，当晚不会收到可定位的告警。应使用即时通知通道，并增加覆盖真实优先级路由的测试。
+tokens used
+72,807
+VERDICT: changes
+- [P1] `scripts/evening-speed-alert.py:182`：`YUE_ALERT_PRIORITY=P2` 将晚高峰告警送入次日 09:00 早报队列，而早报仅汇总来源、标题和次数，不展示主机及测速正文。因此连续两轮低速后，当晚不会收到可定位的告警。应使用即时通知通道，并增加覆盖真实优先级路由的测试。

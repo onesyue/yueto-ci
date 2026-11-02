@@ -1,0 +1,8 @@
+VERDICT: changes
+- [P1] `scripts/dns-scheduler/scheduler.py:427`：任一分组校验或写入异常都会退出整个循环。例如 JP 记录缺失时，TW 分组不会同步禁用状态，已摘除的故障节点仍可持续接收流量。应隔离各分组错误，并继续处理其他分组的摘除。
+- [P2] `scripts/dns-scheduler/scheduler.py:355`：只要一条权重不匹配，就重写所有记录，包括权重已经正确的记录。若后续记录持续失败，每轮重试及回滚会反复提交无变化修改；[DNSPod 文档](https://docs.dnspod.cn/api/modify-records/)说明此类请求超过每小时五次会锁定记录一小时，影响正常更新。应跳过无需修改的记录。
+tokens used
+56,068
+VERDICT: changes
+- [P1] `scripts/dns-scheduler/scheduler.py:427`：任一分组校验或写入异常都会退出整个循环。例如 JP 记录缺失时，TW 分组不会同步禁用状态，已摘除的故障节点仍可持续接收流量。应隔离各分组错误，并继续处理其他分组的摘除。
+- [P2] `scripts/dns-scheduler/scheduler.py:355`：只要一条权重不匹配，就重写所有记录，包括权重已经正确的记录。若后续记录持续失败，每轮重试及回滚会反复提交无变化修改；[DNSPod 文档](https://docs.dnspod.cn/api/modify-records/)说明此类请求超过每小时五次会锁定记录一小时，影响正常更新。应跳过无需修改的记录。
