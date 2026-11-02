@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 279,
+  "head": "6deec95829e472b4fed9d9d2a0189ab5d1ad6ac5",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "6deec95829e472b4fed9d9d2a0189ab5d1ad6ac5",
+    "artifact": "reviews/merge-receipts-20261102/yueops-279.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T15:03:02Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "6deec95829e472b4fed9d9d2a0189ab5d1ad6ac5",
+    "command": "python3 -m pytest -q -p no:randomly tests/test_pytest_random_order.py tests/test_protocol_liveness*.py",
+    "log_sha256": "b3cf3fceb9d46d2c3c5fd575958e7274d1760fcb46c7459140bf57abba8f81b3",
+    "ran_at": "2026-11-02T15:01:28Z",
+    "runner": "box"
+  }
+}
