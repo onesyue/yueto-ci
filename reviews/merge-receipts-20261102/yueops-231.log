@@ -1,0 +1,6 @@
+head=af53fb7e8884e8edacf675956e7c5c6abc386e96 ran_at=2026-11-02T16:56:00Z runner=box
+cmd: for t in debbuild acmebuild verifytools; do docker build -q --target $t -f services/yueops-web/Dockerfile .; done
+debbuild rc=0 image=sha256:4587288c2fe92700cb032afedbba356f8c6073cd1446d7eccaf994648741e1f2
+acmebuild rc=0 image=sha256:39a61b2b2b2c362457be389c6db5c391d6d76fc4e9b869dfe0e42cc90b0a8b01
+verifytools rc=0 image=sha256:fec75a687b5ef9d32b74dc0d55b4fffe560290adb3cc4be5393bff5aba8d0a14
+note: final python:3.13-slim stages not built on box (box apt network exit 100, unrelated to the two alpine FROM lines changed)
