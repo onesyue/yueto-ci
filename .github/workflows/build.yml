@@ -2686,7 +2686,7 @@ jobs:
           body="validate=${VALIDATE_RESULT} validation-evidence=${EVIDENCE_RESULT}. Publish no longer waits for validation (B1). Check ${url} and roll back to the previous signed digest if the release is affected."
           # One rolling alert, not one issue per red run: later reds comment on
           # it and the next green validation closes it (validation-recovered).
-          existing="$(gh issue list --state open --search 'in:title "async validation red"' \
+          existing="$(gh issue list --state open --search 'in:title "async validation red" sort:created-asc' \
             --limit 1 --json number --jq '.[0].number // empty' || true)"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "run ${RUN_ID}: ${body}" \

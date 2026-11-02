@@ -72,5 +72,18 @@ class FailFastPolicyTest(unittest.TestCase):
         self.assertTrue(self.jobs["publish"].startswith("\n    needs: [build, plan]\n"))
 
 
+    def test_async_validation_alert_is_one_rolling_issue(self) -> None:
+        alert = self.jobs["validation-alert"]
+        # Reuse the oldest open alert; only open a new one when none exists.
+        self.assertIn('in:title "async validation red" sort:created-asc', alert)
+        self.assertIn('gh issue comment "$existing"', alert)
+        self.assertNotIn("run ${RUN_ID}\"", alert.split("gh issue create", 1)[1].split("\n", 1)[0])
+        recovered = self.jobs["validation-recovered"]
+        self.assertIn("    needs: [plan, validate, validation-evidence]\n", recovered)
+        self.assertIn("    if: success() && needs.plan.outputs.has_builds == 'true'\n", recovered)
+        self.assertIn("gh issue close", recovered)
+        self.assertNotIn("uses:", recovered)
+
+
 if __name__ == "__main__":
     unittest.main()
