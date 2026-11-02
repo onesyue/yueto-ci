@@ -1,0 +1,91 @@
+head=e477209f8decd61d399b6a5c53e2e31b695a7516 rc=0 ran_at=2026-11-02T18:34:52Z cmd=go test -count=1 -p 1 -tags integration ./... (PG18 local, then rerun ./test/integration/ ./internal/modules/order/ in CI phase order)
+ok  	github.com/onesyue/yueboard/cmd/economy-contract-pack	0.018s
+?   	github.com/onesyue/yueboard/cmd/export-openapi	[no test files]
+ok  	github.com/onesyue/yueboard/cmd/graycheck	0.015s
+?   	github.com/onesyue/yueboard/cmd/schemafloor	[no test files]
+ok  	github.com/onesyue/yueboard/cmd/yueboard	3.668s
+?   	github.com/onesyue/yueboard/internal/config	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/accountcenter	0.006s
+ok  	github.com/onesyue/yueboard/internal/modules/admin	0.574s
+ok  	github.com/onesyue/yueboard/internal/modules/aiops	0.005s
+ok  	github.com/onesyue/yueboard/internal/modules/bannedprotect	0.003s
+ok  	github.com/onesyue/yueboard/internal/modules/campaign	0.010s
+ok  	github.com/onesyue/yueboard/internal/modules/changeemail	0.018s
+ok  	github.com/onesyue/yueboard/internal/modules/clientconfig	0.197s
+?   	github.com/onesyue/yueboard/internal/modules/commissioncron	[no test files]
+?   	github.com/onesyue/yueboard/internal/modules/commissiontiercron	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/diagnostics	0.005s
+ok  	github.com/onesyue/yueboard/internal/modules/emby	11.388s
+?   	github.com/onesyue/yueboard/internal/modules/funnel	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/giftcard	0.006s
+ok  	github.com/onesyue/yueboard/internal/modules/giftledger	0.005s
+ok  	github.com/onesyue/yueboard/internal/modules/guest	0.006s
+ok  	github.com/onesyue/yueboard/internal/modules/handoff	0.309s
+ok  	github.com/onesyue/yueboard/internal/modules/idlepurgecron	0.007s
+ok  	github.com/onesyue/yueboard/internal/modules/invitealias	0.006s
+ok  	github.com/onesyue/yueboard/internal/modules/lifecyclecron	0.004s
+?   	github.com/onesyue/yueboard/internal/modules/memories	[no test files]
+?   	github.com/onesyue/yueboard/internal/modules/message	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/nodeext	0.317s
+ok  	github.com/onesyue/yueboard/internal/modules/nodesync	24.584s
+?   	github.com/onesyue/yueboard/internal/modules/nodesync/store	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/notice	0.175s
+?   	github.com/onesyue/yueboard/internal/modules/notify	[no test files]
+2026/11/03 02:34:01 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+2026/11/03 02:34:01 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+2026/11/03 02:34:01 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+2026/11/03 02:34:01 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+2026/11/03 02:34:01 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+2026/11/03 02:34:01 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+--- FAIL: TestPersonalCouponRecipientAndEligibilityPostgres (0.00s)
+    personal_coupon_integration_test.go:54: ERROR: relation "plans" does not exist (SQLSTATE 42P01)
+--- FAIL: TestCancelledSweepRetriesFailedOutboxWrite (0.00s)
+    reconcile_outbox_integration_test.go:49: clone migrated orders fixture (run test/integration first): ERROR: relation "public.orders" does not exist (SQLSTATE 42P01)
+FAIL
+FAIL	github.com/onesyue/yueboard/internal/modules/order	0.033s
+?   	github.com/onesyue/yueboard/internal/modules/order/store	[no test files]
+?   	github.com/onesyue/yueboard/internal/modules/payment	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/plan	0.005s
+?   	github.com/onesyue/yueboard/internal/modules/plan/store	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/pluginapi	0.006s
+ok  	github.com/onesyue/yueboard/internal/modules/remindmailcron	6.044s
+ok  	github.com/onesyue/yueboard/internal/modules/resettrafficcron	0.004s
+ok  	github.com/onesyue/yueboard/internal/modules/speedlimitcron	0.014s
+ok  	github.com/onesyue/yueboard/internal/modules/statcron	3.433s
+ok  	github.com/onesyue/yueboard/internal/modules/subextra	0.008s
+ok  	github.com/onesyue/yueboard/internal/modules/subrisk	0.012s
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	0.783s
+ok  	github.com/onesyue/yueboard/internal/modules/support	0.006s
+ok  	github.com/onesyue/yueboard/internal/modules/telegram	0.012s
+ok  	github.com/onesyue/yueboard/internal/modules/theme	0.005s
+ok  	github.com/onesyue/yueboard/internal/modules/usagepolicy	5.767s
+ok  	github.com/onesyue/yueboard/internal/modules/user	0.711s
+ok  	github.com/onesyue/yueboard/internal/modules/userx	0.008s
+ok  	github.com/onesyue/yueboard/internal/modules/uticket	0.006s
+ok  	github.com/onesyue/yueboard/internal/modules/webvitals	0.093s
+?   	github.com/onesyue/yueboard/internal/noderpc/gen/yuenode/v1	[no test files]
+?   	github.com/onesyue/yueboard/internal/noderpc/gen/yuenode/v1/yuenodev1connect	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/actionledger	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/advisorylock	0.053s
+ok  	github.com/onesyue/yueboard/internal/platform/antigfw	0.018s
+ok  	github.com/onesyue/yueboard/internal/platform/apiresp	0.779s
+ok  	github.com/onesyue/yueboard/internal/platform/apptime	0.002s
+ok  	github.com/onesyue/yueboard/internal/platform/audit	0.233s
+ok  	github.com/onesyue/yueboard/internal/platform/auth	0.006s
+?   	github.com/onesyue/yueboard/internal/platform/auth/store	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/authattempt	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/brand	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/checkoutorigin	0.002s
+ok  	github.com/onesyue/yueboard/internal/platform/clientnotice	0.004s
+ok  	github.com/onesyue/yueboard/internal/platform/commission	0.004s
+ok  	github.com/onesyue/yueboard/internal/platform/commissiontier	0.006s
+?   	github.com/onesyue/yueboard/internal/platform/commissiontier/store	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/contractpack	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/controltoken	0.001s
+ok  	github.com/onesyue/yueboard/internal/platform/credentialreset	0.292s
+?   	github.com/onesyue/yueboard/internal/platform/dailyclaim	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/db	16.947s
+ok  	github.com/onesyue/yueboard/internal/platform/dbreserve	0.003s
+== phase-order rerun
+ok github.com/onesyue/yueboard/test/integration 166.527s
+ok github.com/onesyue/yueboard/internal/modules/order 0.224s
