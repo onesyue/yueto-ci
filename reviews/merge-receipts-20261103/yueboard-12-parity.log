@@ -1,0 +1,8 @@
+head=9794c77a03ae7888c67022ec3acf4c28413a3e6f ran_at=2026-11-02T16:59:29Z runner=box
+cmd: go vet ./internal/modules/admin ./internal/modules/guest ./internal/modules/nodesync ./internal/platform/apiresp ./internal/platform/statuspage  && go test ./internal/modules/admin ./internal/modules/guest ./internal/modules/nodesync ./internal/platform/apiresp ./internal/platform/statuspage 
+ok  	github.com/onesyue/yueboard/internal/modules/admin	2.145s
+ok  	github.com/onesyue/yueboard/internal/modules/guest	0.030s
+ok  	github.com/onesyue/yueboard/internal/modules/nodesync	15.172s
+ok  	github.com/onesyue/yueboard/internal/platform/apiresp	1.912s
+ok  	github.com/onesyue/yueboard/internal/platform/statuspage	0.020s
+rc=0

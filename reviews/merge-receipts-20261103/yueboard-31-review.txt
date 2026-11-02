@@ -1,0 +1,12 @@
+仅审查指定 diff；未修改文件或运行测试。
+
+VERDICT: changes
+
+- [P1] `internal/platform/db/migrations_pg18_integration_test.go:5145`：新增循环错误地要求 `Ready()` 拒绝版本 151，但此提交的实际 schema floor 就是 151，因此 PostgreSQL 集成测试必然失败。应仅拒绝低于 151 的版本，并将第 5153 行的成功用例从 152 改为 151。
+tokens used
+49,090
+仅审查指定 diff；未修改文件或运行测试。
+
+VERDICT: changes
+
+- [P1] `internal/platform/db/migrations_pg18_integration_test.go:5145`：新增循环错误地要求 `Ready()` 拒绝版本 151，但此提交的实际 schema floor 就是 151，因此 PostgreSQL 集成测试必然失败。应仅拒绝低于 151 的版本，并将第 5153 行的成功用例从 152 改为 151。

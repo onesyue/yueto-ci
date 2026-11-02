@@ -1,0 +1,9 @@
+head=00e3067a9aa50e1aed153cebc178bd9498ea64d7 ran_at=2026-11-02T17:15:54Z runner=box
+cmd: go vet -tags integration ./internal/modules/admin ./internal/modules/campaign ./internal/modules/emby ./internal/modules/memories ./internal/platform/advisorylock ./internal/platform/db ./test/integration  && go test ./internal/modules/admin ./internal/modules/campaign ./internal/modules/emby ./internal/modules/memories ./internal/platform/advisorylock ./internal/platform/db 
+ok  	github.com/onesyue/yueboard/internal/modules/admin	1.908s
+ok  	github.com/onesyue/yueboard/internal/modules/campaign	0.066s
+ok  	github.com/onesyue/yueboard/internal/modules/emby	0.338s
+?   	github.com/onesyue/yueboard/internal/modules/memories	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/advisorylock	0.335s
+ok  	github.com/onesyue/yueboard/internal/platform/db	1.775s
+rc=0

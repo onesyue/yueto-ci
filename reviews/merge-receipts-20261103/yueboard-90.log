@@ -1,0 +1,4 @@
+head=6f75757eda3f3d81256b696b48d3ae35aa9c9906 ran_at=2026-11-02T16:57:51Z runner=box
+cmd: go vet ./internal/modules/subscribe  && go test ./internal/modules/subscribe 
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	0.735s
+rc=0

@@ -1,0 +1,12 @@
+已审查指定 diff；未修改文件或输出秘密值。未运行测试：当前工作树并非指定 head。
+
+VERDICT: changes
+
+- [P2] `internal/modules/admin/scoped_token.go:193`：功能关闭或来源 IP 不在白名单时仍返回 API JSON 404，与未知路径的 nginx 伪装 404 明显不同。无凭据探测者因此可以识别新增管理入口，即使功能未启用，违反现有抗探测约定。此处及第 197 行应使用统一伪装响应，并增加正文与 Content-Type 的断言；现有测试仅检查状态码，无法发现此问题。
+tokens used
+68,144
+已审查指定 diff；未修改文件或输出秘密值。未运行测试：当前工作树并非指定 head。
+
+VERDICT: changes
+
+- [P2] `internal/modules/admin/scoped_token.go:193`：功能关闭或来源 IP 不在白名单时仍返回 API JSON 404，与未知路径的 nginx 伪装 404 明显不同。无凭据探测者因此可以识别新增管理入口，即使功能未启用，违反现有抗探测约定。此处及第 197 行应使用统一伪装响应，并增加正文与 Content-Type 的断言；现有测试仅检查状态码，无法发现此问题。

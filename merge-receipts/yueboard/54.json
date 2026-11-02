@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 54,
+  "head": "5340ac9c137068f4f199a8853c0996543d4624fe",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "5340ac9c137068f4f199a8853c0996543d4624fe",
+    "artifact": "reviews/merge-receipts-20261103/yueboard-54.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T17:07:16Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "5340ac9c137068f4f199a8853c0996543d4624fe",
+    "command": "none (no Go packages changed); git diff --check 00295a3f7c7cd652ac63f0e88db1b7daa382d7bb 5340ac9c137068f4f199a8853c0996543d4624fe",
+    "log_sha256": "f231eac588514ef584e12f220ae459b768483be317ddffe85a17bf6fdca67a8a",
+    "ran_at": "2026-11-02T17:06:26Z",
+    "runner": "box"
+  }
+}

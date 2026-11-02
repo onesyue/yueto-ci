@@ -1,0 +1,14 @@
+Static review completed for the exact diff; no files modified or tests executed.
+
+VERDICT: changes
+
+- [P2] `internal/modules/nodesync/fair_use_stopgap.go:59` — Zero-rate traffic bypasses fair-use enforcement. Ingestion’s `scaleTraffic` stores zero billed bytes when `rate == 0`; dividing those counters by 1 cannot recover actual usage. The new test seeds nonzero zero-rate counters that ingestion cannot produce. Preserve raw per-user counters and test through ingestion.
+- [P2] `internal/modules/nodesync/fair_use_stopgap.go:175` — `context.WithoutCancel(ctx)` removes both the reconciliation deadline and shutdown cancellation before database-backed notification. Pool exhaustion or a stalled query can indefinitely block the promoter loop, stopping subsequent expiry and reconciliation passes. Give this notification a bounded timeout.
+tokens used
+84,828
+Static review completed for the exact diff; no files modified or tests executed.
+
+VERDICT: changes
+
+- [P2] `internal/modules/nodesync/fair_use_stopgap.go:59` — Zero-rate traffic bypasses fair-use enforcement. Ingestion’s `scaleTraffic` stores zero billed bytes when `rate == 0`; dividing those counters by 1 cannot recover actual usage. The new test seeds nonzero zero-rate counters that ingestion cannot produce. Preserve raw per-user counters and test through ingestion.
+- [P2] `internal/modules/nodesync/fair_use_stopgap.go:175` — `context.WithoutCancel(ctx)` removes both the reconciliation deadline and shutdown cancellation before database-backed notification. Pool exhaustion or a stalled query can indefinitely block the promoter loop, stopping subsequent expiry and reconciliation passes. Give this notification a bounded timeout.

@@ -1,0 +1,5 @@
+head=03b13c1e57a6e56adb8318734e7fe7be25692246 ran_at=2026-11-02T17:06:01Z runner=box
+cmd: go vet -tags integration ./internal/modules/order ./internal/platform/auth  && go test ./internal/modules/order ./internal/platform/auth 
+ok  	github.com/onesyue/yueboard/internal/modules/order	0.025s
+ok  	github.com/onesyue/yueboard/internal/platform/auth	0.007s
+rc=0

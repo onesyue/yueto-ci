@@ -1,0 +1,10 @@
+静态审查完成，范围仅限指定 diff；未修改文件，未运行测试。
+
+VERDICT: changes
+- [P1] `internal/platform/nativeproto/vless.go:46`：关闭 XHTTP 准入开关也会阻断已有节点的计费上报。`authAccounting → authNodeMode → getServer → validateNativeProtocolSettings` 调用此谓词，导致合法 XHTTP 节点返回 `NotFound`，无法清空待上报流量，连禁用节点的计费宽限期也失效。应将准入开关限制在保存、订阅及配置下发路径，已有节点的计费鉴权仅校验配置形状和既有权限。
+tokens used
+49,461
+静态审查完成，范围仅限指定 diff；未修改文件，未运行测试。
+
+VERDICT: changes
+- [P1] `internal/platform/nativeproto/vless.go:46`：关闭 XHTTP 准入开关也会阻断已有节点的计费上报。`authAccounting → authNodeMode → getServer → validateNativeProtocolSettings` 调用此谓词，导致合法 XHTTP 节点返回 `NotFound`，无法清空待上报流量，连禁用节点的计费宽限期也失效。应将准入开关限制在保存、订阅及配置下发路径，已有节点的计费鉴权仅校验配置形状和既有权限。

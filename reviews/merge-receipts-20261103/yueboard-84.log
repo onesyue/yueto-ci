@@ -1,0 +1,5 @@
+head=ab61feb6a47cf12fc9fb7d1d84f6dbd2820b2828 ran_at=2026-11-02T16:58:26Z runner=box
+cmd: go vet ./internal/modules/emby ./internal/platform/advisorylock  && go test ./internal/modules/emby ./internal/platform/advisorylock 
+ok  	github.com/onesyue/yueboard/internal/modules/emby	0.205s
+ok  	github.com/onesyue/yueboard/internal/platform/advisorylock	0.087s
+rc=0

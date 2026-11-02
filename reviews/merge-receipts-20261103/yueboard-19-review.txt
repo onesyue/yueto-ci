@@ -1,0 +1,14 @@
+已审阅指定两次提交之间的 diff；未修改文件，未运行测试。
+
+VERDICT: changes
+
+- [P2] `internal/platform/db/lock_safety.go:319`：`NO TRANSACTION` 会直接跳过 ADD/VALIDATE 同事务检查，但同一个 `DO $$ BEGIN ... END $$` 内的两项操作仍处于同一事务。此类迁移会被放行，ADD 获取的强锁却会持续覆盖整个 VALIDATE 扫描。应识别语句块的事务边界并补充测试。
+- [P2] `internal/platform/db/lock_safety.go:276`：临时表与永久表共用规范化名称。例如 `CREATE TEMP TABLE users (id bigint); CREATE INDEX ix ON public.users(id);` 会将已有的 `public.users` 误判为新表，放行阻塞写入的普通索引构建。应区分临时 schema 与 `public`，并补充同名表测试。
+tokens used
+43,240
+已审阅指定两次提交之间的 diff；未修改文件，未运行测试。
+
+VERDICT: changes
+
+- [P2] `internal/platform/db/lock_safety.go:319`：`NO TRANSACTION` 会直接跳过 ADD/VALIDATE 同事务检查，但同一个 `DO $$ BEGIN ... END $$` 内的两项操作仍处于同一事务。此类迁移会被放行，ADD 获取的强锁却会持续覆盖整个 VALIDATE 扫描。应识别语句块的事务边界并补充测试。
+- [P2] `internal/platform/db/lock_safety.go:276`：临时表与永久表共用规范化名称。例如 `CREATE TEMP TABLE users (id bigint); CREATE INDEX ix ON public.users(id);` 会将已有的 `public.users` 误判为新表，放行阻塞写入的普通索引构建。应区分临时 schema 与 `public`，并补充同名表测试。

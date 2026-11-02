@@ -1,0 +1,10 @@
+已审查指定 diff；未修改文件。`git diff --check` 通过；未运行测试。
+
+VERDICT: changes
+- [P2] `internal/modules/admin/payment.go:355`、`:462`：直接记录 JSON 解码错误可能泄露配置值。若损坏配置包含超出 `float64` 范围的数字字段（例如误存为数字的长凭据），`json.Unmarshal` 返回的错误包含完整数字原文，而 PostgreSQL `jsonb` 可以保存此类数字。应仅记录错误类别及位置，并增加数字溢出场景的日志脱敏测试。
+tokens used
+29,275
+已审查指定 diff；未修改文件。`git diff --check` 通过；未运行测试。
+
+VERDICT: changes
+- [P2] `internal/modules/admin/payment.go:355`、`:462`：直接记录 JSON 解码错误可能泄露配置值。若损坏配置包含超出 `float64` 范围的数字字段（例如误存为数字的长凭据），`json.Unmarshal` 返回的错误包含完整数字原文，而 PostgreSQL `jsonb` 可以保存此类数字。应仅记录错误类别及位置，并增加数字溢出场景的日志脱敏测试。

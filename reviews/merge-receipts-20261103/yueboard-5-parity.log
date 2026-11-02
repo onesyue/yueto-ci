@@ -1,0 +1,12 @@
+head=16019be83f64277f5d462c74d0fea413490de43d ran_at=2026-11-02T17:06:46Z runner=box
+cmd: go vet -tags integration ./internal/modules/admin ./internal/modules/nodesync ./internal/modules/subextra ./internal/modules/subscribe ./internal/modules/usagepolicy ./internal/modules/userx ./internal/platform/audit ./internal/platform/credentialreset ./internal/platform/speedpolicy ./test/integration  && go test ./internal/modules/admin ./internal/modules/nodesync ./internal/modules/subextra ./internal/modules/subscribe ./internal/modules/usagepolicy ./internal/modules/userx ./internal/platform/audit ./internal/platform/credentialreset ./internal/platform/speedpolicy 
+ok  	github.com/onesyue/yueboard/internal/modules/admin	0.798s
+ok  	github.com/onesyue/yueboard/internal/modules/nodesync	11.044s
+ok  	github.com/onesyue/yueboard/internal/modules/subextra	0.009s
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	0.756s
+ok  	github.com/onesyue/yueboard/internal/modules/usagepolicy	0.478s
+ok  	github.com/onesyue/yueboard/internal/modules/userx	0.012s
+ok  	github.com/onesyue/yueboard/internal/platform/audit	0.234s
+ok  	github.com/onesyue/yueboard/internal/platform/credentialreset	0.281s
+ok  	github.com/onesyue/yueboard/internal/platform/speedpolicy	0.016s
+rc=0
