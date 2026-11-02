@@ -1,0 +1,7 @@
+repo=yue-node ref=ed29e84032a8e74b14435e317b9782df946cb26b workers=2 logs=/tmp/yt-premerge-a78b_s52
+node-profiles: PASS (log: /tmp/yt-premerge-a78b_s52/node-profiles.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+node-profiles                PASS     0
+Private logs: /tmp/yt-premerge-a78b_s52
