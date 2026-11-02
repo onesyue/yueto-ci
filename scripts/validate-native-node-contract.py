@@ -143,8 +143,15 @@ def read_tree(
     return "\n".join(path.read_text(encoding="utf-8") for path in files)
 
 
+def normalize_horizontal_whitespace(text: str) -> str:
+    """Ignore alignment spacing while preserving line breaks and token content."""
+    return re.sub(r"[ \t]+", " ", text)
+
+
 def require(text: str, fragments: list[str], source: str) -> None:
-    missing = [fragment for fragment in fragments if fragment not in text]
+    normalized = normalize_horizontal_whitespace(text)
+    missing = [fragment for fragment in fragments
+               if normalize_horizontal_whitespace(fragment) not in normalized]
     if missing:
         raise RuntimeError(
             f"{source} is missing native contract fragments: {missing!r}"
@@ -152,14 +159,17 @@ def require(text: str, fragments: list[str], source: str) -> None:
 
 
 def forbid(text: str, fragments: list[str], source: str) -> None:
-    present = [fragment for fragment in fragments if fragment in text]
+    normalized = normalize_horizontal_whitespace(text)
+    present = [fragment for fragment in fragments
+               if normalize_horizontal_whitespace(fragment) in normalized]
     if present:
         raise RuntimeError(f"{source} contains retired contract fragments: {present!r}")
 
 
 def forbid_casefold(text: str, fragments: list[str], source: str) -> None:
-    folded = text.casefold()
-    present = [fragment for fragment in fragments if fragment.casefold() in folded]
+    folded = normalize_horizontal_whitespace(text).casefold()
+    present = [fragment for fragment in fragments
+               if normalize_horizontal_whitespace(fragment).casefold() in folded]
     if present:
         raise RuntimeError(f"{source} contains retired contract fragments: {present!r}")
 
