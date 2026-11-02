@@ -1,0 +1,3 @@
+head=8698883cf0ddf26c86427bad01a9412d3c363dcc ran_at=2026-11-02T17:40:43Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/test-shell-early-exit-pipes.py  && for f in scripts/fast-check.sh scripts/ship-queue.sh ; do bash -n $f || exit 1; done && shellcheck -S error scripts/fast-check.sh scripts/ship-queue.sh  && git diff --check efb6cddc11c1c36cbaa9eea6306a623b8017c72c 8698883cf0ddf26c86427bad01a9412d3c363dcc
+rc=0
