@@ -1,0 +1,21 @@
+test_actual_collection_error_is_not_missing_success (tests.test_pytest_shards.ShardPrimitives.test_actual_collection_error_is_not_missing_success) ... ok
+test_actual_pytest_ini_cuts_off_conftest_above_source_root (tests.test_pytest_shards.ShardPrimitives.test_actual_pytest_ini_cuts_off_conftest_above_source_root) ... ok
+test_actual_reference_and_shards_keep_skip_nested_subtest_and_readonly_evidence (tests.test_pytest_shards.ShardPrimitives.test_actual_reference_and_shards_keep_skip_nested_subtest_and_readonly_evidence) ... ok
+test_actual_root_conftest_and_collection_symlinks_require_owned_sources (tests.test_pytest_shards.ShardPrimitives.test_actual_root_conftest_and_collection_symlinks_require_owned_sources) ... ok
+test_actual_sessions_bind_each_image_without_replacing_planning_provenance (tests.test_pytest_shards.ShardPrimitives.test_actual_sessions_bind_each_image_without_replacing_planning_provenance) ... ok
+test_actual_setup_call_teardown_and_abrupt_exit_are_never_success (tests.test_pytest_shards.ShardPrimitives.test_actual_setup_call_teardown_and_abrupt_exit_are_never_success) ... ok
+test_cli_errors_fail_closed_and_workflow_requires_join (tests.test_pytest_shards.ShardPrimitives.test_cli_errors_fail_closed_and_workflow_requires_join) ... ok
+test_deterministic_plan_tracks_whole_modules_and_serial_ownership (tests.test_pytest_shards.ShardPrimitives.test_deterministic_plan_tracks_whole_modules_and_serial_ownership) ... ok
+test_expected_empty_module_keeps_exit_five_and_never_counts_as_a_pass (tests.test_pytest_shards.ShardPrimitives.test_expected_empty_module_keeps_exit_five_and_never_counts_as_a_pass) ... ok
+test_invalid_capacity_serial_assignment_empty_and_symlink_are_rejected (tests.test_pytest_shards.ShardPrimitives.test_invalid_capacity_serial_assignment_empty_and_symlink_are_rejected) ... ok
+test_lost_case_deselection_and_missing_terminal_reject (tests.test_pytest_shards.ShardPrimitives.test_lost_case_deselection_and_missing_terminal_reject) ... ok
+test_missing_duplicate_changed_plan_and_mismatched_identities_reject (tests.test_pytest_shards.ShardPrimitives.test_missing_duplicate_changed_plan_and_mismatched_identities_reject) ... ok
+test_per_role_runtime_context_and_rejection_cannot_be_omitted_or_relabelled (tests.test_pytest_shards.ShardPrimitives.test_per_role_runtime_context_and_rejection_cannot_be_omitted_or_relabelled) ... ok
+test_plan_rejects_wrong_root_dirty_untracked_and_configuration (tests.test_pytest_shards.ShardPrimitives.test_plan_rejects_wrong_root_dirty_untracked_and_configuration) ... ok
+test_two_module_reference_parts_union_and_reject_a_drop_or_skip_mismatch (tests.test_pytest_shards.ShardPrimitives.test_two_module_reference_parts_union_and_reject_a_drop_or_skip_mismatch) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 10.237s
+
+OK
+rc=0
