@@ -1,0 +1,10 @@
+VERDICT: changes
+
+- [P1] `scripts/release-root-prune-20261013.py:171`：只记录符号链接第一跳。例如已安装入口 → `/opt/tool/current` → release root 内脚本，后续 `open()` 会跟随第二跳，但不会记录其中的 revision。若无其他引用且超过保留期限，该仍被使用的 root 会被删除。应遍历链接链并记录最终解析路径，增加相应回归测试。
+- [P2] `scripts/install-release-root-prune-20261014.py:275`：`apply()` 已启用 timer，随后回执写入和最终校验却位于回滚事务之外。磁盘满或最终校验失败时，安装命令报错但新配置仍生效；使用 `--enable-deletion` 时自动删除也仍启用。应将回执持久化和最终校验纳入同一回滚事务。
+tokens used
+49,271
+VERDICT: changes
+
+- [P1] `scripts/release-root-prune-20261013.py:171`：只记录符号链接第一跳。例如已安装入口 → `/opt/tool/current` → release root 内脚本，后续 `open()` 会跟随第二跳，但不会记录其中的 revision。若无其他引用且超过保留期限，该仍被使用的 root 会被删除。应遍历链接链并记录最终解析路径，增加相应回归测试。
+- [P2] `scripts/install-release-root-prune-20261014.py:275`：`apply()` 已启用 timer，随后回执写入和最终校验却位于回滚事务之外。磁盘满或最终校验失败时，安装命令报错但新配置仍生效；使用 `--enable-deletion` 时自动删除也仍启用。应将回执持久化和最终校验纳入同一回滚事务。

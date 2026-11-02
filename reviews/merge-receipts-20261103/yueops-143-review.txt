@@ -1,0 +1,10 @@
+已审查指定 base→head 的全部变更。只读语法、JSON、站点哈希、列权限清单及 DNS 分块检查通过；未运行 PostgreSQL 集成测试。未修改文件。
+
+VERDICT: approve
+- 未发现本次变更引入的明确正确性、安全、秘密泄露、测试弱化或回归问题。
+tokens used
+62,628
+已审查指定 base→head 的全部变更。只读语法、JSON、站点哈希、列权限清单及 DNS 分块检查通过；未运行 PostgreSQL 集成测试。未修改文件。
+
+VERDICT: approve
+- 未发现本次变更引入的明确正确性、安全、秘密泄露、测试弱化或回归问题。

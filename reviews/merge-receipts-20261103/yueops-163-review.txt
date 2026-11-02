@@ -1,0 +1,6 @@
+VERDICT: changes
+- [P2] `checkin-api/telemetry/db.py:34–36`: Missing upper bound permits raw telemetry and day salts to exceed the published 30-day retention limit (`nginx/html/en/privacy.html:194`). Confirmed `365` is accepted and used by cleanup. Restrict configuration to 1–30 days and test rejection above 30.
+tokens used
+43,735
+VERDICT: changes
+- [P2] `checkin-api/telemetry/db.py:34–36`: Missing upper bound permits raw telemetry and day salts to exceed the published 30-day retention limit (`nginx/html/en/privacy.html:194`). Confirmed `365` is accepted and used by cleanup. Restrict configuration to 1–30 days and test rejection above 30.

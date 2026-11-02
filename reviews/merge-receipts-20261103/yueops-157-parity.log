@@ -1,0 +1,9 @@
+head=d2c760757f88a5cfb26404453fdb8d5a4092ac37 ran_at=2026-11-02T18:07:16Z runner=box
+cmd: /home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/_subscribe_reliability.py tests/test_subscription_health_and_membership_20261017.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests/test_subscription_health_and_membership_20261017.py  && for f in tests/subscribe-active-20261028.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && python3 -c 'import sys,yaml;[list(yaml.safe_load_all(open(f))) for f in sys.argv[1:]]' scripts/subscribe-templates/clash.yaml scripts/subscribe-templates/clashmeta.yaml scripts/subscribe-templates/en/clash.yaml scripts/subscribe-templates/en/clashmeta.yaml scripts/subscribe-templates/zh/clash.yaml scripts/subscribe-templates/zh/clashmeta.yaml  && git diff --check fd203d799a1a0987e865ff074e0daa78992ce997 d2c760757f88a5cfb26404453fdb8d5a4092ac37
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+........                                                                 [100%]
+8 passed in 1.53s
+rc=0

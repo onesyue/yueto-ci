@@ -1,0 +1,9 @@
+head=4ef17c89feac499c8883c796661021d0df594980 ran_at=2026-11-02T18:27:06Z runner=box
+cmd: /workspace/lane/yo-venv/bin/python -m py_compile scripts/converge-node-failure-notifications.py tests/test_node_failure_convergence_20261101.py  && /workspace/lane/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_node_failure_convergence_20261101.py  && git diff --check b76ee33c218051037850a9e9a3d8850455e59a69 4ef17c89feac499c8883c796661021d0df594980
+/workspace/lane/yo-venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+................                                                         [100%]
+16 passed in 0.34s
+rc=0
