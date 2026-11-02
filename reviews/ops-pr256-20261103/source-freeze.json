@@ -1,0 +1,20 @@
+{
+  "source_before": "175860d056393697b752e21c58ae636e9466d86d",
+  "source_after": "1e6f5d53a8f749f326da51ffd9c5d9f5881574ec",
+  "source_tree": "7046dd77ca8984b2a42e817e8d1d046fc852487a",
+  "pr_head": "0d8c8f47432db7f2b11a8dd2bfc5081350929e76",
+  "changes": {
+    "pyproject.toml": {
+      "before_blob": "ba32ad966dc0d67280ba04c03c1f911c8839780a",
+      "after_blob": "1d861dc9e1da3fbe876ded02f454a3fd26f2cd27",
+      "mode": "100644",
+      "source": "1e6f5d53a8f749f326da51ffd9c5d9f5881574ec"
+    },
+    "uv.lock": {
+      "before_blob": "18d0dc71583fcd55ae726dd6c533e0f2111539f2",
+      "after_blob": "a432bb987a9b6f8f7871647680e9078c6a56b6a3",
+      "mode": "100644",
+      "source": "1e6f5d53a8f749f326da51ffd9c5d9f5881574ec"
+    }
+  }
+}

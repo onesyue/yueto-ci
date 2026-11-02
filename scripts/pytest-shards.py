@@ -1615,6 +1615,7 @@ def estate_successor_proof(baseline, source, revision):
     predecessor inside the sealed admission; validators and the join re-admit
     against that sealed value and still compare every estate input blob.
     """
+    pr_shared_input_successor_proof(source, revision)
     reviewed_pr_input_proof(source, revision)
     _, security = reviewed_npm_security_transition(baseline)
     if security is not None:
@@ -1810,6 +1811,142 @@ def admit_first_native_helper(common, files, source_revision):
     return {p: v for p, v in common.items() if p != path}, files
 
 
+# Outermost first: #256 succeeds the shared pyproject/lock blobs from #122.
+PR_SHARED_INPUT_SEALS = (
+    (256, "fef83c066a9042e4ededf3c6f45786084d20ff79e44ba1c85724580e1a5d97cb",
+     frozenset({"pyproject.toml", "uv.lock"})),
+    (122, "6cf768c07c2e49f25b93a31af60f60eca5df307203748195c87abf775550c5f5",
+     frozenset({"checkin-api/requirements.txt", "pyproject.toml",
+                "telegram-bot/yue/requirements.txt", "uv.lock"})),
+)
+
+
+# Activate only for these exact after-blobs; historical policy fixtures need no new evidence.
+PR_SHARED_INPUT_AFTER_BLOBS = frozenset({
+    ('checkin-api/requirements.txt', 'a5bd445e3f132c2fd090490ab07bb8ee79de6a2f'),
+    ('pyproject.toml', '1d861dc9e1da3fbe876ded02f454a3fd26f2cd27'),
+    ('pyproject.toml', 'ba32ad966dc0d67280ba04c03c1f911c8839780a'),
+    ('telegram-bot/yue/requirements.txt', '6d87484afee325a2c00630c6eb1c9ed411b130f1'),
+    ('uv.lock', '18d0dc71583fcd55ae726dd6c533e0f2111539f2'),
+    ('uv.lock', 'a432bb987a9b6f8f7871647680e9078c6a56b6a3'),
+})
+
+
+PR_SHARED_INPUT_SOURCE_REVISIONS = (
+    "1e6f5d53a8f749f326da51ffd9c5d9f5881574ec",
+    "175860d056393697b752e21c58ae636e9466d86d",
+)
+
+
+def reviewed_pr_shared_input_transitions():
+    """Peel exact outermost successors without modifying any historical seal."""
+    original = dict(read_json(ROOT / "ops-shared-input-successors.json"))
+    records = []
+    for number, identity, paths in PR_SHARED_INPUT_SEALS:
+        record = original.pop(f"reviewed_pr{number}_shared_input_transition", None)
+        require(isinstance(record, dict) and set(record) == {
+            "schema", "reviewer", "prior_baseline_sha256", "prior_successors_sha256",
+            "source_before", "source_after", "independent_review_sha256",
+            "source_freeze_sha256", "qualification_receipt_sha256", "changes"}
+            and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid PR shared-input transition")
+        require(sha(encoded(record)) == identity, "unreviewed PR shared-input transition")
+        require(record["prior_successors_sha256"] == sha(baseline_bytes(original))
+                and record["prior_baseline_sha256"] == sha(
+                    (ROOT / "ops-pytest-skip-baseline.json").read_bytes()),
+                "PR shared-input transition changed historical predecessor")
+        require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                    for k in ("source_before", "source_after"))
+                and record["source_before"] != record["source_after"],
+                "invalid PR shared-input source")
+        require(all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                    and record[k] != "0" * 64 for k in (
+                        "independent_review_sha256", "source_freeze_sha256",
+                        "qualification_receipt_sha256")), "missing PR shared-input evidence")
+        require(isinstance(record["changes"], dict) and set(record["changes"]) == paths,
+                "invalid PR shared-input paths")
+        for item in record["changes"].values():
+            require(isinstance(item, dict) and set(item) == {
+                "before_blob", "after_blob", "mode", "source"}
+                and item["mode"] == "100644"
+                and all(isinstance(item[k], str) and SHA.fullmatch(item[k])
+                        for k in ("before_blob", "after_blob", "source"))
+                and item["before_blob"] != item["after_blob"]
+                and item["source"] == record["source_after"],
+                "invalid PR shared-input blob identity")
+        records.append(record)
+    outer, inner = records
+    require(outer["source_before"] == inner["source_after"] and all(
+        item["before_blob"] == inner["changes"][path]["after_blob"]
+        for path, item in outer["changes"].items()), "PR shared-input merge order differs")
+    return records
+
+
+def admit_pr_shared_inputs(common, files, source_revision):
+    """Undo #256, then #122, before any inner seal sees the shared map."""
+    if source_revision not in PR_SHARED_INPUT_SOURCE_REVISIONS and not any(
+            common.get(path) == blob for path, blob in PR_SHARED_INPUT_AFTER_BLOBS):
+        return common, files
+    for record in reviewed_pr_shared_input_transitions():
+        changes = record["changes"]
+        if source_revision != record["source_after"] and not any(
+                common.get(path) == item["after_blob"] for path, item in changes.items()):
+            continue
+        require(source_revision == first_native_policy()["source_revision"],
+                "PR shared-input successor requires the signed release pin")
+        common = dict(common)
+        if files is not None:
+            files = dict(files)
+        for path, item in changes.items():
+            require(common.get(path) == item["after_blob"],
+                    "PR shared-input successor bundle missing or changed")
+            common[path] = item["before_blob"]
+            if files is not None:
+                require(files.get(path) == (item["mode"], item["after_blob"]),
+                        "PR shared-input successor mode or tree differs")
+                files[path] = (item["mode"], item["before_blob"])
+    return common, files
+
+
+def pr_shared_input_successor_proof(source, revision):
+    """Bind the applied bundles to real merge ancestry and exact parent trees."""
+    files = tree_inputs(source, revision)
+    successors = set()
+    for after in PR_SHARED_INPUT_SOURCE_REVISIONS:
+        try:
+            git(source, "cat-file", "-e", after + "^{commit}")
+        except subprocess.CalledProcessError:
+            continue  # Historical source repositories may predate these merges.
+        try:
+            git(source, "merge-base", "--is-ancestor", after, revision)
+            successors.add(after)
+        except subprocess.CalledProcessError as exc:
+            require(exc.returncode == 1, "PR shared-input ancestry unavailable")
+    if not successors and not any(files.get(path, (None, None))[1] == blob
+                                  for path, blob in PR_SHARED_INPUT_AFTER_BLOBS):
+        return
+    for record in reviewed_pr_shared_input_transitions():
+        changes = record["changes"]
+        if record["source_after"] not in successors and not any(
+                files.get(path, (None, None))[1] == item["after_blob"]
+                for path, item in changes.items()):
+            continue
+        try:
+            git(source, "merge-base", "--is-ancestor", record["source_after"], revision)
+            parent = git(source, "rev-parse", record["source_after"] + "^1").decode().strip()
+            require(parent == record["source_before"], "PR shared-input parent differs")
+            before = tree_inputs(source, parent)
+            after = tree_inputs(source, record["source_after"])
+        except subprocess.CalledProcessError:
+            raise ValueError("PR shared-input successor ancestry differs") from None
+        files = dict(files)
+        for path, item in changes.items():
+            require(files.get(path) == after.get(path) == (item["mode"], item["after_blob"])
+                    and before.get(path) == (item["mode"], item["before_blob"]),
+                    "PR shared-input successor blob or mode differs")
+            files[path] = (item["mode"], item["before_blob"])
+
+
 MINIAPP_MEMBERSHIP_TRANSITION_SHA256 = "ca92f22e6699afa5e9dd48457b79968d8cfb540a43c6e2f7d715158423703638"
 MINIAPP_MEMBERSHIP_INPUT = "tests/_miniapp_source.py"
 
@@ -1970,6 +2107,7 @@ def admit_reviewed_pr_inputs(common, files, source_revision):
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    common, files = admit_pr_shared_inputs(common, files, source_revision)
     common, files = admit_reviewed_pr_inputs(common, files, source_revision)
     common, files = admit_first_native_helper(common, files, source_revision)
     common, files = admit_miniapp_membership(common, files, source_revision)

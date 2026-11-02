@@ -59,5 +59,67 @@
         "source": "b8c60bbc0f620ca75579479c20bb0243520d6582"
       }
     }
+  },
+  "reviewed_pr122_shared_input_transition": {
+    "schema": 1,
+    "reviewer": "Codex (source-diff review; same session)",
+    "prior_baseline_sha256": "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d",
+    "prior_successors_sha256": "28e0e9420332b5b2a24541cb6d059a9faa9e5cbf8b2afa260762071a7378ecbd",
+    "source_before": "c56159246c31ede8e24b40b8626b6a3c6b0b0137",
+    "source_after": "175860d056393697b752e21c58ae636e9466d86d",
+    "independent_review_sha256": "85a36562a453c9e77a93b67e76c95af770c87beb33379d426de293776b5ae77a",
+    "source_freeze_sha256": "3c7dc2694f78dcdcfdfbd41336e2b7811423d69c490a9b4e6e0f7373081be47d",
+    "qualification_receipt_sha256": "d568f5c05cddfb4ccb9f7ae8c6aaf5079c834e2d813e052f53905e29f230a807",
+    "changes": {
+      "checkin-api/requirements.txt": {
+        "before_blob": "89665fa663e3a0b07958050e3697f27916724a47",
+        "after_blob": "a5bd445e3f132c2fd090490ab07bb8ee79de6a2f",
+        "mode": "100644",
+        "source": "175860d056393697b752e21c58ae636e9466d86d"
+      },
+      "pyproject.toml": {
+        "before_blob": "1baeb62063307eaad0c8a395790806e2ec4ca223",
+        "after_blob": "ba32ad966dc0d67280ba04c03c1f911c8839780a",
+        "mode": "100644",
+        "source": "175860d056393697b752e21c58ae636e9466d86d"
+      },
+      "telegram-bot/yue/requirements.txt": {
+        "before_blob": "42c931eec1ae7949b37fe9e79bdbbcb47c526174",
+        "after_blob": "6d87484afee325a2c00630c6eb1c9ed411b130f1",
+        "mode": "100644",
+        "source": "175860d056393697b752e21c58ae636e9466d86d"
+      },
+      "uv.lock": {
+        "before_blob": "aa728bd1bea85c20624f7817ad643366476b0570",
+        "after_blob": "18d0dc71583fcd55ae726dd6c533e0f2111539f2",
+        "mode": "100644",
+        "source": "175860d056393697b752e21c58ae636e9466d86d"
+      }
+    }
+  },
+  "reviewed_pr256_shared_input_transition": {
+    "schema": 1,
+    "reviewer": "Codex (source-diff review; same session)",
+    "prior_baseline_sha256": "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d",
+    "prior_successors_sha256": "3fcff0b4b1318827ddf7f5620787a55328891ff6974fa541ab19309f04f35b9f",
+    "source_before": "175860d056393697b752e21c58ae636e9466d86d",
+    "source_after": "1e6f5d53a8f749f326da51ffd9c5d9f5881574ec",
+    "independent_review_sha256": "e5dcb5d69f820d7731518f35201353beb9bd93f6992260473cece865af8a5474",
+    "source_freeze_sha256": "3b8cc57c469cc99829920a8a4a1a7887ddbf8a06d678a8aabb9f6edaae26c014",
+    "qualification_receipt_sha256": "c2f8d26b11a09f568e5ba96b05a6a7864e470c30a1b21c61c61ad96aa69eaca5",
+    "changes": {
+      "pyproject.toml": {
+        "before_blob": "ba32ad966dc0d67280ba04c03c1f911c8839780a",
+        "after_blob": "1d861dc9e1da3fbe876ded02f454a3fd26f2cd27",
+        "mode": "100644",
+        "source": "1e6f5d53a8f749f326da51ffd9c5d9f5881574ec"
+      },
+      "uv.lock": {
+        "before_blob": "18d0dc71583fcd55ae726dd6c533e0f2111539f2",
+        "after_blob": "a432bb987a9b6f8f7871647680e9078c6a56b6a3",
+        "mode": "100644",
+        "source": "1e6f5d53a8f749f326da51ffd9c5d9f5881574ec"
+      }
+    }
   }
 }
