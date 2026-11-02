@@ -296,3 +296,106 @@ class MergeReceipts(unittest.TestCase):
         self.assertEqual(AUDIT.receipt("yueops", self.pr), self.value)
         (self.root / "review.md").write_text("Uncommitted replacement")
         with self.assertRaises(ValueError): AUDIT.receipt("yueops", self.pr)
+
+
+class EvidenceOnly(unittest.TestCase):
+    def setUp(self):
+        self.fixture = json.loads((ROOT / "tests/fixtures/merge-hygiene/approved.json").read_text())
+        self.pr = self.fixture["pr"]
+        self.files = [{"filename": "merge-receipts/yueops/203.json", "status": "added"},
+                      {"filename": "reviews/merge-receipts-20261102/review.md", "status": "modified"}]
+        self.checks = []
+        self.seen = []
+
+    def api(self, endpoint):
+        self.seen.append(endpoint)
+        if "/files?" in endpoint:
+            page = int(endpoint.rsplit("page=", 1)[1])
+            return self.files[(page - 1) * 100:page * 100]
+        if "/pulls?" in endpoint:
+            return [self.pr]
+        if endpoint.endswith(f'/pulls/{self.pr["number"]}'):
+            return self.pr | {"state": "open", "merged_at": None}
+        if "/reviews?" in endpoint or "/statuses?" in endpoint:
+            return []
+        if "/check-runs?" in endpoint:
+            return {"check_runs": self.checks}
+        raise AssertionError(endpoint)
+
+    def run_gate(self, mode, repo="yueto-ci"):
+        with patch.object(AUDIT, "api", side_effect=self.api), patch.object(
+                AUDIT, "receipt", return_value=None), patch.object(
+                AUDIT, "enforcement_cutoff", return_value=AUDIT.timestamp("2026-11-01T00:00:00Z")):
+            if mode == "premerge":
+                return AUDIT.premerge("owner", repo, self.pr["number"])
+            row, = AUDIT.audit("owner", [repo], AUDIT.timestamp("2026-11-02T00:00:00Z"),
+                               {}, AUDIT.timestamp("2026-11-03T00:00:00Z"))
+            return row
+
+    def test_passes_without_receipt(self):
+        for mode in ("audit", "premerge"):
+            with self.subTest(mode=mode):
+                row = self.run_gate(mode)
+                self.assertTrue(row["evidence_only"])
+                self.assertEqual(row["findings"], [])
+                self.assertIsNone(row["receipt"])
+                self.assertEqual(row["satisfied_by_receipt"], [])
+
+    def test_mixed_removed_renamed_and_other_repo_require_receipt(self):
+        original = self.files[:]
+        for extra, repo in (({"filename": "scripts/example.py", "status": "modified"}, "yueto-ci"),
+                            ({"filename": "merge-receipts/old.json", "status": "removed"}, "yueto-ci"),
+                            ({"filename": "merge-receipts/new.json", "status": "renamed",
+                              "previous_filename": "merge-receipts/old.json"}, "yueto-ci"),
+                            (None, "yueops")):
+            self.files = original + ([extra] if extra else [])
+            for mode in ("audit", "premerge"):
+                with self.subTest(extra=extra, repo=repo, mode=mode):
+                    row = self.run_gate(mode, repo)
+                    self.assertFalse(row.get("evidence_only", False))
+                    self.assertEqual(set(row["findings"]), {"required_merge_receipt_missing",
+                        "no_approving_review_at_merge", "no_check_evidence_at_merge"})
+
+    def test_red_pending_unknown_checks_remain(self):
+        for change, reason in (({"conclusion": "failure"}, "check_nonpassing_at_merge:policy"),
+                               ({"status": "queued"}, "check_pending_at_merge:policy"),
+                               ({"started_at": None}, "check_history_unavailable:policy")):
+            self.checks = [self.fixture["checks"][0] | change]
+            for mode in ("audit", "premerge"):
+                with self.subTest(mode=mode, change=change):
+                    self.assertEqual(self.run_gate(mode)["findings"], [reason])
+
+    def test_files_paginated_and_later_script_disqualifies(self):
+        self.files = [self.files[0]] * 100 + [self.files[1]]
+        self.assertTrue(self.run_gate("audit")["evidence_only"])
+        self.assertIn(f'repos/owner/yueto-ci/pulls/{self.pr["number"]}/files?per_page=100&page=2', self.seen)
+        self.files[-1] = {"filename": "scripts/example.py", "status": "added"}
+        self.assertIn("required_merge_receipt_missing", self.run_gate("audit")["findings"])
+
+    def test_incomplete_file_evidence(self):
+        for files in ([self.files[0]] * 3000,
+                      [self.files[0] | {"previous_filename": "scripts/example.py"}]):
+            self.files = files
+            for mode in ("audit", "premerge"):
+                with self.subTest(mode=mode, count=len(files)), self.assertRaises(ValueError):
+                    self.run_gate(mode)
+        original_api = self.api
+        def unavailable(endpoint):
+            if "/files?" in endpoint:
+                raise ValueError("API unavailable")
+            return original_api(endpoint)
+        with patch.object(self, "api", side_effect=unavailable):
+            for mode in ("audit", "premerge"):
+                with self.assertRaises(ValueError):
+                    self.run_gate(mode)
+
+    def test_clean_text_state_and_exit_code(self):
+        import contextlib
+        import io
+        row = self.run_gate("audit")
+        with patch.object(AUDIT, "audit", return_value=[row]), patch.object(
+                AUDIT, "exceptions", return_value={}), patch("sys.argv", ["audit"]):
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(AUDIT.main(), 0)
+        self.assertIn("EVIDENCE-ONLY " + row["url"], output.getvalue())
+        self.assertIn("0 unregistered", output.getvalue())

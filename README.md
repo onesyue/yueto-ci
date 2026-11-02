@@ -402,9 +402,19 @@ and #71 itself retain the prior rules. The audit scans back to activation even
 when `--hours` is shorter, so an unreceipted merge cannot age out of the gate.
 No workflow, scheduled job or paid Actions dispatch is added.
 
-Before merging a lane's candidate:
+An **evidence-only** PR in `yueto-ci` adds or modifies files exclusively under
+`merge-receipts/` or `reviews/merge-receipts-*/`. These PRs stop the
+receipt-of-receipt chain: both the audit and `--premerge` waive the receipt
+requirement and only the missing approval/check-evidence findings. They still
+need normal branch rules; red, pending and unknown checks remain findings.
+Clean rows include `"evidence_only": true` and print as `EVIDENCE-ONLY`.
+Mixed source/evidence PRs, removed or renamed files, and other repositories use
+normal rules. File lists are paginated; API errors, lists of 3,000 or more files,
+or a previous filename outside the allowed paths make the audit incomplete.
 
-**Required: no merge without a committed receipt.** Steps 1–3 must all be done
+Before merging a lane's source candidate:
+
+**Required for source PRs: no merge without a committed receipt.** Steps 1–3 must all be done
 before pressing merge. A PR comment, a local file or a staged file does not count as a receipt.
 For a yueto-ci source PR, open its companion evidence PR (step 4) with the
 committed receipt for the frozen head **before** merging the source PR. A merge
