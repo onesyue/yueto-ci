@@ -1,0 +1,11 @@
+repo=yueops ref=6974c7b4d341146a47e7e0c9abe47e3c17e9ef7f workers=2 logs=/tmp/yt-premerge-pzdrlu3s
+ops-ci: FAIL (log: /tmp/yt-premerge-pzdrlu3s/ops-ci.log)
+ops-native: FAIL (log: /tmp/yt-premerge-pzdrlu3s/ops-native.log)
+admission-precheck: FAIL (log: /tmp/yt-premerge-pzdrlu3s/admission-precheck.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+ops-ci                       FAIL     4
+ops-native                   FAIL     4
+admission-precheck           FAIL     2
+Private logs: /tmp/yt-premerge-pzdrlu3s

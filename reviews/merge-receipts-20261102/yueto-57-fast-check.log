@@ -1,0 +1,7 @@
+SKIP bash-n (no sh)
+STEP py-compile rc=0 secs=0 cmd=python3 -m py_compile scripts/test-yt-premerge.py
+STEP pytest rc=1 secs=1 cmd=env -u ALL_PROXY -u all_proxy -u HTTPS_PROXY -u https_proxy -u HTTP_PROXY -u http_proxy PATH=/home/box/.local/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/box/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games TZ=UTC python3 -m pytest -q -p no:cacheprovider --basetemp /tmp/fcbt-876591 scripts/test-yt-premerge.py
+    | /usr/bin/python3: No module named pytest
+STEP secrets-changed rc=0 secs=2 cmd=env SECRET_SCAN_STATE_DIR=/home/box/Projects/yueto/.claude/state/coord/fastcheck/runs/root.BVGpqD88/secret-state SECRET_SCAN_ROOT=/home/box/Projects/yueto bash /tmp/yt-premerge-4ggnosp1/source/scripts/scan-secrets-changed.sh --repo . --sha cd80751bda1da3649c7547cb964f2cc59590f1d2
+tests_selected=1 total_secs=12
+FASTCHECK-RESULT rc=1 repo=root sha=cd80751bda1da3649c7547cb964f2cc59590f1d2 at 2026-11-02 17:16:05 +0800
