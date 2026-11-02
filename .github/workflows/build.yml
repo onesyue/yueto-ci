@@ -2671,7 +2671,7 @@ jobs:
     permissions:
       issues: write
     steps:
-      - name: Open async validation alert
+      - name: Open or update the single async validation alert
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -2683,10 +2683,42 @@ jobs:
           set -euo pipefail
           url="${GITHUB_SERVER_URL}/${GH_REPO}/actions/runs/${RUN_ID}/attempts/${RUN_ATTEMPT}"
           echo "::error::async validation red (validate=${VALIDATE_RESULT}, evidence=${EVIDENCE_RESULT}); images may already be published: ${url}"
-          gh issue create \
-            --title "async validation red: run ${RUN_ID}" \
-            --body "validate=${VALIDATE_RESULT} validation-evidence=${EVIDENCE_RESULT}. Publish no longer waits for validation (B1). Check ${url} and roll back to the previous signed digest if the release is affected." \
-            || echo "::warning::could not open alert issue; the red run itself is the alert"
+          body="validate=${VALIDATE_RESULT} validation-evidence=${EVIDENCE_RESULT}. Publish no longer waits for validation (B1). Check ${url} and roll back to the previous signed digest if the release is affected."
+          # One rolling alert, not one issue per red run: later reds comment on
+          # it and the next green validation closes it (validation-recovered).
+          existing="$(gh issue list --state open --search 'in:title "async validation red"' \
+            --limit 1 --json number --jq '.[0].number // empty' || true)"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "run ${RUN_ID}: ${body}" \
+              || echo "::warning::could not update alert issue; the red run itself is the alert"
+          else
+            gh issue create --title "async validation red" --body "run ${RUN_ID}: ${body}" \
+              || echo "::warning::could not open alert issue; the red run itself is the alert"
+          fi
+
+  validation-recovered:
+    # Close the rolling async-validation alert once a full validation is green,
+    # so a fixed problem never leaves stale open issues behind.
+    needs: [plan, validate, validation-evidence]
+    if: success() && needs.plan.outputs.has_builds == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Close the async validation alert
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          url="${GITHUB_SERVER_URL}/${GH_REPO}/actions/runs/${RUN_ID}"
+          for n in $(gh issue list --state open --search 'in:title "async validation red"' \
+              --limit 200 --json number --jq '.[].number'); do
+            gh issue close "$n" --reason completed --comment "Validation green again: ${url}" \
+              || echo "::warning::could not close alert issue #${n}"
+          done
 
   abort-on-build-failure:
     # Fail fast across jobs: as soon as any candidate image build fails, cancel the
