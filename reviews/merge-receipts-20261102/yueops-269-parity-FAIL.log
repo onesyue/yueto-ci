@@ -1,0 +1,11 @@
+repo=yueops ref=2235b172f7e35fc14276f0bd30eafa6dcda355b6 workers=2 logs=/tmp/yt-premerge-edj31nlr
+ops-ci: FAIL (log: /tmp/yt-premerge-edj31nlr/ops-ci.log)
+ops-native: FAIL (log: /tmp/yt-premerge-edj31nlr/ops-native.log)
+admission-precheck: FAIL (log: /tmp/yt-premerge-edj31nlr/admission-precheck.log)
+pre-push: NOT INSTALLED
+
+GATE                         RESULT  EXIT
+ops-ci                       FAIL     4
+ops-native                   FAIL     4
+admission-precheck           FAIL     2
+Private logs: /tmp/yt-premerge-edj31nlr
