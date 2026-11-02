@@ -3,7 +3,7 @@
   "repo": "yueto",
   "pr": 60,
   "head": "c73efaaa72382af7cd33393b7d7c2272decaa6c0",
-  "backfilled": false,
+  "backfilled": true,
   "review": {
     "tool": "codex",
     "verdict": "approve",
