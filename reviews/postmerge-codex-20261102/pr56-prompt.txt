@@ -1,0 +1,56 @@
+You are an independent reviewer. Post-merge review of PR yueto-ci-56 (fix(pg-gate): gate email coupon suite on its worker source, not floor 150	2026-11-02T01:53:39Z	69c59fb5). Review the diff below for correctness, security, and whether it weakens any gate. Note: yueto-ci#56 merged while policy CI failed (missing PyYAML for test_postgres_lock_diagnostics), fixed forward by #58. Output: verdict APPROVE / APPROVE_WITH_NOTES / REQUEST_CHANGES, then findings with file:line. Be concise.
+
+diff --git a/scripts/validate-yueboard-postgres.py b/scripts/validate-yueboard-postgres.py
+index 312f03e..d57f1a6 100644
+--- a/scripts/validate-yueboard-postgres.py
++++ b/scripts/validate-yueboard-postgres.py
+@@ -29,9 +29,12 @@
+ # did not exist yet. Every suite actually discovered still must execute.
+ HISTORICAL_ADDITIONS = {'./internal/modules/user', './internal/platform/referencelock',
+                         './internal/platform/nativeproto'}
+-FLOOR_ADDITIONS = {'./internal/modules/subscribe': 138, './internal/modules/statcron': 139,
+-                   './internal/platform/emailcoupon': 150}
++FLOOR_ADDITIONS = {'./internal/modules/subscribe': 138, './internal/modules/statcron': 139}
++# The email coupon receipt consumer was reviewed against a branch whose 00150
++# was never merged; yueboard master's 00150 is vless_xhttp_rows. Gate the
++# suite on the consumer's own source, not on a schema floor it never owned.
+ CAPABILITY_ADDITIONS = {
++    './internal/platform/emailcoupon': Path('internal/platform/emailcoupon/worker.go'),
+     './internal/modules/remindmailcron': Path('internal/platform/reminderrules/rules_g.go'),
+ }
+ # Durable abuse reset retries were introduced without a schema-floor change.
+diff --git a/tests/test_postgres_integration_gate.py b/tests/test_postgres_integration_gate.py
+index abc3074..6dd6c11 100644
+--- a/tests/test_postgres_integration_gate.py
++++ b/tests/test_postgres_integration_gate.py
+@@ -361,16 +361,28 @@ def test_current_floor_requires_statcron_and_subscribe_even_if_deleted(self):
+                 self.assertIn("missing=['" + path + "']", result.stderr)
+                 self.package(path)
+ 
+-    def test_floor_150_requires_email_coupon_receipt_consumer(self):
+-        (self.root / 'schema-floor.txt').write_text('150\n')
++    def test_email_coupon_worker_requires_its_receipt_consumer(self):
++        (self.root / 'schema-floor.txt').write_text('151\n')
+         email = './internal/platform/emailcoupon'
+         for path in GATE.ORDER:
+             if path != email:
+                 self.package(path)
++        marker = self.root / GATE.CAPABILITY_ADDITIONS[email]
++        marker.parent.mkdir(parents=True)
++        marker.write_text('package emailcoupon\n')
+         result = self.command('domain', self.root / 'receipt.json')
+         self.assertNotEqual(result.returncode, 0)
+         self.assertIn("missing=['" + email + "']", result.stderr)
+ 
++    def test_floor_151_without_email_coupon_source_is_not_missing(self):
++        (self.root / 'schema-floor.txt').write_text('151\n')
++        email = './internal/platform/emailcoupon'
++        for path in GATE.ORDER:
++            if path != email:
++                self.package(path)
++        result = self.command('domain', self.root / 'receipt.json')
++        self.assertNotIn('integration package plan mismatch', result.stderr)
++
+     def test_email_coupon_suite_runs_before_user_reset(self):
+         email = './internal/platform/emailcoupon'
+         for path in GATE.ORDER:

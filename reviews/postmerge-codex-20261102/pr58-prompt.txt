@@ -1,0 +1,24 @@
+You are an independent reviewer. Post-merge review of PR yueto-ci-58 (ci(policy): pin hashed PyYAML for test_postgres_lock_diagnostics	2026-11-02T02:27:31Z	9a223ab3). Review the diff below for correctness, security, and whether it weakens any gate. Note: yueto-ci#56 merged while policy CI failed (missing PyYAML for test_postgres_lock_diagnostics), fixed forward by #58. Output: verdict APPROVE / APPROVE_WITH_NOTES / REQUEST_CHANGES, then findings with file:line. Be concise.
+
+diff --git a/requirements-policy.txt b/requirements-policy.txt
+index fd7e93a..d430132 100644
+--- a/requirements-policy.txt
++++ b/requirements-policy.txt
+@@ -5,3 +5,4 @@ packaging==26.3 --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb55
+ pluggy==1.6.0 --hash=sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746
+ pygments==2.21.0 --hash=sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9
+ pytest==9.1.1 --hash=sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c
++pyyaml==6.0.3 --hash=sha256:0f29edc409a6392443abf94b9cf89ce99889a1dd5376d94316ae5145dfedd5d6
+diff --git a/tests/test_pytest_timing.py b/tests/test_pytest_timing.py
+index e0d9579..48d6ceb 100644
+--- a/tests/test_pytest_timing.py
++++ b/tests/test_pytest_timing.py
+@@ -243,7 +243,7 @@ def test_yaml_binding_is_ops_only_ordered_always_retained_and_immutable(self):
+         self.assertLess(policy.index(install), policy.index("python3 -m unittest discover"))
+         requirements = (ROOT / "requirements-policy.txt").read_text()
+         self.assertEqual(len(re.findall(r"^[a-z]+==.*--hash=sha256:[0-9a-f]{64}$",
+-                                        requirements, re.M)), 5)
++                                        requirements, re.M)), 6)
+ 
+ 
+ if __name__ == "__main__":
