@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 95,
+  "head": "7040338e5d0a6064605004f34bac2756cd1987ec",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "7040338e5d0a6064605004f34bac2756cd1987ec",
+    "artifact": "reviews/merge-receipts-20261102/yueboard-95.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T17:26:07Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "7040338e5d0a6064605004f34bac2756cd1987ec",
+    "command": "PG18 docker; go test -count=1 -p 1 -tags integration ./test/integration/ (+ the 4 named tests fail on 96f85bcd, pass on head)",
+    "log_sha256": "9d04ba2c8babf6889ce632e27e02757f51e679fc4306f1ffd4641cf4487b1cec",
+    "ran_at": "2026-11-02T17:30:29Z",
+    "runner": "box"
+  }
+}
