@@ -1,6 +1,593 @@
-head=af53fb7e8884e8edacf675956e7c5c6abc386e96 ran_at=2026-11-02T16:56:00Z runner=box
-cmd: for t in debbuild acmebuild verifytools; do docker build -q --target $t -f services/yueops-web/Dockerfile .; done
-debbuild rc=0 image=sha256:4587288c2fe92700cb032afedbba356f8c6073cd1446d7eccaf994648741e1f2
-acmebuild rc=0 image=sha256:39a61b2b2b2c362457be389c6db5c391d6d76fc4e9b869dfe0e42cc90b0a8b01
-verifytools rc=0 image=sha256:fec75a687b5ef9d32b74dc0d55b4fffe560290adb3cc4be5393bff5aba8d0a14
-note: final python:3.13-slim stages not built on box (box apt network exit 100, unrelated to the two alpine FROM lines changed)
+head=af53fb7e8884e8edacf675956e7c5c6abc386e96 ran_at=2026-11-02T16:59:33Z runner=box
+cmd: for t in debbuild acmebuild verifytools; do docker build --progress=plain --no-cache --target $t -f services/yueops-web/Dockerfile .; echo "$t rc=$?"; done
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 25.04kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+#2 DONE 0.0s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+#3 CACHED
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 25.04kB done
+#1 DONE 0.0s
+
+#4 [internal] load build definition from Dockerfile
+#4 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+#5 DONE 0.0s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 813B done
+#6 DONE 0.0s
+
+#7 [debbuild  1/11] FROM docker.io/library/alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+#7 CACHED
+
+#8 [internal] load build context
+#8 transferring context: 15.01kB 0.1s done
+#8 DONE 0.2s
+
+#9 [debbuild  2/11] RUN apk add --no-cache ca-certificates curl tar     && curl --fail --show-error --silent --location --proto '=https' --tlsv1.2       "https://github.com/goreleaser/nfpm/releases/download/v2.44.0/nfpm_2.44.0_Linux_x86_64.tar.gz"       --output /tmp/nfpm.tgz     && echo "1a12d47f104bdd5953d33bb1e97b369ffade9c429bfc070fd19977844100d3d2  /tmp/nfpm.tgz" | sha256sum -c -     && tar -xzf /tmp/nfpm.tgz -C /usr/local/bin nfpm
+#9 1.065 ( 1/12) Installing ca-certificates (20261020-r0)
+#9 1.081 ( 2/12) Installing brotli-libs (1.2.1-r0)
+#9 1.094 ( 3/12) Installing c-ares (1.34.9-r0)
+#9 1.101 ( 4/12) Installing libunistring (1.4.2-r0)
+#9 1.181 ( 5/12) Installing libidn2 (2.3.8-r0)
+#9 1.188 ( 6/12) Installing nghttp2-libs (1.70.0-r0)
+#9 1.195 ( 7/12) Installing libpsl (0.21.5-r3)
+#9 1.201 ( 8/12) Installing zstd-libs (1.5.7-r2)
+#9 1.216 ( 9/12) Installing libcurl (8.23.0-r0)
+#9 1.230 (10/12) Installing curl (8.23.0-r0)
+#9 1.237 (11/12) Installing acl-libs (2.3.2-r1)
+#9 1.244 (12/12) Installing tar (1.35-r5)
+#9 1.255 Executing busybox-1.37.0-r31.trigger
+#9 1.265 Executing ca-certificates-20261020-r0.trigger
+#9 1.308 OK: 13.7 MiB in 28 packages
+#9 1.676 /tmp/nfpm.tgz: OK
+#9 DONE 2.1s
+
+#10 [debbuild  3/11] WORKDIR /build/yueops-tuning
+#10 DONE 0.0s
+
+#11 [debbuild  4/11] COPY scripts/yueops-tuning/ ./
+#11 DONE 0.1s
+
+#12 [debbuild  5/11] COPY scripts/assert-node-recreate-safe.sh /build/assert-node-recreate-safe.sh
+#12 DONE 0.0s
+
+#13 [debbuild  6/11] COPY scripts/node-unit-failure.py /build/node-unit-failure.py
+#13 DONE 0.0s
+
+#14 [debbuild  7/11] COPY scripts/gso-canary-guard.sh /build/gso-canary-guard.sh
+#14 DONE 0.0s
+
+#15 [debbuild  8/11] COPY scripts/yue-node-effective-gso-policy.sh /build/yue-node-effective-gso-policy.sh
+#15 DONE 0.1s
+
+#16 [debbuild  9/11] COPY scripts/relay-hy2-dnat.sh /build/relay-hy2-dnat.sh
+#16 DONE 0.0s
+
+#17 [debbuild 10/11] COPY scripts/units/ /build/units/
+#17 DONE 0.1s
+
+#18 [debbuild 11/11] RUN mkdir -p /out     && sh ./build-reviewed.sh /out     && curl --fail --show-error --silent --location --proto '=https' --tlsv1.2       "https://raw.githubusercontent.com/bin456789/reinstall/b941221ec1f56400198e2904b723ae3410b50e2f/reinstall.sh"       --output /out/reinstall.sh     && echo "9b130b8108275372d875bea56638480dc58de9583c52e82270059a43f88c4234  /out/reinstall.sh" | sha256sum -c -     && chmod 0755 /out/reinstall.sh
+#18 0.298 using deb packager...
+#18 0.322 created package: /out/.tuning-build.NJlAgB/yueops-tuning.deb
+#18 0.328 TUNING_PACKAGE_VERIFIED package=yueops-tuning version=2026.11.02.1 sha256=e6cfb008d04235a098437cab0e7398637fd63694c7b97efccf1a1f980646f5ad
+#18 0.333 using deb packager...
+#18 0.343 created package: /out/.tuning-build.NJlAgB/yueops-tuning-relay.deb
+#18 0.344 TUNING_PACKAGE_VERIFIED package=yueops-tuning-relay version=2026.11.01.1 sha256=e84cd15170fd651add5d8aca8d384d3db76e7fbf9ffff2ef365f575be0878acb
+#18 0.505 /out/reinstall.sh: OK
+#18 DONE 0.6s
+
+#19 exporting to image
+#19 exporting layers
+#19 exporting layers 0.2s done
+#19 writing image sha256:c0e17fdfda7a7f36a2cb65440f42a1ee441d93321d64ded09339d52f55c33199 done
+#19 DONE 0.2s
+debbuild rc=0
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 25.04kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+#2 DONE 0.0s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+#3 CACHED
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 25.04kB done
+#1 DONE 0.0s
+
+#4 [internal] load build definition from Dockerfile
+#4 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+#5 DONE 0.0s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 813B 0.0s done
+#6 DONE 0.0s
+
+#7 [acmebuild 1/2] FROM docker.io/library/alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+#7 CACHED
+
+#8 [acmebuild 2/2] RUN apk add --no-cache ca-certificates curl tar     && curl --fail --show-error --silent --location --proto '=https' --tlsv1.2       "https://codeload.github.com/acmesh-official/acme.sh/tar.gz/3661fd86b6304115e42f43910e6dd452ab9866d6"       --output /tmp/acme.tar.gz     && echo "9af3ad3d775a5782246df4cdd4b4e7b9b3179deb63c509b10e3ba0433093a884  /tmp/acme.tar.gz" | sha256sum -c -     && mkdir -p /out     && tar -xzf /tmp/acme.tar.gz -C /out --strip-components=1     && test -x /out/acme.sh     && test -f /out/dnsapi/dns_cf.sh     && test -f /out/dnsapi/dns_dpi.sh
+#8 0.855 ( 1/12) Installing ca-certificates (20261020-r0)
+#8 0.871 ( 2/12) Installing brotli-libs (1.2.1-r0)
+#8 0.891 ( 3/12) Installing c-ares (1.34.9-r0)
+#8 0.894 ( 4/12) Installing libunistring (1.4.2-r0)
+#8 0.909 ( 5/12) Installing libidn2 (2.3.8-r0)
+#8 0.920 ( 6/12) Installing nghttp2-libs (1.70.0-r0)
+#8 0.929 ( 7/12) Installing libpsl (0.21.5-r3)
+#8 0.937 ( 8/12) Installing zstd-libs (1.5.7-r2)
+#8 0.946 ( 9/12) Installing libcurl (8.23.0-r0)
+#8 0.960 (10/12) Installing curl (8.23.0-r0)
+#8 0.968 (11/12) Installing acl-libs (2.3.2-r1)
+#8 0.973 (12/12) Installing tar (1.35-r5)
+#8 0.988 Executing busybox-1.37.0-r31.trigger
+#8 0.995 Executing ca-certificates-20261020-r0.trigger
+#8 1.049 OK: 13.7 MiB in 28 packages
+#8 1.230 /tmp/acme.tar.gz: OK
+#8 DONE 1.6s
+
+#9 exporting to image
+#9 exporting layers
+#9 exporting layers 0.2s done
+#9 writing image sha256:bf2a2e2b87a3a90d71bec77b57fb0ed4f9d06f3ff9e6474fe493a8888d1afc85
+#9 writing image sha256:bf2a2e2b87a3a90d71bec77b57fb0ed4f9d06f3ff9e6474fe493a8888d1afc85 done
+#9 DONE 0.2s
+acmebuild rc=0
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 25.04kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+#2 DONE 0.0s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+#3 CACHED
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 25.04kB done
+#1 DONE 0.0s
+
+#4 [internal] load build definition from Dockerfile
+#4 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/golang:1.27.3-alpine@sha256:d530cf60723abf1ffae0cd16bb546b379ec0550d2f3815e5b16ed69dbc00fba4
+#5 DONE 0.0s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 813B done
+#6 DONE 0.0s
+
+#7 [verifytools 1/7] FROM docker.io/library/golang:1.27.3-alpine@sha256:d530cf60723abf1ffae0cd16bb546b379ec0550d2f3815e5b16ed69dbc00fba4
+#7 DONE 0.0s
+
+#7 [verifytools 1/7] FROM docker.io/library/golang:1.27.3-alpine@sha256:d530cf60723abf1ffae0cd16bb546b379ec0550d2f3815e5b16ed69dbc00fba4
+#7 CACHED
+
+#8 [verifytools 2/7] RUN --mount=type=cache,target=/go/pkg/mod     set -eu;     download_json() {       module="$1"; attempt=1;       while ! result="$(timeout 300 go mod download -json "$module" 2>&1)"; do         if [ "$attempt" -ge 3 ]; then           printf '%s\n' "$result" >&2; return 1;         fi;         sleep "$((attempt * 2))"; attempt="$((attempt + 1))";       done;       printf '%s\n' "$result";     };     mkdir -p /out /src/cosign;     cosign_json="$(download_json       "github.com/sigstore/cosign/v3@v3.1.3")";     printf '%s\n' "$cosign_json"       | grep -F ""Sum": "h1:001JQRI/PJ/5T+g/kJ1KTvKFbb322+fomc+pHDZ/6sg="";     printf '%s\n' "$cosign_json"       | grep -F ""GoModSum": "h1:DmjtYkWDMdbG26X+QSOPB6QQGkLjRjQCIxxNs6wV6bA="";     printf '%s\n' "$cosign_json"       | grep -F ""Hash": "11926fa5bbbbde47e88fc006b625a17769b743b2"";     cosign_dir="$(go env GOMODCACHE)/github.com/sigstore/cosign/v3@v3.1.3";     test -d "$cosign_dir";     cp -R "$cosign_dir"/. /src/cosign/;     chmod -R u+w /src/cosign
+#8 0.735 	"Sum": "h1:001JQRI/PJ/5T+g/kJ1KTvKFbb322+fomc+pHDZ/6sg=",
+#8 0.735 	"GoModSum": "h1:DmjtYkWDMdbG26X+QSOPB6QQGkLjRjQCIxxNs6wV6bA=",
+#8 0.735 		"Hash": "11926fa5bbbbde47e88fc006b625a17769b743b2",
+#8 DONE 1.5s
+
+#9 [verifytools 3/7] RUN --mount=type=cache,target=/go/pkg/mod     set -eu;     download_json() {       module="$1"; attempt=1;       while ! result="$(timeout 300 go mod download -json "$module" 2>&1)"; do         if [ "$attempt" -ge 3 ]; then           printf '%s\n' "$result" >&2; return 1;         fi;         sleep "$((attempt * 2))"; attempt="$((attempt + 1))";       done;       printf '%s\n' "$result";     };     mkdir -p /src/gh;     gh_json="$(download_json       "github.com/cli/cli/v2@v2.96.0")";     printf '%s\n' "$gh_json"       | grep -F ""Sum": "h1:G3l9qOSbd18iNTfuoU24mscFrIyJSsLmhk6xg9HJxGo="";     printf '%s\n' "$gh_json"       | grep -F ""GoModSum": "h1:o2yRfcl3KMilZwY7Rr8YuqPnSX5qOmE9Pu77NZQ07Bw="";     printf '%s\n' "$gh_json"       | grep -F ""Hash": "b300f2ec7ec9dc9addc39b2ad88c54097ded7ca0"";     gh_dir="$(go env GOMODCACHE)/github.com/cli/cli/v2@v2.96.0";     test -d "$gh_dir";     cp -R "$gh_dir"/. /src/gh/;     chmod -R u+w /src/gh
+#9 1.325 	"Sum": "h1:G3l9qOSbd18iNTfuoU24mscFrIyJSsLmhk6xg9HJxGo=",
+#9 1.325 	"GoModSum": "h1:o2yRfcl3KMilZwY7Rr8YuqPnSX5qOmE9Pu77NZQ07Bw=",
+#9 1.325 		"Hash": "b300f2ec7ec9dc9addc39b2ad88c54097ded7ca0",
+#9 DONE 1.7s
+
+#10 [verifytools 4/7] WORKDIR /src/cosign
+#10 DONE 0.0s
+
+#11 [verifytools 5/7] RUN --mount=type=cache,target=/go/pkg/mod     --mount=type=cache,target=/root/.cache/go-build     set -eu;     go mod edit -require="google.golang.org/grpc@v1.83.2"     && go mod edit -require="golang.org/x/text@v0.42.0"     && go mod edit -require="golang.org/x/mod@v0.41.0"     && go mod edit -require="golang.org/x/net@v0.60.0"     && go mod edit -require="github.com/klauspost/compress@v1.18.7"     && go mod edit -require="github.com/go-jose/go-jose/v4@v4.1.6"     && go mod download "google.golang.org/grpc@v1.83.2"     && go mod download "golang.org/x/text@v0.42.0"     && go mod download "golang.org/x/mod@v0.41.0"     && go mod download "golang.org/x/net@v0.60.0"     && go mod download "github.com/klauspost/compress@v1.18.7"     && go mod download "github.com/go-jose/go-jose/v4@v4.1.6"     && grep -F "google.golang.org/grpc v1.83.2 h1:EManeRomTObA0BU7I8vXgg/78uE5MJ9M8B39EX2WscU=" go.sum     && grep -F "google.golang.org/grpc v1.83.2/go.mod h1:YPI1hK3kDked6iHvgX3tR0y+nX/qpMFKhPgFsokw1S8=" go.sum     && grep -F "golang.org/x/text v0.42.0 h1:JbOZXgfeCPU9gacVtYliJqOhD+zhrEqK4LfdpmlUZqI=" go.sum     && grep -F "golang.org/x/text v0.42.0/go.mod h1:ojzP1Z+2QtioaF8DTtO8K5q7JWVVYwZKenzujK0Zd0E=" go.sum     && grep -F "golang.org/x/mod v0.41.0 h1:qJmnOUb4YB+FsEuM3HcWucdZASCPGhsX6uljO6pog0c=" go.sum     && grep -F "golang.org/x/mod v0.41.0/go.mod h1:Ek9pY8RKWXwsWvd3rQiHYtMqkjSUV+s1Rj7j4H5Ur6o=" go.sum     && grep -F "golang.org/x/net v0.60.0 h1:79p50tfZlm0J9YfoDsSi639qSXNGVwEzOPLCxM2FsYU=" go.sum     && grep -F "golang.org/x/net v0.60.0/go.mod h1:2DA/G1UfVbCpQPeWTmMPGY7Cs2PkBkwu743bVX5PIVg=" go.sum     && grep -Fx "github.com/klauspost/compress v1.18.7 h1:aUyZsS4kH3QTKurYhAOwAHxllVPnOthb3vPfnF1Ehjw=" go.sum     && grep -Fx "github.com/klauspost/compress v1.18.7/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=" go.sum     && grep -Fx "github.com/go-jose/go-jose/v4 v4.1.6 h1:sNRkftxFJxwsILiQukqp5z83QBSmntVwmgRY7AqBDO4=" go.sum     && grep -Fx "github.com/go-jose/go-jose/v4 v4.1.6/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=" go.sum     && CGO_ENABLED=0 GOOS="linux" GOARCH="amd64"       go build -mod=mod -trimpath -buildvcs=false       -ldflags="-buildid=         -X sigs.k8s.io/release-utils/version.gitVersion=v3.1.3         -X sigs.k8s.io/release-utils/version.gitCommit=11926fa5bbbbde47e88fc006b625a17769b743b2         -X sigs.k8s.io/release-utils/version.gitTreeState=clean         -X sigs.k8s.io/release-utils/version.buildDate=2026-08-06T01:09:23Z"       -o /out/cosign ./cmd/cosign     && go version -m /out/cosign       | awk -v version="v4.1.6" -v sum="h1:sNRkftxFJxwsILiQukqp5z83QBSmntVwmgRY7AqBDO4=" '$1 == "dep" && $2 == "github.com/go-jose/go-jose/v4" && $3 == version && $4 == sum { found = 1 } END { exit !found }'
+#11 2.965 google.golang.org/grpc v1.83.2 h1:EManeRomTObA0BU7I8vXgg/78uE5MJ9M8B39EX2WscU=
+#11 2.966 google.golang.org/grpc v1.83.2/go.mod h1:YPI1hK3kDked6iHvgX3tR0y+nX/qpMFKhPgFsokw1S8=
+#11 2.967 golang.org/x/text v0.42.0 h1:JbOZXgfeCPU9gacVtYliJqOhD+zhrEqK4LfdpmlUZqI=
+#11 2.968 golang.org/x/text v0.42.0/go.mod h1:ojzP1Z+2QtioaF8DTtO8K5q7JWVVYwZKenzujK0Zd0E=
+#11 2.969 golang.org/x/mod v0.41.0 h1:qJmnOUb4YB+FsEuM3HcWucdZASCPGhsX6uljO6pog0c=
+#11 2.974 golang.org/x/mod v0.41.0/go.mod h1:Ek9pY8RKWXwsWvd3rQiHYtMqkjSUV+s1Rj7j4H5Ur6o=
+#11 2.975 golang.org/x/net v0.60.0 h1:79p50tfZlm0J9YfoDsSi639qSXNGVwEzOPLCxM2FsYU=
+#11 2.975 golang.org/x/net v0.60.0/go.mod h1:2DA/G1UfVbCpQPeWTmMPGY7Cs2PkBkwu743bVX5PIVg=
+#11 2.975 github.com/klauspost/compress v1.18.7 h1:aUyZsS4kH3QTKurYhAOwAHxllVPnOthb3vPfnF1Ehjw=
+#11 2.979 github.com/klauspost/compress v1.18.7/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
+#11 2.979 github.com/go-jose/go-jose/v4 v4.1.6 h1:sNRkftxFJxwsILiQukqp5z83QBSmntVwmgRY7AqBDO4=
+#11 2.979 github.com/go-jose/go-jose/v4 v4.1.6/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
+#11 3.005 go: downloading github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.8
+#11 3.005 go: downloading github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.8
+#11 3.005 go: downloading github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.8
+#11 3.005 go: downloading github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.8
+#11 3.019 go: downloading github.com/moby/term v0.5.2
+#11 3.069 go: downloading github.com/google/go-containerregistry v0.21.7
+#11 3.087 go: downloading github.com/sigstore/sigstore v1.10.8
+#11 3.192 go: downloading github.com/spf13/cobra v1.10.2
+#11 3.192 go: downloading github.com/spf13/pflag v1.0.10
+#11 3.227 go: downloading github.com/spf13/viper v1.21.0
+#11 3.235 go: downloading github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
+#11 3.255 go: downloading sigs.k8s.io/release-utils v0.12.4
+#11 3.265 go: downloading github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
+#11 3.265 go: downloading github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
+#11 3.265 go: downloading github.com/go-openapi/runtime v0.32.4
+#11 3.266 go: downloading github.com/go-openapi/strfmt v0.26.4
+#11 3.269 go: downloading github.com/go-openapi/swag/conv v0.27.0
+#11 3.273 go: downloading github.com/google/certificate-transparency-go v1.3.3
+#11 3.287 go: downloading github.com/go-openapi/swag v0.26.1
+#11 3.316 go: downloading github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
+#11 3.317 go: downloading github.com/secure-systems-lab/go-securesystemslib v0.11.0
+#11 3.369 go: downloading github.com/sigstore/protobuf-specs v0.5.1
+#11 3.369 go: downloading github.com/sigstore/rekor v1.5.3
+#11 3.587 go: downloading github.com/sigstore/sigstore-go v1.2.2
+#11 3.595 go: downloading github.com/sigstore/timestamp-authority/v2 v2.1.2
+#11 3.595 go: downloading github.com/transparency-dev/merkle v0.0.2
+#11 3.617 go: downloading golang.org/x/sync v0.21.0
+#11 3.628 go: downloading golang.org/x/term v0.44.0
+#11 3.636 go: downloading google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
+#11 3.824 go: downloading golang.org/x/sys v0.46.0
+#11 3.838 go: downloading github.com/aws/aws-sdk-go-v2 v1.42.0
+#11 3.838 go: downloading github.com/aws/aws-sdk-go-v2/config v1.32.25
+#11 3.838 go: downloading github.com/aws/aws-sdk-go-v2/service/kms v1.53.4
+#11 3.845 go: downloading github.com/jellydator/ttlcache/v3 v3.4.0
+#11 3.845 go: downloading github.com/hashicorp/vault/api v1.22.0
+#11 3.909 go: downloading github.com/mitchellh/go-homedir v1.1.0
+#11 3.909 go: downloading github.com/Azure/azure-sdk-for-go/sdk/azcore v1.22.0
+#11 3.964 go: downloading github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
+#11 3.964 go: downloading github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.14.0
+#11 3.967 go: downloading github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys v1.5.0
+#11 3.975 go: downloading golang.org/x/crypto v0.53.0
+#11 4.149 go: downloading cloud.google.com/go/kms v1.31.0
+#11 4.186 go: downloading cloud.google.com/go v0.123.0
+#11 4.200 go: downloading google.golang.org/api v0.284.0
+#11 4.239 go: downloading github.com/in-toto/attestation v1.2.0
+#11 4.239 go: downloading k8s.io/apimachinery v0.36.2
+#11 4.473 go: downloading github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.12.0
+#11 4.473 go: downloading github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
+#11 4.494 go: downloading github.com/in-toto/in-toto-golang v0.11.0
+#11 4.557 go: downloading github.com/mozillazg/docker-credential-acr-helper v0.4.0
+#11 4.565 go: downloading github.com/mitchellh/go-wordwrap v1.0.1
+#11 4.574 go: downloading github.com/sigstore/rekor-tiles/v2 v2.3.0
+#11 4.648 go: downloading github.com/fsnotify/fsnotify v1.10.1
+#11 4.648 go: downloading github.com/go-viper/mapstructure/v2 v2.5.0
+#11 4.661 go: downloading github.com/sagikazarmark/locafero v0.11.0
+#11 4.661 go: downloading github.com/spf13/afero v1.15.0
+#11 4.666 go: downloading github.com/spf13/cast v1.10.0
+#11 4.678 go: downloading github.com/docker/cli v29.5.3+incompatible
+#11 4.963 go: downloading github.com/opencontainers/image-spec v1.1.1
+#11 4.965 go: downloading github.com/opencontainers/go-digest v1.0.0
+#11 5.033 go: downloading github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352
+#11 5.041 go: downloading github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
+#11 5.055 go: downloading github.com/go-openapi/errors v0.22.8
+#11 5.075 go: downloading github.com/google/uuid v1.6.0
+#11 5.085 go: downloading github.com/oklog/ulid/v2 v2.1.1
+#11 5.118 go: downloading google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa
+#11 5.158 go: downloading google.golang.org/genproto v0.0.0-20260406210006-6f92a3bedf2d
+#11 5.158 go: downloading github.com/go-openapi/swag/fileutils v0.26.1
+#11 5.164 go: downloading github.com/go-openapi/swag/jsonutils v0.26.1
+#11 5.178 go: downloading github.com/go-openapi/swag/stringutils v0.26.1
+#11 5.190 go: downloading github.com/go-openapi/validate v0.26.0
+#11 5.380 go: downloading github.com/blang/semver v3.5.1+incompatible
+#11 5.389 go: downloading github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
+#11 5.401 go: downloading github.com/letsencrypt/boulder v0.20260309.0
+#11 5.743 go: downloading github.com/theupdateframework/go-tuf v0.7.0
+#11 6.075 go: downloading github.com/pkg/errors v0.9.1
+#11 6.114 go: downloading github.com/theupdateframework/go-tuf/v2 v2.4.2
+#11 6.196 go: downloading github.com/hashicorp/go-multierror v1.1.1
+#11 6.203 go: downloading github.com/hashicorp/hcl v1.0.1-vault-7
+#11 6.241 go: downloading github.com/cenkalti/backoff/v4 v4.3.0
+#11 6.254 go: downloading github.com/hashicorp/errwrap v1.1.0
+#11 6.258 go: downloading github.com/hashicorp/go-cleanhttp v0.5.2
+#11 6.261 go: downloading github.com/hashicorp/go-retryablehttp v0.7.8
+#11 6.263 go: downloading github.com/hashicorp/go-rootcerts v1.0.2
+#11 6.270 go: downloading github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0
+#11 6.270 go: downloading github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
+#11 6.285 go: downloading github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
+#11 6.285 go: downloading golang.org/x/time v0.15.0
+#11 6.293 go: downloading github.com/aws/smithy-go v1.27.2
+#11 6.387 go: downloading github.com/aws/aws-sdk-go-v2/credentials v1.19.24
+#11 6.412 go: downloading github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.29
+#11 6.412 go: downloading github.com/aws/aws-sdk-go-v2/service/signin v1.2.0
+#11 6.424 go: downloading github.com/aws/aws-sdk-go-v2/service/sso v1.31.3
+#11 6.427 go: downloading github.com/aws/aws-sdk-go-v2/service/ssooidc v1.36.6
+#11 6.448 go: downloading github.com/aws/aws-sdk-go-v2/service/sts v1.43.3
+#11 6.457 go: downloading github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.29
+#11 6.471 go: downloading cloud.google.com/go/longrunning v1.0.0
+#11 6.566 go: downloading cloud.google.com/go/iam v1.11.0
+#11 6.598 go: downloading github.com/googleapis/gax-go/v2 v2.22.0
+#11 7.980 go: downloading github.com/google/go-github/v88 v88.0.0
+#11 7.980 go: downloading golang.org/x/oauth2 v0.36.0
+#11 7.982 go: downloading gitlab.com/gitlab-org/api/client-go v1.46.0
+#11 8.030 go: downloading k8s.io/api v0.36.2
+#11 8.209 go: downloading k8s.io/client-go v0.36.2
+#11 8.792 go: downloading k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
+#11 8.792 go: downloading sigs.k8s.io/yaml v1.6.0
+#11 8.797 go: downloading github.com/docker/docker-credential-helpers v0.9.5
+#11 8.808 go: downloading github.com/sirupsen/logrus v1.9.4
+#11 8.809 go: downloading github.com/Azure/go-autorest/autorest/azure/auth v0.5.12
+#11 8.820 go: downloading github.com/shibumi/go-pathspec v1.3.0
+#11 8.823 go: downloading github.com/dustin/go-humanize v1.0.1
+#11 8.829 go: downloading cuelang.org/go v0.16.1
+#11 8.841 go: downloading github.com/Azure/go-autorest/autorest v0.11.29
+#11 8.853 go: downloading github.com/Azure/go-autorest v14.2.0+incompatible
+#11 9.299 go: downloading github.com/open-policy-agent/opa v1.17.1
+#11 9.299 go: downloading github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8
+#11 9.316 go: downloading github.com/subosito/gotenv v1.6.0
+#11 9.325 go: downloading github.com/pelletier/go-toml/v2 v2.2.4
+#11 9.352 go: downloading go.yaml.in/yaml/v3 v3.0.4
+#11 9.387 go: downloading github.com/google/go-cmp v0.7.0
+#11 9.434 go: downloading github.com/go-openapi/swag/typeutils v0.27.0
+#11 9.443 go: downloading github.com/go-openapi/runtime/server-middleware v0.30.0
+#11 9.459 go: downloading go.opentelemetry.io/otel v1.44.0
+#11 9.806 go: downloading go.opentelemetry.io/otel/trace v1.44.0
+#11 9.826 go: downloading github.com/go-openapi/swag/cmdutils v0.26.1
+#11 9.835 go: downloading github.com/go-openapi/swag/jsonname v0.26.1
+#11 9.849 go: downloading github.com/go-openapi/swag/loading v0.26.1
+#11 9.859 go: downloading github.com/go-openapi/swag/mangling v0.26.1
+#11 9.866 go: downloading github.com/go-openapi/swag/netutils v0.26.1
+#11 9.874 go: downloading github.com/go-openapi/swag/yamlutils v0.26.1
+#11 9.888 go: downloading github.com/go-chi/chi/v5 v5.3.0
+#11 9.905 go: downloading go.uber.org/zap v1.28.0
+#11 9.940 go: downloading github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
+#11 9.953 go: downloading github.com/jedisct1/go-minisign v0.0.0-20230811132847-661be99b8267
+#11 9.968 go: downloading github.com/go-openapi/analysis v0.25.2
+#11 10.03 go: downloading github.com/go-openapi/jsonpointer v0.23.1
+#11 10.05 go: downloading github.com/go-openapi/loads v0.24.0
+#11 10.08 go: downloading github.com/go-openapi/spec v0.22.6
+#11 10.22 go: downloading github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399
+#11 10.23 go: downloading github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d
+#11 10.26 go: downloading github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
+#11 10.36 go: downloading github.com/transparency-dev/formats v0.1.1
+#11 10.37 go: downloading github.com/cenkalti/backoff/v5 v5.0.3
+#11 10.40 go: downloading github.com/natefinch/atomic v1.0.1
+#11 10.40 go: downloading github.com/hashicorp/go-sockaddr v1.0.7
+#11 10.42 go: downloading github.com/ryanuber/go-glob v1.0.0
+#11 10.43 go: downloading github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.30
+#11 10.44 go: downloading github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.12
+#11 10.45 go: downloading github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.29
+#11 10.46 go: downloading github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.29
+#11 10.47 go: downloading google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa
+#11 10.47 go: downloading go.opentelemetry.io/otel/metric v1.44.0
+#11 10.48 go: downloading cloud.google.com/go/auth v0.20.0
+#11 10.53 go: downloading cloud.google.com/go/auth/oauth2adapt v0.2.8
+#11 10.53 go: downloading cloud.google.com/go/compute/metadata v0.9.0
+#11 10.53 go: downloading go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.68.0
+#11 10.54 go: downloading go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
+#11 10.54 go: downloading github.com/google/go-querystring v1.2.0
+#11 10.55 go: downloading sigs.k8s.io/randfill v1.0.0
+#11 10.55 go: downloading k8s.io/klog/v2 v2.140.0
+#11 10.56 go: downloading github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
+#11 10.56 go: downloading sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730
+#11 10.57 go: downloading github.com/coreos/go-oidc/v3 v3.18.0
+#11 10.58 go: downloading github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
+#11 10.58 go: downloading github.com/buildkite/agent/v3 v3.130.0
+#11 10.59 go: downloading github.com/spiffe/go-spiffe/v2 v2.7.0
+#11 10.62 go: downloading github.com/aws/aws-sdk-go-v2/service/ecr v1.55.3
+#11 10.65 go: downloading github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.38.10
+#11 10.67 go: downloading go.yaml.in/yaml/v2 v2.4.4
+#11 10.80 go: downloading github.com/Azure/go-autorest/autorest/adal v0.9.23
+#11 10.81 go: downloading github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/provider v0.14.0
+#11 10.82 go: downloading github.com/alibabacloud-go/cr-20160607 v1.0.1
+#11 10.87 go: downloading github.com/alibabacloud-go/cr-20181201 v1.0.10
+#11 10.87 go: downloading github.com/alibabacloud-go/darabonba-openapi v0.2.1
+#11 10.87 go: downloading github.com/alibabacloud-go/tea-utils v1.4.5
+#11 10.87 go: downloading github.com/alibabacloud-go/tea v1.2.1
+#11 10.87 go: downloading github.com/aliyun/credentials-go v1.3.2
+#11 10.87 go: downloading github.com/Azure/go-autorest/autorest/azure/cli v0.4.6
+#11 10.88 go: downloading github.com/Azure/go-autorest/logger v0.2.1
+#11 10.88 go: downloading github.com/dimchansky/utfbom v1.1.1
+#11 10.88 go: downloading github.com/go-logr/logr v1.4.3
+#11 10.88 go: downloading go.uber.org/multierr v1.11.0
+#11 10.88 go: downloading github.com/sassoftware/relic v7.2.1+incompatible
+#11 10.94 go: downloading github.com/go-openapi/jsonreference v0.21.6
+#11 10.94 go: downloading github.com/cespare/xxhash/v2 v2.3.0
+#11 10.94 go: downloading github.com/google/s2a-go v0.1.9
+#11 10.94 go: downloading github.com/googleapis/enterprise-certificate-proxy v0.3.16
+#11 10.95 go: downloading k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a
+#11 10.95 go: downloading sigs.k8s.io/structured-merge-diff/v6 v6.3.2
+#11 10.96 go: downloading gopkg.in/inf.v0 v0.9.1
+#11 10.97 go: downloading github.com/felixge/httpsnoop v1.0.4
+#11 10.99 go: downloading github.com/google/gnostic-models v0.7.0
+#11 10.99 go: downloading github.com/fxamacker/cbor/v2 v2.9.0
+#11 10.99 go: downloading connectrpc.com/connect v1.20.0
+#11 10.99 go: downloading github.com/buildkite/go-pipeline v0.17.1
+#11 10.99 go: downloading github.com/buildkite/roko v1.4.0
+#11 11.00 go: downloading github.com/pborman/uuid v1.2.1
+#11 11.00 go: downloading github.com/Azure/go-autorest/tracing v0.6.0
+#11 11.01 go: downloading github.com/Azure/go-autorest/autorest/date v0.3.0
+#11 11.01 go: downloading github.com/golang-jwt/jwt/v4 v4.5.2
+#11 11.02 go: downloading github.com/Azure/azure-sdk-for-go/sdk/internal v1.12.0
+#11 11.02 go: downloading github.com/AzureAD/microsoft-authentication-library-for-go v1.7.2
+#11 11.05 go: downloading github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.2.0
+#11 11.05 go: downloading github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.4
+#11 11.05 go: downloading github.com/alibabacloud-go/tea-xml v1.1.3
+#11 11.05 go: downloading github.com/alibabacloud-go/openapi-util v0.1.0
+#11 11.05 go: downloading github.com/cockroachdb/apd/v3 v3.2.1
+#11 11.07 go: downloading cuelabs.dev/go/oci/ociregistry v0.0.0-20251212221603-3adeb8663819
+#11 11.09 go: downloading github.com/go-logr/stdr v1.2.2
+#11 11.09 go: downloading go.opentelemetry.io/auto/sdk v1.2.1
+#11 11.09 go: downloading github.com/alibabacloud-go/endpoint-util v1.1.1
+#11 11.09 go: downloading github.com/golang/snappy v0.0.4
+#11 11.09 go: downloading github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415
+#11 11.10 go: downloading github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9
+#11 11.10 go: downloading github.com/gobwas/glob v0.2.3
+#11 11.10 go: downloading github.com/lestrrat-go/jwx/v3 v3.1.1
+#11 11.11 go: downloading github.com/tchap/go-patricia/v2 v2.3.3
+#11 11.11 go: downloading github.com/vektah/gqlparser/v2 v2.5.33
+#11 11.15 go: downloading github.com/yashtewari/glob-intersection v0.2.0
+#11 11.15 go: downloading github.com/alibabacloud-go/debug v1.0.0
+#11 11.15 go: downloading github.com/json-iterator/go v1.1.12
+#11 11.15 go: downloading github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee
+#11 11.16 go: downloading github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+#11 11.16 go: downloading gopkg.in/ini.v1 v1.67.3
+#11 11.16 go: downloading buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1
+#11 11.16 go: downloading github.com/x448/float16 v0.8.4
+#11 11.16 go: downloading github.com/kylelemons/godebug v1.1.0
+#11 11.16 go: downloading github.com/clbanning/mxj/v2 v2.7.0
+#11 11.18 go: downloading github.com/emicklei/proto v1.14.3
+#11 11.18 go: downloading github.com/protocolbuffers/txtpbfmt v0.0.0-20260217160748-a481f6a22f94
+#11 11.18 go: downloading github.com/rogpeppe/go-internal v1.14.1
+#11 11.18 go: downloading github.com/tjfoc/gmsm v1.4.1
+#11 11.20 go: downloading github.com/buildkite/interpolate v0.1.5
+#11 11.20 go: downloading github.com/oleiade/reflections v1.1.0
+#11 11.20 go: downloading gopkg.in/yaml.v3 v3.0.1
+#11 11.20 go: downloading github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb
+#11 11.20 go: downloading gopkg.in/evanphx/json-patch.v4 v4.13.0
+#11 11.21 go: downloading github.com/lestrrat-go/option/v2 v2.0.0
+#11 11.21 go: downloading github.com/lestrrat-go/blackmagic v1.0.4
+#11 11.21 go: downloading github.com/lestrrat-go/httprc/v3 v3.0.5
+#11 11.21 go: downloading github.com/lestrrat-go/dsig v1.2.1
+#11 11.21 go: downloading github.com/valyala/fastjson v1.6.10
+#11 11.21 go: downloading github.com/golang-jwt/jwt/v5 v5.3.1
+#11 11.22 go: downloading github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
+#11 11.22 go: downloading github.com/agnivade/levenshtein v1.2.1
+#11 11.22 go: downloading github.com/emicklei/go-restful/v3 v3.13.0
+#11 11.23 go: downloading github.com/lestrrat-go/httpcc v1.0.1
+#11 11.68 go: downloading golang.org/x/crypto v0.57.0
+#11 11.68 go: downloading golang.org/x/sync v0.23.0
+#11 11.68 go: downloading golang.org/x/term v0.46.0
+#11 11.68 go: downloading golang.org/x/sys v0.48.0
+#11 DONE 67.6s
+
+#12 [verifytools 6/7] WORKDIR /src/gh
+#12 DONE 0.0s
+
+#13 [verifytools 7/7] RUN --mount=type=cache,target=/go/pkg/mod     --mount=type=cache,target=/root/.cache/go-build     set -eu;     go mod edit -require="google.golang.org/grpc@v1.83.2"     && go mod edit -require="golang.org/x/text@v0.42.0"     && go mod edit -require="golang.org/x/mod@v0.41.0"     && go mod edit -require="golang.org/x/net@v0.60.0"     && go mod edit -require="github.com/klauspost/compress@v1.18.7"     && go mod download "google.golang.org/grpc@v1.83.2"     && go mod download "golang.org/x/text@v0.42.0"     && go mod download "golang.org/x/mod@v0.41.0"     && go mod download "golang.org/x/net@v0.60.0"     && go mod download "github.com/klauspost/compress@v1.18.7"     && grep -F "google.golang.org/grpc v1.83.2 h1:EManeRomTObA0BU7I8vXgg/78uE5MJ9M8B39EX2WscU=" go.sum     && grep -F "google.golang.org/grpc v1.83.2/go.mod h1:YPI1hK3kDked6iHvgX3tR0y+nX/qpMFKhPgFsokw1S8=" go.sum     && grep -F "golang.org/x/text v0.42.0 h1:JbOZXgfeCPU9gacVtYliJqOhD+zhrEqK4LfdpmlUZqI=" go.sum     && grep -F "golang.org/x/text v0.42.0/go.mod h1:ojzP1Z+2QtioaF8DTtO8K5q7JWVVYwZKenzujK0Zd0E=" go.sum     && grep -F "golang.org/x/mod v0.41.0 h1:qJmnOUb4YB+FsEuM3HcWucdZASCPGhsX6uljO6pog0c=" go.sum     && grep -F "golang.org/x/mod v0.41.0/go.mod h1:Ek9pY8RKWXwsWvd3rQiHYtMqkjSUV+s1Rj7j4H5Ur6o=" go.sum     && grep -F "golang.org/x/net v0.60.0 h1:79p50tfZlm0J9YfoDsSi639qSXNGVwEzOPLCxM2FsYU=" go.sum     && grep -F "golang.org/x/net v0.60.0/go.mod h1:2DA/G1UfVbCpQPeWTmMPGY7Cs2PkBkwu743bVX5PIVg=" go.sum     && grep -Fx "github.com/klauspost/compress v1.18.7 h1:aUyZsS4kH3QTKurYhAOwAHxllVPnOthb3vPfnF1Ehjw=" go.sum     && grep -Fx "github.com/klauspost/compress v1.18.7/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=" go.sum     && CGO_ENABLED=0 GOOS="linux" GOARCH="amd64"       go build -mod=mod -trimpath -buildvcs=false       -ldflags="-buildid=         -X github.com/cli/cli/v2/internal/build.Version=2.96.0         -X github.com/cli/cli/v2/internal/build.Date=2026-07-02"       -o /out/gh ./cmd/gh     && for binary in /out/cosign /out/gh; do       go version -m "$binary"         | awk 'NR == 1 && $2 == "go1.27.3" { found = 1 } END { exit !found }';       go version -m "$binary"         | awk '$1 == "dep" && $2 == "google.golang.org/grpc" && $3 == "v'"1.83.2"'" { found = 1 } END { exit !found }';       go version -m "$binary"         | awk '$1 == "dep" && $2 == "golang.org/x/text" && $3 == "v'"0.42.0"'" { found = 1 } END { exit !found }';       go version -m "$binary"         | awk '$1 == "dep" && $2 == "golang.org/x/mod" && $3 == "v'"0.41.0"'" { found = 1 } END { exit !found }';       go version -m "$binary"         | awk '$1 == "dep" && $2 == "golang.org/x/net" && $3 == "v'"0.60.0"'" { found = 1 } END { exit !found }';       go version -m "$binary"         | awk -v version="v1.18.7" -v sum="h1:aUyZsS4kH3QTKurYhAOwAHxllVPnOthb3vPfnF1Ehjw=" '$1 == "dep" && $2 == "github.com/klauspost/compress" && $3 == version && $4 == sum { found = 1 } END { exit !found }';     done
+#13 0.274 google.golang.org/grpc v1.83.2 h1:EManeRomTObA0BU7I8vXgg/78uE5MJ9M8B39EX2WscU=
+#13 0.275 google.golang.org/grpc v1.83.2/go.mod h1:YPI1hK3kDked6iHvgX3tR0y+nX/qpMFKhPgFsokw1S8=
+#13 0.276 golang.org/x/text v0.42.0 h1:JbOZXgfeCPU9gacVtYliJqOhD+zhrEqK4LfdpmlUZqI=
+#13 0.277 golang.org/x/text v0.42.0/go.mod h1:ojzP1Z+2QtioaF8DTtO8K5q7JWVVYwZKenzujK0Zd0E=
+#13 0.278 golang.org/x/mod v0.41.0 h1:qJmnOUb4YB+FsEuM3HcWucdZASCPGhsX6uljO6pog0c=
+#13 0.279 golang.org/x/mod v0.41.0/go.mod h1:Ek9pY8RKWXwsWvd3rQiHYtMqkjSUV+s1Rj7j4H5Ur6o=
+#13 0.280 golang.org/x/net v0.60.0 h1:79p50tfZlm0J9YfoDsSi639qSXNGVwEzOPLCxM2FsYU=
+#13 0.281 golang.org/x/net v0.60.0/go.mod h1:2DA/G1UfVbCpQPeWTmMPGY7Cs2PkBkwu743bVX5PIVg=
+#13 0.282 github.com/klauspost/compress v1.18.7 h1:aUyZsS4kH3QTKurYhAOwAHxllVPnOthb3vPfnF1Ehjw=
+#13 0.283 github.com/klauspost/compress v1.18.7/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
+#13 0.288 go: downloading github.com/AlecAivazis/survey/v2 v2.3.7
+#13 0.291 go: downloading github.com/cli/go-gh/v2 v2.13.0
+#13 0.291 go: downloading github.com/cli/safeexec v1.0.1
+#13 0.291 go: downloading github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
+#13 0.341 go: downloading github.com/hashicorp/go-version v1.9.0
+#13 0.341 go: downloading github.com/mattn/go-isatty v0.0.22
+#13 0.341 go: downloading github.com/MakeNowJust/heredoc v1.0.0
+#13 0.343 go: downloading github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
+#13 0.343 go: downloading github.com/briandowns/spinner v1.23.2
+#13 0.344 go: downloading github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
+#13 0.344 go: downloading github.com/mattn/go-colorable v0.1.15
+#13 0.357 go: downloading github.com/zalando/go-keyring v0.2.8
+#13 0.359 go: downloading github.com/cli/shurcooL-graphql v0.0.4
+#13 0.359 go: downloading github.com/henvic/httpretty v0.1.4
+#13 0.359 go: downloading github.com/thlib/go-timezone-local v0.0.6
+#13 0.361 go: downloading github.com/atotto/clipboard v0.1.4
+#13 0.363 go: downloading github.com/cli/oauth v1.2.2
+#13 0.375 go: downloading charm.land/bubbles/v2 v2.1.0
+#13 0.377 go: downloading charm.land/bubbletea/v2 v2.0.7
+#13 0.379 go: downloading charm.land/huh/v2 v2.0.3
+#13 0.397 go: downloading charm.land/lipgloss/v2 v2.0.4
+#13 0.398 go: downloading github.com/stretchr/testify v1.11.1
+#13 0.402 go: downloading github.com/muesli/termenv v0.16.0
+#13 0.403 go: downloading github.com/itchyny/gojq v0.12.17
+#13 0.416 go: downloading github.com/Masterminds/sprig/v3 v3.3.0
+#13 0.437 go: downloading github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
+#13 0.438 go: downloading github.com/charmbracelet/glamour v0.10.0
+#13 0.439 go: downloading github.com/microsoft/dev-tunnels v0.1.27
+#13 0.439 go: downloading github.com/muhammadmuzzammil1998/jsonc v1.0.0
+#13 0.475 go: downloading github.com/cli/browser v1.3.0
+#13 0.475 go: downloading github.com/fatih/color v1.18.0
+#13 0.482 go: downloading github.com/godbus/dbus/v5 v5.2.2
+#13 0.483 go: downloading github.com/catppuccin/go v0.3.0
+#13 0.489 go: downloading github.com/charmbracelet/x/exp/ordered v0.1.0
+#13 0.490 go: downloading github.com/charmbracelet/x/exp/strings v0.0.0-20250630141444-821143405392
+#13 0.499 go: downloading github.com/mitchellh/hashstructure/v2 v2.0.2
+#13 0.500 go: downloading github.com/charmbracelet/colorprofile v0.4.3
+#13 0.507 go: downloading github.com/charmbracelet/ultraviolet v0.0.0-20260525132238-948f4557a654
+#13 0.508 go: downloading github.com/charmbracelet/x/ansi v0.11.7
+#13 0.514 go: downloading github.com/charmbracelet/x/term v0.2.2
+#13 0.524 go: downloading github.com/lucasb-eyer/go-colorful v1.4.0
+#13 0.526 go: downloading github.com/muesli/cancelreader v0.2.2
+#13 0.532 go: downloading github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
+#13 0.536 go: downloading github.com/mattn/go-runewidth v0.0.23
+#13 0.536 go: downloading github.com/rivo/uniseg v0.4.7
+#13 0.539 go: downloading github.com/gdamore/tcell/v2 v2.13.10
+#13 0.547 go: downloading github.com/rivo/tview v0.42.0
+#13 0.567 go: downloading github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
+#13 0.569 go: downloading github.com/stretchr/objx v0.5.2
+#13 0.571 go: downloading github.com/muesli/reflow v0.3.0
+#13 0.577 go: downloading github.com/digitorus/timestamp v0.0.0-20250524132541-c45532741eea
+#13 0.577 go: downloading github.com/sigstore/sigstore-go v1.2.1
+#13 0.605 go: downloading github.com/aymanbagabas/go-osc52/v2 v2.0.1
+#13 0.606 go: downloading github.com/itchyny/timefmt-go v0.1.6
+#13 0.606 go: downloading dario.cat/mergo v1.0.2
+#13 0.606 go: downloading github.com/Masterminds/goutils v1.1.1
+#13 0.606 go: downloading github.com/Masterminds/semver/v3 v3.4.0
+#13 0.614 go: downloading github.com/huandu/xstrings v1.5.0
+#13 0.614 go: downloading github.com/mitchellh/copystructure v1.2.0
+#13 0.617 go: downloading github.com/shopspring/decimal v1.4.0
+#13 0.621 go: downloading google.golang.org/protobuf v1.36.11
+#13 0.626 go: downloading github.com/joho/godotenv v1.5.1
+#13 0.626 go: downloading github.com/twitchtv/twirp v8.1.3+incompatible
+#13 0.695 go: downloading github.com/opentracing/opentracing-go v1.2.0
+#13 0.720 go: downloading github.com/yuin/goldmark v1.8.2
+#13 0.723 go: downloading github.com/yuin/goldmark-emoji v1.0.6
+#13 0.746 go: downloading github.com/charmbracelet/x/cellbuf v0.0.15
+#13 0.755 go: downloading github.com/clipperhouse/displaywidth v0.11.0
+#13 0.756 go: downloading github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
+#13 0.756 go: downloading github.com/clipperhouse/uax29/v2 v2.7.0
+#13 0.762 go: downloading github.com/shurcooL/graphql v0.0.0-20230722043721-ed46e5a46466
+#13 0.765 go: downloading github.com/gdamore/encoding v1.0.1
+#13 0.774 go: downloading github.com/vmihailenco/msgpack/v5 v5.4.1
+#13 0.782 go: downloading github.com/distribution/reference v0.6.0
+#13 0.787 go: downloading github.com/sigstore/rekor-tiles/v2 v2.2.2-0.20260601073857-5d098a2b6443
+#13 0.787 go: downloading github.com/gabriel-vasile/mimetype v1.4.13
+#13 0.811 go: downloading github.com/mitchellh/reflectwalk v1.0.2
+#13 0.816 go: downloading github.com/gorilla/websocket v1.5.3
+#13 0.818 go: downloading github.com/charmbracelet/x/termios v0.1.1
+#13 0.818 go: downloading github.com/charmbracelet/x/windows v0.2.2
+#13 0.818 go: downloading github.com/alecthomas/chroma/v2 v2.19.0
+#13 0.827 go: downloading github.com/charmbracelet/x/exp/slice v0.0.0-20250630141444-821143405392
+#13 0.828 go: downloading github.com/microcosm-cc/bluemonday v1.0.27
+#13 0.829 go: downloading github.com/rodaine/table v1.3.0
+#13 0.839 go: downloading github.com/go-openapi/runtime v0.32.3
+#13 0.839 go: downloading github.com/go-openapi/strfmt v0.26.3
+#13 0.852 go: downloading github.com/go-openapi/swag/conv v0.26.0
+#13 0.856 go: downloading github.com/go-openapi/swag v0.26.0
+#13 0.857 go: downloading github.com/sigstore/rekor v1.5.2
+#13 0.941 go: downloading github.com/vmihailenco/tagparser/v2 v2.0.0
+#13 0.944 go: downloading google.golang.org/genproto/googleapis/rpc v0.0.0-20260523011958-0a33c5d7ca68
+#13 0.946 go: downloading github.com/aymerick/douceur v0.2.0
+#13 0.946 go: downloading github.com/go-openapi/errors v0.22.7
+#13 0.951 go: downloading github.com/go-openapi/swag/fileutils v0.26.0
+#13 0.954 go: downloading github.com/go-openapi/swag/jsonutils v0.26.0
+#13 0.954 go: downloading github.com/go-openapi/swag/stringutils v0.26.0
+#13 0.958 go: downloading github.com/go-openapi/validate v0.25.3
+#13 0.960 go: downloading github.com/docker/docker-credential-helpers v0.9.3
+#13 0.962 go: downloading github.com/gorilla/css v1.0.1
+#13 0.962 go: downloading github.com/dlclark/regexp2 v1.11.5
+#13 0.965 go: downloading github.com/go-openapi/swag/cmdutils v0.26.0
+#13 0.966 go: downloading github.com/go-openapi/swag/jsonname v0.26.0
+#13 0.971 go: downloading github.com/go-openapi/swag/loading v0.26.0
+#13 0.971 go: downloading github.com/go-openapi/swag/mangling v0.26.0
+#13 0.971 go: downloading github.com/go-openapi/swag/netutils v0.26.0
+#13 0.975 go: downloading github.com/go-openapi/swag/typeutils v0.26.0
+#13 0.976 go: downloading github.com/go-openapi/swag/yamlutils v0.26.0
+#13 0.978 go: downloading github.com/go-openapi/loads v0.23.3
+#13 0.982 go: downloading github.com/go-openapi/spec v0.22.5
+#13 DONE 15.3s
+
+#14 exporting to image
+#14 exporting layers
+#14 exporting layers 1.0s done
+#14 writing image sha256:f19fa68ce8a058fc6a149fbeea458198e2f821f56e1a38098a7ebcde15d35446 done
+#14 DONE 1.0s
+verifytools rc=0

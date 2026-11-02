@@ -1,7 +1,7 @@
 # Codex review — yueops #231 @ af53fb7e8884e8edacf675956e7c5c6abc386e96
 
 Box `codex exec -s read-only`, prompt scoped to `git diff <merge-base> af53fb7e8884e8edacf675956e7c5c6abc386e96`. Reviewed 2026-11-02T16:56:39Z.
-Parity: docker build --target debbuild/acmebuild/verifytools of services/yueops-web/Dockerfile at exact head on the box, log `yueops-231.log` (sha256 69c4e4c2820c954a8c3dc64d1cc59f26da6d7f018d516aa1ff0e49478eb8fb95). The two changed FROM lines (alpine:3.24 digest) are in debbuild and acmebuild; verifytools (gh module sum check) also passed on the box, so the earlier Mac gh-sum failure was environmental. Final python:3.13-slim stages not built (box apt network), unchanged by this PR. Pins checked against sum.golang.org/proxy.golang.org for gh v2.96.0: match.
+Parity: raw `docker build --progress=plain --no-cache --target {debbuild,acmebuild,verifytools}` output of services/yueops-web/Dockerfile at exact head on the box, ran 2026-11-02T16:59:33Z, log `yueops-231.log` (sha256 7f5c017c3645ac3ce4dbc788b9155078ea60b8344fa2be1daf645ad021918222; unedited command output with a head/ran_at header). The two changed FROM lines (alpine:3.24 digest) are in debbuild and acmebuild; verifytools (gh module sum check) also passed on the box, so the earlier Mac gh-sum failure was environmental. Final python:3.13-slim stages not built (box apt network), unchanged by this PR. Pins checked against sum.golang.org/proxy.golang.org for gh v2.96.0: match.
 Admission: check-shared-input-seal.py on simulated merge with origin/master: SHARED_INPUTS_UNCHANGED. Owner rules: no rule affected (base image digest only).
 
 ```
