@@ -404,6 +404,13 @@ No workflow, scheduled job or paid Actions dispatch is added.
 
 Before merging a lane's candidate:
 
+**Required: no merge without a committed receipt.** Steps 1–3 must all be done
+before pressing merge. A PR comment, a local file or a staged file does not count as a receipt.
+For a yueto-ci source PR, open its companion evidence PR (step 4) with the
+committed receipt for the frozen head **before** merging the source PR. A merge
+without one is a hygiene failure that needs a backfilled receipt PR (e.g.
+yueto-ci #72, merged 2026-11-02 with only a comment).
+
 1. Freeze its final PR **head SHA**. Obtain an independent read-only Codex review
    of that exact diff, with an `approve` verdict, and run local parity, for example
    `YUETO_ROOT=/home/box/Projects/yueto /home/box/Projects/yueto/scripts/yt-premerge <repo> <head>`.
