@@ -1,0 +1,16 @@
+Ran 4 tests in 0.004s
+
+OK
+rc=0 tests/test_ops_miniapp_membership_transition.py
+Ran 10 tests in 0.195s
+
+OK
+rc=0 tests/test_ops_first_native_successors.py
+usage: pytest-shards.py [-h]
+                        {plan,aggregate,expand,run,native-start,native-terminal,join,generate-skip-baseline,generate-retired-host-baseline} ...
+pytest-shards.py: error: the following arguments are required: command
+rc=0 scripts/pytest-shards.py
+Ran 15 tests in 1.488s
+
+FAILED (failures=13)
+rc=0 tests/test_pytest_shards.py
