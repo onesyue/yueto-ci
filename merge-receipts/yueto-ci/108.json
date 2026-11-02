@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto-ci",
+  "pr": 108,
+  "head": "04ad2272a6f9f7c6b0c0ed837f6eafc31435e3d6",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "04ad2272a6f9f7c6b0c0ed837f6eafc31435e3d6",
+    "artifact": "reviews/merge-receipts-20261103/yueto-ci-108.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-02T19:24:49Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "04ad2272a6f9f7c6b0c0ed837f6eafc31435e3d6",
+    "command": "/home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests && for f in merge-hygiene-exceptions.json merge-receipts/yueto-ci/101.json merge-receipts/yueto-ci/87.json merge-receipts/yueto-ci/91.json merge-receipts/yueto-ci/94.json merge-receipts/yueto-ci/97.json merge-receipts/yueto-ci/98.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check 2c2c7b2dd4e25314cecf9066b5b078ec1903eda8 04ad2272a6f9f7c6b0c0ed837f6eafc31435e3d6 -- . ':(exclude)reviews/'",
+    "log_sha256": "763f3e869b482be1d8b66c35bc4b41066a90555eb41521f87e2164ea4e4e4925",
+    "ran_at": "2026-11-02T19:24:50Z",
+    "runner": "box"
+  }
+}

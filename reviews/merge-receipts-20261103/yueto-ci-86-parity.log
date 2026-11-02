@@ -1,0 +1,3 @@
+head=0149182395f708a173ac602c4e466704d1cf3f43 ran_at=2026-11-02T17:45:55Z runner=box
+cmd: for f in ops-first-native-successors.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check d8629fc1b02596b8bd9f94bccdec90dff275ba91 0149182395f708a173ac602c4e466704d1cf3f43
+rc=0
