@@ -280,6 +280,11 @@ def premerge(owner, repo, number):
     now = datetime.now(timezone.utc)
     candidate = pr | {"merged_at": now.isoformat()}
     only_evidence = evidence_only(owner, repo, number)
+    # The files endpoint is mutable, including between pagination requests.
+    # Bind its classification to the same head and base observed initially.
+    refreshed = api(f"{prefix}/pulls/{number}")
+    if any(refreshed[ref]["sha"] != pr[ref]["sha"] for ref in ("head", "base")):
+        raise ValueError("PR head or base changed while fetching evidence; audit incomplete")
     evidence = receipt(repo, candidate)
     reasons = findings(candidate, reviews, checks, statuses)
     if evidence:

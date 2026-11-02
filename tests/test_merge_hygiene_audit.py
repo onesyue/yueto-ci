@@ -302,6 +302,7 @@ class EvidenceOnly(unittest.TestCase):
     def setUp(self):
         self.fixture = json.loads((ROOT / "tests/fixtures/merge-hygiene/approved.json").read_text())
         self.pr = self.fixture["pr"]
+        self.pr["base"] = {"sha": "b" * 40}
         self.files = [{"filename": "merge-receipts/yueops/203.json", "status": "added"},
                       {"filename": "reviews/merge-receipts-20261102/review.md", "status": "modified"}]
         self.checks = []
@@ -371,6 +372,43 @@ class EvidenceOnly(unittest.TestCase):
         self.assertIn(f'repos/owner/yueto-ci/pulls/{self.pr["number"]}/files?per_page=100&page=2', self.seen)
         self.files[-1] = {"filename": "scripts/example.py", "status": "added"}
         self.assertIn("required_merge_receipt_missing", self.run_gate("audit")["findings"])
+
+    def test_premerge_head_or_base_change_after_files_fails_closed(self):
+        original_api = self.api
+        for ref in ("head", "base"):
+            self.seen.clear()
+            def changed(endpoint):
+                result = original_api(endpoint)
+                if endpoint.endswith(f'/pulls/{self.pr["number"]}') and any(
+                        "/files?" in url for url in self.seen):
+                    return result | {ref: {"sha": "c" * 40}}
+                return result
+            with self.subTest(ref=ref), patch.object(self, "api", side_effect=changed):
+                with self.assertRaisesRegex(ValueError, "head or base changed"):
+                    self.run_gate("premerge")
+
+    def test_premerge_head_change_during_file_pagination_fails_closed(self):
+        self.files = [self.files[0]] * 100 + [self.files[1]]
+        original_api = self.api
+        def changed(endpoint):
+            result = original_api(endpoint)
+            if endpoint.endswith(f'/pulls/{self.pr["number"]}') and any(
+                    "/files?" in url and url.endswith("&page=2") for url in self.seen):
+                return result | {"head": {"sha": "c" * 40}}
+            return result
+        with patch.object(self, "api", side_effect=changed):
+            with self.assertRaisesRegex(ValueError, "head or base changed"):
+                self.run_gate("premerge")
+
+    def test_prefix_and_traversal_paths_do_not_qualify(self):
+        for path in ("merge-receipts-evil/x.json",
+                     "reviews/merge-receipts-x/../../scripts/a.py"):
+            self.files = [{"filename": path, "status": "added"}]
+            for mode in ("audit", "premerge"):
+                with self.subTest(path=path, mode=mode):
+                    row = self.run_gate(mode)
+                    self.assertFalse(row.get("evidence_only", False))
+                    self.assertIn("required_merge_receipt_missing", row["findings"])
 
     def test_incomplete_file_evidence(self):
         for files in ([self.files[0]] * 3000,
