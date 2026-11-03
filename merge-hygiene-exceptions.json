@@ -1014,6 +1014,12 @@
       "pr": 298,
       "reason": "Exact-head independent Codex review approved 837675c2e2cb89676a386a6034c302e46476a80b (yueto-ci #182 artifact). Full suite at head ended EXIT 1. Re-run of the failure set on head and base 79a20284eb1947f84dd663ac743ff5d2a7cd1c64 with the same environment: 14 failures on head, all also failing on base (base 15, extra one a known flaky); 0 head-only failures. Recorded as no regression vs base; parity is NOT pass. Evidence: reviews/merge-receipts-20261103/yueops-298-exception.md (head log SHA256 05775be5f8b830a890684089be11aaae54a26b13755febfa25f534610bf616c3). Missing evidence: a passing exact-head parity log.",
       "approver": "coordinator 2026-11-03 decision under owner standing mandate (decide autonomously): exception, no-regression-vs-base"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 179,
+      "reason": "INCIDENT: merged without a committed prior receipt during the P1 window (owner classification). Head bd051adae75a3f924b2cb9faae5b933c1aa66283; merge 9b318b9f51200c0f1d384218ae8d2fc13d6cf2fb; merged_at 2026-11-03T04:18:34Z (owner-supplied event time). GitHub PR/check pages show the policy tests + workflow lint check succeeded, run 41574191513. gh pr view was unavailable; exact check timestamps and complete API history remain unverified. The attempted pass receipt in PR #180 was withdrawn at 690bb67023513071de1189936c7d63a13031bae6: its review names another head and its parity log is prose. Missing evidence: independent approval naming the merged head and a passing exact-head local parity command log from an accepted runner. PARITY: NOT pass. Incident registration does not waive post-activation findings or restore the withdrawn pass receipt. Evidence: reviews/merge-receipts-20261103/yueto-ci-179-exception.md.",
+      "approver": "owner instruction 2026-11-03: record PR #179 as an INCIDENT receipt; authorization covers incident registration, not approval of missing review/parity or a gate waiver"
     }
   ]
 }
