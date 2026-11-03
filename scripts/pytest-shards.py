@@ -2848,6 +2848,16 @@ def map_bounded(functions, limit):
         return list(pool.map(lambda fn: fn(), functions))
 
 
+def shard_pythonpath(source, site):
+    """Expose the recorder and admitted source to pytest and its children.
+
+    Use only absolute, policy-selected entries: inherited/relative entries
+    would change meaning when a test launches Python from telegram-bot/yue.
+    Keep the verified recorder first, including each reference part's copy.
+    """
+    return os.pathsep.join(str(path.resolve()) for path in (site, source))
+
+
 def _collect_reference_part(expected, source, output, site, actual_runner, timing, assignment):
     part = output / "parts" / assignment["id"]
     site = part / "site"
@@ -2861,7 +2871,7 @@ def _collect_reference_part(expected, source, output, site, actual_runner, timin
         "LENS_REPORT": str(part / "events.jsonl"),
         "LENS_INVOCATION_ID": metadata["invocation_id"],
         "YUEOPS_PYTEST_SERIAL": "1",
-        "PYTHONPATH": str(site),
+        "PYTHONPATH": shard_pythonpath(source, site),
         "PYTEST_ADDOPTS": parent_opts,
     }
     xml = part / "pytest.xml"
@@ -3164,6 +3174,7 @@ def execute(value, source, board, role, output, site):
             "runner identity changed during preparation")
     env = os.environ | {"LENS_REPORT": str(output / "events.jsonl"),
                         "LENS_INVOCATION_ID": metadata["invocation_id"],
+                        "PYTHONPATH": shard_pythonpath(source, site),
                         "YUEOPS_PYTEST_SERIAL": "1"}
     (output / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
     result = subprocess.run(

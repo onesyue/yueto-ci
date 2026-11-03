@@ -486,6 +486,61 @@ class OpsShardWorkflow(unittest.TestCase):
         return self.call(self.consumer.join, self.admission, self.artifacts, result,
                          expected or self.admission["admission_sha256"])
 
+    def test_subprocess_imports_from_bot_cwd_in_reference_ordinary_and_serial(self):
+        self.check_subprocess_imports(ambient_path=True)
+
+    def test_subprocess_imports_without_inherited_pythonpath(self):
+        self.env.pop("PYTHONPATH", None)
+        self.check_subprocess_imports(ambient_path=False)
+
+    def check_subprocess_imports(self, ambient_path):
+        package = self.source / "yueops"
+        package.mkdir()
+        (package / "__init__.py").write_text("")
+        (package / "brand_g.py").write_text("URL_SITE = 'reviewed-source'\n")
+        bot = self.source / "telegram-bot/yue"
+        bot.mkdir(parents=True)
+        (bot / "service.py").write_text("from yueops.brand_g import URL_SITE\n")
+        probe = textwrap.dedent('''
+            import os, subprocess, sys
+            from pathlib import Path
+            def check_child_import():
+                root = Path(__file__).resolve().parents[1]
+                entries = os.environ['PYTHONPATH'].split(os.pathsep)
+                assert len(entries) == 2 and all(Path(p).is_absolute() for p in entries)
+                assert entries[1] == str(root)
+                child = subprocess.run(
+                    [sys.executable, '-c',
+                     "from service import URL_SITE; assert URL_SITE == 'reviewed-source'"],
+                    cwd=root / 'telegram-bot/yue', capture_output=True, text=True)
+                assert child.returncode == 0, child.stderr
+            check_child_import()
+            def test_child_import():
+                check_child_import()
+        ''')
+        # Exercise both collection-time children and test-time children, with
+        # the same clean Python invocation and nested cwd as the real failure.
+        (self.source / "tests/test_import_order.py").write_text(probe)
+        serial = self.source / TAIL[0]
+        serial.write_text(serial.read_text() + probe)
+        self.fixture.git(self.source, "add", "yueops", "telegram-bot", "tests")
+        self.fixture.commit(self.source)
+        revision = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
+        for row in self.targets["matrix"] + self.targets["validation_matrix"]:
+            row["ref"] = revision
+        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+                                   self.board_sha, "ubuntu-24.04", 4, 4)
+        # Ambient import paths must not leak into the reviewed child path.
+        poison = self.base / "ambient"
+        poison.mkdir()
+        (poison / "yueops.py").write_text("raise RuntimeError('ambient import')\n")
+        extra = ({"PYTHONPATH": os.pathsep.join((str(poison), "relative", ""))}
+                 if ambient_path else {})
+        joined = self.full_bundle(extra)
+        self.assertEqual(joined["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertEqual(joined["ordinary"]["case_count"], 10)
+        self.assertEqual(joined["skip_admission"]["status"], "NO_NEW_SKIPS")
+
     def test_actual_mixed_runner_allocations_reach_source_native_and_complete_join(self):
         roles = ["reference", *[a["id"] for a in self.admission["ops_plan"]["assignments"]], "native"]
         images = {}
