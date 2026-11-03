@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto-ci",
+  "pr": 161,
+  "head": "137e0502bc89505da7ab9b787a2c93e8f5985b99",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "137e0502bc89505da7ab9b787a2c93e8f5985b99",
+    "artifact": "reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T00:45:37Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "137e0502bc89505da7ab9b787a2c93e8f5985b99",
+    "command": "PYTHONPATH=tests pytest -q tests/test_build_policy.py tests/test_ops_shard_workflow.py",
+    "log_sha256": "6da499c3608cbbea32b8a84afceb42ee7491ae9446e90ab3af96a7ef6a43178c",
+    "ran_at": "2026-11-03T00:47:23Z",
+    "runner": "box"
+  }
+}
