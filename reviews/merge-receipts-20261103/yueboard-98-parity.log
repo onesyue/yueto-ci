@@ -1,0 +1,3 @@
+ok  	github.com/onesyue/yueboard/internal/modules/nodeext	0.371s
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	0.883s
+ok  	github.com/onesyue/yueboard/internal/modules/admin	0.698s
