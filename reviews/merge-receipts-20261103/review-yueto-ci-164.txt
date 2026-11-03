@@ -1,0 +1,1395 @@
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /home/box/Projects/yueto/yueto-ci
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a19ee6-6e71-7d11-8e9b-952b8469cbca
+--------
+user
+You are an independent code reviewer for onesyue/yueto-ci PR #164 at exact head 77ccf163402216c0caca5c3e3b0de166e6e6dbb3. Review ONLY the change in 'git diff 9346fac92cb07e3b379e765668e406f8b381ab1c 77ccf163402216c0caca5c3e3b0de166e6e6dbb3' (use git show/diff; do not modify anything). Look for correctness bugs, security problems, secret exposure, weakened tests, and regressions. Do not print any secret values. End with a block exactly of the form:
+VERDICT: approve   (or VERDICT: changes)
+followed by concise bullet findings with file:line.
+codex
+I’ll inspect the exact diff and relevant surrounding code, without modifying files or printing secret values.
+exec
+/bin/bash -lc 'git diff --stat 9346fac92cb07e3b379e765668e406f8b381ab1c 77ccf163402216c0caca5c3e3b0de166e6e6dbb3; git diff --name-only 9346fac92cb07e3b379e765668e406f8b381ab1c 77ccf163402216c0caca5c3e3b0de166e6e6dbb3' in /home/box/Projects/yueto/yueto-ci
+ succeeded in 0ms:
+ ops-first-native-successors.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+ops-first-native-successors.json
+
+exec
+/bin/bash -lc "rg --files -g AGENTS.md -g '*164*'" in /home/box/Projects/yueto/yueto-ci
+ succeeded in 0ms:
+reviews/merge-receipts-20261103/yueops-164-parity.log
+reviews/merge-receipts-20261103/yueops-164-review.txt
+
+exec
+/bin/bash -lc 'git diff 9346fac92cb07e3b379e765668e406f8b381ab1c 77ccf163402216c0caca5c3e3b0de166e6e6dbb3 -- ops-first-native-successors.json; git show 77ccf163402216c0caca5c3e3b0de166e6e6dbb3:ops-first-native-successors.json' in /home/box/Projects/yueto/yueto-ci
+ succeeded in 0ms:
+diff --git a/ops-first-native-successors.json b/ops-first-native-successors.json
+index db7f78f..b931827 100644
+--- a/ops-first-native-successors.json
++++ b/ops-first-native-successors.json
+@@ -487,5 +487,5 @@
+     "mode": "100644",
+     "path": "tests/_native_root_lab.py"
+   },
+-  "source_revision": "c2fe96139e41bead0a1c6f454fe3c603a3c98223"
++  "source_revision": "79a20284eb1947f84dd663ac743ff5d2a7cd1c64"
+ }
+{
+  "cases": {
+    "tests/test_frozen_manifest_reader_20261015.py::test_native_frozen_boundary_still_enforces_file_set_mode_and_content": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: native export boundary requires isolated Linux root",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_actual_native_sticky_lock_directory_is_supported": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_actual_signed_root_accepts_only_pinned_signer_and_exact_tree": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        },
+        {
+          "reason": "Skipped: canonical verifier requires an actual disposable container",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_approved_plan_drift_zero_publication": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_changed_container_or_authority_refuses_commit_and_rollback": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_commit_readback_crossing_deadline_cannot_write_marker": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_crash_intent_journal_covers_missing_publications": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_exclusive_publication_never_replaces_foreign_empty_directory": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_existing_executor_reference_refuses_partial_source_admission": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_existing_source_collision_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_expired_automatic_guard_does_not_refresh_its_budget_but_explicit_recovery_is_bounded": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_expired_before_git_publication_never_admits": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_expired_commit_keeps_guard": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_foreign_drift_refuses_all_rollback_writes": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_guard_failure_leaves_original_tree": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_guard_process_waits_for_real_writer_lock_then_rolls_back": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_hardlinked_runtime_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_lock_inode_change_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_lock_missing_is_not_recreated": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_contention": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_directory_refuses_nonsticky_symlink_or_foreign_owner[16895-0]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_directory_refuses_nonsticky_symlink_or_foreign_owner[17407-1]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_directory_refuses_nonsticky_symlink_or_foreign_owner[41471-0]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_partial_publication_failure_removes_only_owned_additions": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_peer_adoption_requires_exact_signed_bytes": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_preserves_all_existing_inodes_commit_and_guard_noop": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_readback_failure_withdraws_git_before_removing_source": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_rollback_restores_exact_original_tree": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_source_bytes_changed_after_plan_cannot_be_adopted": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_symlink_lock_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_panel_subscribe_delivery_alert_20261012.py::test_every_board_fail_delivery_event_is_watched": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: yueboard checkout absent",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_actual_nginx_routes_are_exact_private_and_read_only": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: explicit cached nginx Docker lab required",
+          "when": "call"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_automatic_guard_uses_original_deadline_and_explicit_recovery_does_not_mask_it": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_consumer_install_only_stages_units_and_cohort": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_expired_commit_has_no_success_marker": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[guard]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[reload]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[second_file]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[syntax]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_foreign_drift_refused_before_any_rollback_write": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_install_preserves_all_original_nginx_bytes_except_exact_include": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_missing_lock_never_recreated_by_rollback": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_refuses_existing_producer_unit_before_mutation": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[enabled-runtime]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[enabled]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[linked]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[masked]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_stages_exact_native_units_and_rollback_removes_them": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_plan_cas_refuses_changed_config": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_pull.py::test_actual_killed_service_process_then_configured_failure_command_projects_unknown": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: isolated root process failure lab required",
+          "when": "call"
+        }
+      ]
+    },
+    "tests/test_status_tls_installer_20261027.py::test_native_install_and_reverse_rollback_preserve_transport[False]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: native Linux root NGINX installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_status_tls_installer_20261027.py::test_native_install_and_reverse_rollback_preserve_transport[True]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: native Linux root NGINX installer required",
+          "when": "setup"
+        }
+      ]
+    }
+  },
+  "module_blobs": {
+    "tests/test_frozen_manifest_reader_20261015.py": "086246934ab623ad6df49be9225bc7ee04f4fee5",
+    "tests/test_install_operator_host_source.py": "64550a55f127f2db77cde4e7e4a6576158a02b56",
+    "tests/test_panel_subscribe_delivery_alert_20261012.py": "0d382f25ff22113ff54968d233555739da6da0d9",
+    "tests/test_protocol_liveness_results_install.py": "a4383cf33b167cb55578116b44a3f7c26d6e41b7",
+    "tests/test_protocol_liveness_results_pull.py": "882a60ee11cc6e6206219d115d947586be18c452",
+    "tests/test_status_tls_installer_20261027.py": "39c99459df135a7b5463930ce626c9f9d6b848ca"
+  },
+  "schema": 1,
+  "shared_input": {
+    "blob": "614ba6cbdce76989b9028e3bed2fdf0799eba3eb",
+    "mode": "100644",
+    "path": "tests/_native_root_lab.py"
+  },
+  "source_revision": "79a20284eb1947f84dd663ac743ff5d2a7cd1c64"
+}
+
+exec
+/bin/bash -lc "rg -n 'ops-first-native-successors|first.native.successors' . --glob '"'!reviews/**'"' --glob '"'!package-lock.json'"'; rg --files -g AGENTS.md /home/box/Projects /home/box/.codex 2>/dev/null" in /home/box/Projects/yueto/yueto-ci
+ succeeded in 0ms:
+./merge-hygiene-exceptions.json:739:      "reason": "Backfilled independent review of exact head 0149182395f708a173ac602c4e466704d1cf3f43 (2026-11-02T17:47:19Z). Codex review returned CHANGES: - [P1] `ops-first-native-successors.json:490`: 新 pin 的 `test_protocol_liveness_results_pull.py` 和 `test_status_tls_installer_20261027.py` 与保留的 `module_blobs` 不匹配。共享输入准入通过，但原生测试准入实测报错 `first native module source differs`，因此该 revision 仍无法通过完整校验。旧 pin 也存在此不匹配；本次换 pin 未解决它。请选择匹配的 revision，或独立审核并同步更新模块 seals。 - [P1] `ops-first-native-successors.json:490`: 新 pin 的 `test_protocol_liveness_results_pull.py` 和 `test_status_tls_installer_20261027.py` 与保留的 `module_blobs` 不匹配。共享输入准入通过，但原生测试准入实测报错 `first native module source differs`，因此该 revision 仍无法通过完整校验。旧 pin 也存在此不匹配；本次换 pin 未解决它。请选择匹配的 revision，或独立审核并同步更新模块 seals。; exact-head box parity: pass (reviews/merge-receipts-20261103/yueto-ci-86-parity.log) (reviews/merge-receipts-20261103/yueto-ci-86-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+./README.md:350:`ops-first-native-successors.json` and historical reviewed seals. A changed
+./tests/test_pytest_shards.py:72:        shutil.copyfile(ROOT / "ops-first-native-successors.json",
+./tests/test_pytest_shards.py:73:                        self.policy / "ops-first-native-successors.json")
+./scripts/pytest-shards.py:1789:    policy = read_json(ROOT / "ops-first-native-successors.json")
+/home/box/Projects/yueto/AGENTS.md
+
+exec
+/bin/bash -lc "cat /home/box/Projects/yueto/AGENTS.md; git show 77ccf163402216c0caca5c3e3b0de166e6e6dbb3:scripts/pytest-shards.py | sed -n '1740,1900p'; git show 77ccf163402216c0caca5c3e3b0de166e6e6dbb3:README.md | sed -n '325,370p'; ls /home/box/Projects/yueto" in /home/box/Projects/yueto/yueto-ci
+ succeeded in 0ms:
+# Yue.to workspace
+
+Read [CLAUDE.md](CLAUDE.md) before working here, then the target component's
+`CLAUDE.md`. This root contains independent repositories, not a monorepo.
+The same instructions and skills apply to Codex and Claude; current user
+authorization takes precedence over historical plans and permission reminders.
+
+Owner decision (2026-10-20): acceptance contracts for large items must still be
+recorded before implementation, but no Claude-specific or fixed-model approval
+is required. The currently authorized main session owns coordination and proceeds
+within the owner's scope without redundant coordinator sign-off. Claude's absence
+is not a blocker. Independent review, risk-proportional gates, release ownership,
+production readback and rollback remain required where applicable. Escalate only
+unresolved owner-level decisions or work outside existing authorization; never
+weaken acceptance silently. See R4.12's coordination-authority amendment in the
+sole execution plan. This decision supersedes conflicting inherited instructions.
+
+Owner decision (2026-10-20): choose and adjust parallel lanes for every task from
+its independent work, dependencies, available agents/resources and review/release
+capacity. Three lanes, a prior session layout or a template is never a fixed
+quota or ceiling. Use fewer lanes for coupled work and more for ready independent
+work when capacity permits. Prefer durable asynchronous waits; reuse or release
+idle workers without abandoning their recorded jobs, evidence or leases. Preserve
+one source writer per repository, independent review and actual resource limits.
+
+Owner decision (2026-10-23): execution plans must require no human participation
+or future cooperation. Retain only concrete AI-accessible work with available
+inputs, finite machine-verifiable acceptance, an automatic failure exit and
+applicable rollback. Withdraw human-dependent, unavailable and unbounded work
+from scheduling; preserve historical unmet evidence without claiming success.
+Independent review may be performed by another AI agent. This does not authorize
+bypassing permissions, financial/authentication invariants or release gates,
+abandoning in-flight recovery, or deleting installed schedules or stored data.
+The sole plan's R4.2h and current R4.12 control define the executable scope.
+
+Canonical skills live in `.claude/skills/`; `.agents/skills/` exposes the same
+files to Codex through relative links. Do not maintain a second copy.
+`scripts/sync-agent-skills.py --check` checks project discovery;
+`--apply --user` also installs the workspace and component skills for both
+agents in this user's local skill directories without overwriting other skills.
+
+Agent setup and verified commands: [docs/agent-tooling.md](docs/agent-tooling.md).
+Claude loads `.claude/rules/` by path. Codex must read the applicable rule file
+explicitly: `generated-blocks.md` for generated sources, `guard-scripts.md` for
+guards, `release-pins.md` for release inputs, and `fleet-baseline.md` for inventory.
+The root Codex SessionStart hook shares the read-only snapshot implementation;
+hook availability depends on the client's native trust and configuration.
+
+Use the newest dated closeout as a starting point, then independently read
+source, tests and production. Keep historical observations dated. A missing
+measurement is UNKNOWN; removing an unsupported task is not proof it passed.
+Run `scripts/status-all.sh` before interpreting cross-repository checks and
+`scripts/heavy-run.sh --exclusive bash scripts/gauntlet.sh` before release (direct `scripts/gauntlet.sh` exits 2). Follow the existing signed release chain.
+
+## Execution discipline (owner feedback, 2026-10-12: "slow, divergent, repeats work")
+
+Evidence rules above set the *standard*, not the *volume*. Scale verification to
+risk (docs/copy/tests: targeted tests; service code: module suite + the CI lens,
+i.e. the Linux container; money/auth/migrations/prod/fleet: full gate + prod
+read-back). Land a verified batch at least every 90 minutes. Every action maps to a
+checklist item; out-of-scope findings go to a one-line "Parked" list unless P0.
+Reuse evidence already recorded in the round doc for the same object and
+revision; do not re-measure or re-read unchanged material. One lane per question,
+and a darwin-skipped test is not a passed test.
+
+The following owner rules are tracked here so a fresh checkout does not depend
+on a workstation-only `~/.codex/AGENTS.md`:
+
+- Deliver a small, single-topic, verifiable batch within 90 minutes. If blocked,
+  record the blocker and expected resolution in the round log. Ready fixes do
+  not wait for wider audits.
+- Name the checklist item for each action. Only P0 incidents (production outage,
+  data loss or an actively exploited vulnerability) may interrupt the scope.
+- Reuse evidence for the same object and revision. Remeasure only when the
+  object changes, evidence exceeds 24 hours, or evidence conflicts. Do not reread
+  whole files already read in the session. After two identical command failures,
+  investigate the cause or change approach before retrying.
+- Report status changes: what changed, where the evidence is, and what is next.
+  Close an item once its acceptance criteria are met; do not keep polishing it.
+- Use exact-path staging in each independent repository. Do not overwrite
+  another session's work or change an executing script's bytes.
+- Preserve owner-opened interactive sessions. Coordination, takeover, an idle
+  screen or a release-lock conflict does not authorize signaling, closing or
+  injecting input into the owner's Grok, Codex, Claude or terminal session.
+  Stop only a worker this session created, or one explicitly transferred to
+  this session, with a verified receipt (session ID, PID and start time); an
+  owner instruction to stop the specific session also authorizes it. Reading
+  another lane's receipt does not transfer ownership. Otherwise record the
+  conflict in the existing inbox and keep independent work moving. See
+  `yueto-orchestration` for the process-ownership boundary.
+- Repository documentation, including historical audit and release narratives,
+  and explanatory comments use English. Preserve product translations, exact
+  test inputs, protocol values and original evidence identifiers. Reply to the
+  owner in Chinese unless requested otherwise.
+- The sole production execution entry is
+  `docs/2026-10-17-whole-estate-execution-plan.md`, starting at its current r4
+  control section and linked production backlog. Update that plan in place;
+  do not create a competing master plan. The 10-16 focused plan supplies inherited
+  acceptance contracts, not current scheduling. Agent maintenance is recorded in
+  `docs/2026-10-16-agent-maintenance-round.md`; the English backlog remains in
+  `docs/2026-10-16-english-cleanup-round.md` and its existing CSV.
+
+- Owner decision (2026-10-20): backup creation/verification, off-site backup
+  work, PITR/disaster-restore drills, and backup-retirement planning are canceled
+  from current and future work. Do not reintroduce them as tasks, observation
+  waits or admission prerequisites from inherited plans, skills or old findings
+  unless the owner explicitly reverses this decision. See R4.2b in the sole
+  execution plan. Preserve historical evidence. This planning exclusion does
+  not cancel release rollback, interrupted-transaction recovery, live replication
+  or client connection recovery; it does not authorize deleting stored data or
+  changing installed production schedules.
+            if blob != change["after_blob"]:
+                continue
+            # The named signed source must descend from the Tornado successor, must
+            # itself introduce exactly this blob transition, and must be an
+            # ancestor of the revision being planned.
+            try:
+                git(source, "merge-base", "--is-ancestor",
+                    packaging["source_before"], change["source"])
+                git(source, "merge-base", "--is-ancestor", change["source"], revision)
+                introduced = git(source, "rev-parse",
+                                 f"{change['source']}:{path}").decode().strip()
+            except subprocess.CalledProcessError:
+                raise ValueError("ops packaging successor source revision differs") from None
+            try:
+                parent = git(source, "rev-parse",
+                             f"{change['source']}^1:{path}").decode().strip()
+            except subprocess.CalledProcessError:
+                parent = None
+            require(introduced == change["after_blob"] and parent == change["before_blob"],
+                    "ops packaging successor source revision differs")
+    if tornado is not None:
+        for path, change in tornado["changes"].items():
+            try:
+                blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
+            except subprocess.CalledProcessError:
+                blob = None
+            if blob == change["after_blob"]:
+                try:
+                    git(source, "merge-base", "--is-ancestor",
+                        tornado["source_before"], tornado["source_after"])
+                    git(source, "merge-base", "--is-ancestor", tornado["source_after"], revision)
+                except subprocess.CalledProcessError:
+                    raise ValueError("Tornado dependency successor source revision differs") from None
+                break
+    if runtime is not None:
+        for path, change in runtime["changes"].items():
+            try:
+                blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
+            except subprocess.CalledProcessError:
+                blob = None
+            if blob == change["after_blob"]:
+                try:
+                    git(source, "merge-base", "--is-ancestor", runtime["source_after"], revision)
+                except subprocess.CalledProcessError:
+                    raise ValueError(
+                        "runtime dependency successor source revision differs") from None
+    return after
+
+
+def first_native_policy():
+    """Trusted central policy; it grants no historical execution credit."""
+    policy = read_json(ROOT / "ops-first-native-successors.json")
+    require(policy.get("schema") == 1 and len(policy.get("cases", {})) == 52
+            and len(policy.get("module_blobs", {})) == 6,
+            "invalid first native successor policy")
+    return policy
+
+
+def admit_first_native_helper(common, files, source_revision):
+    policy = first_native_policy()
+    item = policy["shared_input"]
+    path = item["path"]
+    if path not in common and source_revision != policy["source_revision"]:
+        return common, files
+    require(source_revision == policy["source_revision"]
+            and common.get(path) == item["blob"],
+            "first native helper requires exact reviewed source and blob")
+    if files is not None:
+        require(files.get(path) == (item["mode"], item["blob"]),
+                "first native helper mode or tree changed")
+        files = {p: v for p, v in files.items() if p != path}
+    return {p: v for p, v in common.items() if p != path}, files
+
+
+# Outermost first; #256 is pending review and has no active seal.
+PR_SHARED_INPUT_SEALS = (
+    (122, "c2d8f9c57343ec12fcbaecda2bd3ef2e4fcf68c0fba3c4b86dd2f4c4bbdd7a46",
+     frozenset({"checkin-api/requirements.txt", "pyproject.toml",
+                "telegram-bot/yue/requirements.txt", "uv.lock"})),
+)
+
+
+# Activate only for these exact after-blobs; historical policy fixtures need no new evidence.
+PR_SHARED_INPUT_AFTER_BLOBS = frozenset({
+    ('checkin-api/requirements.txt', 'a5bd445e3f132c2fd090490ab07bb8ee79de6a2f'),
+    ('pyproject.toml', 'ba32ad966dc0d67280ba04c03c1f911c8839780a'),
+    ('telegram-bot/yue/requirements.txt', '6d87484afee325a2c00630c6eb1c9ed411b130f1'),
+    ('uv.lock', '18d0dc71583fcd55ae726dd6c533e0f2111539f2'),
+})
+
+
+PR_SHARED_INPUT_SOURCE_REVISIONS = (
+    "56a7e0412e9bd1d297ba4a5dd3d363147fac463c",
+)
+
+
+def reviewed_pr_shared_input_transitions():
+    """Peel exact outermost successors without modifying any historical seal."""
+    original = dict(read_json(ROOT / "ops-shared-input-successors.json"))
+    records = []
+    for number, identity, paths in PR_SHARED_INPUT_SEALS:
+        record = original.pop(f"reviewed_pr{number}_shared_input_transition", None)
+        require(isinstance(record, dict) and set(record) == {
+            "schema", "reviewer", "prior_baseline_sha256", "prior_successors_sha256",
+            "source_before", "source_after", "independent_review_sha256",
+            "source_freeze_sha256", "qualification_receipt_sha256", "changes"}
+            and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid PR shared-input transition")
+        require(sha(encoded(record)) == identity, "unreviewed PR shared-input transition")
+        require(record["prior_successors_sha256"] == sha(baseline_bytes(original))
+                and record["prior_baseline_sha256"] == sha(
+                    (ROOT / "ops-pytest-skip-baseline.json").read_bytes()),
+                "PR shared-input transition changed historical predecessor")
+        require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                    for k in ("source_before", "source_after"))
+                and record["source_before"] != record["source_after"],
+                "invalid PR shared-input source")
+        require(all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                    and record[k] != "0" * 64 for k in (
+                        "independent_review_sha256", "source_freeze_sha256",
+                        "qualification_receipt_sha256")), "missing PR shared-input evidence")
+        require(isinstance(record["changes"], dict) and set(record["changes"]) == paths,
+                "invalid PR shared-input paths")
+        for item in record["changes"].values():
+            require(isinstance(item, dict) and set(item) == {
+                "before_blob", "after_blob", "mode", "source"}
+                and item["mode"] == "100644"
+                and all(isinstance(item[k], str) and SHA.fullmatch(item[k])
+                        for k in ("before_blob", "after_blob", "source"))
+                and item["before_blob"] != item["after_blob"]
+                and item["source"] == record["source_after"],
+                "invalid PR shared-input blob identity")
+        records.append(record)
+    for outer, inner in zip(records, records[1:]):
+        require(outer["source_before"] == inner["source_after"] and all(
+            item["before_blob"] == inner["changes"][path]["after_blob"]
+            for path, item in outer["changes"].items()), "PR shared-input merge order differs")
+    return records
+
+
+def admit_pr_shared_inputs(common, files, source_revision):
+    """Undo reviewed PR bundles before any inner seal sees the shared map."""
+    if source_revision not in PR_SHARED_INPUT_SOURCE_REVISIONS and not any(
+            common.get(path) == blob for path, blob in PR_SHARED_INPUT_AFTER_BLOBS):
+        return common, files
+    for record in reviewed_pr_shared_input_transitions():
+        changes = record["changes"]
+        if source_revision != record["source_after"] and not any(
+                common.get(path) == item["after_blob"] for path, item in changes.items()):
+            continue
+        require(source_revision == first_native_policy()["source_revision"],
+                "PR shared-input successor requires the signed release pin")
+        common = dict(common)
+        if files is not None:
+            files = dict(files)
+        for path, item in changes.items():
+            require(common.get(path) == item["after_blob"],
+                    "PR shared-input successor bundle missing or changed")
+            common[path] = item["before_blob"]
+            if files is not None:
+                require(files.get(path) == (item["mode"], item["after_blob"]),
+The workspace guard `scripts/check-toolchain-pin-agreement.py` in `onesyue/yueto`
+compares YueLink's `core/go.mod` toolchain with its build workflows and benchmark
+image, in addition to the native services. It also checks the PostgreSQL Alpine
+18.6 pins in the clean-PG gate, e2e harness, workspace PG gate and i18n clients.
+Run that guard from an assembled workspace containing the companion PR revisions;
+a single central-CI checkout cannot establish cross-repository agreement.
+
+Central validation retains its reviewed `postgres:18@sha256:…` service image.
+It is digest-pinned and uses a different image variant from the Alpine helpers;
+changing its tag to Alpine while retaining that digest would mislabel the bytes.
+`python3 -m unittest discover -s tests -p 'test_postgres_image_pin.py'` rejects
+service-pin removal, mutable replacements and unreviewed digest changes.
+
+### Admission precheck and merge hygiene
+
+Run shared-input admission from a trusted, reviewed **yueto-ci** checkout before
+requesting a build (the source checkout needs the sealed successor history):
+
+```sh
+python3 scripts/admission-precheck.py --repo yueops --source ../yueops --base "$BASE_SHA" --head "$HEAD_SHA"
+```
+
+The precheck reads committed Git trees without checking out or executing Ops
+code. It calls the build planner's exact shared-input selector, ancestry proof
+and admission validator, including `ops-shared-input-successors.json`,
+`ops-first-native-successors.json` and historical reviewed seals. A changed
+packaging file or shared helper is accepted only if the existing sealed policy
+admits that complete tree. Even an unchanged base/head is validated. Exit codes:
+**0** admitted, **1** rejected, **2** invalid input or unavailable local evidence.
+A rejection names the changed inputs and the seal requirement in `reviews/`.
+This checks shared-input admission only; it does not certify all build gates.
+
+The build workflow's `pytest-shards.py expand` emits a single-line
+`ADMISSION_REJECTED: <reason>` Actions error annotation and step summary on
+rejection. Ship callers can surface that reason instead of reporting “no build
+found”. Existing JSON rejection diagnostics remain available.
+
+```sh
+python3 scripts/merge-hygiene-audit.py --hours 24
+python3 scripts/merge-hygiene-audit.py --hours 24 --format json
+```
+
+The audit uses the authenticated `gh api` client and defaults to all seven repos:
+`yueops`, `yueboard`, `yueto`, `yueto-ci`, `yuelink`, `yuelink-ci`, `yue-node`.
+The credential must be able to read PRs, reviews, checks and statuses in each
+repo. It paginates closed PRs and head-commit evidence, looking for absent human
+AGENTS.md
+CLAUDE.md
+README.md
+Xray-core
+deploy
+design
+docs
+help
+hysteria
+i18n
+pyrightconfig.json
+quic-go
+release.yaml
+release.yaml.asc
+reminders
+reports
+schedule
+scripts
+wt
+yue-node
+yueboard
+yuelink
+yuelink-ci
+yueops
+yueto-ci
+yueto-worktrees
+yueto.code-workspace
+yuetube-video
+
+exec
+/bin/bash -lc "cat /home/box/Projects/yueto/CLAUDE.md CLAUDE.md /home/box/Projects/yueto/.claude/rules/release-pins.md; git show 77ccf163402216c0caca5c3e3b0de166e6e6dbb3:scripts/pytest-shards.py | rg -n -A75 'def admit_first_native|first native module source'" in /home/box/Projects/yueto/yueto-ci
+ succeeded in 0ms:
+# CLAUDE.md
+
+@AGENTS.md
+
+Shared workspace guidance for Claude Code and Codex (`AGENTS.md` loads this file).
+
+**All owner-facing replies must be in Chinese**, including progress updates,
+tables and final reports. Keep code identifiers, commands and SHAs unchanged.
+Repository engineering documentation and explanatory comments use English.
+
+This is the **`yue.to` workspace root** — an umbrella over a family of independent git repos that together make up a privatized (from-Xboard) VPN/proxy service: panel, node fleet, client apps, and ops. It is NOT a monorepo. Each subdirectory is its own repository; the root repo tracks nine directories — `docs/`, `scripts/`, `design/`, `i18n/`, `schedule/`, `help/`, `.claude/` (skills/rules/agents/hooks/settings only; `worktrees/`/`projects/`/`state/` stay ignored), `.agents/` (Codex skill links), `.grok/` (Grok rules, LSP, and three skill overrides; estate skills stay in `.claude/skills/`) — plus `.codex/hooks.json` and a few top-level files: `yueto.code-workspace`, `.gitleaksignore`, and the signed release desired state `release.yaml` + `release.yaml.asc` (`.gitignore` is `/*/` + allowlist, so root *files* are not ignored). Root `reports/` is a local, untracked scratch area — never commit it or cite it as current state. Most real work happens **inside** a component repo, each of which has its own richer `CLAUDE.md` — read that one too when working in it.
+
+## Where the knowledge lives: this file, skills, rules
+
+This file is **always-loaded context** and is kept under the official ~200-line target. Everything
+else has a home that loads on demand — that is the whole design, not a filing convenience:
+
+- **`.claude/skills/` — workspace skills**, symlinked into `~/.claude/skills/` so they load
+  through `.agents/skills/` for Codex and installed for both agents by `scripts/sync-agent-skills.py --apply --user`. Procedural knowledge: worthless most of the time, and must be
+  word-for-word correct the rest of the time.
+- **`.claude/rules/` — path-scoped rules** (`paths:` frontmatter). A rule enters context only when
+  a file it names is read. Use it for "this *file class* has a trap", never for prose.
+- **`.claude/agents/` — project subagents**: `component-worker` (edits a component repo from its own
+  worktree under root `.claude/worktrees/` — never `isolation: worktree`) and `readonly-investigator`.
+
+| Skill (routes by **domain**) | Load it when |
+|---|---|
+| `guard-authoring` | changing/reviewing guard coverage, contract checks, CI assertions or probes; diagnosing test import/fixture leakage; ordinary fixes that only run existing checks do not trigger it |
+| `release-chain` | planning or running any release, image roll, promote or production deploy |
+| `node-lifecycle` | classifying maintenance/retirement or supplier-quota availability; provisioning, cloning, rebuilding or hard-deleting a fleet node |
+| `fleet-diagnose` | diagnosing node/fleet/network/latency/loss/resource problems, **before** changing production |
+| `pg-safety` | writing a Postgres migration, GRANT/role manifest, cross-ownership table access, erasure change, or a spend/eligibility query |
+| `generated-blocks` | changing design tokens, user-facing strings/translations, help articles, or any recurring job |
+| `round-closeout` | closing out an audit / optimization / incident round |
+| `yueto-orchestration` | running an authorized multi-session round under the current coordinator (Claude or Codex): one release exit, side-branch candidates, inbox, release train and shutdown; no fixed-model approval prerequisite |
+
+| Skill (routes by **action**) | Load it when |
+|---|---|
+| `yueto-agent-maintenance` | equipping, configuring or diagnosing coding-agent capabilities for this workspace |
+| `evidence-discipline` | interpreting operational measurements or asserting production/fleet health or runtime improvement; match the claim to its evidence |
+| `landed-not-written` | installing executable scripts/configuration/automation or claiming an installed change took effect; verify the actual consumer |
+| `change-blast-radius` | removing a boundary, renaming, moving a file, zeroing a parameter, dropping a wait, or touching a constant other code pins |
+| `concurrent-git-safety` | committing/pushing, spawning concurrent agents into one repo, or editing anything while a long-running script executes |
+| `patrol` | routine read-only patrol of failed units, DNS sentinel receipts, relay-pool evidence and local workload admission; never changes production |
+| `readonly-reconcile` | read-only balance/points reconciliation or release accounting comparisons; never repairs data |
+| `release-readback` | after a signed release: reconcile promoted, desired and running images, migration receipts and before/after accounting evidence |
+
+Select skills by the actual change and claim. Related-skill links are conditional,
+not a recursive reading list. Reuse loaded guidance and read only relevant reference sections.
+
+Component repos use the same mechanism: **yueops** nine (`yueops-agent-deploy`, `-host-hardening`, `-deploy-gotchas`,
+`-panel-db-gotchas`, `-business-gotchas`, `-emby`, `-ai-support`, `-telegram`, `-business-features`) and **yuelink**
+five (`yuelink-platform-gotchas`, `-core-ffi`, `-panel-api`, `-environment`, `-release-ci`), moved **verbatim** from each `CLAUDE.md`.
+
+**Measure before proposing another split** (`wc -l` + tokens over the real byte/CJK mix, same unit on
+both sides; dated readings live in `round-closeout`). **yueboard and yue-node are at target — do not split them.**
+🚨 Moving doc text into a skill silently shrinks the scan surface of **negative** doc-truth guards
+("must no longer say Y") while they stay green. 📎 `change-blast-radius`.
+
+`.claude/hooks/` (wired in `settings.json`, tests beside them): `yueto-notice.py` reminds, never
+blocks, on a `git push` touching yueboard or an edit to a generated token file, `schedule/registry.yaml`
+or an i18n catalog; `session-status.py` (SessionStart) injects any side branch / dirty tree / unpushed
+commit / pin mismatch / release lock — UNKNOWN, never "clean". `defaultMode: "bypassPermissions"` is
+the owner's 2026-08-31 decision: **zero permission prompts** (`ask-gate.py` is deliberately un-wired;
+don't re-wire it); 2026-10-13 extended to subagents (`permissionMode` + a `PermissionRequest` auto-allow). The one
+blocking hook is `secret-read-guard.py` (2026-10-17: denies unredacted secret-file/container-env reads); else reminders, rules, guards.
+
+**Owner decision — 2026-09-10:** never run local download-and-verify acceptance after YueLink
+releases; CI package/runtime checks, artifact verification, signed provenance and the promotion result suffice.
+
+## Workspace commands (root scope)
+
+```bash
+scripts/status-all.sh          # branch / dirty / unpushed for every component repo (+ yuelink/core/mihomo)
+scripts/pull-all.sh            # git pull --ff-only across all; repos with local changes fetch-only
+scripts/check-all-contracts.sh # run every cross-cutting guard, print one summary (--list to see them)
+scripts/gauntlet-launch.sh     # clean login environment, fail-fast admission, exclusive log
+                               # THE pre-release gate: every private repo's own CI stages + all contracts
+                               # (run it only under heavy-run; a direct scripts/gauntlet.sh exits 2)
+scripts/release-state.py       # read-only: source HEAD vs reviewed pin vs promoted image vs production
+scripts/ship.sh <yueops|yueboard|yue-node> [--auto|--no-deploy|--detach|--from-promoted]
+                               # the whole release chain unattended: build → promote → verify → deploy
+scripts/kick-builds.sh [--dry-run]     # trigger yueto-ci poll-sources now instead of waiting for its cron
+scripts/scan-workspace-secrets.sh      # yueops' secret scanner over ALL private repos + root (in gauntlet)
+scripts/run-yueboard-pg18-gauntlet.sh  # release-only yueboard integration gate on a disposable PG18
+scripts/linux-lens-gate.sh             # yueops full suite in the central-CI Linux lens; proves darwin-skipped tests ran
+scripts/disk-hygiene.sh --check|--apply  # the ONLY sanctioned worktree/docker/cache cleanup (keep-list + safety criteria)
+scripts/heavy-run.sh / new-session.sh  # orchestration entry points (semaphore, Codex sessions) 📎 `yueto-orchestration`
+```
+
+The root's own tests are the guard self-tests (`scripts/test-*.py`, `.claude/hooks/test_*.py`), run
+from the workspace venv `~/.venvs/yueto` (3.13 + pytest + pyyaml; system `python3` is 3.9 with neither).
+Hyphenated `test-*.py` names escape pytest discovery — `pytest scripts` silently collects nothing:
+
+```bash
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-root-doc-truth.py                        # one guard's tests
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-schedule-registry.py -k baseline_is_green # one case
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-*.py .claude/hooks                        # all root self-tests
+```
+
+- `ship.sh` only chains the audited per-step scripts, scraping digests from the *promote* step's log
+  (never the build's). 📎 constraints: **`release-chain`**; commands: `docs/release-chain-runbook.md`.
+- `release-state.py` names the next action per row; `--fleet`/`--packages` sweep the fleet, where an
+  unreachable row is **UNKNOWN, never OK**. 📎 `release-chain`.
+- `gauntlet.sh` is the only fail-closed "did everything actually run" gate; `--fast` drops the
+  network stages and **does not qualify for a release**. 📎 `guard-authoring`.
+- `status-all.sh`/`pull-all.sh` also cover `yuelink/core/mihomo`, a *separate* repo inside `yuelink`.
+
+🚨 **Before believing a red guard or a four-truths mismatch, run `scripts/status-all.sh`.** Cross-repo
+guards read each repo's **main checkout**, so whatever branch it is on is a hidden input (2026-09-06:
+one repo left on a side branch → 8 red contracts, 6 pure artifacts). 📎 `concurrent-git-safety`.
+
+`check-all-contracts.sh` is the one place that knows the **full** guard set (`--list`; never copy the
+count). Every comparator that reads two repos at once runs **here and nowhere else** — single-repo CI
+lacks the sibling checkout. 📎 `guard-authoring` (incl. the `guard-ci-claims` meta-guard).
+
+## The cross-repo sources of truth the root repo itself owns
+
+Four small root directories are the **single upstream** for values duplicated across five surfaces
+and four runtimes — so an edit inside a component repo to any generated block is a regression, not a fix.
+
+- **`design/tokens/yue.tokens.json`** — the design scale. `node design/build-tokens.mjs` regenerates
+  one fenced block per surface plus the scale tables in `docs/yue-visual-language-2026.md` §2.
+- **`i18n/catalog/*.json`** — the zh-CN → en catalog; `scripts/i18n/CONTRACT.md` is the one binding spec.
+- **`schedule/registry.yaml`** — the generated inventory of every recurring job across six layers,
+  from `scripts/schedule/extract.py --write`.
+- **`help/articles/*.md`** — the unified help center (`help/CONTRACT.md`); UIs reference `help:<slug>`.
+
+📎 **Before touching any of these, read the `generated-blocks` skill** (generated vs. hand-written,
+fence rules, never-translate set, ratchets).
+
+## The system: four planes
+
+Data flows **panel → subscription → client**, and **panel ⇄ node** for control.
+
+| Repo | Plane | Stack | Role |
+|---|---|---|---|
+| **yueboard** | Control (panel) | Go (chi + sqlc + goose + pgx/PG, ConnectRPC) | Native panel backend for user/admin APIs, login, **subscription generation**, and the only node control-plane server. The former REST/WS node protocol and fallback proxy are gone. Native admin/user SPAs (React 19) are embedded with `go:embed`; `my.yue.to` runs this. |
+| **yue-node** | Data (nodes) | Go (`cmd/` + `internal/…`, kernels as adapters) | Native node agent on the anti-GFW fleet, with direct hosts and shared relays. **Never restate the fleet size from memory or from this file**: the three counts (direct hosts / serving assignments / unique enabled nodes) come only from the live inventory (`servers` where `deploy_mode='direct'`; 📎 `.claude/rules/fleet-baseline.md`); `docs/yue-product-surface-inventory-2026.md` carries only a **dated snapshot** (dated, self-consistent, pointing at the live source — a second hand-copy caused the 2026-08-18 guard that *refused* to let a stale fact be corrected). Runs Reality/VLESS and Hysteria2 and talks to yueboard only through machine-scoped ConnectRPC. `/home/yue-node` on each machine. |
+| **yuelink** | Client | Flutter UI + mihomo (Clash.Meta) Go core via FFI | The Yue.to cross-platform app (Android/iOS/macOS/Windows/Linux, id `com.yueto.yuelink`). The server template is authoritative; the client adds only bounded compatibility defaults and seeds bundled `.mrs` rule sets for offline startup. |
+| **yueops** | Ops / services | Python (FastAPI, python-telegram-bot, RAG) monorepo | Supporting services: `checkin-api` (check-in), `yue-bot`/yubot (Telegram) + TG mini-app, AI support (Xiaoyue; RAG uses API embeddings and in-process NumPy cosine similarity, not pgvector), DNS/Cloudflare automation, telemetry ingest. Deployed as containers on the bastion. |
+
+Supporting repos: **yuelink-ci** / **yueto-ci** are public build-only CI repos (they began as a workaround for the private-repo Actions billing freeze, which comes and goes — see the CI section — but `yueto-ci` has since become load-bearing for a supply-chain reason that holds regardless); **hysteria**, **Xray-core** and **quic-go** are the maintained data-plane kernel forks (yue-node's HY2 and Reality/VLESS engines plus HY2's QUIC dependency — each carries real yue-specific fixes, so "just track upstream" is wrong there); **clash-verge-rev / ClashMetaForAndroid / clashmi** are historical Yue product forks, frozen migration-only and no longer checked out in this workspace (status: `docs/yue-product-surface-inventory-2026.md`). **yuetube-video** is the private Remotion project that renders the Yue.to QA promo video (Node 24 / Remotion pinned, `src/data/video-script.json` is the single source for copy, subtitles, shot lengths and audio SHA-256; `npm run verify` gates supply chain + assets + `tsc`). It ships no runtime and is coupled to nothing else here. The old PHP panel and its local repository are retired and must not be reintroduced as a runtime, build, template, or fallback dependency.
+
+## Cross-repo coupling that isn't visible in any single repo
+
+- **Subscription generation is a contract between yueboard and every client family.** `yueboard/internal/modules/subscribe/` renders Clash Meta, Surge, Loon, Quantumult X, Surfboard, sing-box, and general links from native templates. There is no `?yl=1` or device-specific server branch. When one client fails, render its exact User-Agent and compare fields against a working renderer before changing the fleet.
+- **The server template is the YueLink source of truth.** YueLink no longer inlines `GeoIP.dat`/`GeoSite.dat`; it seeds the exact bundled `.mrs` set and preserves server routing. Keep client transforms bounded to compatibility defaults, and use the reference clients to justify any divergence.
+- **The schema is native; remaining cross-service reads are explicit migration debt.** Tables use native names, `numeric` amounts, `jsonb`, and `timestamptz`. YueBoard owns panel-domain writes. Any temporary YueOps read must be catalogued and moved behind a scoped native internal API before its DB credential is removed.
+- **Panel↔node control is ConnectRPC only.** The protobuf contract is shared by yueboard and yue-node. Every physical host must use a machine-scoped credential and exact assignment; a fleet-wide token, REST polling, or WS push is a migration regression.
+- **🚨 Never rebuild a node by copying another node's `/home/yue-node` wholesale.** The runtime tree
+  contains `node-*/data/report-outbox`, which is the machine's **billing identity**. Cloning it either
+  double-bills or wedges the node forever on `report sequence gap`, which has no recovery path. This
+  has now happened twice (2026-08-01, 2026-08-11). **Wipe `node-*/data/report-outbox` before first
+  start** — the in-code owner guard only protects hosts already running yue-node `4bf9ada` or newer.
+  📎 Full provisioning / cloning / retiring / hard-delete procedure: the **`node-lifecycle`** skill.
+
+## Authoritative planning docs (read before large work)
+
+Start with `docs/README.md` for task-oriented navigation.
+
+- **`docs/2026-10-17-whole-estate-execution-plan.md`** is the sole production plan.
+  Use current r4 control and its backlog; update it in place. The 10-16 plan retains acceptance contracts only.
+- **The newest relevant closeout/handoff** supplies dated evidence and supersession
+  links. Verify its revision against current source and production; it cannot override the current plan.
+  Removing a report never closes an obligation;
+  preserve Git recovery records per `docs/2026-10-16-repository-cleanup.md`.
+- **`docs/release-chain-runbook.md`** supplies procedures; `release-chain` supplies
+  planning constraints. Dated examples do not authorize old targets or new owners.
+- **`docs/2026-endgame-plan.md`** is a historical obligation map and guard input.
+  Its predecessor `docs/2026-master-plan.md` was deleted; recover it with
+  `git show 2ac56121:docs/2026-master-plan.md`. Neither is a current plan.
+- **`docs/tech-stack-2026.md`** records choices and rejected alternatives.
+  Database contracts: `docs/v2-shared-db-decoupling-map.md`, `docs/v2-timestamp-decoupling-roadmap.md`.
+Raw build logs, `.exit`/`.stderr` files and per-run samples do not belong in `docs/`.
+Use private/temporary evidence or component performance storage; see `docs/performance/README.md`.
+
+## Release / CI: what is true in every session
+
+Four things must name the same commit: the reviewed **pin**, the source repo **HEAD**, the
+**promoted** image, and what **production** actually runs. `release-state.py` prints all four.
+- **2026-10-12: SSH authority is ACTIVE.** Every new yueops revision needs auto-pull + `make-release-root.sh
+  --strict` + `scripts/ship-sshd-authority.py --apply` before Ops/panel deploys or A/B publishing (ship.sh chains them).
+- **2026-10-11: bastion is CPU-steal-bound** (60–78%): no heavy tests there; check `vmstat` st first. 📎 `release-chain`.
+
+**Before pushing `yueboard/master`, establish its effect on the active release.**
+Promotion requires default-branch ancestry, inputs identical to HEAD and a candidate
+not older than `:latest`. A changed input can invalidate a running release.
+When inputs change, the integration owner must complete these steps:
+
+1. Read the revision labels off the **running production** panel image and node fleet, then run
+   `scripts/converge-yueboard-release-pin.py --from-head --deployed-board-revision <prod-board>
+   --deployed-node-revision <prod-node>`. Both are explicit because reviewed candidates may never
+   have been deployed. It updates yueto-ci's two copies atomically and **derives** the schema
+   floor from `git show <rev>:schema-floor.txt`; since P2 §4 A3 it no longer writes yueops.
+2. Coordinate the required rebuild and panel deployment with the release owner.
+   The desired state yueops deploys from is the **signed** root `release.yaml`
+   (ship.sh writes + seals it; no pin is committed back into yueops). 📎 `release-chain`.
+
+Promote, `release-state.py` and the schema-migrator contract accept a descendant
+with unchanged native image inputs and the same schema floor while retaining the
+reviewed pin. Use the actual input comparator: a Markdown or test filename alone
+does not establish equivalence. Changed or unknown inputs retain the normal pin
+convergence and release requirements. Preserve each active writer's source custody.
+
+🚨 **The private repos' Actions billing freeze comes and goes** — measure it (wall-clock + step count,
+job annotation decisive) before reading any red run; the local `gauntlet.sh` is the real gate either way.
+Builds are **pulled** by `yueto-ci/poll-sources.yml` (**build only, never promote**; GitHub throttles
+its cron, hence `kick-builds.sh`), and `yueto-ci` is **load-bearing**: every production digest is
+cosign-signed under its workflow identity. 📎 criterion, cadence and trust anchor: `release-chain`.
+cat: CLAUDE.md: No such file or directory
+---
+paths:
+  - "yueto-ci/native-node-contract.json"
+  - "yueboard/schema-floor.txt"
+  - "scripts/converge-yueboard-release-pin.py"
+  - "release.yaml"
+---
+
+# Release identity must remain consistent
+
+At release completion, the **reviewed pin, signed desired state, promoted image
+and running production artifact** must identify the same release. Source HEAD
+may be a successor with proven identical build inputs. Keep the image's actual
+build revision; never relabel an older artifact as a new HEAD.
+
+- Do not hand-edit pins. The authorized writer is
+  `scripts/converge-yueboard-release-pin.py --from-head --deployed-board-revision <production-board> --deployed-node-revision <production-fleet>`.
+  It updates the copies atomically and derives the schema floor from
+  `git show <rev>:schema-floor.txt`; the floor is not an input.
+- The two `--deployed-*` revisions validate ancestry only: deployed Board must
+  precede the candidate, and deployed Node must precede the sidecar candidate.
+  They are no longer recorded in files. The Release-A predecessor/target contract
+  was removed on 2026-09-14. Incorrect inputs are rejected; omitting them performs
+  pin convergence only.
+- Since 2026-09-24 (P2 section 4 A3), convergence writes only the two yueto-ci
+  files: the contract and central policy test. It does not write YueOps; those
+  three former projections caused a Board-to-Ops release cycle. Commit yueto-ci
+  after convergence; promotion reads that reviewed state.
+- Do not hand-edit `release.yaml`. `ship.sh` writes it and `release-yaml.py seal`
+  signs it. YueOps deployers, rollouts and migrators consume only verified signed
+  state. Deliberate rollback uses `release-yaml.py write --rollback` then `seal`;
+  late older candidates cannot overwrite newer desired state.
+- The 2026-09-24 build-input rule replaced the old rule allowing only
+  `.gitleaksignore` to lead the pin. Use the existing fingerprints in
+  `scripts/release-state.py --fleet --inputs` to establish equality for every
+  input. Unreadable or unproven inputs are UNKNOWN; calling a change documentation
+  or tests is not an exemption.
+- `schema-compat.txt` records the production floor only after successful actual
+  deployment. Tests still read it, but it has been excluded from Board image
+  inputs since 2026-09-30. Advancing it alone does not move the reviewed pin,
+  rebuild an image or relabel production. `schema-floor.txt` and migration SQL
+  remain build inputs and require a reviewed release when changed.
+- For a new candidate, converge the reviewed pin first, then run
+  `release-yaml.py source-check` for ancestry and floor. Do not declare release
+  consistency before promotion and production readback.
+
+Use `release-chain` for constraints, `docs/release-chain-runbook.md` for commands,
+and `scripts/release-state.py` to read the release identities.
+1798:def admit_first_native_helper(common, files, source_revision):
+1799-    policy = first_native_policy()
+1800-    item = policy["shared_input"]
+1801-    path = item["path"]
+1802-    if path not in common and source_revision != policy["source_revision"]:
+1803-        return common, files
+1804-    require(source_revision == policy["source_revision"]
+1805-            and common.get(path) == item["blob"],
+1806-            "first native helper requires exact reviewed source and blob")
+1807-    if files is not None:
+1808-        require(files.get(path) == (item["mode"], item["blob"]),
+1809-                "first native helper mode or tree changed")
+1810-        files = {p: v for p, v in files.items() if p != path}
+1811-    return {p: v for p, v in common.items() if p != path}, files
+1812-
+1813-
+1814-# Outermost first; #256 is pending review and has no active seal.
+1815-PR_SHARED_INPUT_SEALS = (
+1816-    (122, "c2d8f9c57343ec12fcbaecda2bd3ef2e4fcf68c0fba3c4b86dd2f4c4bbdd7a46",
+1817-     frozenset({"checkin-api/requirements.txt", "pyproject.toml",
+1818-                "telegram-bot/yue/requirements.txt", "uv.lock"})),
+1819-)
+1820-
+1821-
+1822-# Activate only for these exact after-blobs; historical policy fixtures need no new evidence.
+1823-PR_SHARED_INPUT_AFTER_BLOBS = frozenset({
+1824-    ('checkin-api/requirements.txt', 'a5bd445e3f132c2fd090490ab07bb8ee79de6a2f'),
+1825-    ('pyproject.toml', 'ba32ad966dc0d67280ba04c03c1f911c8839780a'),
+1826-    ('telegram-bot/yue/requirements.txt', '6d87484afee325a2c00630c6eb1c9ed411b130f1'),
+1827-    ('uv.lock', '18d0dc71583fcd55ae726dd6c533e0f2111539f2'),
+1828-})
+1829-
+1830-
+1831-PR_SHARED_INPUT_SOURCE_REVISIONS = (
+1832-    "56a7e0412e9bd1d297ba4a5dd3d363147fac463c",
+1833-)
+1834-
+1835-
+1836-def reviewed_pr_shared_input_transitions():
+1837-    """Peel exact outermost successors without modifying any historical seal."""
+1838-    original = dict(read_json(ROOT / "ops-shared-input-successors.json"))
+1839-    records = []
+1840-    for number, identity, paths in PR_SHARED_INPUT_SEALS:
+1841-        record = original.pop(f"reviewed_pr{number}_shared_input_transition", None)
+1842-        require(isinstance(record, dict) and set(record) == {
+1843-            "schema", "reviewer", "prior_baseline_sha256", "prior_successors_sha256",
+1844-            "source_before", "source_after", "independent_review_sha256",
+1845-            "source_freeze_sha256", "qualification_receipt_sha256", "changes"}
+1846-            and type(record["schema"]) is int and record["schema"] == 1,
+1847-            "invalid PR shared-input transition")
+1848-        require(sha(encoded(record)) == identity, "unreviewed PR shared-input transition")
+1849-        require(record["prior_successors_sha256"] == sha(baseline_bytes(original))
+1850-                and record["prior_baseline_sha256"] == sha(
+1851-                    (ROOT / "ops-pytest-skip-baseline.json").read_bytes()),
+1852-                "PR shared-input transition changed historical predecessor")
+1853-        require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+1854-                    for k in ("source_before", "source_after"))
+1855-                and record["source_before"] != record["source_after"],
+1856-                "invalid PR shared-input source")
+1857-        require(all(isinstance(record[k], str) and re.fullmatch(r"[0-9a-f]{64}", record[k])
+1858-                    and record[k] != "0" * 64 for k in (
+1859-                        "independent_review_sha256", "source_freeze_sha256",
+1860-                        "qualification_receipt_sha256")), "missing PR shared-input evidence")
+1861-        require(isinstance(record["changes"], dict) and set(record["changes"]) == paths,
+1862-                "invalid PR shared-input paths")
+1863-        for item in record["changes"].values():
+1864-            require(isinstance(item, dict) and set(item) == {
+1865-                "before_blob", "after_blob", "mode", "source"}
+1866-                and item["mode"] == "100644"
+1867-                and all(isinstance(item[k], str) and SHA.fullmatch(item[k])
+1868-                        for k in ("before_blob", "after_blob", "source"))
+1869-                and item["before_blob"] != item["after_blob"]
+1870-                and item["source"] == record["source_after"],
+1871-                "invalid PR shared-input blob identity")
+1872-        records.append(record)
+1873-    for outer, inner in zip(records, records[1:]):
+--
+3342:            "first native module source differs")
+3343-    cases = dict(baseline["reviewed_hosted"]["cases"])
+3344-    for nodeid, row in policy["cases"].items():
+3345-        module = nodeid.split("::", 1)[0]
+3346-        require(nodeid in native["obligations"].get(module, {}).get("passed", []),
+3347-                "first native successor lacks exact same-run call: " + nodeid)
+3348-        cases[nodeid] = row | {"module_blob": policy["module_blobs"][module],
+3349-                              "disposition": "SAME_RUN_NATIVE_REQUIRED",
+3350-                              "native_target": module}
+3351-    return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": cases}}
+3352-
+3353-
+3354-def admit_skips(value, result, native):
+3355-    sealed_baseline = skip_baseline()
+3356-    _, i10_blob_record = reviewed_i10_skip_blob_successor_transition(sealed_baseline)
+3357-    _, retirement = reviewed_retired_host_transition(sealed_baseline)
+3358-    _, blob_record = reviewed_skip_blob_successor_transition(sealed_baseline)
+3359-    _, release_blob_record = reviewed_release_skip_blob_successor_transition(sealed_baseline)
+3360-    _, case_successors = reviewed_case_file_transition(sealed_baseline)
+3361-    baseline, estate = reviewed_estate_input_transition(sealed_baseline)
+3362-    if estate is not None:
+3363-        admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
+3364-                            source_revision=value.get("source_revision"),
+3365-                            estate_successor_of=value.get("estate_successor_of"))
+3366-    baseline, preservation_successors = reviewed_relay_preservation_module_transition(baseline)
+3367-    baseline, meter_successors = reviewed_relay_meter_module_transition(baseline)
+3368-    baseline, metrics_successors = reviewed_relay_metrics_module_transition(baseline)
+3369-    baseline, relay_successors = reviewed_relay_skip_module_transition(baseline)
+3370-    baseline, extra = reviewed_current_skip_transition(baseline)
+3371-    _, successors = reviewed_skip_module_transition(baseline)
+3372-    successors.update(extra)
+3373-    admitted = {nodeid: dict(case) for nodeid, case in baseline["cases"].items()}
+3374-    for mapping in (successors, relay_successors, metrics_successors, meter_successors,
+3375-                    preservation_successors, case_successors):
+3376-        admitted.update(mapping)
+3377-    blob_successors = skip_blob_successors(
+3378-        blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
+3379-    admitted.update(blob_successors)
+3380-    release_blob_successors = skip_blob_successors(
+3381-        release_blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
+3382-    admitted.update(release_blob_successors)
+3383-    i10_blob_successors = skip_blob_successors(
+3384-        i10_blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
+3385-    unknown = []
+3386-    observed_collection = {}
+3387-    baseline = reviewed_canceled_backup_blob_successor(baseline, value)
+3388-    baseline = reviewed_board139_native_successor(baseline, value, native)
+3389-    baseline = reviewed_first_native_successor(baseline, value, native)
+3390-    reviewed = baseline.get("reviewed_hosted", {})
+3391-    counts = {"HISTORICAL_UNEXECUTED": 0, "OWNER_CANCELED": 0,
+3392-              "SAME_RUN_NATIVE_REQUIRED": 0}
+3393-    for session in [result["reference"], *result["shards"]]:
+3394-        require(session["execution_context"] == baseline["context"],
+3395-                "skip execution context differs from baseline")
+3396-        require(isinstance(session["collection_skips"], dict) and session["junit_sha256"],
+3397-                "missing collection-skip evidence")
+3398-        for row in session["nonpassing_outcomes"]:
+3399-            nodeid = row["nodeid"]
+3400-            module = nodeid.split("::", 1)[0]
+3401-            if retirement is not None and module == RETIRED_HOST_MODULE:
+3402-                require(nodeid in retirement["surviving_ids"]
+3403-                        and {"outcome": row["outcome"], "reason": row.get("reason"),
+3404-                             "module_blob": value["skip_module_blobs"].get(module)}
+3405-                        == sealed_baseline["cases"].get(nodeid),
+3406-                        "retired host case or successor blob differs: " + nodeid)
+3407-                counts["HISTORICAL_UNEXECUTED"] += 1
+3408-                continue
+3409-            specific = reviewed.get("cases", {}).get(nodeid)
+3410-            if specific is None:
+3411-                observed = {
+3412-                    "outcome": row["outcome"], "reason": row.get("reason"),
+3413-                    "module_blob": value["skip_module_blobs"].get(module),
+3414-                }
+3415-                if observed not in (baseline["cases"].get(nodeid), successors.get(nodeid),
+3416-                                    relay_successors.get(nodeid), metrics_successors.get(nodeid),
+3417-                                    meter_successors.get(nodeid), preservation_successors.get(nodeid),
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+import json,subprocess
+head='77ccf163402216c0caca5c3e3b0de166e6e6dbb3'
+p=json.loads(subprocess.check_output(['git','show',head+':ops-first-native-successors.json']))
+r=p['source_revision']
+for path,blob in {**p['module_blobs'],p['shared_input']['path']:p['shared_input']['blob']}.items():
+ x=subprocess.run(['git','-C','../yueops','rev-parse',r+':'+path],capture_output=True,text=True)
+ print(path, 'MATCH' if x.returncode==0 and x.stdout.strip()==blob else 'MISMATCH or unavailable')
+print(subprocess.run(['git','-C','../yueops','show','-s','--format=%h %s',r],capture_output=True,text=True).stdout)
+PY" in /home/box/Projects/yueto/yueto-ci
+ succeeded in 0ms:
+tests/test_frozen_manifest_reader_20261015.py MATCH
+tests/test_install_operator_host_source.py MATCH
+tests/test_panel_subscribe_delivery_alert_20261012.py MATCH
+tests/test_protocol_liveness_results_install.py MATCH
+tests/test_protocol_liveness_results_pull.py MATCH
+tests/test_status_tls_installer_20261027.py MATCH
+tests/_native_root_lab.py MATCH
+79a20284e hy2: signed --supersede-upgrade path to replace a stale paused upgrade window at the current master root (fail closed; timer enabled only after observer proof)
+
+
+codex
+该 diff 只更新了来源 revision；新 revision 的六个测试模块及共享 helper 均与保留的 blob seals 匹配。我会继续核对引用该 pin 的准入条件。
+exec
+/bin/bash -lc "git show 77ccf163402216c0caca5c3e3b0de166e6e6dbb3:scripts/pytest-shards.py | sed -n '3315,3352p'; git grep -n 'c2fe96139e41bead0a1c6f454fe3c603a3c98223\\|79a20284eb1947f84dd663ac743ff5d2a7cd1c64' 77ccf163402216c0caca5c3e3b0de166e6e6dbb3 -- ':"'!reviews'"' ':"'!merge-hygiene-exceptions.json'"'; git diff --check 9346fac92cb07e3b379e765668e406f8b381ab1c 77ccf163402216c0caca5c3e3b0de166e6e6dbb3; git -C ../yueops merge-base --is-ancestor c2fe96139e41bead0a1c6f454fe3c603a3c98223 79a20284eb1947f84dd663ac743ff5d2a7cd1c64" in /home/box/Projects/yueto/yueto-ci
+ succeeded in 0ms:
+    require(selected == previous, "Board139 historical native case set differs")
+    variant = [{"when": "setup", "reason":
+                "Skipped: requires frozen Board139 schema fixture; set YUEBOARD_MONEY_SCHEMA_FIXTURE"}]
+    for key in previous:
+        require(cases[key]["module_blob"] == before
+                and cases[key]["outcome"] == "skipped"
+                and cases[key]["variants"] == variant
+                and cases[key]["disposition"] == "SAME_RUN_NATIVE_REQUIRED"
+                and cases[key]["native_target"] == module,
+                "Board139 historical native skip binding differs")
+    passed = native["obligations"].get(module, {}).get("passed", [])
+    require(set(passed) == previous | {added} and len(passed) == 7,
+            "Board139 successor requires seven exact same-run native calls")
+    updated = dict(cases)
+    for key in previous | {added}:
+        updated[key] = {"module_blob": after, "outcome": "skipped",
+                        "variants": variant, "disposition": "SAME_RUN_NATIVE_REQUIRED",
+                        "native_target": module}
+    return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": updated}}
+
+
+def reviewed_first_native_successor(baseline, value, native):
+    policy = first_native_policy()
+    if value.get("source_revision") != policy["source_revision"]:
+        return baseline
+    require(all(value["skip_module_blobs"].get(module) == blob
+                for module, blob in policy["module_blobs"].items()),
+            "first native module source differs")
+    cases = dict(baseline["reviewed_hosted"]["cases"])
+    for nodeid, row in policy["cases"].items():
+        module = nodeid.split("::", 1)[0]
+        require(nodeid in native["obligations"].get(module, {}).get("passed", []),
+                "first native successor lacks exact same-run call: " + nodeid)
+        cases[nodeid] = row | {"module_blob": policy["module_blobs"][module],
+                              "disposition": "SAME_RUN_NATIVE_REQUIRED",
+                              "native_target": module}
+    return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": cases}}
+
+77ccf163402216c0caca5c3e3b0de166e6e6dbb3:merge-receipts/yueops/168.json:5:  "head": "c2fe96139e41bead0a1c6f454fe3c603a3c98223",
+77ccf163402216c0caca5c3e3b0de166e6e6dbb3:merge-receipts/yueops/168.json:10:    "reviewed_head": "c2fe96139e41bead0a1c6f454fe3c603a3c98223",
+77ccf163402216c0caca5c3e3b0de166e6e6dbb3:merge-receipts/yueops/168.json:17:    "head": "c2fe96139e41bead0a1c6f454fe3c603a3c98223",
+77ccf163402216c0caca5c3e3b0de166e6e6dbb3:merge-receipts/yueops/294.json:5:  "head": "79a20284eb1947f84dd663ac743ff5d2a7cd1c64",
+77ccf163402216c0caca5c3e3b0de166e6e6dbb3:merge-receipts/yueops/294.json:10:    "reviewed_head": "79a20284eb1947f84dd663ac743ff5d2a7cd1c64",
+77ccf163402216c0caca5c3e3b0de166e6e6dbb3:merge-receipts/yueops/294.json:17:    "head": "79a20284eb1947f84dd663ac743ff5d2a7cd1c64",
+77ccf163402216c0caca5c3e3b0de166e6e6dbb3:ops-first-native-successors.json:490:  "source_revision": "79a20284eb1947f84dd663ac743ff5d2a7cd1c64"
+
+codex
+VERDICT: approve
+
+- ops-first-native-successors.json:490：未发现本次变更新增的问题。新 revision 是旧 revision 的后继，六个模块及共享 helper 均匹配现有 seals；同次运行的原生测试通过要求保持不变。
+tokens used
+23,434
+VERDICT: approve
+
+- ops-first-native-successors.json:490：未发现本次变更新增的问题。新 revision 是旧 revision 的后继，六个模块及共享 helper 均匹配现有 seals；同次运行的原生测试通过要求保持不变。
