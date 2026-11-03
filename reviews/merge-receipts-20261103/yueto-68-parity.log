@@ -1,0 +1,8 @@
+125 passed, 16 subtests passed in 33.09s
+    f.write(f'Candidate frozen: {sha}. Independent reviewer lane pr67_exact_review owns read-only review of this SHA and may write only /Users/j/Projects/lane-q1103/review-67b.txt. Main retains sole source writer ownership. Final macOS and Linux suites: 125 passed, 16 subtests each; snapshot matches Git blobs.\\n')
+  also prevents a previously OK fleet row from remaining OK when pending exists.
+Final macOS result: 125 passed, 16 subtests passed in 33.09s, exit 0.
+Final Linux result: 125 passed, 16 subtests passed in 41.87s, exit 0.
+Additional independent review: 584 parser/classifier combinations passed for
+The recorded actual-query checks against disposable PostgreSQL 18.6 passed in
+redacted differential secret scan. The reviewer independently passed
