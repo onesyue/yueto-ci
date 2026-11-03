@@ -1,0 +1,2231 @@
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a19f92-a010-7d83-9f31-65194f8d9f99
+--------
+user
+Review-only, exact head. HEAD must be 0022fa5e (verify with git rev-parse HEAD). It is a GitHub update-branch merge of origin/master (e05012e, PR #177) into the previously APPROVED pin commit 9b7273eb (see ../../lane-ci/review-176b.txt). Verify: (1) git diff 9b7273eb 0022fa5e equals only changes already on master e05012e (i.e. git diff e05012e 0022fa5e equals git diff e05012e^... only the 2 pin replacements: native-node-contract.json yueboard_contract_pin and tests/test_build_policy.py -> 40a0026d71395ac37fb9ab5943bd8c2693440036); (2) no conflict-resolution edits; (3) .yb-master.txt shows yueboard master 40a0026d. Do not edit anything. End with a single line 'VERDICT: APPROVE' or 'VERDICT: CHANGES' and the reviewed head SHA.
+2026-11-03T04:02:34.009508Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+codex
+我会只读核对指定 HEAD、此前审批记录、合并差异和 `.yb-master.txt`，确认是否只有既有 master 改动与两处 pin 替换。
+
+exec
+/bin/zsh -lc 'cat /Users/j/.agents/skills/verification-before-completion/SKILL.md' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+---
+name: verification-before-completion
+description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+---
+
+# Verification Before Completion
+
+## Overview
+
+**Core principle:** Evidence before claims, always.
+
+**Violating the letter of this rule is violating the spirit of this rule.**
+
+## The Iron Law
+
+```
+NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+```
+
+If you haven't run the verification command in this message, you cannot claim it passes.
+
+## The Gate Function
+
+```
+BEFORE claiming any status or expressing satisfaction:
+
+1. IDENTIFY: What command proves this claim?
+2. RUN: Execute the FULL command (fresh, complete)
+3. READ: Full output, check exit code, count failures
+4. VERIFY: Does output confirm the claim?
+   - If NO: State actual status with evidence
+   - If YES: State claim WITH evidence
+5. ONLY THEN: Make the claim
+
+Skip any step = lying, not verifying
+```
+
+## Common Failures
+
+| Claim | Requires | Not Sufficient |
+|-------|----------|----------------|
+| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
+| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
+| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
+| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
+| Regression test works | Red-green cycle verified | Test passes once |
+| Agent completed | VCS diff shows changes | Agent reports "success" |
+| Requirements met | Line-by-line checklist | Tests passing |
+
+## Red Flags - STOP
+
+- Using "should", "probably", "seems to"
+- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
+- About to commit/push/PR without verification
+- Trusting agent success reports
+- Relying on partial verification
+- Thinking "just this once"
+- Tired and wanting work over
+- **ANY wording implying success without having run verification**
+
+## Rationalization Prevention
+
+| Excuse | Reality |
+|--------|---------|
+| "Should work now" | RUN the verification |
+| "I'm confident" | Confidence ≠ evidence |
+| "Just this once" | No exceptions |
+| "Linter passed" | Linter ≠ compiler |
+| "Agent said success" | Verify independently |
+| "I'm tired" | Exhaustion ≠ excuse |
+| "Partial check is enough" | Partial proves nothing |
+| "Different words so rule doesn't apply" | Spirit over letter |
+
+## Key Patterns
+
+**Tests:**
+```
+✅ [Run test command] [See: 34/34 pass] "All tests pass"
+❌ "Should pass now" / "Looks correct"
+```
+
+**Regression tests (TDD Red-Green):**
+```
+✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
+❌ "I've written a regression test" (without red-green verification)
+```
+
+**Build:**
+```
+✅ [Run build] [See: exit 0] "Build passes"
+❌ "Linter passed" (linter doesn't check compilation)
+```
+
+**Requirements:**
+```
+✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
+❌ "Tests pass, phase complete"
+```
+
+**Agent delegation:**
+```
+✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
+❌ Trust agent report
+```
+
+## When To Apply
+
+**ALWAYS before:**
+- ANY variation of success/completion claims
+- ANY expression of satisfaction
+- ANY positive statement about work state
+- Committing, PR creation, task completion
+- Moving to next task
+- Delegating to agents
+
+**Rule applies to:**
+- Exact phrases
+- Paraphrases and synonyms
+- Implications of success
+- ANY communication suggesting completion/correctness
+
+exec
+/bin/zsh -lc 'cat ../../lane-ci/review-176b.txt' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a19f6d-d276-7891-90a5-198829e6451b
+--------
+user
+Re-review yueto-ci PR #176 at HEAD 9b7273eb (git diff HEAD~1). Prior review (~/Projects/lane-ci/review-176.txt) said CHANGES only because it couldn't verify 40a0026d is yueboard master. Coordinator ran git ls-remote outside your sandbox; output is in ./.yb-master.txt (untracked evidence file, ignore it in the diff). Verify and decide. End with exactly 'VERDICT: APPROVE' or 'VERDICT: CHANGES'.
+codex
+我会核对上次审阅的阻塞点、当前 HEAD 差异和 `.yb-master.txt` 证据，再给出结论。
+exec
+/bin/zsh -lc "pwd && git status --short && git rev-parse HEAD && git diff --stat HEAD~1 && rg --files -g AGENTS.md -g '*176*' -g '*findings*' -g '*status*' -g '*batch*' -g '.yb-master.txt' . /Users/j/Projects/lane-ci 2>/dev/null" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 137ms:
+/Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+?? .yb-master.txt
+9b7273eb97e1214df10aa025cbae0fb39bd46514
+ native-node-contract.json  | 2 +-
+ tests/test_build_policy.py | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+/Users/j/Projects/lane-ci/review-176.txt
+/Users/j/Projects/lane-ci/review-176b.txt
+./.yb-master.txt
+./reviews/merge-receipts-20261103/yueops-176-review.txt
+./reviews/merge-receipts-20261103/yueops-176-parity.log
+
+exec
+/bin/zsh -lc 'for p in /AGENTS.md /Users/AGENTS.md /Users/j/AGENTS.md /Users/j/Projects/AGENTS.md /Users/j/Projects/yueto-ci-worktrees/AGENTS.md /Users/j/Projects/yueto-ci-worktrees/pin-yb-176/AGENTS.md; do if [ -f "$p" ]; then printf '"'\\n%s\\n' \""'$p"; cat "$p"; fi; done; cat /Users/j/.agents/skills/evidence-discipline/SKILL.md /Users/j/.agents/skills/verification-before-completion/SKILL.md' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+---
+name: evidence-discipline
+description: 'Use for Yue.to post-release readback, read-only production accounting reconciliation, routine inspection, or operational health claims. Prove collection reached the target, match scope and freshness, and distinguish healthy, failed and UNKNOWN.'
+---
+
+# Evidence discipline (Yue.to)
+
+For post-release readback, read-only accounting reconciliation or routine
+inspection, read [Read-only operational evidence](references/readonly-operations.md).
+It supplies collection criteria without authorizing production access or repairs.
+
+The most common failure here is a conclusion with **no supporting evidence**
+whose output looks identical to an evidenced conclusion. On 2026-08-29 this
+recurred independently in five unrelated places, including two newly written
+scripts.
+
+Every rule below comes from an observed incident. Use `guard-authoring` to write
+guards and `fleet-diagnose` to investigate nodes. This skill governs **the claim
+you are about to make**.
+
+## Select the evidence before collecting again
+
+Start with the selected item's latest receipt: object/input revision, environment
+(including timezone, shard order and concurrency when relevant), covered behavior,
+result, timestamp and evidence path. Reuse matching evidence within 24 hours;
+remeasure changed inputs, conflicting results or expired evidence. A changed
+runtime/environment changes the object even if the source SHA is unchanged.
+Collect only the missing obligation. A targeted test proves that tested behavior;
+it does not replace a required full release gate or current production readback.
+State the claim at the layer actually observed and close the item once its
+acceptance is satisfied. Historical incidents without a denominator establish
+failure mechanisms, not an error rate or a measured performance improvement.
+
+## Answer three questions before stating a conclusion
+
+1. **What does this output say when probing fails?** If it looks the same as
+   health or failure, it has no evidentiary value.
+2. **Did I observe not-X, or merely fail to observe X?** These are different
+   propositions.
+3. **Did I measure the layer I am making a claim about?** Inbound reachability
+   is not usability, ICMP is not the data plane, and cached receipts are not
+   liveness.
+
+If any answer is missing, report **UNKNOWN / UNMEASURABLE**, not either verdict.
+
+## 1. Unmeasurable state mistaken for a definite verdict
+
+This causes both **false green** (unreachable becomes healthy) and **false red**
+(unreachable becomes failed). Observed forms include:
+
+- SSH fails, collection returns an empty string, and output says HY2 is not
+  listening on UDP/443. That is a data-plane claim supported only by inability
+  to reach the host.
+- An observation point outside China judges whether the Chinese path is blocked.
+  That plane cannot observe the proposition, always returns UP and vetoed
+  recovery for 9 hours. **Write down what a veto gate can establish first.**
+- `dev-null-fleet-guard` reports SEEN from a cached `checked_at` receipt; it does
+  not establish liveness.
+- A listener assertion after `sleep 15` mistakes a host taking longer than
+  15 seconds to bind for a host unable to start. **Poll readiness until it appears**
+  within the operation's bound instead of assuming a fixed wait suffices.
+- All inbound 443 checks pass while outbound access reaches only the same
+  datacenter (`yue-us-premium`). Reachability does not establish usability.
+
+Fallback repair can hide this family completely: "fails every time and gets
+repaired" and "never failed" can produce identical observable state. A timer
+that repairs the state every N minutes is itself a reason to inspect the path.
+Where authorized and operationally appropriate, suspend the fallback for the
+measurement so it cannot mask the failure; preserve the recovery path.
+
+For every collect-then-assert path, first prove collection succeeded (nonempty,
+expected fields), then inspect contents. Missing measurements are
+UNKNOWN/UNREACHABLE. An inspection unable to measure should `exit 75`, not
+`exit 1`.
+
+## 2. A negative observation requires proof of handler arrival
+
+A rate-limit test sent 30 fake tokens to `checkin.yue.to/api/client/feedback`
+and counted 30 non-429 responses as passes. That hostname actually returned
+404: thirty 404s had been mistaken for thirty admitted requests.
+
+"No rate limit/error/alert" and "code was never reached" have identical counts.
+Anti-probing decoy 404s can further hide a missing route as bad data.
+
+First obtain a signal **generated by the target handler itself**, such as an
+empty-body 400 `content_required`, not a 404 from elsewhere. Then count results.
+Run a negative/control comparison too: a blocking result may have blocked
+legitimate traffic as well.
+
+## 3. The tool can manufacture evidence
+
+Every example below has contaminated actual conclusions:
+
+| Failure shape | Consequence | Check or remedy |
+|---|---|---|
+| Read `$?` after `cmd \| tail` | Captures tail's status; four mutation runs falsely passed | Capture `rc=$?` immediately on its own line, with no intervening command, including `echo`; preserve the producer status |
+| `echo "rc=$?"` also contains `$(date)` | Command-substitution expansion overwrote status; rc 78 was recorded as 0 | Capture status separately and immediately |
+| `ssh -n` with heredoc/`bash -s` | stdin becomes /dev/null; remote reads zero bytes and always exits 0 | Look for `-n` and `<<` together |
+| `${...}`/backticks in a remote SSH command | Premature remote-shell expansion produced two opposite fleet conclusions in one day | Include a known-good control host in the same batch |
+| zsh `$VAR:path` | Modifier parsing silently rewrites the command; errors name a nonexistent file | Quote the whole value |
+| `__pycache__` / Flutter kernel cache | Same-length edits loaded stale bytecode; all four mutations falsely passed | After editing, `sleep 2 && touch`, or clear the relevant cache |
+| Playwright `fullPage` stitching | Turned an entire home section white; visual baseline missed three major regions | Quantify pixels rather than trusting visual inspection alone |
+| Matching structural fingerprints | Reported green for syntactically invalid YAML | Require successful parsing; shape alone is insufficient |
+| Background jobs inherit `SIGINT=SIG_IGN` | Bash cannot install a trap for an already ignored signal | A failure only in the SIGINT parameter is the signature |
+
+## 4. The criterion itself can be wrong
+
+- **Too broad:** `dpkg -l | awk '$1 !~ /^ii/'` treated normal `rc` (removed,
+  configuration retained) as failure and reported every host failed after a
+  successful rollout. The intended predicate is `^i[^i]`.
+- **Too narrow/non-universal:** `ss | grep -c :443` is 2 on a dual-stack host,
+  not 1. Establish universality before asserting an exact count.
+- **Measuring the probe:** instantaneous single samples, counting the probe
+  itself, or self-matching `pgrep -f X`.
+- **Wrong method:** binary-search MTU on a lossy path mistakes loss for oversized
+  packets. Repeat fixed-size probes and inspect the pattern, not the converged
+  search value.
+- **Agreement is not correctness:** comparing two handwritten copies detects
+  one-sided changes but is blind when both are stale. All four checks passed
+  during actual Thailand2/Indonesia2 VLESS disconnections. Ask who detects A
+  and B being wrong together; add a runtime-derived observation when necessary.
+- **Contaminated sampling:** check for other heavy work in the sample window
+  before attributing load. Geodata distribution once caused 5 false positives.
+- **Inventory is not forwarding topology (2026-10-08):** do not combine
+  `servers/server_nodes` hosts, protocol nodes, relay membership and other
+  product pools. Distinguish entry SID, logical node ID and actual backend.
+  Read current nginx upstreams, HY2 MAP and loaded nft targets, then reconcile
+  native machine presence. One node ID bound to several hosts proves bindings
+  only, not multiple current v4 exits in a region or readiness for backend load
+  balancing. Measure primary/backup entry and exit redundancy separately.
+- **Batch success is not item success (2026-10-08):** a protocol sweep using
+  consecutive-failure alerting can `exit 0` with VLESS 49/50. Locate the exact
+  invocation output with
+  `systemctl show <unit> -p InvocationID -p Result -p ExecMainStatus -p StandardOutput`,
+  then verify each protocol's denominator and OK/FAIL/UNKNOWN counts. A later
+  96/96 cannot erase the prior failure. Handshake reachability is not bandwidth
+  recovery evidence.
+- **Queued alerts are not delivered alerts (2026-10-08):** P1 deferred ACK proves
+  durable acceptance only. Use the original event's dedupe key/source generation
+  to correlate `ops_alert_outbox`, the actual batch's `delivered_at` and native
+  send ACK; compare payload hash and timing. Before an hourly batch is due,
+  report queued. Missing delivery links mean UNKNOWN. Extra test messages cannot
+  substitute for evidence of the original alert chain.
+
+## 5. The source itself can be stale
+
+- IPs taken from old rollout logs make healthy hosts appear unreachable. Verify
+  the current address before a liveness verdict.
+- Cross-repository assertions in comments expire unnoticed; one guided
+  production for three months.
+- Backlogs age: when asked what remained in `endgame-plan`, 4 items were already
+  complete and 1 was hidden in a merged row. Reconcile before working.
+- Of 15 self-reported visual defects, 6 were observation errors. Measure before
+  changing code.
+- A benchmark site with fabricated data entered long-term memory and was cited
+  as measured evidence for 9 days.
+
+## Pre-conclusion checklist
+
+- [ ] Probe failure is distinguishable from the claimed verdict.
+- [ ] Negative results have independent arrival proof and controls.
+- [ ] Fleet-wide claims include a known-good host in the same batch.
+- [ ] Numbers come from current authoritative sources, not old logs/comments/lists.
+- [ ] Measurement and claim concern the same layer.
+- [ ] Repair timers cannot silently mask the behavior being measured.
+- [ ] Report inability to measure explicitly; it is a valid, necessary conclusion.
+---
+name: verification-before-completion
+description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+---
+
+# Verification Before Completion
+
+## Overview
+
+**Core principle:** Evidence before claims, always.
+
+**Violating the letter of this rule is violating the spirit of this rule.**
+
+## The Iron Law
+
+```
+NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+```
+
+If you haven't run the verification command in this message, you cannot claim it passes.
+
+## The Gate Function
+
+```
+BEFORE claiming any status or expressing satisfaction:
+
+1. IDENTIFY: What command proves this claim?
+2. RUN: Execute the FULL command (fresh, complete)
+3. READ: Full output, check exit code, count failures
+4. VERIFY: Does output confirm the claim?
+   - If NO: State actual status with evidence
+   - If YES: State claim WITH evidence
+5. ONLY THEN: Make the claim
+
+Skip any step = lying, not verifying
+```
+
+## Common Failures
+
+| Claim | Requires | Not Sufficient |
+|-------|----------|----------------|
+| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
+| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
+| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
+| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
+| Regression test works | Red-green cycle verified | Test passes once |
+| Agent completed | VCS diff shows changes | Agent reports "success" |
+| Requirements met | Line-by-line checklist | Tests passing |
+
+## Red Flags - STOP
+
+- Using "should", "probably", "seems to"
+- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
+- About to commit/push/PR without verification
+- Trusting agent success reports
+- Relying on partial verification
+- Thinking "just this once"
+- Tired and wanting work over
+- **ANY wording implying success without having run verification**
+
+## Rationalization Prevention
+
+| Excuse | Reality |
+|--------|---------|
+| "Should work now" | RUN the verification |
+| "I'm confident" | Confidence ≠ evidence |
+| "Just this once" | No exceptions |
+| "Linter passed" | Linter ≠ compiler |
+| "Agent said success" | Verify independently |
+| "I'm tired" | Exhaustion ≠ excuse |
+| "Partial check is enough" | Partial proves nothing |
+| "Different words so rule doesn't apply" | Spirit over letter |
+
+## Key Patterns
+
+**Tests:**
+```
+✅ [Run test command] [See: 34/34 pass] "All tests pass"
+❌ "Should pass now" / "Looks correct"
+```
+
+**Regression tests (TDD Red-Green):**
+```
+✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
+❌ "I've written a regression test" (without red-green verification)
+```
+
+**Build:**
+```
+✅ [Run build] [See: exit 0] "Build passes"
+❌ "Linter passed" (linter doesn't check compilation)
+```
+
+**Requirements:**
+```
+✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
+❌ "Tests pass, phase complete"
+```
+
+**Agent delegation:**
+```
+✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
+❌ Trust agent report
+```
+
+## When To Apply
+
+**ALWAYS before:**
+- ANY variation of success/completion claims
+- ANY expression of satisfaction
+- ANY positive statement about work state
+- Committing, PR creation, task completion
+- Moving to next task
+- Delegating to agents
+
+**Rule applies to:**
+- Exact phrases
+- Paraphrases and synonyms
+- Implications of success
+- ANY communication suggesting completion/correctness
+
+exec
+/bin/zsh -lc 'cat /Users/j/Projects/lane-ci/review-176.txt /Users/j/Projects/lane-ci/review-176b.txt .yb-master.txt && git diff HEAD~1 -- native-node-contract.json tests/test_build_policy.py && git log -2 --format=fuller' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a19f69-f3e7-75d2-bf1e-24459f0266d9
+--------
+user
+Review yueto-ci PR #176 at HEAD 9b7273eb (git diff HEAD~1). It bumps yueboard_contract_pin 92377c1f -> 40a0026d71395ac37fb9ab5943bd8c2693440036. yueboard commits in range: #99 recommend-yuelink notice (flag default 0), #100 openapi snapshot + metrics test, #101 reset-secret audit stale tests. Check the pin is the full current yueboard master sha, all pin references updated consistently, and nothing else in the repo pins 92377c1f that should move (receipts/reviews are historical, leave them). Read-only. End with exactly 'VERDICT: APPROVE' or 'VERDICT: CHANGES' and reasons.
+2026-11-03T03:18:08.494861Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+codex
+我会只读核对 PR 差异、仓库中的 pin 引用，以及 yueboard master 的当前完整 SHA，并区分历史收据和审阅记录。
+
+exec
+/bin/zsh -lc "pwd && git status --short && git rev-parse HEAD && rg --files -g 'AGENTS.md' -g '*findings*' -g '*status*' -g '*batch*' -g '*review*' -g '*receipt*' -g '*176*' -g 'claude-inbox.md'" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+/Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+9b7273eb97e1214df10aa025cbae0fb39bd46514
+reviews/postmerge-codex-20261102/pr58-codex-review.md
+reviews/postmerge-codex-20261102/pr56-codex-review.md
+reviews/merge-receipts-20261102/yueops-257.review.txt
+reviews/merge-receipts-20261102/yueops-267-resolution-review-changes.txt
+reviews/merge-receipts-20261102/yueops-273-review-changes.txt
+reviews/merge-receipts-20261102/yueops-196.review.txt
+reviews/merge-receipts-20261102/implementation-review.md
+reviews/merge-receipts-20261102/yueto-51-review.txt
+reviews/merge-receipts-20261102/enforcement-review.md
+reviews/merge-receipts-20261102/yueops-267-review-changes.txt
+reviews/merge-receipts-20261102/yueops-195.review.txt
+reviews/merge-receipts-20261102/yueboard-52-box-review.txt
+reviews/merge-receipts-20261102/yueops-165.review.txt
+reviews/ops-miniapp-membership-20261102/review-bundle.md
+reviews/ops-miniapp-membership-20261102/codex-review.stderr.txt
+reviews/ops-miniapp-membership-20261102/independent-review.md
+reviews/ops-pr256-20261103/independent-review.md
+reviews/merge-receipts-20261103/yueops-294-review.txt
+reviews/merge-receipts-20261103/yueops-157-review.txt
+reviews/merge-receipts-20261103/yueops-160-review.txt
+reviews/merge-receipts-20261103/yueboard-65-review.txt
+reviews/merge-receipts-20261103/yueops-135-review.txt
+reviews/merge-receipts-20261103/yueto-ci-109-review.md
+reviews/merge-receipts-20261103/yueto-ci-104-review.txt
+reviews/merge-receipts-20261103/yueops-183-review.txt
+reviews/merge-receipts-20261103/yueops-129-review.txt
+reviews/merge-receipts-20261103/yueops-138-review.txt
+reviews/merge-receipts-20261103/yueto-ci-110-review.md
+reviews/merge-receipts-20261103/yueboard-97-review-hyg.md
+reviews/merge-receipts-20261103/yueops-204-review.txt
+reviews/merge-receipts-20261103/yuelink-45-review.txt
+reviews/merge-receipts-20261103/yueops-192-review.txt
+reviews/merge-receipts-20261103/yueops-171-review.txt
+reviews/merge-receipts-20261103/yueops-146-review.txt
+reviews/merge-receipts-20261103/yue-node-20-review.txt
+reviews/merge-receipts-20261103/yue-node-17-review.txt
+reviews/merge-receipts-20261103/yuelink-40-review.txt
+reviews/merge-receipts-20261103/yueto-ci-172-review.txt
+reviews/merge-receipts-20261103/review-yueto-ci-164.txt
+reviews/merge-receipts-20261103/yueops-201-review.txt
+reviews/merge-receipts-20261103/yue-node-12-review.txt
+reviews/merge-receipts-20261103/yuelink-ci-20-review.txt
+reviews/merge-receipts-20261103/yuelink-ci-17-review.txt
+reviews/merge-receipts-20261103/yueops-143-review.txt
+reviews/merge-receipts-20261103/yueops-174-review.txt
+reviews/merge-receipts-20261103/yueops-152-review.txt
+reviews/merge-receipts-20261103/yueops-130-review.txt
+reviews/merge-receipts-20261103/yueto-ci-17-review.txt
+reviews/merge-receipts-20261103/yueops-179-review.txt
+reviews/merge-receipts-20261103/yueops-210-review.txt
+reviews/merge-receipts-20261103/yueto-ci-116-review.md
+reviews/merge-receipts-20261103/yue-node-7-review.txt
+reviews/merge-receipts-20261103/yueops-290-review-r2.md
+reviews/merge-receipts-20261103/yueops-181-review.txt
+reviews/merge-receipts-20261103/yueops-217-review.txt
+reviews/merge-receipts-20261103/yueops-149-review.txt
+reviews/merge-receipts-20261103/yueboard-19-review.txt
+reviews/merge-receipts-20261103/yuelink-28-review.txt
+reviews/merge-receipts-20261103/yueboard-67-review.txt
+reviews/merge-receipts-20261103/yueops-162-review.txt
+reviews/merge-receipts-20261103/yueboard-50-review.txt
+reviews/merge-receipts-20261103/yueops-155-review.txt
+reviews/merge-receipts-20261103/yueops-137-review.txt
+reviews/merge-receipts-20261103/yueops-126-review.txt
+reviews/merge-receipts-20261103/yueops-144-review.txt
+reviews/merge-receipts-20261103/yueops-173-review.txt
+reviews/merge-receipts-20261103/yueops-287-review-g.md
+reviews/merge-receipts-20261103/yueto-ci-63-review.txt
+reviews/merge-receipts-20261103/yue-node-15-review.txt
+reviews/merge-receipts-20261103/yueops-253-review.txt
+reviews/merge-receipts-20261103/yueboard-99-review-tos.md
+reviews/merge-receipts-20261103/yueops-158-review.txt
+reviews/merge-receipts-20261103/yuelink-47-review.txt
+reviews/merge-receipts-20261103/yueops-190-review.txt
+reviews/merge-receipts-20261103/yue-node-10-review.txt
+reviews/merge-receipts-20261103/yue-node-8-review.txt
+reviews/merge-receipts-20261103/yuelink-ci-22-review.txt
+reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt
+reviews/merge-receipts-20261103/yueops-95-review.txt
+reviews/merge-receipts-20261103/yueops-176-review.txt
+reviews/merge-receipts-20261103/yueops-141-review.txt
+reviews/merge-receipts-20261103/yuelink-42-review.txt
+reviews/merge-receipts-20261103/yueto-ci-18-review.txt
+reviews/merge-receipts-20261103/yueops-75-review-r2.md
+reviews/merge-receipts-20261103/yuelink-52-review-tos.md
+reviews/merge-receipts-20261103/yueboard-6-review.txt
+reviews/merge-receipts-20261103/yueops-203-review.txt
+reviews/merge-receipts-20261103/yueboard-58-review.txt
+reviews/merge-receipts-20261103/yueops-212-review.txt
+reviews/merge-receipts-20261103/yueops-225-review.txt
+reviews/merge-receipts-20261103/yueops-168-review-r2.md
+reviews/merge-receipts-20261103/yuelink-ci-18-review.txt
+reviews/merge-receipts-20261103/yueops-239-review.txt
+reviews/merge-receipts-20261103/yueto-45-review.txt
+reviews/merge-receipts-20261103/yueops-132-review.txt
+reviews/merge-receipts-20261103/yueboard-37-review.txt
+reviews/merge-receipts-20261103/yueto-ci-117-review.md
+reviews/merge-receipts-20261103/yueops-255-review.txt
+reviews/merge-receipts-20261103/yueboard-5-review.txt
+reviews/merge-receipts-20261103/yueops-169-review.txt
+reviews/merge-receipts-20261103/yueto-ci-86-review.txt
+reviews/merge-receipts-20261103/yuelink-41-review.txt
+reviews/merge-receipts-20261103/yueops-176-parity.log
+reviews/merge-receipts-20261103/yueboard-12-review.txt
+reviews/merge-receipts-20261103/yueops-249-review.txt
+reviews/merge-receipts-20261103/yueops-142-review.txt
+reviews/merge-receipts-20261103/yueboard-47-review.txt
+reviews/merge-receipts-20261103/yueops-175-review.txt
+reviews/merge-receipts-20261103/yueboard-70-review.txt
+reviews/merge-receipts-20261103/yue-node-13-review.txt
+reviews/merge-receipts-20261103/yuelink-ci-21-review.txt
+reviews/merge-receipts-20261103/yueto-46-review.txt
+reviews/merge-receipts-20261103/yueops-164-review.txt
+reviews/merge-receipts-20261103/yueops-153-review.txt
+reviews/merge-receipts-20261103/yueops-131-review.txt
+reviews/merge-receipts-20261103/yueto-ci-112-review.md
+reviews/merge-receipts-20261103/yueto-ci-9-review.txt
+reviews/merge-receipts-20261103/yueops-187-review.txt
+reviews/merge-receipts-20261103/yueops-178-review.txt
+reviews/merge-receipts-20261103/yueops-244-review.txt
+reviews/merge-receipts-20261103/yueops-273-review.txt
+reviews/merge-receipts-20261103/yueops-156-review.txt
+reviews/merge-receipts-20261103/yueops-161-review.txt
+reviews/merge-receipts-20261103/yueboard-64-review.txt
+reviews/merge-receipts-20261103/yueboard-31-review.txt
+reviews/merge-receipts-20261103/yueops-134-review.txt
+reviews/merge-receipts-20261103/yueto-ci-13-review.txt
+reviews/merge-receipts-20261103/yueto-ci-121-review-g.md
+reviews/merge-receipts-20261103/yuelink-49-review.txt
+reviews/merge-receipts-20261103/yueops-128-review.txt
+reviews/merge-receipts-20261103/yueto-ci-114-review.md
+reviews/merge-receipts-20261103/yueops-139-review.txt
+reviews/merge-receipts-20261103/yueops-267-review.txt
+reviews/merge-receipts-20261103/yueops-291-review.md
+reviews/merge-receipts-20261103/yueops-285-review.md
+reviews/merge-receipts-20261103/yueboard-20-review.txt
+reviews/merge-receipts-20261103/yueops-125-review.txt
+reviews/merge-receipts-20261103/yueops-170-review.txt
+reviews/merge-receipts-20261103/yueops-147-review.txt
+reviews/merge-receipts-20261103/yueto-ci-145-review.md
+reviews/merge-receipts-20261103/yueops-188-review.txt
+reviews/merge-receipts-20261103/yuelink-ci-23-review.txt
+reviews/merge-receipts-20261103/yueboard-101-review.log
+reviews/merge-receipts-20261103/yuelink-43-review.txt
+reviews/merge-receipts-20261103/yueops-40-review.txt
+reviews/merge-receipts-20261103/yuelink-30-review.txt
+reviews/merge-receipts-20261103/yueops-185-review.txt
+reviews/merge-receipts-20261103/yueto-ci-95-review.txt
+reviews/merge-receipts-20261103/yueops-213-review.txt
+reviews/merge-receipts-20261103/yueops-224-review.txt
+reviews/merge-receipts-20261103/review-yueto-ci-168.txt
+reviews/merge-receipts-20261103/yueto-ci-14-review.txt
+reviews/merge-receipts-20261103/yueto-62-review.md
+reviews/merge-receipts-20261103/yueops-151-review.txt
+reviews/merge-receipts-20261103/yueto-ci-113-review.md
+reviews/merge-receipts-20261103/yueops-166-review.txt
+reviews/merge-receipts-20261103/yueops-133-review.txt
+reviews/merge-receipts-20261103/yueops-221-review.txt
+reviews/merge-receipts-20261103/yueops-216-review.txt
+reviews/merge-receipts-20261103/yueops-180-review.txt
+reviews/merge-receipts-20261103/yueto-ci-107-review.txt
+reviews/merge-receipts-20261103/yueboard-100-review.txt
+reviews/merge-receipts-20261103/yueops-286-review-g.md
+reviews/merge-receipts-20261103/yueops-163-review.txt
+reviews/merge-receipts-20261103/yueops-289-review.md
+reviews/merge-receipts-20261103/yueops-154-review.txt
+reviews/merge-receipts-20261103/yueto-41-review.txt
+reviews/merge-receipts-20261103/yueto-ci-86-review.md
+reviews/merge-receipts-20261103/yueops-136-review.txt
+reviews/merge-receipts-20261103/yuelink-29-review.txt
+reviews/merge-receipts-20261103/yue-node-14-review.txt
+reviews/merge-receipts-20261103/yuelink-ci-26-review.txt
+reviews/merge-receipts-20261103/yueops-127-review.txt
+reviews/merge-receipts-20261103/yueops-172-review.txt
+reviews/merge-receipts-20261103/yuelink-46-review.txt
+reviews/merge-receipts-20261103/yueops-191-review.txt
+reviews/merge-receipts-20261103/yueto-ci-153-review-hyg.md
+reviews/merge-receipts-20261103/yueops-159-review.txt
+reviews/ops-npm-security-20261031/independent-review.md
+reviews/ops-collection-shuffle-20261031/independent-review.md
+reviews/ops-pr122-20261103/independent-review.md
+reviews/ops-hang-guard-20261029/receipt-B-release-skip-blob-successors.md
+reviews/ops-hang-guard-20261029/release-review-document.json
+reviews/ops-hang-guard-20261029/receipt-A-tests-_subprocess.md
+reviews/ops-deploy-ai-exit-20261103/independent-review.md
+reviews/ops-site-devdeps-20261103/independent-review.md
+scripts/write-merge-receipt.py
+scripts/candidate-receipt.py
+tests/test_write_merge_receipt.py
+tests/test_ops_reviewed_pr_input_transitions.py
+tests/test_merge_receipt_enforcement.py
+tests/test_ops_hang_guard_review_receipts.py
+
+exec
+/bin/zsh -lc 'cat /Users/j/.agents/skills/evidence-discipline/SKILL.md && cat /Users/j/.agents/skills/verification-before-completion/SKILL.md' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+---
+name: evidence-discipline
+description: 'Use for Yue.to post-release readback, read-only production accounting reconciliation, routine inspection, or operational health claims. Prove collection reached the target, match scope and freshness, and distinguish healthy, failed and UNKNOWN.'
+---
+
+# Evidence discipline (Yue.to)
+
+For post-release readback, read-only accounting reconciliation or routine
+inspection, read [Read-only operational evidence](references/readonly-operations.md).
+It supplies collection criteria without authorizing production access or repairs.
+
+The most common failure here is a conclusion with **no supporting evidence**
+whose output looks identical to an evidenced conclusion. On 2026-08-29 this
+recurred independently in five unrelated places, including two newly written
+scripts.
+
+Every rule below comes from an observed incident. Use `guard-authoring` to write
+guards and `fleet-diagnose` to investigate nodes. This skill governs **the claim
+you are about to make**.
+
+## Select the evidence before collecting again
+
+Start with the selected item's latest receipt: object/input revision, environment
+(including timezone, shard order and concurrency when relevant), covered behavior,
+result, timestamp and evidence path. Reuse matching evidence within 24 hours;
+remeasure changed inputs, conflicting results or expired evidence. A changed
+runtime/environment changes the object even if the source SHA is unchanged.
+Collect only the missing obligation. A targeted test proves that tested behavior;
+it does not replace a required full release gate or current production readback.
+State the claim at the layer actually observed and close the item once its
+acceptance is satisfied. Historical incidents without a denominator establish
+failure mechanisms, not an error rate or a measured performance improvement.
+
+## Answer three questions before stating a conclusion
+
+1. **What does this output say when probing fails?** If it looks the same as
+   health or failure, it has no evidentiary value.
+2. **Did I observe not-X, or merely fail to observe X?** These are different
+   propositions.
+3. **Did I measure the layer I am making a claim about?** Inbound reachability
+   is not usability, ICMP is not the data plane, and cached receipts are not
+   liveness.
+
+If any answer is missing, report **UNKNOWN / UNMEASURABLE**, not either verdict.
+
+## 1. Unmeasurable state mistaken for a definite verdict
+
+This causes both **false green** (unreachable becomes healthy) and **false red**
+(unreachable becomes failed). Observed forms include:
+
+- SSH fails, collection returns an empty string, and output says HY2 is not
+  listening on UDP/443. That is a data-plane claim supported only by inability
+  to reach the host.
+- An observation point outside China judges whether the Chinese path is blocked.
+  That plane cannot observe the proposition, always returns UP and vetoed
+  recovery for 9 hours. **Write down what a veto gate can establish first.**
+- `dev-null-fleet-guard` reports SEEN from a cached `checked_at` receipt; it does
+  not establish liveness.
+- A listener assertion after `sleep 15` mistakes a host taking longer than
+  15 seconds to bind for a host unable to start. **Poll readiness until it appears**
+  within the operation's bound instead of assuming a fixed wait suffices.
+- All inbound 443 checks pass while outbound access reaches only the same
+  datacenter (`yue-us-premium`). Reachability does not establish usability.
+
+Fallback repair can hide this family completely: "fails every time and gets
+repaired" and "never failed" can produce identical observable state. A timer
+that repairs the state every N minutes is itself a reason to inspect the path.
+Where authorized and operationally appropriate, suspend the fallback for the
+measurement so it cannot mask the failure; preserve the recovery path.
+
+For every collect-then-assert path, first prove collection succeeded (nonempty,
+expected fields), then inspect contents. Missing measurements are
+UNKNOWN/UNREACHABLE. An inspection unable to measure should `exit 75`, not
+`exit 1`.
+
+## 2. A negative observation requires proof of handler arrival
+
+A rate-limit test sent 30 fake tokens to `checkin.yue.to/api/client/feedback`
+and counted 30 non-429 responses as passes. That hostname actually returned
+404: thirty 404s had been mistaken for thirty admitted requests.
+
+"No rate limit/error/alert" and "code was never reached" have identical counts.
+Anti-probing decoy 404s can further hide a missing route as bad data.
+
+First obtain a signal **generated by the target handler itself**, such as an
+empty-body 400 `content_required`, not a 404 from elsewhere. Then count results.
+Run a negative/control comparison too: a blocking result may have blocked
+legitimate traffic as well.
+
+## 3. The tool can manufacture evidence
+
+Every example below has contaminated actual conclusions:
+
+| Failure shape | Consequence | Check or remedy |
+|---|---|---|
+| Read `$?` after `cmd \| tail` | Captures tail's status; four mutation runs falsely passed | Capture `rc=$?` immediately on its own line, with no intervening command, including `echo`; preserve the producer status |
+| `echo "rc=$?"` also contains `$(date)` | Command-substitution expansion overwrote status; rc 78 was recorded as 0 | Capture status separately and immediately |
+| `ssh -n` with heredoc/`bash -s` | stdin becomes /dev/null; remote reads zero bytes and always exits 0 | Look for `-n` and `<<` together |
+| `${...}`/backticks in a remote SSH command | Premature remote-shell expansion produced two opposite fleet conclusions in one day | Include a known-good control host in the same batch |
+| zsh `$VAR:path` | Modifier parsing silently rewrites the command; errors name a nonexistent file | Quote the whole value |
+| `__pycache__` / Flutter kernel cache | Same-length edits loaded stale bytecode; all four mutations falsely passed | After editing, `sleep 2 && touch`, or clear the relevant cache |
+| Playwright `fullPage` stitching | Turned an entire home section white; visual baseline missed three major regions | Quantify pixels rather than trusting visual inspection alone |
+| Matching structural fingerprints | Reported green for syntactically invalid YAML | Require successful parsing; shape alone is insufficient |
+| Background jobs inherit `SIGINT=SIG_IGN` | Bash cannot install a trap for an already ignored signal | A failure only in the SIGINT parameter is the signature |
+
+## 4. The criterion itself can be wrong
+
+- **Too broad:** `dpkg -l | awk '$1 !~ /^ii/'` treated normal `rc` (removed,
+  configuration retained) as failure and reported every host failed after a
+  successful rollout. The intended predicate is `^i[^i]`.
+- **Too narrow/non-universal:** `ss | grep -c :443` is 2 on a dual-stack host,
+  not 1. Establish universality before asserting an exact count.
+- **Measuring the probe:** instantaneous single samples, counting the probe
+  itself, or self-matching `pgrep -f X`.
+- **Wrong method:** binary-search MTU on a lossy path mistakes loss for oversized
+  packets. Repeat fixed-size probes and inspect the pattern, not the converged
+  search value.
+- **Agreement is not correctness:** comparing two handwritten copies detects
+  one-sided changes but is blind when both are stale. All four checks passed
+  during actual Thailand2/Indonesia2 VLESS disconnections. Ask who detects A
+  and B being wrong together; add a runtime-derived observation when necessary.
+- **Contaminated sampling:** check for other heavy work in the sample window
+  before attributing load. Geodata distribution once caused 5 false positives.
+- **Inventory is not forwarding topology (2026-10-08):** do not combine
+  `servers/server_nodes` hosts, protocol nodes, relay membership and other
+  product pools. Distinguish entry SID, logical node ID and actual backend.
+  Read current nginx upstreams, HY2 MAP and loaded nft targets, then reconcile
+  native machine presence. One node ID bound to several hosts proves bindings
+  only, not multiple current v4 exits in a region or readiness for backend load
+  balancing. Measure primary/backup entry and exit redundancy separately.
+- **Batch success is not item success (2026-10-08):** a protocol sweep using
+  consecutive-failure alerting can `exit 0` with VLESS 49/50. Locate the exact
+  invocation output with
+  `systemctl show <unit> -p InvocationID -p Result -p ExecMainStatus -p StandardOutput`,
+  then verify each protocol's denominator and OK/FAIL/UNKNOWN counts. A later
+  96/96 cannot erase the prior failure. Handshake reachability is not bandwidth
+  recovery evidence.
+- **Queued alerts are not delivered alerts (2026-10-08):** P1 deferred ACK proves
+  durable acceptance only. Use the original event's dedupe key/source generation
+  to correlate `ops_alert_outbox`, the actual batch's `delivered_at` and native
+  send ACK; compare payload hash and timing. Before an hourly batch is due,
+  report queued. Missing delivery links mean UNKNOWN. Extra test messages cannot
+  substitute for evidence of the original alert chain.
+
+## 5. The source itself can be stale
+
+- IPs taken from old rollout logs make healthy hosts appear unreachable. Verify
+  the current address before a liveness verdict.
+- Cross-repository assertions in comments expire unnoticed; one guided
+  production for three months.
+- Backlogs age: when asked what remained in `endgame-plan`, 4 items were already
+  complete and 1 was hidden in a merged row. Reconcile before working.
+- Of 15 self-reported visual defects, 6 were observation errors. Measure before
+  changing code.
+- A benchmark site with fabricated data entered long-term memory and was cited
+  as measured evidence for 9 days.
+
+## Pre-conclusion checklist
+
+- [ ] Probe failure is distinguishable from the claimed verdict.
+- [ ] Negative results have independent arrival proof and controls.
+- [ ] Fleet-wide claims include a known-good host in the same batch.
+- [ ] Numbers come from current authoritative sources, not old logs/comments/lists.
+- [ ] Measurement and claim concern the same layer.
+- [ ] Repair timers cannot silently mask the behavior being measured.
+- [ ] Report inability to measure explicitly; it is a valid, necessary conclusion.
+---
+name: verification-before-completion
+description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+---
+
+# Verification Before Completion
+
+## Overview
+
+**Core principle:** Evidence before claims, always.
+
+**Violating the letter of this rule is violating the spirit of this rule.**
+
+## The Iron Law
+
+```
+NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+```
+
+If you haven't run the verification command in this message, you cannot claim it passes.
+
+## The Gate Function
+
+```
+BEFORE claiming any status or expressing satisfaction:
+
+1. IDENTIFY: What command proves this claim?
+2. RUN: Execute the FULL command (fresh, complete)
+3. READ: Full output, check exit code, count failures
+4. VERIFY: Does output confirm the claim?
+   - If NO: State actual status with evidence
+   - If YES: State claim WITH evidence
+5. ONLY THEN: Make the claim
+
+Skip any step = lying, not verifying
+```
+
+## Common Failures
+
+| Claim | Requires | Not Sufficient |
+|-------|----------|----------------|
+| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
+| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
+| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
+| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
+| Regression test works | Red-green cycle verified | Test passes once |
+| Agent completed | VCS diff shows changes | Agent reports "success" |
+| Requirements met | Line-by-line checklist | Tests passing |
+
+## Red Flags - STOP
+
+- Using "should", "probably", "seems to"
+- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
+- About to commit/push/PR without verification
+- Trusting agent success reports
+- Relying on partial verification
+- Thinking "just this once"
+- Tired and wanting work over
+- **ANY wording implying success without having run verification**
+
+## Rationalization Prevention
+
+| Excuse | Reality |
+|--------|---------|
+| "Should work now" | RUN the verification |
+| "I'm confident" | Confidence ≠ evidence |
+| "Just this once" | No exceptions |
+| "Linter passed" | Linter ≠ compiler |
+| "Agent said success" | Verify independently |
+| "I'm tired" | Exhaustion ≠ excuse |
+| "Partial check is enough" | Partial proves nothing |
+| "Different words so rule doesn't apply" | Spirit over letter |
+
+## Key Patterns
+
+**Tests:**
+```
+✅ [Run test command] [See: 34/34 pass] "All tests pass"
+❌ "Should pass now" / "Looks correct"
+```
+
+**Regression tests (TDD Red-Green):**
+```
+✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
+❌ "I've written a regression test" (without red-green verification)
+```
+
+**Build:**
+```
+✅ [Run build] [See: exit 0] "Build passes"
+❌ "Linter passed" (linter doesn't check compilation)
+```
+
+**Requirements:**
+```
+✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
+❌ "Tests pass, phase complete"
+```
+
+**Agent delegation:**
+```
+✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
+❌ Trust agent report
+```
+
+## When To Apply
+
+**ALWAYS before:**
+- ANY variation of success/completion claims
+- ANY expression of satisfaction
+- ANY positive statement about work state
+- Committing, PR creation, task completion
+- Moving to next task
+- Delegating to agents
+
+**Rule applies to:**
+- Exact phrases
+- Paraphrases and synonyms
+- Implications of success
+- ANY communication suggesting completion/correctness
+
+codex
+本次按 `evidence-discipline` 和 `verification-before-completion` 技能核对证据；检查限定为 master SHA、pin 引用一致性和旧 pin 残留三项。
+
+exec
+/bin/zsh -lc 'for d in / /Users /Users/j /Users/j/Projects /Users/j/Projects/yueto-ci-worktrees /Users/j/Projects/yueto-ci-worktrees/pin-yb-176; do if [ -f "$d/AGENTS.md" ]; then printf '"'\\n%s\\n' \""'$d/AGENTS.md"; cat "$d/AGENTS.md"; fi; done' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+exec
+/bin/zsh -lc "rg -n --hidden -g '"'!.git'"' '92377c1f|40a0026d|yueboard_contract_pin' . && rg --files --hidden -g '"'!.git'"' -g 'AGENTS.md' -g '*findings*' -g '*status*' -g '*batch*' -g '*176*' -g '*plan*' -g '*log*' -g '"'!reviews/**'"' -g '"'!receipts/**'"'" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+./reviews/merge-receipts-20261103/yueboard-100-parity.log:10:NOTE: scripts/premerge.sh stops at internal/platform/schemagate SchemaReferences (5 rejections) identically at base 92377c1f; pre-existing, not touched by this PR (diff: openapi json + metrics test)
+./reviews/merge-receipts-20261103/yueboard-100-review.txt:56:base = \"92377c1f87d99d83705e00d92f8d9742142f7e17\"
+./reviews/merge-receipts-20261103/yueboard-100-review.txt:107:DONE_WITH_CONCERNS — No P0–P3 findings in `92377c1f..89db33a3`.
+./reviews/merge-receipts-20261103/yueboard-100-review.txt:118:DONE_WITH_CONCERNS — No P0–P3 findings in `92377c1f..89db33a3`.
+./.github/workflows/build.yml:129:          yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
+./.github/workflows/build.yml:130:          yueboard_contract_ref="$yueboard_contract_pin"
+./.github/workflows/build.yml:207:             [ "$yueboard_contract_ref" != "$yueboard_contract_pin" ]; then
+./.github/workflows/build.yml:266:                  "$yueboard_contract_pin" "$board_source_sha" "$promote" \
+./.github/workflows/build.yml:876:          contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+./.github/workflows/build.yml:1480:          board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
+./.github/workflows/build.yml:2490:            contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueboard-101-review.log:13:Independent review, read-only. Repo yueboard, branch cx/reset-secret-audit-stale-tests, HEAD 9f73d7b4 vs origin/master 92377c1f (2 commits: ad08f983 + 9f73d7b4). Your r1 verdict on ad08f983 was CHANGES: add service-level audit-count assertions covering pending staging and idempotent replay; qualify the persistence-coverage comment. Check those are addressed properly, test-only, no flakiness, assertions are meaningful (would fail on 0 or 2 rows). End with one line: VERDICT: APPROVE or VERDICT: CHANGES <reasons>. Print no secrets.
+./reviews/merge-receipts-20261103/yueboard-101-review.log:310:92377c1f87d99d83705e00d92f8d9742142f7e17
+./reviews/merge-receipts-20261103/yueboard-101-review.log:4886:/tmp/reset-audit.review.log:14:Independent review, read-only. Repo yueboard, commit ad08f983 (HEAD) vs parent 92377c1f. Context: commit 97503588 moved the user.reset_secret audit from the admin handler into internal/platform/credentialreset (recordResetAudit in the staging tx). The two integration tests in test/integration/admin_reset_secret_audit_integration_test.go stubbed ResetCredentials and failed deterministically. Review whether the rewrite is correct and honest: (a) test-only, no product code; (b) does it lose real coverage, i.e. is audit for pending AND idempotent replay actually covered by credentialreset tests (check internal/platform/credentialreset/audit_test.go and credentialreset.go replay path); (c) any flakiness (channel/default select, map iteration, fixture admin id 1). End with one line: VERDICT: APPROVE or VERDICT: CHANGES <reasons>. Print no secrets.
+./reviews/merge-receipts-20261103/yueboard-101-review.log:4887:/tmp/reset-audit.review.log:20:/bin/zsh -lc 'pwd; git status --short; git rev-parse HEAD; git diff --stat 92377c1f ad08f983; cat CLAUDE.md' in /Users/j/Projects/yueboard-worktrees/reset-audit
+./reviews/merge-receipts-20261103/yueboard-101-review.log:4893:/tmp/reset-audit.review.log:258:/bin/zsh -lc "git diff 92377c1f ad08f983 -- test/integration/admin_reset_secret_audit_integration_test.go; cat internal/platform/credentialreset/audit_test.go; rg -n 'replay|recordResetAudit|Audit|audit|func .*Reset' internal/platform/credentialreset/credentialreset.go; rg --files -g '*findings*' -g '*status*' -g '*batch*' -g '*AGENTS.md' -g '*reset*' docs test/integration internal/platform/credentialreset" in /Users/j/Projects/yueboard-worktrees/reset-audit
+./reviews/merge-receipts-20261103/yueboard-101-review.log:4911:/tmp/reset-audit.review.log:1073:ad08f983 92377c1f test(integration): reset-secret audit tests follow credentialreset-owned audit (97503588)
+./reviews/merge-receipts-20261103/yueboard-101-review.log:4912:/tmp/reset-audit.review.log:1227:/bin/zsh -lc "rg -n 'audit|Audit|replay|Replay' internal/platform/credentialreset/*integration* test/integration/credential_reset_roundtrips_integration_test.go; sed -n '120,205p' internal/modules/admin/user_moderate.go; sed -n '20,75p' test/integration/admin_reset_secret_audit_integration_test.go; sed -n '174,188p' test/integration/harness_test.go; rg -n 'smoketoken000000000000000000000000000001' test/fixtures/seed.sql; rg -n '"'^func Test|RowsAffected|INSERT 0 0'"' internal/platform/credentialreset/*test.go; git diff --check 92377c1f ad08f983; git -c core.fsmonitor=false status --short" in /Users/j/Projects/yueboard-worktrees/reset-audit
+./reviews/merge-receipts-20261103/yueboard-101-review.log:5735:/bin/zsh -lc "cat /Users/j/Projects/yueto/AGENTS.md; sed -n '1,71p' /Users/j/Projects/yueto/CLAUDE.md; sed -n '202,270p' /Users/j/Projects/yueto/CLAUDE.md; sed -n '1720,1755p' /tmp/reset-audit.review.log; cat /tmp/reset-audit-r2.tests-retry.log /tmp/reset-audit-r2.missing.log /tmp/reset-audit-r2.duplicate.log; cat /tmp/reset-audit-r2-missing.json /tmp/reset-audit-r2-duplicate.json; git -c core.fsmonitor=false diff --check 92377c1f 9f73d7b4; gofmt -l internal/platform/credentialreset/audit_test.go test/integration/admin_reset_secret_audit_integration_test.go" in /Users/j/Projects/yueboard-worktrees/reset-audit
+./reviews/merge-receipts-20261103/yueboard-101-review.log:6358:/bin/zsh -lc "sed -n '24,70p' /Users/j/Projects/yueto/AGENTS.md; sed -n '1,70p' /Users/j/Projects/yueto/CLAUDE.md; sed -n '202,245p' /Users/j/Projects/yueto/CLAUDE.md; sed -n '1728,1745p' /tmp/reset-audit.review.log; git -c core.fsmonitor=false diff --check 92377c1f 9f73d7b4; gofmt -l internal/platform/credentialreset/audit_test.go test/integration/admin_reset_secret_audit_integration_test.go" in /Users/j/Projects/yueboard-worktrees/reset-audit
+./reviews/merge-receipts-20261103/yueboard-101-review.log:6538:/bin/zsh -lc "sed -n '208,248p' internal/platform/tokenvault/tokenvault.go; cat /tmp/reset-audit.report.md; nl -ba internal/platform/credentialreset/audit_test.go | sed -n '180,205p;264,316p'; git -c core.fsmonitor=false status --short; git -c core.fsmonitor=false diff --name-only 92377c1f 9f73d7b4; git -c core.fsmonitor=false log --oneline 92377c1f..9f73d7b4" in /Users/j/Projects/yueboard-worktrees/reset-audit
+./reviews/merge-receipts-20261103/yueboard-101-review.log:6584:Base: 92377c1f
+./native-node-contract.json:4:  "yueboard_contract_pin": "40a0026d71395ac37fb9ab5943bd8c2693440036",
+./reviews/merge-receipts-20261103/yueto-ci-161.md:5:- Scope: yueboard_contract_pin -> 92377c1 (yueboard#98)
+./reviews/merge-receipts-20261103/yueboard-100.md:4:- Full scripts/premerge.sh fails at internal/platform/schemagate SchemaReferences (5 rejections) at head AND identically at base 92377c1f (logs attached). PR diff touches only contracts/openapi json + metrics test. Coordinator decision 11-03 10:31: targeted parity + same-as-base accepted. Schemagate fix tracked as P1 (Codex lane cx/fix-schemagate-sql-20261103).
+./reviews/merge-receipts-20261103/yueto-ci-161.log:14:Independent reviewer for onesyue/yueto-ci at head 46431f4a7d881ae227c6663eb1a3111631e3811e. Review only 'git diff origin/master...46431f4a7d881ae227c6663eb1a3111631e3811e' (contract pin bump to yueboard 92377c1f87d99d83705e00d92f8d9742142f7e17, which is current yueboard master). Check consistency of all pin locations. End with VERDICT: APPROVE|CHANGES and FINDINGS.
+./reviews/merge-receipts-20261103/yueto-ci-161.log:28:-  "yueboard_contract_pin": "f7102350a149d4dbcb72ea212596a86f12ddca21",
+./reviews/merge-receipts-20261103/yueto-ci-161.log:29:+  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161.log:40:             self.native_contract["yueboard_contract_pin"],
+./reviews/merge-receipts-20261103/yueto-ci-161.log:42:+            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161.log:228:            self.native_contract["yueboard_contract_pin"],
+./reviews/merge-receipts-20261103/yueto-ci-161.log:229:            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161.log:344:native-node-contract.json:4:  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161.log:345:tests/test_ops_shard_workflow.py:44:            json.dumps({"yueboard_contract_pin": self.board_sha}))
+./reviews/merge-receipts-20261103/yueto-ci-161.log:346:scripts/pytest-shards.py:3135:    require(contract["yueboard_contract_pin"] == value["board_revision"],
+./reviews/merge-receipts-20261103/yueto-ci-161.log:357:tests/test_build_policy.py:1251:        self.assertIn("['yueboard_contract_pin']", capture_code)
+./reviews/merge-receipts-20261103/yueto-ci-161.log:360:tests/test_build_policy.py:1560:        self.assertIn("yueboard_contract_pin", self.readme)
+./reviews/merge-receipts-20261103/yueto-ci-161.log:367:tests/test_build_policy.py:2120:        pin = self.native_contract["yueboard_contract_pin"]
+./reviews/merge-receipts-20261103/yueto-ci-161.log:368:tests/test_build_policy.py:2122:        self.assertIn(".yueboard_contract_pin", self.workflow)
+./reviews/merge-receipts-20261103/yueto-ci-161.log:370:tests/test_build_policy.py:2137:            'yueboard_contract_ref" != "$yueboard_contract_pin',
+./reviews/merge-receipts-20261103/yueto-ci-161.log:374:tests/test_build_policy.py:2195:            self.native_contract["yueboard_contract_pin"],
+./reviews/merge-receipts-20261103/yueto-ci-161.log:380:README.md:62:`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
+./reviews/merge-receipts-20261103/yueto-ci-161.log:407:.github/workflows/board-visual-capture.yml:55:          revision = json.load(open('policy/native-node-contract.json'))['yueboard_contract_pin']
+./reviews/merge-receipts-20261103/yueto-ci-161.log:409:.github/workflows/build.yml:129:          yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161.log:410:.github/workflows/build.yml:130:          yueboard_contract_ref="$yueboard_contract_pin"
+./reviews/merge-receipts-20261103/yueto-ci-161.log:413:.github/workflows/build.yml:207:             [ "$yueboard_contract_ref" != "$yueboard_contract_pin" ]; then
+./reviews/merge-receipts-20261103/yueto-ci-161.log:415:.github/workflows/build.yml:266:                  "$yueboard_contract_pin" "$board_source_sha" "$promote" \
+./reviews/merge-receipts-20261103/yueto-ci-161.log:420:.github/workflows/build.yml:876:          contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161.log:426:.github/workflows/build.yml:1480:          board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
+./reviews/merge-receipts-20261103/yueto-ci-161.log:429:.github/workflows/build.yml:2490:            contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161.log:432:/bin/bash -lc "git grep -n -E 'yueboard_contract_pin|f7102350a149d4dbcb72ea212596a86f12ddca21|92377c1f87d99d83705e00d92f8d9742142f7e17' 46431f4a7d881ae227c6663eb1a3111631e3811e" in /workspace/rcpt-yueto-ci
+./reviews/merge-receipts-20261103/yueto-ci-161.log:434:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/board-visual-capture.yml:55:          revision = json.load(open('policy/native-node-contract.json'))['yueboard_contract_pin']
+./reviews/merge-receipts-20261103/yueto-ci-161.log:435:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:129:          yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161.log:436:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:130:          yueboard_contract_ref="$yueboard_contract_pin"
+./reviews/merge-receipts-20261103/yueto-ci-161.log:437:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:207:             [ "$yueboard_contract_ref" != "$yueboard_contract_pin" ]; then
+./reviews/merge-receipts-20261103/yueto-ci-161.log:438:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:266:                  "$yueboard_contract_pin" "$board_source_sha" "$promote" \
+./reviews/merge-receipts-20261103/yueto-ci-161.log:439:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:876:          contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161.log:440:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:1480:          board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
+./reviews/merge-receipts-20261103/yueto-ci-161.log:441:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:2490:            contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161.log:442:46431f4a7d881ae227c6663eb1a3111631e3811e:README.md:62:`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
+./reviews/merge-receipts-20261103/yueto-ci-161.log:443:46431f4a7d881ae227c6663eb1a3111631e3811e:native-node-contract.json:4:  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161.log:444:46431f4a7d881ae227c6663eb1a3111631e3811e:reviews/merge-receipts-20261103/yueto-ci-153.md:3:Box `codex exec -s read-only`, prompt scoped to `git diff origin/master 8731458f0ed0640ff30b0f27207287398cc10bc5`. Reviewed 2026-11-02T23:54:12Z. Pin-only change (yueboard_contract_pin -> f7102350, test expectation).
+./reviews/merge-receipts-20261103/yueto-ci-161.log:446:46431f4a7d881ae227c6663eb1a3111631e3811e:scripts/pytest-shards.py:3135:    require(contract["yueboard_contract_pin"] == value["board_revision"],
+./reviews/merge-receipts-20261103/yueto-ci-161.log:447:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:1251:        self.assertIn("['yueboard_contract_pin']", capture_code)
+./reviews/merge-receipts-20261103/yueto-ci-161.log:448:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:1560:        self.assertIn("yueboard_contract_pin", self.readme)
+./reviews/merge-receipts-20261103/yueto-ci-161.log:449:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2120:        pin = self.native_contract["yueboard_contract_pin"]
+./reviews/merge-receipts-20261103/yueto-ci-161.log:450:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2122:        self.assertIn(".yueboard_contract_pin", self.workflow)
+./reviews/merge-receipts-20261103/yueto-ci-161.log:451:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2137:            'yueboard_contract_ref" != "$yueboard_contract_pin',
+./reviews/merge-receipts-20261103/yueto-ci-161.log:452:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2195:            self.native_contract["yueboard_contract_pin"],
+./reviews/merge-receipts-20261103/yueto-ci-161.log:453:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2196:            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161.log:454:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_ops_shard_workflow.py:44:            json.dumps({"yueboard_contract_pin": self.board_sha}))
+./reviews/merge-receipts-20261103/yueto-ci-161.log:560:Reviewed only the specified diff. Both pin literals—`native-node-contract.json:4` and `tests/test_build_policy.py:2196`—match `92377c1f87d99d83705e00d92f8d9742142f7e17`. Workflow consumers read the central pin; the previous SHA remains only in a historical review receipt.
+./reviews/merge-receipts-20261103/yueto-ci-161.log:568:Reviewed only the specified diff. Both pin literals—`native-node-contract.json:4` and `tests/test_build_policy.py:2196`—match `92377c1f87d99d83705e00d92f8d9742142f7e17`. Workflow consumers read the central pin; the previous SHA remains only in a historical review receipt.
+./merge-receipts/yueboard/100.json:18:    "command": "pass-targeted, schemagate pre-existing on base 92377c1f: make check-http-contract && go test -count=1 ./internal/platform/metrics/",
+./README.md:62:`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
+./.github/workflows/board-visual-capture.yml:55:          revision = json.load(open('policy/native-node-contract.json'))['yueboard_contract_pin']
+./scripts/pytest-shards.py:3135:    require(contract["yueboard_contract_pin"] == value["board_revision"],
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:14:Review onesyue/yueto-ci PR #161 at its merged head 137e0502bc89505da7ab9b787a2c93e8f5985b99 (git diff origin/master~3 is not relevant; review: git diff e5e7219^1 137e0502 -- i.e. the PR diff 9c83dd8..137e0502 if that base fits, otherwise git show 46431f4 137e0502). It pins yueboard_contract_pin to 92377c1 and adds review artifacts. Check correctness, that both pin literals match, no secrets/internal IPs in added files. End with exactly 'VERDICT: APPROVE' or 'VERDICT: CHANGES' and FINDINGS.
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:88:46431f4a7d881ae227c6663eb1a3111631e3811e 9fe40bc32d6c8468af3ffb8fe089dca8e7834ad4 pin: yueboard_contract_pin f7102350 -> 92377c1 (yueboard#98)
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:160:-  "yueboard_contract_pin": "f7102350a149d4dbcb72ea212596a86f12ddca21",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:161:+  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:175:+- Scope: yueboard_contract_pin -> 92377c1 (yueboard#98)
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:183:             self.native_contract["yueboard_contract_pin"],
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:185:+            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:209:Independent reviewer for onesyue/yueto-ci at head 46431f4a7d881ae227c6663eb1a3111631e3811e. Review only 'git diff origin/master...46431f4a7d881ae227c6663eb1a3111631e3811e' (contract pin bump to yueboard 92377c1f87d99d83705e00d92f8d9742142f7e17, which is current yueboard master). Check consistency of all pin locations. End with VERDICT: APPROVE|CHANGES and FINDINGS.
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:223:-  "yueboard_contract_pin": "f7102350a149d4dbcb72ea212596a86f12ddca21",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:224:+  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:235:             self.native_contract["yueboard_contract_pin"],
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:237:+            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:423:            self.native_contract["yueboard_contract_pin"],
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:424:            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:539:native-node-contract.json:4:  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:540:tests/test_ops_shard_workflow.py:44:            json.dumps({"yueboard_contract_pin": self.board_sha}))
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:541:scripts/pytest-shards.py:3135:    require(contract["yueboard_contract_pin"] == value["board_revision"],
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:552:tests/test_build_policy.py:1251:        self.assertIn("['yueboard_contract_pin']", capture_code)
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:555:tests/test_build_policy.py:1560:        self.assertIn("yueboard_contract_pin", self.readme)
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:562:tests/test_build_policy.py:2120:        pin = self.native_contract["yueboard_contract_pin"]
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:563:tests/test_build_policy.py:2122:        self.assertIn(".yueboard_contract_pin", self.workflow)
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:565:tests/test_build_policy.py:2137:            'yueboard_contract_ref" != "$yueboard_contract_pin',
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:569:tests/test_build_policy.py:2195:            self.native_contract["yueboard_contract_pin"],
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:575:README.md:62:`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:602:.github/workflows/board-visual-capture.yml:55:          revision = json.load(open('policy/native-node-contract.json'))['yueboard_contract_pin']
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:604:.github/workflows/build.yml:129:          yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:605:.github/workflows/build.yml:130:          yueboard_contract_ref="$yueboard_contract_pin"
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:608:.github/workflows/build.yml:207:             [ "$yueboard_contract_ref" != "$yueboard_contract_pin" ]; then
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:610:.github/workflows/build.yml:266:                  "$yueboard_contract_pin" "$board_source_sha" "$promote" \
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:615:.github/workflows/build.yml:876:          contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:621:.github/workflows/build.yml:1480:          board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:624:.github/workflows/build.yml:2490:            contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:627:/bin/bash -lc "git grep -n -E 'yueboard_contract_pin|f7102350a149d4dbcb72ea212596a86f12ddca21|92377c1f87d99d83705e00d92f8d9742142f7e17' 46431f4a7d881ae227c6663eb1a3111631e3811e" in /workspace/rcpt-yueto-ci
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:629:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/board-visual-capture.yml:55:          revision = json.load(open('policy/native-node-contract.json'))['yueboard_contract_pin']
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:630:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:129:          yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:631:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:130:          yueboard_contract_ref="$yueboard_contract_pin"
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:632:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:207:             [ "$yueboard_contract_ref" != "$yueboard_contract_pin" ]; then
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:633:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:266:                  "$yueboard_contract_pin" "$board_source_sha" "$promote" \
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:634:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:876:          contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:635:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:1480:          board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:636:46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:2490:            contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:637:46431f4a7d881ae227c6663eb1a3111631e3811e:README.md:62:`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:638:46431f4a7d881ae227c6663eb1a3111631e3811e:native-node-contract.json:4:  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:639:46431f4a7d881ae227c6663eb1a3111631e3811e:reviews/merge-receipts-20261103/yueto-ci-153.md:3:Box `codex exec -s read-only`, prompt scoped to `git diff origin/master 8731458f0ed0640ff30b0f27207287398cc10bc5`. Reviewed 2026-11-02T23:54:12Z. Pin-only change (yueboard_contract_pin -> f7102350, test expectation).
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:641:46431f4a7d881ae227c6663eb1a3111631e3811e:scripts/pytest-shards.py:3135:    require(contract["yueboard_contract_pin"] == value["board_revision"],
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:642:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:1251:        self.assertIn("['yueboard_contract_pin']", capture_code)
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:643:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:1560:        self.assertIn("yueboard_contract_pin", self.readme)
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:644:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2120:        pin = self.native_contract["yueboard_contract_pin"]
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:645:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2122:        self.assertIn(".yueboard_contract_pin", self.workflow)
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:646:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2137:            'yueboard_contract_ref" != "$yueboard_contract_pin',
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:647:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2195:            self.native_contract["yueboard_contract_pin"],
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:648:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2196:            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:649:46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_ops_shard_workflow.py:44:            json.dumps({"yueboard_contract_pin": self.board_sha}))
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:755:Reviewed only the specified diff. Both pin literals—`native-node-contract.json:4` and `tests/test_build_policy.py:2196`—match `92377c1f87d99d83705e00d92f8d9742142f7e17`. Workflow consumers read the central pin; the previous SHA remains only in a historical review receipt.
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:763:Reviewed only the specified diff. Both pin literals—`native-node-contract.json:4` and `tests/test_build_policy.py:2196`—match `92377c1f87d99d83705e00d92f8d9742142f7e17`. Workflow consumers read the central pin; the previous SHA remains only in a historical review receipt.
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:800:rg -n 'f7102350a149d4dbcb72ea212596a86f12ddca21|92377c1f87d99d83705e00d92f8d9742142f7e17' --glob '"'!reviews/**'"' --hidden --glob '"'!.git/**'"'
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:813:native-node-contract.json:4:  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:814:tests/test_build_policy.py:2196:            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:822:Both pin literals match `92377c1f87d99d83705e00d92f8d9742142f7e17`. Two targeted contract tests and `git diff --check` passed. No secrets or internal IPs found in either added artifact.
+./reviews/merge-receipts-20261103/yueto-ci-161-review-r2.txt:831:Both pin literals match `92377c1f87d99d83705e00d92f8d9742142f7e17`. Two targeted contract tests and `git diff --check` passed. No secrets or internal IPs found in either added artifact.
+./reviews/merge-receipts-20261103/yueto-ci-153.md:3:Box `codex exec -s read-only`, prompt scoped to `git diff origin/master 8731458f0ed0640ff30b0f27207287398cc10bc5`. Reviewed 2026-11-02T23:54:12Z. Pin-only change (yueboard_contract_pin -> f7102350, test expectation).
+./tests/test_ops_shard_workflow.py:44:            json.dumps({"yueboard_contract_pin": self.board_sha}))
+./tests/test_build_policy.py:1251:        self.assertIn("['yueboard_contract_pin']", capture_code)
+./tests/test_build_policy.py:1560:        self.assertIn("yueboard_contract_pin", self.readme)
+./tests/test_build_policy.py:2120:        pin = self.native_contract["yueboard_contract_pin"]
+./tests/test_build_policy.py:2122:        self.assertIn(".yueboard_contract_pin", self.workflow)
+./tests/test_build_policy.py:2137:            'yueboard_contract_ref" != "$yueboard_contract_pin',
+./tests/test_build_policy.py:2195:            self.native_contract["yueboard_contract_pin"],
+./tests/test_build_policy.py:2196:            "40a0026d71395ac37fb9ab5943bd8c2693440036",
+scripts/freeze-build-plan.sh
+scripts/plan-build-targets.sh
+scripts/authorize-yueboard-build-plan.sh
+scripts/plan-rescan-targets.py
+scripts/go-cache-plan.py
+
+exec
+/bin/zsh -lc "git diff HEAD~1 --stat && git diff HEAD~1 && git remote -v && git log -4 --format='%h %s'" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+ native-node-contract.json  | 2 +-
+ tests/test_build_policy.py | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+diff --git a/native-node-contract.json b/native-node-contract.json
+index a923392..1bab0b1 100644
+--- a/native-node-contract.json
++++ b/native-node-contract.json
+@@ -1,7 +1,7 @@
+ {
+   "version": 6,
+   "schema_floor": 151,
+-  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
++  "yueboard_contract_pin": "40a0026d71395ac37fb9ab5943bd8c2693440036",
+   "layout": {
+     "node-1": {
+       "inventory_type": "hy2",
+diff --git a/tests/test_build_policy.py b/tests/test_build_policy.py
+index 2d9c754..713ef2f 100644
+--- a/tests/test_build_policy.py
++++ b/tests/test_build_policy.py
+@@ -2193,7 +2193,7 @@ class BuildPolicyTest(unittest.TestCase):
+         self.assertEqual(self.native_contract["schema_floor"], 151)
+         self.assertEqual(
+             self.native_contract["yueboard_contract_pin"],
+-            "92377c1f87d99d83705e00d92f8d9742142f7e17",
++            "40a0026d71395ac37fb9ab5943bd8c2693440036",
+         )
+         self.assertEqual(
+             self.native_contract["presence"],
+origin	https://github.com/onesyue/yueto-ci.git (fetch)
+origin	https://github.com/onesyue/yueto-ci.git (push)
+9b7273e pin: yueboard_contract_pin 92377c1 -> 40a0026d (yueboard#100 #101 #99)
+1c8dffe Merge pull request #170 from onesyue/receipt/yueboard-101
+1e4b48b Merge pull request #173 from onesyue/receipt/yueboard-100
+1f60776 Merge pull request #175 from onesyue/receipt/yueto-ci-168
+
+exec
+/bin/zsh -lc "rg -n --hidden -g '"'!.git'"' -g '"'!reviews/**'"' -g '"'!merge-receipts/**'"' 'yueboard|board_revision' .github scripts tests native-node-contract.json README.md | rg -i 'pin|[0-9a-f]{7,40}|refs/heads/master' && git -C /Users/j/Projects/yueboard rev-parse --show-toplevel && git -C /Users/j/Projects/yueboard log --format='%h %s' 92377c1f87d99d83705e00d92f8d9742142f7e17..40a0026d71395ac37fb9ab5943bd8c2693440036" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ exited 128 in 0ms:
+native-node-contract.json:4:  "yueboard_contract_pin": "40a0026d71395ac37fb9ab5943bd8c2693440036",
+README.md:37:  -f service=yueboard -f ref=<40-hex-reviewed-contract-pin>
+README.md:52:  -f service=yueboard -f ref=<40-hex-reviewed-contract-pin> -f promote=true
+README.md:62:`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
+scripts/validate-native-node-contract.py:540:    pinned_floor = read(yueboard_contract_root / "schema-floor.txt").strip()
+scripts/validate-native-node-contract.py:1091:    # enumerated enrolled credential rows again after yueboard 9580485, so the
+.github/workflows/build.yml:129:          yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
+.github/workflows/build.yml:130:          yueboard_contract_ref="$yueboard_contract_pin"
+.github/workflows/build.yml:207:             [ "$yueboard_contract_ref" != "$yueboard_contract_pin" ]; then
+.github/workflows/build.yml:266:                  "$yueboard_contract_pin" "$board_source_sha" "$promote" \
+.github/workflows/build.yml:876:          contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+.github/workflows/build.yml:1355:          contract_test=tests/test_yueboard_notices_contract_20261028.py
+.github/workflows/build.yml:1480:          board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
+.github/workflows/build.yml:1481:          test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"
+.github/workflows/build.yml:1484:          git -C .ci-yueboard diff --exit-code "$board_pin" -- test/fixtures/schema.sql
+.github/workflows/build.yml:2490:            contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+.github/workflows/board-visual-capture.yml:55:          revision = json.load(open('policy/native-node-contract.json'))['yueboard_contract_pin']
+tests/test_notices_contract_gate_20261028.py:22:        self.assertIn("YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard", self.step)
+tests/test_ops_shard_workflow.py:44:            json.dumps({"yueboard_contract_pin": self.board_sha}))
+tests/test_hardening_20260927.py:66:                           "validate-yueboard-postgres.py")
+tests/test_hardening_20260927.py:89:                   if "go test" in s or "validate-yueboard-postgres.py" in s]
+scripts/pytest-shards.py:3135:    require(contract["yueboard_contract_pin"] == value["board_revision"],
+tests/test_build_policy.py:1251:        self.assertIn("['yueboard_contract_pin']", capture_code)
+tests/test_build_policy.py:1510:    def test_yueboard_promotion_is_bound_to_exact_reviewed_contract_pin(self) -> None:
+tests/test_build_policy.py:1560:        self.assertIn("yueboard_contract_pin", self.readme)
+tests/test_build_policy.py:1562:    def test_yueboard_pin_authorizer_positive_and_negative_cases(self) -> None:
+tests/test_build_policy.py:1611:    def test_unpinned_yueboard_plan_is_validation_only_and_never_writes_registry(
+tests/test_build_policy.py:2104:    def test_yue_node_and_yueops_use_a_pinned_yueboard_contract(self) -> None:
+tests/test_build_policy.py:2120:        pin = self.native_contract["yueboard_contract_pin"]
+tests/test_build_policy.py:2122:        self.assertIn(".yueboard_contract_pin", self.workflow)
+tests/test_build_policy.py:2137:            'yueboard_contract_ref" != "$yueboard_contract_pin',
+tests/test_build_policy.py:2195:            self.native_contract["yueboard_contract_pin"],
+tests/test_build_policy.py:2624:    def test_native_validator_rejects_stale_pinned_yueboard_floor(self) -> None:
+tests/test_yueops_node_tests_20261017.py:228:@pytest.mark.parametrize('role',['PUBLIC','app_yue_bot','app_checkin','yueboard_runtime'])
+tests/test_yueops_node_tests_20261017.py:261:    test.assertIn('YUEBOARD_MONEY_SCHEMA_FIXTURE: ${{ github.workspace }}/.ci-yueboard/test/fixtures/schema.sql', workflow)
+tests/test_yueops_node_tests_20261017.py:263:        'test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"',
+tests/test_yueops_node_tests_20261017.py:264:        'git -C .ci-yueboard diff --exit-code "$board_pin" -- test/fixtures/schema.sql',
+tests/test_yueops_node_tests_20261017.py:272:        'sudo -n env PATH="$PATH" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"',
+tests/test_yueops_node_tests_20261017.py:295:            'test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"',
+tests/test_yueops_node_tests_20261017.py:310:            ('YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"', ''),
+tests/test_yueops_node_tests_20261017.py:311:            ('YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"', 'YUEBOARD_REPO_PATH=/tmp/unbound'),
+tests/test_yueops_node_tests_20261017.py:325:            fixture = root / '.ci-yueboard/test/fixtures/schema.sql'
+tests/test_yueops_node_tests_20261017.py:381:                    self.assertEqual(rows[4]['board'], str(root / '.ci-yueboard'))
+tests/test_go_cache_policy.py:54:                        ImageVersion="20261020.1", SOURCE_REPOSITORY="onesyue/yueboard",
+fatal: cannot change to '/Users/j/Projects/yueboard': No such file or directory
+
+exec
+/bin/zsh -lc 'git ls-remote https://github.com/onesyue/yueboard.git refs/heads/master && gh pr view 176 --repo onesyue/yueto-ci --json headRefOid,baseRefName,state,statusCheckRollup' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ exited 128 in 0ms:
+fatal: unable to access 'https://github.com/onesyue/yueboard.git/': Could not resolve host: github.com
+
+exec
+/bin/zsh -lc "sed -n '1,100p' tests/test_build_policy.py && sed -n '2100,2220p' tests/test_build_policy.py && sed -n '48,74p' README.md && cat merge-receipts/yueboard/99.json merge-receipts/yueboard/100.json merge-receipts/yueboard/101.json && git diff --check HEAD~1" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+from __future__ import annotations
+
+import fnmatch
+import glob
+import hashlib
+import importlib.util
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import textwrap
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW_DIR = ROOT / ".github" / "workflows"
+WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
+POLICY_WORKFLOW = ROOT / ".github" / "workflows" / "policy-ci.yml"
+IMAGE_RESCAN_WORKFLOW = ROOT / ".github" / "workflows" / "image-rescan.yml"
+SERVICES = ROOT / "services.json"
+VALIDATION_TARGETS = ROOT / "validation-targets.json"
+README = ROOT / "README.md"
+NATIVE_CONTRACT = ROOT / "native-node-contract.json"
+NATIVE_VALIDATOR = ROOT / "scripts" / "validate-native-node-contract.py"
+TARGET_PLANNER = ROOT / "scripts" / "plan-build-targets.sh"
+YUEBOARD_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-promotion.sh"
+YUEBOARD_PLAN_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-build-plan.sh"
+BUILDX_INSTALLER = ROOT / "scripts" / "install-verified-buildx.sh"
+BUILDX_SHA256 = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"
+
+
+class NativeNodeMakeChainTest(unittest.TestCase):
+    """Drive the actual CLI; unrelated ABI inputs are a bounded static fixture."""
+
+    PREFIX = (
+        "VALID_BUILD_PROFILES := auto hy2 vless\n"
+        ".PHONY: test test-vendored verify-fork-tags check-profile-deps\n"
+        "verify-fork-tags:\n\tbash scripts/verify-fork-tags.sh\n"
+        "check-profile-deps:\n\tsh scripts/check-profile-deps.sh\n"
+    )
+    BODY = (
+        "\tbash scripts/test-check-vulnerabilities.sh\n"
+        '\tgo test -race -count=1 -timeout $(TEST_TIMEOUT) -tags "$(TEST_COMMON_TAGS) yue_profile_hy2" ./...\n'
+        '\tgo test -race -count=1 -timeout $(TEST_TIMEOUT) -tags "$(TEST_COMMON_TAGS) yue_profile_vless" ./...\n'
+        "ifeq ($(shell uname -s),Linux)\n\tgo test ./native-fixture\n"
+        "else\n\t$(MAKE) native-fixture\nendif\n"
+    )
+    CURRENT = "test: verify-fork-tags\n\t$(MAKE) test-vendored\ntest-vendored: check-profile-deps\n"
+    LEGACY = "test: verify-fork-tags check-profile-deps\n"
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.node = self.root / "node"
+        self.board = self.root / "board"
+        contract = json.loads(NATIVE_CONTRACT.read_text())
+
+        def write(path, value):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(value, encoding="utf-8")
+
+        files = {
+            "Dockerfile": (
+                "ARG BUILD_PROFILE=auto\n-o yue-node-hy2 ./cmd/yue-node\n"
+                "-o yue-node-vless ./cmd/yue-node\n-o yue-node ./cmd/yue-node-launcher\n"
+                "COPY --from=builder /build/yue-node* /usr/local/bin/"
+            ),
+            "cmd/yue-node-launcher/main.go": (
+                "case capability.KernelHysteria:\ncase capability.KernelXray:\n"
+                'target := filepath.Join(filepath.Dir(executable), "yue-node-"+profile)\n'
+                "syscall.Exec(target"
+            ),
+            "scripts/check-profile-deps.sh": "yue_profile_hy2 yue_profile_vless profile dependency violation",
+            "internal/capability/manifest.go": 'InboundProtocols:    []string{"vless"}\nStructuredOutbounds: []string{"vless", "socks", "http", "wireguard"}',
+        }
+        for path, value in files.items():
+            write(self.node / path, value)
+        packages = [
+            ("config", 5, 0, "package config", ""),
+            ("controlplane", 5, 0, '\n'.join(['"' + c + '"' for c in contract["presence"]["release_a_rollout_capabilities"]] + [
+                '"crypto/rand"', "io.ReadFull(entropy, processRaw[:])", "ProcessInstanceId: c.processInstanceID",
+                "PresenceInstanceId: p.cp.processInstanceID", "GetAcknowledgedUserGeneration()", "GetAcknowledgedDeviceGeneration()"]), ""),
+            ("service", 8, 3, "s.kernel.UpdateGlobalDevices(users)\nDeviceState is an account-ID/IP projection\nruntime admission",
+             "TestDeviceGenerationPublishesAccountIPAdmissionPolicy\naccount/IP generation was rejected"),
+            ("model", 8, 0, "package model", ""),
+            ("kernel/xray", 20, 10, "local∪global union\ncanonicalDeviceIP",
+             "TestLimitDispatcherDeviceLimitUsesDeduplicatedLocalGlobalUnion"),
+            ("kernel/hysteria", 8, 10, "local∪global union\ncanonicalDeviceIP",
+             "TestDeviceLimitDeduplicatesCanonicalLocalGlobalUnion"),
+        ]
+        for package, count, tests, source, test in packages:
+            for index in range(count):
+                write(self.node / "internal" / package / f"fixture{index}.go", source)
+            for index in range(tests):
+                write(self.node / "internal" / package / f"fixture{index}_test.go", test)
+
+    def test_yueops_tests_do_not_override_the_isolated_database_fixture(self) -> None:
+        self.assertNotIn("DATABASE_URL: ''", self.workflow)
+
+    def test_yue_node_and_yueops_use_a_pinned_yueboard_contract(self) -> None:
+        self.assertIn(
+            "Checkout pinned YueBoard canonical contract",
+            self.workflow,
+        )
+        checkout_start = self.workflow.index(
+            "- name: Checkout pinned YueBoard canonical contract"
+        )
+        checkout_end = self.workflow.index(
+            "- name: Checkout immutable central native-node policy"
+        )
+        checkout_step = self.workflow[checkout_start:checkout_end]
+        self.assertIn(
+            "if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'",
+            checkout_step,
+        )
+        pin = self.native_contract["yueboard_contract_pin"]
+        self.assertRegex(pin, r"^[0-9a-f]{40}$")
+        self.assertIn(".yueboard_contract_pin", self.workflow)
+        self.assertIn("yueboard_contract_ref:", self.workflow)
+        self.assertIn(
+            "ref: ${{ needs.plan.outputs.yueboard_contract_ref }}",
+            self.workflow,
+        )
+        self.assertIn(
+            '[[ "$yueboard_contract_ref" =~ ^[0-9a-f]{40}$ ]]',
+            self.workflow,
+        )
+        self.assertIn(
+            "repository_dispatch may not override the pinned YueBoard contract",
+            self.workflow,
+        )
+        self.assertIn(
+            'yueboard_contract_ref" != "$yueboard_contract_pin',
+            self.workflow,
+        )
+        self.assertIn(
+            'echo "yueboard_contract_ref=$yueboard_contract_ref"',
+            self.workflow,
+        )
+        self.assertIn(
+            "YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard",
+            self.workflow,
+        )
+        self.assertIn(
+            "--yueboard-contract-source .ci-yueboard",
+            self.workflow,
+        )
+        validation_start = self.workflow.index(
+            "- name: Validate native-node cross-repository contract"
+        )
+        self.assertLess(checkout_start, validation_start)
+        validation_step = self.workflow[
+            validation_start : self.workflow.index(
+                "- name: Validate yue-node", validation_start
+            )
+        ]
+        self.assertIn("matrix.validation == 'yue-node'", validation_step)
+        self.assertIn("matrix.validation == 'yueops'", validation_step)
+        self.assertIn("validate_canonical_proto_mirror", self.native_validator)
+        self.assertIn(
+            "yue-node validation requires the separately checked-out",
+            self.native_validator,
+        )
+        self.assertIn(
+            "pinned YueBoard contract schema floor does not match central policy",
+            self.native_validator,
+        )
+        self.assertIn(
+            'for source_dir in (root / "cmd", root / "internal")',
+            self.native_validator,
+        )
+        self.assertNotIn(
+            'for path in root.rglob("*.go")',
+            self.native_validator,
+        )
+
+    def test_native_node_contract_is_central_and_blocks_all_product_repositories(
+        self,
+    ) -> None:
+        self.assertEqual(self.native_contract["version"], 6)
+        # 58 is the binary-required floor: the pinned YueBoard tree's irreversible
+        # hot-path-index and runtime-role migration. The floor-57 authority
+        # retirement ceremony has also landed, so neither the old decoupled-at-55
+        # value nor the superseded floor 57 is deployable. Keep the
+        # central policy and pinned YueBoard tree on this exact reviewed value (the
+        # YueOps three-stage deployer is retired/frozen since P2 §4 A3; the
+        # validator requires its RETIRED marker instead of a live floor).
+        self.assertIsInstance(self.native_contract["schema_floor"], int)
+        self.assertEqual(self.native_contract["schema_floor"], 151)
+        self.assertEqual(
+            self.native_contract["yueboard_contract_pin"],
+            "40a0026d71395ac37fb9ab5943bd8c2693440036",
+        )
+        self.assertEqual(
+            self.native_contract["presence"],
+            {
+                "required_capabilities": [
+                    "presence_v2",
+                ],
+                "release_a_rollout_capabilities": [
+                    "credential_limit_v1",
+                    "presence_v2",
+                ],
+                "report_rpc": "/yuenode.v1.NodeControlPlane/ReportDevices",
+                "rollout_proof_endpoint": "/api/v1/internal/yueops/nodes/rollout",
+                "process_lease_seconds": 240,
+                "rollout_order": [
+                    "yueboard_control_plane_locked",
+                    "yue_node_fleet",
+                    "credential_consumers",
+                ],
+            },
+        )
+        self.assertEqual(
+            self.native_contract["layout"],
+            {
+  -f service=yue-node-validation -f ref=<40-hex-yue-node-sha> -f promote=false
+
+# Promotion additionally requires the conditions below.
+gh workflow run build.yml -R onesyue/yueto-ci \
+  -f service=yueboard -f ref=<40-hex-reviewed-contract-pin> -f promote=true
+```
+
+Validation accepts full branch/tag names or full 40-character commit SHAs;
+7–39-character commit abbreviations are rejected. `promote=true` requires a
+full 40-character source SHA and this workflow's `refs/heads/master`. Validation
+and build check out independently, so movable refs cannot authorize promotion.
+
+Promotion also requires source default-branch ancestry, build inputs identical
+to HEAD, no regression behind `:latest`, and Board's exact signed
+`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
+[promote-source-gate.py](scripts/promote-source-gate.py) repeats these checks
+immediately before changing tags. Unpinned Board HEAD receives full validation
+but is `non-promotable`: no registry login, image, candidate or tag writes.
+Source-only targets reject promotion; ordinary `service=yue-node` still builds
+an image, while `yue-node-validation` runs both complete native profiles only.
+
+Ops builds require `migration_base=<full40-characterSHA>`, an existing ancestor.
+SQL lint covers baseline through candidate and rejects deleted/renamed SQL;
+there is no `HEAD^` or full-history fallback. Workspace `scripts/ship.sh yueops`
+derives the predecessor from verified signed `release.yaml`. Manual validation
+must use the same trusted basis, never the candidate itself. Poll derives a
+published ancestor from verified master provenance and OCI revision, choosing
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 99,
+  "head": "bd3e04110f71527a82b91c672893156196fd7876",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "bd3e04110f71527a82b91c672893156196fd7876",
+    "artifact": "reviews/merge-receipts-20261103/yueboard-99-review-tos.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T01:08:00Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "bd3e04110f71527a82b91c672893156196fd7876",
+    "command": "go test+vet subscribe; real-core parse flag-on: stash/mihomo, sing-box 1.12.12/1.14.4",
+    "log_sha256": "9900d1a24c3a70bf7ea157e8fbb7da6a25d3ccc789278a0aad2e6408a4a4a1ab",
+    "ran_at": "2026-11-03T01:09:40Z",
+    "runner": "box"
+  }
+}
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 100,
+  "head": "89db33a339607d7f36d09143f8ea6b8e1711afcd",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "89db33a339607d7f36d09143f8ea6b8e1711afcd",
+    "artifact": "reviews/merge-receipts-20261103/yueboard-100.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T02:12:14Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "89db33a339607d7f36d09143f8ea6b8e1711afcd",
+    "command": "pass-targeted, schemagate pre-existing on base 92377c1f: make check-http-contract && go test -count=1 ./internal/platform/metrics/",
+    "log_sha256": "518889c5e570b2f0601c425e22f69bdd2e7f86272fe23abeb5a40cb6684d2841",
+    "ran_at": "2026-11-03T02:27:18Z",
+    "runner": "box"
+  }
+}
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 101,
+  "head": "9f73d7b497fdae49c70f7a50c07a5ef816f4b04a",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "9f73d7b497fdae49c70f7a50c07a5ef816f4b04a",
+    "artifact": "reviews/merge-receipts-20261103/yueboard-101.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T01:18:49Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "9f73d7b497fdae49c70f7a50c07a5ef816f4b04a",
+    "command": "go vet ./... && go test -count=1 ./internal/platform/credentialreset/... ./internal/modules/admin/... && go test -count=1 -p 1 -tags integration ./test/integration ./internal/platform/credentialreset/...",
+    "log_sha256": "a2d2cffd4876def6afa631e5593a72faade3ddc811904fedcd74b40ea5b6b5c4",
+    "ran_at": "2026-11-03T01:24:44Z",
+    "runner": "box"
+  }
+}
+
+web search: 
+exec
+/bin/zsh -lc "ls -d /Users/j/Projects/*board* /Users/j/Projects/yueto/yueboard /Users/j/Projects/yueto-ci-worktrees/*176* 2>/dev/null
+rg -n '"'^class BuildPolicyTest|def setUpClass|def setUp'"\\(|unittest.main|yueboard.*176|40a0026d' tests/test_build_policy.py merge-receipts reviews/merge-receipts-20261103 --glob '*.md' --glob '*.json' --glob '*.py'" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+/Users/j/Projects/yueboard-worktrees
+/Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+/Users/j/Projects/yueto/yueboard
+tests/test_build_policy.py:55:    def setUp(self):
+tests/test_build_policy.py:186:    def setUpClass(cls):
+tests/test_build_policy.py:220:    def setUpClass(cls):
+tests/test_build_policy.py:583:    def setUp(self) -> None:
+tests/test_build_policy.py:791:class BuildPolicyTest(unittest.TestCase):
+tests/test_build_policy.py:793:    def setUpClass(cls) -> None:
+tests/test_build_policy.py:2196:            "40a0026d71395ac37fb9ab5943bd8c2693440036",
+tests/test_build_policy.py:2726:    unittest.main()
+reviews/merge-receipts-20261103/yueto-ci-87.md:4:Parity: `/home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests && for f in merge-hygiene-exceptions.json merge-receipts/yueboard/30.json merge-receipts/yueboard/42.json merge-receipts/yueboard/44.json merge-receipts/yueboard/78.json merge-receipts/yueboard/92.json merge-receipts/yueops/231.json merge-receipts/yueops/233.json merge-receipts/yueops/236.json merge-receipts/yueops/237.json merge-receipts/yueops/281.json merge-receipts/yueops/282.json merge-receipts/yueto-ci/71.json merge-receipts/yueto/61.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check 7b449be4431ed8baaf748528f6875a3c301763f7 94444b582ae32645f9eda62cdbdc1150fdb0d7cd -- . ':(exclude)reviews/'` at exact head on the box, ran 2026-11-02T18:26:13Z, log `yueto-ci-87.log` (sha256 ea0e59c8a32c08e278724360cac70d572b6346712893955b677ed599d6b69e4a). Scoped to the PR's changed files; not the full hosted suite.
+reviews/merge-receipts-20261103/yueboard-80.md:4:Parity: `go vet -tags integration ./internal/platform/toolchain  && go test ./internal/platform/toolchain ` at exact head on the box, ran 2026-11-02T17:01:51Z, log `yueboard-80.log` (sha256 31b18665fde17216d784ad1766dad219c2039c7a92570facfc3656e820cc951e). Scoped to the PR's changed Go packages; integration-tagged packages vetted only (no DB). Not the full hosted suite.
+reviews/merge-receipts-20261103/yueboard-82.md:1:# Codex review — yueboard #82 @ 8c73dcff7b8650371324337117637fdad51ea0d1
+reviews/merge-receipts-20261103/yueto-ci-56.md:4:Parity: `/home/box/Projects/yueto/yueops/.venv/bin/python3 -m py_compile scripts/validate-yueboard-postgres.py tests/test_postgres_integration_gate.py  && /home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests && git diff --check 5e2003a5a7afcbc1cc57fd4edee9e22f2b9b6ab3 571b524f36502789f205779698d0cc64cf501f6d` at exact head on the box, ran 2026-11-02T17:47:20Z, log `yueto-ci-56.log` (sha256 13b6996dea802d0efcfcf12f8721766afd08cebbb8ebfbe809145701df55a099). Scoped to the PR's changed files; not the full hosted suite.
+merge-receipts/yueto-ci/87.json:18:    "command": "/home/box/Projects/yueto/yueops/.venv/bin/python3 -m pytest -q -p no:cacheprovider tests && for f in merge-hygiene-exceptions.json merge-receipts/yueboard/30.json merge-receipts/yueboard/42.json merge-receipts/yueboard/44.json merge-receipts/yueboard/78.json merge-receipts/yueboard/92.json merge-receipts/yueops/231.json merge-receipts/yueops/233.json merge-receipts/yueops/236.json merge-receipts/yueops/237.json merge-receipts/yueops/281.json merge-receipts/yueops/282.json merge-receipts/yueto-ci/71.json merge-receipts/yueto/61.json ; do python3 -m json.tool $f >/dev/null || exit 1; done && git diff --check 7b449be4431ed8baaf748528f6875a3c301763f7 94444b582ae32645f9eda62cdbdc1150fdb0d7cd -- . ':(exclude)reviews/'",
+
+web search: https://api.github.com/repos/onesyue/yueboard/git/ref/heads/master
+codex
+两处 pin 字面量已同步更新，工作流从中央 JSON 读取；旧 SHA 的匹配项均在历史审阅或收据中。GitHub DNS 查询失败，尚无法确认远端 master；我会补查本地引用时间和提交范围，并运行相关只读测试。
+
+exec
+/bin/zsh -lc "git -C /Users/j/Projects/yueto/yueboard rev-parse refs/heads/master refs/remotes/origin/master && git -C /Users/j/Projects/yueto/yueboard reflog show -1 --format='%H %gI %gs' refs/remotes/origin/master && git -C /Users/j/Projects/yueto/yueboard log --format='%h %s' 92377c1f87d99d83705e00d92f8d9742142f7e17..40a0026d71395ac37fb9ab5943bd8c2693440036 && git -C /Users/j/Projects/yueto/yueboard diff --stat 92377c1f87d99d83705e00d92f8d9742142f7e17 40a0026d71395ac37fb9ab5943bd8c2693440036" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ exited 128 in 0ms:
+cc0de351345d9d84b1269d8b0bd46102e44e8c12
+f1e2c6ffd6174a5871bb6a9e663e474582063326
+f1e2c6ffd6174a5871bb6a9e663e474582063326 %gI fetch -q origin master: fast-forward
+fatal: Invalid revision range 92377c1f87d99d83705e00d92f8d9742142f7e17..40a0026d71395ac37fb9ab5943bd8c2693440036
+
+exec
+/bin/zsh -lc "sed -n '791,835p' tests/test_build_policy.py && sed -n '2240,2290p' tests/test_build_policy.py && python3 -B -c 'import pathlib, subprocess
+files = subprocess.check_output([\"git\", \"ls-files\", \"-z\"]).decode().split(\"\\0\")
+old_matches = [name for name in filter(None, files) if pathlib.Path(name).is_file() and b\"92377c1\" in pathlib.Path(name).read_bytes()]
+active_old = [name for name in old_matches if not name.startswith((\"reviews/\", \"merge-receipts/\"))]
+print(\"Tracked files containing old SHA:\", len(old_matches))
+print(\"Old SHA outside historical reviews/merge-receipts:\", active_old)
+assert not active_old'" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+class BuildPolicyTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.workflow = WORKFLOW.read_text(encoding="utf-8")
+        cls.policy_workflow = POLICY_WORKFLOW.read_text(encoding="utf-8")
+        cls.image_rescan_workflow = IMAGE_RESCAN_WORKFLOW.read_text(encoding="utf-8")
+        cls.services = json.loads(SERVICES.read_text(encoding="utf-8"))
+        cls.validation_targets = json.loads(
+            VALIDATION_TARGETS.read_text(encoding="utf-8")
+        )
+        cls.readme = README.read_text(encoding="utf-8")
+        cls.native_contract = json.loads(NATIVE_CONTRACT.read_text(encoding="utf-8"))
+        cls.native_validator = NATIVE_VALIDATOR.read_text(encoding="utf-8")
+        cls.target_planner = TARGET_PLANNER.read_text(encoding="utf-8")
+
+    def test_all_actions_are_pinned_to_full_commit_sha(self) -> None:
+        action_sources = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted(WORKFLOW_DIR.glob("*.y*ml"))
+        )
+        uses = re.findall(
+            r"^\s*(?:-\s*)?uses:\s*([^\s#]+)",
+            action_sources + "\n" + self.readme,
+            re.MULTILINE,
+        )
+        self.assertTrue(uses)
+        for action in uses:
+            with self.subTest(action=action):
+                self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$")
+
+    def test_documented_selected_actions_include_transitive_trivy_setup(self) -> None:
+        """A composite action's third-party children are policy subjects too."""
+
+        required_patterns = (
+            "anchore/sbom-action@*",
+            "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
+            "aquasecurity/trivy-action@*",
+            "astral-sh/setup-uv@*",
+            "bufbuild/buf-action@*",
+            "docker/build-push-action@*",
+            "docker/login-action@*",
+            "docker/setup-buildx-action@*",
+            "docker/setup-qemu-action@*",
+            "sigstore/cosign-installer@*",
+        )
+                "diagnostic_only": [
+                    "ip",
+                    "connection",
+                    "protocol",
+                    "node",
+                    "user_agent",
+                ],
+                "devices_endpoint": "/api/v1/user/devices",
+                "overview_endpoint": "/api/v1/user/overview",
+                "reset_endpoint": "/api/v1/user/devices/reset-all",
+                "reset_identity_field": "applied_user_ids",
+                "account_subscription_api": "/api/v1/user/getSubscribe",
+                "account_subscription_prefix": "/s/",
+                "third_party_import": "account_subscription",
+                "portal_installation_authority": "retired",
+                "synthetic_install_identity": "retired",
+                "presence_sources": ["memory", "database_projection"],
+            },
+        )
+        self.assertIn(
+            "Checkout immutable central native-node policy",
+            self.workflow,
+        )
+        self.assertIn("ref: ${{ github.sha }}", self.workflow)
+        self.assertIn(
+            "Validate native-node cross-repository contract",
+            self.workflow,
+        )
+        self.assertIn("--kind '${{ matrix.validation }}'", self.workflow)
+        self.assertIn("BUILD_PROFILE=auto", self.workflow)
+        for kind in ("yue-node", "yueops", "yueboard", "yuelink"):
+            self.assertIn(f'"{kind}"', self.native_validator)
+        for rpc in (
+            "/yuenode.v1.NodeControlPlane/GetConfig",
+            "/yuenode.v1.NodeControlPlane/ReportMachineStatus",
+        ):
+            self.assertIn(rpc, json.dumps(self.native_contract))
+        for rpc in (
+            "/yuenode.v1.NodeControlPlane/Report",
+            "/yuenode.v1.NodeControlPlane/ListMachineNodes",
+        ):
+            self.assertIn(rpc, self.native_contract["control"]["retired_rpcs"])
+        self.assertIn("validate_yueboard", self.native_validator)
+
+    def test_floor57_portal_installation_retirement_is_pinned_fail_closed(self) -> None:
+        for required in (
+            "internal/modules/subscribe/install_beacon_inject.go",
+            "internal/modules/subscribe/presence_beacon.go",
+            "00056_drop_portal_handoff_enrollment_receipts.sql",
+            "00057_drop_retired_device_subscription_authorities.sql",
+            "current_setting('yueboard.retirement_nonce', true), 57, false",
+Tracked files containing old SHA: 8
+Old SHA outside historical reviews/merge-receipts: []
+
+exec
+/bin/zsh -lc "git -C /Users/j/Projects/yueto/yueboard log -1 --format='%H %cI %s' refs/remotes/origin/master && git -C /Users/j/Projects/yueto/yueboard reflog show -1 --date=iso-strict --format='%H %gD %gs' refs/remotes/origin/master && ls -d /Users/j/Projects/yueboard-worktrees/* && for f in /Users/j/Projects/yueboard-worktrees/*/.git; do if [ -f \""'$f" ]; then printf '"'%s: ' \""'$f"; head -1 "$f"; fi; done' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+f1e2c6ffd6174a5871bb6a9e663e474582063326 2026-11-03T11:15:41+08:00 Merge pull request #100 from onesyue/cx/fix-master-quality-gates
+f1e2c6ffd6174a5871bb6a9e663e474582063326 refs/remotes/origin/master@{2026-11-03T11:16:12+08:00} fetch -q origin master: fast-forward
+/Users/j/Projects/yueboard-worktrees/gate-fix.codex.log
+/Users/j/Projects/yueboard-worktrees/gate-fix.dup.patch
+/Users/j/Projects/yueboard-worktrees/gate-fix.prompt.md
+/Users/j/Projects/yueboard-worktrees/r100
+/Users/j/Projects/yueboard-worktrees/reset-audit
+/Users/j/Projects/yueboard-worktrees/reset-audit-r2.codex.log
+/Users/j/Projects/yueboard-worktrees/reset-audit-r2.prompt.md
+/Users/j/Projects/yueboard-worktrees/reset-audit-rev2.prompt.md
+/Users/j/Projects/yueboard-worktrees/reset-audit.codex.log
+/Users/j/Projects/yueboard-worktrees/reset-audit.prompt.md
+/Users/j/Projects/yueboard-worktrees/reset-audit.review.log
+/Users/j/Projects/yueboard-worktrees/reset-audit.review2.log
+/Users/j/Projects/yueboard-worktrees/schemagate
+/Users/j/Projects/yueboard-worktrees/r100/.git: gitdir: /Users/j/Projects/yueto/yueboard/.git/worktrees/r100
+/Users/j/Projects/yueboard-worktrees/reset-audit/.git: gitdir: /Users/j/Projects/yueto/yueboard/.git/worktrees/reset-audit
+/Users/j/Projects/yueboard-worktrees/schemagate/.git: gitdir: /Users/j/Projects/yueto/yueboard/.git/worktrees/schemagate
+
+exec
+/bin/zsh -lc 'python3 -B tests/test_build_policy.py BuildPolicyTest.test_yue_node_and_yueops_use_a_pinned_yueboard_contract BuildPolicyTest.test_native_node_contract_is_central_and_blocks_all_product_repositories BuildPolicyTest.test_yueboard_promotion_is_bound_to_exact_reviewed_contract_pin -v && git diff --check HEAD~1 && git status --short' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+test_yue_node_and_yueops_use_a_pinned_yueboard_contract (__main__.BuildPolicyTest.test_yue_node_and_yueops_use_a_pinned_yueboard_contract) ... ok
+test_native_node_contract_is_central_and_blocks_all_product_repositories (__main__.BuildPolicyTest.test_native_node_contract_is_central_and_blocks_all_product_repositories) ... ok
+test_yueboard_promotion_is_bound_to_exact_reviewed_contract_pin (__main__.BuildPolicyTest.test_yueboard_promotion_is_bound_to_exact_reviewed_contract_pin) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+OK
+
+exec
+/bin/zsh -lc "gh api repos/onesyue/yueboard/git/ref/heads/master --jq '.object.sha'" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ exited 1 in 0ms:
+error connecting to api.github.com
+check your internet connection or https://githubstatus.com
+
+codex
+NEEDS_CONTEXT — 未发现代码缺陷，但缺少当前远端 master 的核验证据。
+
+- 两处 pin 均为完整 SHA `40a0026d71395ac37fb9ab5943bd8c2693440036`，工作流统一读取中央配置。
+- 旧 SHA 仅存在于历史 reviews/merge-receipts，无遗漏的有效 pin。
+- 3 项相关测试及 `git diff --check HEAD~1` 通过；未修改文件。
+- GitHub 与 API 均无法连接；本地缓存仍为 `f1e2c6ff`，不能证明目标 SHA 是当前 master。暂不批准的原因仅是此项验证缺失。
+
+VERDICT: CHANGES
+tokens used
+43,661
+NEEDS_CONTEXT — 未发现代码缺陷，但缺少当前远端 master 的核验证据。
+
+- 两处 pin 均为完整 SHA `40a0026d71395ac37fb9ab5943bd8c2693440036`，工作流统一读取中央配置。
+- 旧 SHA 仅存在于历史 reviews/merge-receipts，无遗漏的有效 pin。
+- 3 项相关测试及 `git diff --check HEAD~1` 通过；未修改文件。
+- GitHub 与 API 均无法连接；本地缓存仍为 `f1e2c6ff`，不能证明目标 SHA 是当前 master。暂不批准的原因仅是此项验证缺失。
+
+VERDICT: CHANGES
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a19f6d-d276-7891-90a5-198829e6451b
+--------
+user
+Re-review yueto-ci PR #176 at HEAD 9b7273eb (git diff HEAD~1). Prior review (~/Projects/lane-ci/review-176.txt) said CHANGES only because it couldn't verify 40a0026d is yueboard master. Coordinator ran git ls-remote outside your sandbox; output is in ./.yb-master.txt (untracked evidence file, ignore it in the diff). Verify and decide. End with exactly 'VERDICT: APPROVE' or 'VERDICT: CHANGES'.
+codex
+我会核对上次审阅的阻塞点、当前 HEAD 差异和 `.yb-master.txt` 证据，再给出结论。
+exec
+/bin/zsh -lc "pwd && git status --short && git rev-parse HEAD && git diff --stat HEAD~1 && rg --files -g AGENTS.md -g '*176*' -g '*findings*' -g '*status*' -g '*batch*' -g '.yb-master.txt' . /Users/j/Projects/lane-ci 2>/dev/null" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 137ms:
+/Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+?? .yb-master.txt
+9b7273eb97e1214df10aa025cbae0fb39bd46514
+ native-node-contract.json  | 2 +-
+ tests/test_build_policy.py | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+/Users/j/Projects/lane-ci/review-176.txt
+/Users/j/Projects/lane-ci/review-176b.txt
+./.yb-master.txt
+./reviews/merge-receipts-20261103/yueops-176-review.txt
+./reviews/merge-receipts-20261103/yueops-176-parity.log
+
+40a0026d71395ac37fb9ab5943bd8c2693440036	refs/heads/master
+40a0026d Merge pull request #101 from onesyue/cx/reset-secret-audit-stale-tests
+diff --git a/native-node-contract.json b/native-node-contract.json
+index a923392..1bab0b1 100644
+--- a/native-node-contract.json
++++ b/native-node-contract.json
+@@ -1,7 +1,7 @@
+ {
+   "version": 6,
+   "schema_floor": 151,
+-  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
++  "yueboard_contract_pin": "40a0026d71395ac37fb9ab5943bd8c2693440036",
+   "layout": {
+     "node-1": {
+       "inventory_type": "hy2",
+diff --git a/tests/test_build_policy.py b/tests/test_build_policy.py
+index 2d9c754..713ef2f 100644
+--- a/tests/test_build_policy.py
++++ b/tests/test_build_policy.py
+@@ -2193,7 +2193,7 @@ class BuildPolicyTest(unittest.TestCase):
+         self.assertEqual(self.native_contract["schema_floor"], 151)
+         self.assertEqual(
+             self.native_contract["yueboard_contract_pin"],
+-            "92377c1f87d99d83705e00d92f8d9742142f7e17",
++            "40a0026d71395ac37fb9ab5943bd8c2693440036",
+         )
+         self.assertEqual(
+             self.native_contract["presence"],
+commit 9b7273eb97e1214df10aa025cbae0fb39bd46514
+Author:     onesyue <47652916+onesyue@users.noreply.github.com>
+AuthorDate: Tue Nov 3 11:17:42 2026 +0800
+Commit:     onesyue <47652916+onesyue@users.noreply.github.com>
+CommitDate: Tue Nov 3 11:17:42 2026 +0800
+
+    pin: yueboard_contract_pin 92377c1 -> 40a0026d (yueboard#100 #101 #99)
+
+commit 1c8dffe671f29e315a22908ed151416ac1f319a4
+Merge: 1e4b48b 4d55c81
+Author:     onesyue <47652916+onesyue@users.noreply.github.com>
+AuthorDate: Tue Nov 3 11:17:05 2026 +0800
+Commit:     GitHub <noreply@github.com>
+CommitDate: Tue Nov 3 11:17:05 2026 +0800
+
+    Merge pull request #170 from onesyue/receipt/yueboard-101
+    
+    receipt: yueboard #101 premerge evidence (head 9f73d7b4)
+
+codex
+新证据中的 `refs/heads/master` 与两处完整 pin 一致。按 `evidence-discipline` 和 `verification-before-completion` 技能核对证据；同一 HEAD 已有的测试和引用检查结果将直接复用。
+exec
+/bin/zsh -lc 'cat /Users/j/.agents/skills/evidence-discipline/references/readonly-operations.md' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+# Read-only operational evidence
+
+Use this reference for post-release readback, production accounting reconciliation
+or routine inspection. It grants no production access. When the task prohibits
+production access, inspect source and existing receipts only; leave collection
+to the authorized execution lane. Never turn a failed read into a repair action.
+Do not start services, change timers, sign releases, deploy, alter data or clear
+report-outbox. Preserve host-key verification and the exclusion of yue-tw; never
+hide subscription nodes 47/49. Do not run an unfiltered fleet sweep when its target
+selection cannot honor that exclusion. No backup or restore work belongs here.
+
+## 1. Post-release readback
+
+Start with the release receipt's candidate, signed desired generation, promoted
+digests and observation window. Use `scripts/status-all.sh` before interpreting
+cross-repository drift: its main-checkout inputs may differ from a PR worktree.
+Do not move another lane's checkouts to make a comparison green.
+
+Existing root readers (run only within the authorized collection scope):
+
+```bash
+python3 scripts/release-yaml.py verify-signature
+python3 scripts/release-yaml.py desired-revision yueops
+python3 scripts/release-yaml.py read --component yueops-web --field digest
+python3 scripts/release-yaml.py read --component yue-bot --field digest
+python3 scripts/release-yaml.py read --component checkin-api --field digest
+```
+
+`scripts/release-state.py` also contacts production. Reuse its authorized receipt
+to compare source, reviewed expectation, promoted artifact and running revision.
+Apply release-chain's input-equivalence rules; do not relabel an older image as
+HEAD. Promotion or a deployment completion marker alone is insufficient.
+
+For each released service, collect the following from its existing runbook or
+receipt, retaining the actual exit status and timestamp:
+
+| Surface | Required evidence and decision |
+|---|---|
+| Ops images | All three service revisions/digests reconcile with signed desired; inspect each row rather than a group success label. |
+| Ops migrations | Existing `scripts/yue-bot-migrate.sh` dry-run receipt and `python -m alembic current` output from the web container match the candidate's migration inventory. Historical migration numbers are not today's target. |
+| Chat widget | Existing `scripts/converge-panel-chat-widget-version.sh --check` receipt reports agreement. Never substitute its write mode. |
+| Board | Running revision/digest matches the approved candidate; readyz evidence and home/admin SPA status are present; the admin page contains script tags. Do not print the private admin path. |
+| Board logs | Inspect the bounded post-release window for application errors and `web dist override`; an empty output is meaningful only after successful log collection. |
+| Business change | Compare the exact candidate predicate and its unaffected control cohort after the documented worker interval. Do not reuse a historical correction marker as a universal check. |
+
+A missing receipt or failed collection leaves that obligation unverified; a
+mismatch fails that obligation. Record scope and evidence for the responsible
+release lane. This read-only workflow does not execute remediation or rollback.
+
+## 2. Production accounting reconciliation
+
+Use the authorized existing read-only connection without printing credentials.
+The recorded psql invocation uses `-X -v ON_ERROR_STOP=1 -f -` and
+`PGOPTIONS="-c default_transaction_read_only=on"`. The SQL itself uses
+`BEGIN TRANSACTION READ ONLY`, a local 30-second statement timeout and `ROLLBACK`.
+Do not copy secret-loading shell snippets into reports or PRs.
+
+Select queries against the actual before/after schema. The 2026-10-28 sequence
+records an actual pre-release failure: queries for newly introduced tables
+aborted the original money-readback file and lost its later totals. Its corrected
+before file omits only unavailable-table queries; the after file still requires
+them. Record those omissions explicitly, preserve ON_ERROR_STOP and never treat
+partial output as a completed reconciliation.
+
+Use fixed comparison bounds and the snapshot discipline in pg-safety's
+“Production query comparisons”. Existing money-readback SQL supplies these checks:
+
+- Order-to-ledger join: zero missing ledger entries and zero price/delta
+  mismatches. Check both; an inner join alone hides missing entries.
+- Account points total: the after-minus-before delta must be explained by normal
+  ledger movements in the same window. A raw diff or identical totals alone
+  does not establish correctness during live traffic.
+- Migration ledger and policy values: compare with the exact candidate migrations
+  and approved settings, not dated comments. The October runbook itself changed
+  its purchase-switch expectation when migration 270 entered the candidate.
+- New feature tables: retain their own post-release obligations even when they
+  could not be queried before release. An aggregate query does not prove a
+  per-account frequency limit that it never measured.
+
+Stop at query error, timeout, missing columns or unexplained differences. Save
+sanitized counts, window, schema/candidate identity and producer exit status;
+report the failed comparison without editing balances, policies or ledgers.
+
+## 3. Routine inspection
+
+Prefer already collected evidence within the freshness rules. On an authorized
+target, the existing inspection commands are:
+
+```bash
+systemctl --failed
+systemctl show audit-schema-drift.service -p Result
+systemctl show endpoint-salt-dns-sync.timer -p DropInPaths -p TimersMonotonic
+systemctl is-active leak-hunter.timer
+systemctl show <unit> -p InvocationID -p Result -p ExecMainStatus -p StandardOutput
+vmstat 1 5
+```
+
+The `<unit>` is the exact unit selected by the current inspection item. Correlate
+its invocation with its output, timestamp and terminal status. Enabled/inactive
+is not proof of success or a reason to start a timer. Compare drop-in identity
+with the candidate's signed manifest; do not freeze a historical file count into
+an invariant. Preserve deliberately inactive timers.
+
+For protocol sweeps, read per-protocol OK/FAIL/UNKNOWN counts and their denominator;
+a zero batch exit status can coexist with failed items. CPU steal requires idle
+and pressure context, not a historical percentage. Routine observation does not
+start another probe, restart a worker, change schedules or clean caches. The
+2026-10-28 sequence also records duplicate heavy-run launchers: inspect existing
+process/lock receipts before reporting progress, and do not stop a process merely
+because another lane owns it.
+
+## Source trail
+
+- Tracked readers: `scripts/release-yaml.py`, `scripts/release-state.py`;
+  procedure: `docs/release-chain-runbook.md`.
+- Existing skills: release-chain (four truths and input equivalence), pg-safety
+  (query snapshots), fleet-diagnose (measurement layers), evidence-discipline
+  (collection validity and per-item outcomes), yueto-orchestration (ownership).
+- Dated local evidence inspected for PLAN 9.5, not required installed resources:
+  `reports/SHIP-RUNBOOK-yueboard-2026-10-28.md` §§6–7;
+  `reports/SHIP-RUNBOOK-yueops-2026-10-28.md` §§6,8;
+  `reports/RELEASE-SEQUENCE-2026-10-28.md` (20:52 SQL correction and
+  22:45–22:47 duplicate-launch observation);
+  `reports/prep-20261028/money-readback{,-before}.sql`.
+  These files are local preparation/history, not proof of a completed release.
+
+exec
+/bin/zsh -lc "python3 -B -c 'import json, pathlib, re, subprocess, time
+root = pathlib.Path.cwd()
+head = subprocess.check_output([\"git\", \"rev-parse\", \"HEAD\"], text=True).strip()
+assert head == \"9b7273eb97e1214df10aa025cbae0fb39bd46514\", head
+evidence = root / \".yb-master.txt\"
+matches = [re.fullmatch(r\"([0-9a-f]{40})\\s+refs/heads/master\", line) for line in evidence.read_text().splitlines()]
+shas = [m.group(1) for m in matches if m]
+assert len(shas) == 1, shas
+pin = json.loads((root / \"native-node-contract.json\").read_text())[\"yueboard_contract_pin\"]
+assert shas[0] == pin
+assert json.dumps(pin) in (root / \"tests/test_build_policy.py\").read_text()
+changed = subprocess.check_output([\"git\", \"diff\", \"--name-only\", \"HEAD~1\"], text=True).splitlines()
+assert changed == [\"native-node-contract.json\", \"tests/test_build_policy.py\"], changed
+assert not subprocess.check_output([\"git\", \"diff\", \"HEAD\"], text=True)
+assert not subprocess.check_output([\"git\", \"ls-files\", \".yb-master.txt\"], text=True)
+for name, path in [(\"coordinator evidence\", evidence), (\"prior review\", pathlib.Path(\"/Users/j/Projects/lane-ci/review-176.txt\"))]:
+    age = time.time() - path.stat().st_mtime
+    assert 0 <= age < 86400, (name, age)
+    print(f\"{name}: age {age:.0f}s\")
+print(f\"HEAD verified: {head}\")
+print(f\"Coordinator master evidence matches contract and test: {pin}\")
+print(\"Tracked diff: two pin replacements; evidence untracked; no tracked working changes.\")'" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 33ms:
+coordinator evidence: age 369s
+prior review: age 486s
+HEAD verified: 9b7273eb97e1214df10aa025cbae0fb39bd46514
+Coordinator master evidence matches contract and test: 40a0026d71395ac37fb9ab5943bd8c2693440036
+Tracked diff: two pin replacements; evidence untracked; no tracked working changes.
+
+codex
+DONE — 上次唯一阻塞已解除。[协调者证据](/Users/j/Projects/yueto-ci-worktrees/pin-yb-176/.yb-master.txt:1) 显示 `refs/heads/master` 为 `40a0026d71395ac37fb9ab5943bd8c2693440036`，与配置和测试中的 pin 完全一致。
+
+HEAD 确认为 `9b7273eb`，差异仅两处 pin 替换；证据文件未计入差异。复用[上次审阅](/Users/j/Projects/lane-ci/review-176.txt)的引用检查及 3 项测试通过记录，无遗留问题。
+
+VERDICT: APPROVE
+tokens used
+26,381
+DONE — 上次唯一阻塞已解除。[协调者证据](/Users/j/Projects/yueto-ci-worktrees/pin-yb-176/.yb-master.txt:1) 显示 `refs/heads/master` 为 `40a0026d71395ac37fb9ab5943bd8c2693440036`，与配置和测试中的 pin 完全一致。
+
+HEAD 确认为 `9b7273eb`，差异仅两处 pin 替换；证据文件未计入差异。复用[上次审阅](/Users/j/Projects/lane-ci/review-176.txt)的引用检查及 3 项测试通过记录，无遗留问题。
+
+VERDICT: APPROVE
+
+exec
+/bin/zsh -lc 'git rev-parse HEAD' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+exec
+/bin/zsh -lc "pwd; rg --files -g 'AGENTS.md' -g '.yb-master.txt' -g '*review-176*' -g '*findings*' -g '*status*' -g '*batch*' -g '*ledger*' -g '*lane*' . ../../lane-ci" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+0022fa5e41b8d62b41426a163b60a886e03a44c5
+
+ succeeded in 0ms:
+/Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+../../lane-ci/review-176.txt
+../../lane-ci/review-176b.txt
+../../lane-ci/review-176c.txt
+./.yb-master.txt
+
+codex
+HEAD 已确认是 `0022fa5e41b8d62b41426a163b60a886e03a44c5`，此前记录确实批准了 `9b7273eb`。我会按 `verification-before-completion` 技能核对这次合并的差异证据。
+
+exec
+/bin/zsh -lc "cat .yb-master.txt
+ git --no-optional-locks status --short
+ git log -6 --format='%h %p %s' 0022fa5e" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+40a0026d71395ac37fb9ab5943bd8c2693440036	refs/heads/master
+40a0026d Merge pull request #101 from onesyue/cx/reset-secret-audit-stale-tests
+?? .yb-master.txt
+0022fa5 9b7273e e05012e Merge branch 'master' into pin/yueboard-40a0026d-1103
+e05012e 1c8dffe a0d4b85 Merge pull request #177 from onesyue/cx/receipt-yueto-66
+a0d4b85 1c8dffe receipt: yueto #66 (Codex approve db8e7223, i18n parity pass)
+9b7273e 1c8dffe pin: yueboard_contract_pin 92377c1 -> 40a0026d (yueboard#100 #101 #99)
+1c8dffe 1e4b48b 4d55c81 Merge pull request #170 from onesyue/receipt/yueboard-101
+1e4b48b 1f60776 43f26b5 Merge pull request #173 from onesyue/receipt/yueboard-100
+
+exec
+/bin/zsh -lc 'git show --no-patch --format=fuller 0022fa5e 9b7273eb e05012e
+ git merge-base 9b7273eb e05012e
+ git diff --no-ext-diff --no-textconv --stat 9b7273eb 0022fa5e
+ git diff --no-ext-diff --no-textconv e05012e 0022fa5e
+ git diff --no-ext-diff --no-textconv 9b7273eb''^ 9b7273eb' in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+commit 0022fa5e41b8d62b41426a163b60a886e03a44c5
+Merge: 9b7273e e05012e
+Author:     onesyue <47652916+onesyue@users.noreply.github.com>
+AuthorDate: Tue Nov 3 11:31:44 2026 +0800
+Commit:     GitHub <noreply@github.com>
+CommitDate: Tue Nov 3 11:31:44 2026 +0800
+
+    Merge branch 'master' into pin/yueboard-40a0026d-1103
+
+commit 9b7273eb97e1214df10aa025cbae0fb39bd46514
+Author:     onesyue <47652916+onesyue@users.noreply.github.com>
+AuthorDate: Tue Nov 3 11:17:42 2026 +0800
+Commit:     onesyue <47652916+onesyue@users.noreply.github.com>
+CommitDate: Tue Nov 3 11:17:42 2026 +0800
+
+    pin: yueboard_contract_pin 92377c1 -> 40a0026d (yueboard#100 #101 #99)
+
+commit e05012e63c201f87966da6f2f5b78505e29a2220
+Merge: 1c8dffe a0d4b85
+Author:     onesyue <47652916+onesyue@users.noreply.github.com>
+AuthorDate: Tue Nov 3 11:31:38 2026 +0800
+Commit:     GitHub <noreply@github.com>
+CommitDate: Tue Nov 3 11:31:38 2026 +0800
+
+    Merge pull request #177 from onesyue/cx/receipt-yueto-66
+    
+    receipt: yueto #66
+1c8dffe671f29e315a22908ed151416ac1f319a4
+ merge-receipts/yueto/66.json                | 23 +++++++++++++++++++++++
+ parity-logs/20261103/yueto-66.log           |  6 ++++++
+ reviews/merge-receipts-20261103/yueto-66.md |  8 ++++++++
+ 3 files changed, 37 insertions(+)
+diff --git a/native-node-contract.json b/native-node-contract.json
+index a923392..1bab0b1 100644
+--- a/native-node-contract.json
++++ b/native-node-contract.json
+@@ -1,7 +1,7 @@
+ {
+   "version": 6,
+   "schema_floor": 151,
+-  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
++  "yueboard_contract_pin": "40a0026d71395ac37fb9ab5943bd8c2693440036",
+   "layout": {
+     "node-1": {
+       "inventory_type": "hy2",
+diff --git a/tests/test_build_policy.py b/tests/test_build_policy.py
+index 2d9c754..713ef2f 100644
+--- a/tests/test_build_policy.py
++++ b/tests/test_build_policy.py
+@@ -2193,7 +2193,7 @@ class BuildPolicyTest(unittest.TestCase):
+         self.assertEqual(self.native_contract["schema_floor"], 151)
+         self.assertEqual(
+             self.native_contract["yueboard_contract_pin"],
+-            "92377c1f87d99d83705e00d92f8d9742142f7e17",
++            "40a0026d71395ac37fb9ab5943bd8c2693440036",
+         )
+         self.assertEqual(
+             self.native_contract["presence"],
+diff --git a/native-node-contract.json b/native-node-contract.json
+index a923392..1bab0b1 100644
+--- a/native-node-contract.json
++++ b/native-node-contract.json
+@@ -1,7 +1,7 @@
+ {
+   "version": 6,
+   "schema_floor": 151,
+-  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
++  "yueboard_contract_pin": "40a0026d71395ac37fb9ab5943bd8c2693440036",
+   "layout": {
+     "node-1": {
+       "inventory_type": "hy2",
+diff --git a/tests/test_build_policy.py b/tests/test_build_policy.py
+index 2d9c754..713ef2f 100644
+--- a/tests/test_build_policy.py
++++ b/tests/test_build_policy.py
+@@ -2193,7 +2193,7 @@ class BuildPolicyTest(unittest.TestCase):
+         self.assertEqual(self.native_contract["schema_floor"], 151)
+         self.assertEqual(
+             self.native_contract["yueboard_contract_pin"],
+-            "92377c1f87d99d83705e00d92f8d9742142f7e17",
++            "40a0026d71395ac37fb9ab5943bd8c2693440036",
+         )
+         self.assertEqual(
+             self.native_contract["presence"],
+
+exec
+/bin/zsh -lc "python3 -B -c 'from pathlib import Path
+root = Path.cwd()
+found = []
+for directory in list(root.parents)[::-1] + [root]:
+    path = directory / \"AGENTS.md\"
+    if path.is_file():
+        found.append(str(path))
+        print(str(path) + \":\\n\" + path.read_text())
+if not found:
+    print(\"No ancestor or repository-root AGENTS.md files.\")
+'" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 0ms:
+No ancestor or repository-root AGENTS.md files.
+
+exec
+/bin/zsh -lc "python3 -B -c 'import json
+import re
+import subprocess
+from pathlib import Path
+
+def git(*args):
+    return subprocess.check_output([\"git\", \"--no-optional-locks\", *args])
+
+def rev(name):
+    return git(\"rev-parse\", name).decode().strip()
+
+def diff(a, b):
+    return git(\"diff\", \"--no-ext-diff\", \"--no-textconv\", \"--binary\", \"--full-index\", a, b)
+
+head = \"0022fa5e41b8d62b41426a163b60a886e03a44c5\"
+pin_commit = rev(\"9b7273eb\")
+master = rev(\"e05012e\")
+base = rev(\"e05012e"'^")
+assert rev("HEAD") == head
+assert git("show", "-s", "--format=%P", head).decode().split() == [pin_commit, master]
+assert rev("9b7273eb''^") == base
+assert git("merge-base", pin_commit, master).decode().strip() == base
+assert diff(pin_commit, head) == diff(base, master)
+assert diff(master, head) == diff(base, pin_commit)
+print("PASS: exact merge parents and common base verified.")
+print("PASS: diff 9b7273eb..0022fa5e byte-identical to diff e05012e''^..e05012e.")
+print("PASS: diff e05012e..0022fa5e byte-identical to previously approved pin diff.")
+
+def tree(commit):
+    entries = {}
+    for row in git("ls-tree", "-rz", "--full-tree", commit).split(b"'"\\0\"):
+        if row:
+            entry, path = row.split(b\"\\t\", 1)
+            entries[path] = entry
+    return entries
+
+trees = {name: tree(name) for name in [base, pin_commit, master, head]}
+baseline = trees[base]
+pin_changes = {p for p in baseline.keys() | trees[pin_commit].keys() if baseline.get(p) "'!= trees[pin_commit].get(p)}
+master_changes = {p for p in baseline.keys() | trees[master].keys() if baseline.get(p) != trees[master].get(p)}
+assert not pin_changes & master_changes
+assert pin_changes == {b"native-node-contract.json", b"tests/test_build_policy.py"}
+assert master_changes == {b"merge-receipts/yueto/66.json", b"parity-logs/20261103/yueto-66.log", b"reviews/merge-receipts-20261103/yueto-66.md"}
+expected = baseline.copy()
+for source, changes in [(pin_commit, pin_changes), (master, master_changes)]:
+    for path in changes:
+        if path in trees[source]:
+            expected[path] = trees[source][path]
+        else:
+            expected.pop(path, None)
+assert trees[head] == expected
+print("PASS: parent changes touch disjoint paths; entire merged tree equals their exact union, with no conflict-resolution edits.")
+
+old = b"92377c1f87d99d83705e00d92f8d9742142f7e17"
+new = b"40a0026d71395ac37fb9ab5943bd8c2693440036"
+for path in sorted(pin_changes):
+    name = path.decode()
+    before = git("show", master + ":" + name)
+    after = git("show", head + ":" + name)
+    assert before.count(old) == 1
+    assert after == before.replace(old, new)
+assert json.loads(git("show", head + ":native-node-contract.json"))["yueboard_contract_pin"] == new.decode()
+print("PASS: precisely two single pin replacements to " + new.decode() + ".")
+
+evidence = Path(".yb-master.txt").read_text()
+refs = re.findall(r"''^([0-9a-f]{40})'"\\s+refs/heads/master"'$", evidence, re.MULTILINE)
+assert refs == [new.decode()]
+assert not git("ls-files", "--", ".yb-master.txt")
+assert not diff("HEAD", "--")
+assert rev("HEAD") == head
+print("PASS: .yb-master.txt records matching yueboard master; evidence is untracked; tracked working tree unchanged.")
+print("Reviewed HEAD: " + head)
+'"'" in /Users/j/Projects/yueto-ci-worktrees/pin-yb-176
+ succeeded in 23ms:
+PASS: exact merge parents and common base verified.
+PASS: diff 9b7273eb..0022fa5e byte-identical to diff e05012e^..e05012e.
+PASS: diff e05012e..0022fa5e byte-identical to previously approved pin diff.
+PASS: parent changes touch disjoint paths; entire merged tree equals their exact union, with no conflict-resolution edits.
+PASS: precisely two single pin replacements to 40a0026d71395ac37fb9ab5943bd8c2693440036.
+PASS: .yb-master.txt records matching yueboard master; evidence is untracked; tracked working tree unchanged.
+Reviewed HEAD: 0022fa5e41b8d62b41426a163b60a886e03a44c5
+
+codex
+VERDICT: APPROVE 0022fa5e41b8d62b41426a163b60a886e03a44c5
+tokens used
+23,015
+VERDICT: APPROVE 0022fa5e41b8d62b41426a163b60a886e03a44c5
