@@ -1,0 +1,66 @@
+............................................................................................................................................................................................................................................................................................................................................................................................s......................................................................................................................................................................+ bash scripts/ci/net-operator-pg18-gate.sh
+=== RUN   TestConsumer
+    consumer_test.go:5: root issuer not reached
+--- SKIP: TestConsumer (0.00s)
+PASS
+ok  	gate.example/board/cmd/yueboard	0.001s
+.+ bash scripts/ci/net-operator-pg18-gate.sh
+....+ bash scripts/ci/net-operator-pg18-gate.sh
+=== RUN   TestConsumer
+    consumer_test.go:5: reached integration consumer
+--- PASS: TestConsumer (0.00s)
+PASS
+ok  	gate.example/board/cmd/yueboard	0.001s
++ go test -count=1 -p 1 -tags integration -run ^(TestQuotaRemindersCLIProcess|TestQuotaRemindersIndependentCutoverCLI)$ -json -v ./cmd/yueboard
+=== RUN   TestQuotaRemindersCLIProcess
+    consumer_test.go:6: quota reached
+--- PASS: TestQuotaRemindersCLIProcess (0.00s)
+=== RUN   TestQuotaRemindersIndependentCutoverCLI
+    consumer_test.go:7: quota reached
+--- PASS: TestQuotaRemindersIndependentCutoverCLI (0.00s)
+PASS
+ok  	gate.example/board/cmd/yueboard	0.001s
+Integration execution: {"packages": ["./cmd/yueboard"], "top_level_passed": 2, "subtests_passed": 0, "skipped": 0}
+Native command execution: {"packages": ["./cmd/yueboard"], "top_level_passed": 3, "subtests_passed": 0, "skipped": 0}
++ bash scripts/ci/net-operator-pg18-gate.sh
+=== RUN   TestConsumer
+    consumer_test.go:5: reached integration consumer
+--- PASS: TestConsumer (0.00s)
+PASS
+ok  	gate.example/board/cmd/yueboard	0.001s
++ go test -count=1 -p 1 -tags integration -run ^(TestQuotaRemindersCLIProcess|TestQuotaRemindersIndependentCutoverCLI)$ -json -v ./cmd/yueboard
+=== RUN   TestQuotaRemindersCLIProcess
+--- PASS: TestQuotaRemindersCLIProcess (0.00s)
+PASS
+ok  	gate.example/board/cmd/yueboard	0.004s
+.......+ bash scripts/ci/net-operator-pg18-gate.sh
+=== RUN   TestConsumer
+    consumer_test.go:5: reached integration consumer
+--- PASS: TestConsumer (0.00s)
+PASS
+ok  	gate.example/board/cmd/yueboard	0.001s
++ go test -count=1 -p 1 -tags integration -run ^(TestTrafficLedgerCLIProcess)$ -json -v ./cmd/yueboard
+=== RUN   TestTrafficLedgerCLIProcess
+    consumer_test.go:6: traffic reached
+--- PASS: TestTrafficLedgerCLIProcess (0.00s)
+PASS
+ok  	gate.example/board/cmd/yueboard	0.001s
+Integration execution: {"packages": ["./cmd/yueboard"], "top_level_passed": 1, "subtests_passed": 0, "skipped": 0}
+Native command execution: {"packages": ["./cmd/yueboard"], "top_level_passed": 2, "subtests_passed": 0, "skipped": 0}
+.+ bash scripts/ci/net-operator-pg18-gate.sh
+=== RUN   TestConsumer
+    consumer_test.go:5: reached integration consumer
+--- PASS: TestConsumer (0.00s)
+PASS
+ok  	gate.example/board/cmd/yueboard	0.001s
++ go test -count=1 -p 1 -tags integration -run ^(TestTrafficLedgerCLIProcess)$ -json -v ./cmd/yueboard
+testing: warning: no tests to run
+PASS
+ok  	gate.example/board/cmd/yueboard	0.002s [no tests to run]
+....................................................................................::error::promote-source-gate: malformed arguments
+::error::promote-source-gate: malformed arguments
+......................................
+----------------------------------------------------------------------
+Ran 682 tests in 264.130s
+
+OK (skipped=1)
