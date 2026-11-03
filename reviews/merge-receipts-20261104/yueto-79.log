@@ -1,0 +1,11 @@
+........................................................                 [100%]
+56 passed in 65.89s (0:01:05)
+...                                                                      [100%]
+=============================== warnings summary ===============================
+../usr/lib/python3/dist-packages/_pytest/config/__init__.py:1441
+  /usr/lib/python3/dist-packages/_pytest/config/__init__.py:1441: PytestConfigWarning: Unknown config option: asyncio_mode
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+3 passed, 1 warning in 3.36s
