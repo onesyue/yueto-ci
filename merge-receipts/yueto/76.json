@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "repo": "yueto",
+  "pr": 76,
+  "head": "b1b2c898655b7c33c59836ddde865acfd329609d",
+  "backfilled": false,
+  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "b1b2c898655b7c33c59836ddde865acfd329609d", "artifact": "reviews/merge-receipts-20261103/yueto-76-exact-head.md", "reviewer": "codex", "reviewed_at": "2026-11-03T11:28:47Z"},
+  "parity": {"result": "pass", "head": "b1b2c898655b7c33c59836ddde865acfd329609d", "command": "TZ=UTC python -m pytest -q scripts/test-i18n-catalogs.py scripts/test-i18n-source-digest.py scripts/test-i18n-template-publish.py", "log_sha256": "5bb395763d36a27b3f22530724736611533b725b941b37d10385aea26c121ba2", "ran_at": "2026-11-03T11:03:24Z", "runner": "box"}
+}
