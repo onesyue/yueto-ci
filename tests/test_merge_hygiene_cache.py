@@ -1,6 +1,7 @@
 """Offline HTTP-boundary controls: no gh/network, real disk caches and verdicts."""
 import contextlib
 import copy
+import hashlib
 import importlib.util
 import io
 import json
@@ -63,9 +64,6 @@ class MergeCache(unittest.TestCase):
         self.assertIn("--include", command)
         endpoint = command[2]
         self.requests.append(endpoint)
-        if self.conditional and "If-None-Match: \"fixture\"" in command:
-            self.not_modified += 1
-            return response(status=304)
         if endpoint == "repos/onesyue/yueto-ci/pulls/71":
             body = self.anchor
         elif "/pulls?" in endpoint:
@@ -82,19 +80,25 @@ class MergeCache(unittest.TestCase):
             body = self.pr | {"state": "open", "merged_at": None}
         else:
             self.fail("unexpected endpoint: " + endpoint)
-        return response(body, headers={"ETag": '"fixture"'})
+        etag = '"' + hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest() + '"'
+        if self.conditional and "If-None-Match: " + etag in command:
+            self.not_modified += 1
+            return response(status=304)
+        return response(body, headers={"ETag": etag})
 
     def audit_rows(self, repo="yueto-ci", registered=None):
         return self.audit.audit("onesyue", [repo], self.cutoff, registered or {}, self.now)
 
-    def test_disk_hit_after_module_reload_costs_zero_api_calls(self):
+    def test_disk_hit_after_reload_revalidates_evidence_and_reuses_compare(self):
         cold = self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
         self.assertEqual(len(self.requests), 4)
         self.requests.clear()
+        self.conditional = True
         reloaded = load_audit()
-        with patch.object(reloaded.subprocess, "run", side_effect=AssertionError("cache hit made API call")):
-            self.assertEqual(reloaded.merged_findings("onesyue", "yueto-ci", self.pr), cold)
-        self.assertEqual(self.requests, [])
+        self.assertEqual(reloaded.merged_findings("onesyue", "yueto-ci", self.pr), cold)
+        self.assertEqual(len(self.requests), 3)
+        self.assertEqual(self.not_modified, 3)
+        self.assertFalse(any("/compare/" in endpoint for endpoint in self.requests))
 
     def test_full_rerun_counts_and_unchanged_verdict(self):
         self.fixture["reviews"] = []
@@ -103,8 +107,8 @@ class MergeCache(unittest.TestCase):
         self.requests.clear()
         self.conditional = True
         self.assertEqual(self.audit_rows(), cold)
-        self.assertEqual(len(self.requests), 2)  # discovery remains, both conditional
-        self.assertEqual(self.not_modified, 2)
+        self.assertEqual(len(self.requests), 5)  # discovery and mutable evidence, all conditional
+        self.assertEqual(self.not_modified, 5)
 
     def test_cache_key_separates_owner_repo_pr_merge_and_inputs(self):
         self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
@@ -124,7 +128,7 @@ class MergeCache(unittest.TestCase):
                 self.audit.merged_findings("onesyue", "yueto-ci", self.pr | {"merge_commit_sha": sha})
         self.assertEqual(self.requests, [])
         self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
-        path, = Path(self.tmp.name).glob("v*/merged/*.json")
+        path, = Path(self.tmp.name).glob("v*/compare/*.json")
         for content in ("{", "{}", '{"findings": [], "evidence_only": true}'):
             path.write_text(content)
             self.requests.clear()
@@ -135,13 +139,13 @@ class MergeCache(unittest.TestCase):
         with patch.object(self.audit, "evidence_only", side_effect=ValueError("unavailable")):
             with self.assertRaises(ValueError):
                 self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
-        self.assertEqual(list(Path(self.tmp.name).glob("v*/merged/*.json")), [])
+        self.assertEqual(list(Path(self.tmp.name).glob("v*/compare/*.json")), [])
         with patch.object(self.audit, "write_cache", side_effect=PermissionError):
             with self.assertRaises(OSError):
                 self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
-        self.assertEqual(list(Path(self.tmp.name).glob("v*/merged/*.json")), [])
+        self.assertEqual(list(Path(self.tmp.name).glob("v*/compare/*.json")), [])
 
-    def test_cached_verdicts_match_cold_for_clean_missing_red_pending_and_unknown(self):
+    def test_revalidated_verdicts_match_cold_for_clean_missing_red_pending_and_unknown(self):
         original = copy.deepcopy(self.fixture)
         changes = [({}, []), ({"reviews": []}, ["no_approving_review_at_merge"]),
                    ({"checks": [], "statuses": []}, ["no_check_evidence_at_merge"])]
@@ -155,8 +159,24 @@ class MergeCache(unittest.TestCase):
             with self.subTest(change=change):
                 cold = self.audit.merged_findings("onesyue", "yueops", pr)
                 self.assertEqual(cold, (expected, False))
-                with patch.object(self.audit, "api", side_effect=AssertionError("unexpected API call")):
-                    self.assertEqual(self.audit.merged_findings("onesyue", "yueops", pr), cold)
+                self.requests.clear()
+                self.conditional = True
+                self.assertEqual(self.audit.merged_findings("onesyue", "yueops", pr), cold)
+                self.assertEqual(len(self.requests), 3)
+
+    def test_legacy_green_verdict_cache_is_ignored(self):
+        key = ["onesyue", "yueto-ci", self.pr["number"], self.pr["merge_commit_sha"]]
+        inputs = {"key": key, "head": self.pr["head"]["sha"], "base": self.pr["base"]["sha"],
+                  "merged_at": self.pr["merged_at"], "author": self.pr["user"]["login"]}
+        digest = hashlib.sha256(json.dumps(key, sort_keys=True).encode()).hexdigest()
+        legacy = Path(self.tmp.name) / "v1" / "merged" / (digest + ".json")
+        self.audit.write_cache(legacy, {"inputs": inputs, "findings": [], "evidence_only": False})
+        self.fixture["checks"][0]["conclusion"] = "failure"
+        rows = self.audit_rows()
+        self.assertIn("check_nonpassing_at_merge:policy", rows[0]["findings"])
+        self.assertEqual(len(self.requests), 6)
+        cached, = Path(self.tmp.name).glob("v2/compare/*.json")
+        self.assertNotIn("findings", json.loads(cached.read_text()))
 
     def test_local_receipts_exceptions_and_activation_are_rechecked(self):
         self.fixture["reviews"] = []
@@ -210,6 +230,47 @@ class MergeCache(unittest.TestCase):
         row = self.audit.premerge("onesyue", "yueto-ci", 203)
         self.assertIn("check_nonpassing_at_merge:policy", row["findings"])
         self.assertEqual(len(self.requests), 6)
+
+    def test_warm_audit_detects_changed_checks_reviews_and_statuses(self):
+        original = copy.deepcopy(self.fixture)
+        mutations = [
+            ("checks", {"conclusion": "failure"}, "check_nonpassing_at_merge:policy"),
+            ("reviews", {"state": "DISMISSED"}, "no_approving_review_at_merge"),
+            ("statuses", {"state": "failure"}, "status_nonpassing_at_merge:external-ci"),
+        ]
+        for field, change, reason in mutations:
+            with self.subTest(field=field):
+                self.fixture = copy.deepcopy(original)
+                self.conditional = True
+                self.assertEqual(self.audit_rows(), [])
+                self.fixture[field][0].update(change)
+                self.requests.clear()
+                rows = self.audit_rows()
+                self.assertEqual(len(rows), 1)
+                self.assertIn(reason, rows[0]["findings"])
+                self.assertEqual(len(self.requests), 5)
+                self.assertFalse(any("/compare/" in endpoint for endpoint in self.requests))
+
+    def test_warm_remote_failure_never_falls_back_to_green(self):
+        self.assertEqual(self.audit_rows(), [])
+        self.conditional = True
+        for status, remaining in ((401, "4000"), (500, "4000"), (429, "299")):
+            for output_format in ("json", "text"):
+                def unavailable(command, **kwargs):
+                    if "/check-runs?" in command[2]:
+                        return response(status=status, headers={"X-RateLimit-Remaining": remaining})
+                    return self.http(command, **kwargs)
+
+                with self.subTest(status=status, output_format=output_format), patch.object(
+                        self.audit.subprocess, "run", side_effect=unavailable), patch(
+                        "sys.argv", ["audit", "--repos", "yueto-ci", "--hours", "240", "--format", output_format]), patch.object(
+                        self.audit, "exceptions", return_value={}), patch.object(
+                        self.audit, "datetime", wraps=self.audit.datetime) as clock, contextlib.redirect_stdout(io.StringIO()) as output:
+                    clock.now.return_value = self.now
+                    self.assertEqual(self.audit.main(), 2)
+                    self.assertIn("incomplete", output.getvalue())
+                    if output_format == "json":
+                        self.assertFalse(json.loads(output.getvalue())["complete"])
 
     def test_http_304_reuses_body_and_200_replaces_etag(self):
         endpoint = "repos/onesyue/yueops/pulls?state=closed&per_page=100&page=1"

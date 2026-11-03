@@ -12,7 +12,7 @@ spec = importlib.util.spec_from_file_location("cache_tests", ROOT / "tests/test_
 assert spec is not None and spec.loader is not None
 fixtures = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fixtures)
-baseline_ref = sys.argv[1] if len(sys.argv) > 1 else "2c150a3"
+baseline_ref = sys.argv[1] if len(sys.argv) > 1 else "5a551afd3cd86dc0d783726253d6e2c81927e869"
 source = subprocess.run(["git", "show", baseline_ref + ":scripts/merge-hygiene-audit.py"],
                         cwd=ROOT, capture_output=True, text=True, check=True).stdout
 baseline = types.ModuleType("baseline")

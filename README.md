@@ -380,19 +380,21 @@ JSON goes to stdout with `complete`, `findings`, and an `unregistered` count;
 text is the default. Unregistered findings exit **1**, clean or explicitly
 registered findings exit **0**.
 
-Completed remote merge findings are cached under `~/.cache/yueto/merge-hygiene/`
+Remote evidence is cached under `~/.cache/yueto/merge-hygiene/`
 (override with `MERGE_HYGIENE_CACHE_DIR`), keyed by owner/repo, PR number and
-`merge_commit_sha`. A cached merged PR makes no reviews/checks/statuses/compare
-requests. Receipts, exception registrations and the activation policy are still
-evaluated each run; open PR evidence is always revalidated. The cache preserves
-the first complete remote snapshot for a merge, including violations. Remove
-the cache directory to deliberately refresh those snapshots. It contains private
-repository metadata and should remain local to the auditing user.
+`merge_commit_sha` for immutable file comparisons. Reviews, checks and statuses
+remain mutable after merge, so every audit revalidates each evidence page and
+recomputes findings. Only the file comparison between the same base/head commit
+SHAs can skip its API request. Receipts, exception registrations, accepted-history
+baseline and activation policy are evaluated each run. Version 2 ignores the old
+version 1 verdict snapshots; unavailable evidence exits incomplete even with a
+warm cache. The cache contains private repository metadata and should remain
+local to the auditing user.
 
 GET responses (including each list page and the activation anchor) store ETags
 and bodies. Reruns send `If-None-Match`; authenticated 304 responses reuse the
-body without consuming the primary REST quota. Discovery still makes conditional
-requests, so a warm audit is not completely offline. Closed PRs are sorted by
+body without consuming the primary REST quota. Discovery and mutable evidence
+still make conditional requests, so a warm audit is not offline. Closed PRs are sorted by
 `updated` descending and pagination stops once a page is older than the effective
 cutoff, including the receipt-enforcement activation date.
 
