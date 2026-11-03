@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto",
+  "pr": 80,
+  "head": "132e6c8e7dfb1acc90c39af05649df932e804f68",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "132e6c8e7dfb1acc90c39af05649df932e804f68",
+    "artifact": "reviews/merge-receipts-20261104/yueto-80.md",
+    "reviewer": "primary-codex-independent",
+    "reviewed_at": "2026-11-03T18:29:52.559749Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "132e6c8e7dfb1acc90c39af05649df932e804f68",
+    "command": "pytest both affected modules; real unredacted DSN negative control; native security scan",
+    "log_sha256": "4b24c81b9a9d332e2c50463e78927d46e17fb87d0f07517c651aa9723fff87f4",
+    "ran_at": "2026-11-03T18:29:52.559749Z",
+    "runner": "mac-5f08d00f"
+  }
+}
