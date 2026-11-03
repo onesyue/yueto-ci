@@ -1,0 +1,13 @@
+# Codex review — yueto-ci PR #177 @ a0d4b8542dc1c6c4b554e77cbee2224ac59ee448 (Mac 5f08d00f, sanguayun, read-only)
+
+Note: first pass (same head) gave a single P2 — parity-logs/ path removes the evidence-only exemption — which is resolved by this receipt for #177 itself; second pass below.
+
+codex
+DONE — 指定 HEAD 的 `HEAD^1..HEAD` 未发现 P0–P3 问题。
+
+- 收据 schema 与写入脚本一致；heads、verdict、命令及时间戳内部一致。
+- 日志 SHA-256 与收据完全匹配；记录为 46 passed、12 skipped。
+- 仅新增 3 个证据文件，无代码变更，未发现秘密或 IP。
+- 已排除指定的 #177 自身收据问题；未修改文件。
+
+VERDICT: APPROVE

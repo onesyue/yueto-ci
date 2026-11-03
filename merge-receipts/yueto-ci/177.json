@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto-ci",
+  "pr": 177,
+  "head": "a0d4b8542dc1c6c4b554e77cbee2224ac59ee448",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "a0d4b8542dc1c6c4b554e77cbee2224ac59ee448",
+    "artifact": "reviews/merge-receipts-20261103/review-yueto-ci-177.txt",
+    "reviewer": "codex@mac(sanguayun)",
+    "reviewed_at": "2026-11-03T04:05:00Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "a0d4b8542dc1c6c4b554e77cbee2224ac59ee448",
+    "command": "pytest -q --ignore tests/postgres_integration_gate (needs postgres; covered by CI)",
+    "log_sha256": "6431b0b52930fd36f8bdbdd9cbcb3692307b809e36bf613296ac87b67ff1d512",
+    "ran_at": "2026-11-03T03:48:35Z",
+    "runner": "box"
+  }
+}
