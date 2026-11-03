@@ -7,6 +7,7 @@ This retrospective audit does not override GitHub branch rules.
 """
 import argparse
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -15,6 +16,9 @@ import sys
 
 REPOS = ("yueops", "yueboard", "yueto", "yueto-ci", "yuelink", "yuelink-ci", "yue-node")
 ROOT = Path(__file__).resolve().parents[1]
+# Exact approved snapshot bytes; every path uses this pin. Tests may patch it,
+# but CLI arguments cannot authorize a replacement snapshot.
+ACCEPTED_HISTORY_SHA256 = "fca512aa5e0519ac878e9f5df01111bf995c8d7286a3f0e5360a2ce4bce25324"
 
 
 def timestamp(value):
@@ -139,13 +143,20 @@ def baseline(path):
     def nonempty(value):
         return isinstance(value, str) and bool(value.strip())
 
-    value = json.loads(path.read_text(), object_pairs_hook=unique)
+    contents = path.read_bytes()
+    if hashlib.sha256(contents).hexdigest() != ACCEPTED_HISTORY_SHA256:
+        raise ValueError("baseline SHA256 does not match approved snapshot")
+    value = json.loads(contents, object_pairs_hook=unique)
     if (not isinstance(value, dict) or set(value) != {"schema", "frozen_at", "approver", "entries"}
             or type(value["schema"]) is not int or value["schema"] != 1
             or not nonempty(value["frozen_at"]) or not nonempty(value["approver"])
             or not isinstance(value["entries"], list)):
         raise ValueError("invalid baseline schema")
-    timestamp(value["frozen_at"])
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+                        r"(?:\.[0-9]{1,6})?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])",
+                        value["frozen_at"]):
+        raise ValueError("baseline frozen_at must be an ISO timezone timestamp")
+    frozen_at = timestamp(value["frozen_at"])
     result = {}
     for entry in value["entries"]:
         if (not isinstance(entry, dict) or set(entry) != {"repo", "pr", "head", "findings", "reason"}
@@ -158,7 +169,7 @@ def baseline(path):
         if key in result:
             raise ValueError("duplicate baseline entry")
         result[key] = entry
-    return result
+    return frozen_at, result
 
 
 # Receipt schema 1 is deliberately closed: misspelled or additional fields fail
@@ -366,13 +377,14 @@ def main():
         parser.error("positive --hours and valid GitHub --owner required")
     now = datetime.now(timezone.utc)
     try:
-        accepted = baseline(args.baseline)
+        frozen_at, accepted = baseline(args.baseline)
         rows = audit(args.owner, args.repos, now - timedelta(hours=args.hours),
                      exceptions(args.exceptions), now)
         # Apply only to merged history, before the open premerge candidate exists.
         for row in rows:
             entry = accepted.get((row["repo"], row["pr"], row["head"]))
-            if row["merged_at"] and entry and set(row["findings"]) <= set(entry["findings"]):
+            if (row["merged_at"] and entry and timestamp(row["merged_at"]) <= frozen_at
+                    and set(row["findings"]) <= set(entry["findings"])):
                 row["accepted_history"] = entry
         if args.premerge:
             rows.append(premerge(args.owner, args.premerge[0], int(args.premerge[1])))

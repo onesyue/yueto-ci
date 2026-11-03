@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -181,8 +182,10 @@ class AcceptedHistory(unittest.TestCase):
         self.candidate = self.row | {"pr": 204, "merged_at": None, "findings": [],
                                      "url": "https://github.com/onesyue/yueops/pull/204"}
 
-    def write_baseline(self):
-        self.path.write_text(json.dumps(self.value))
+    def write_baseline(self, contents=None):
+        self.path.write_text(json.dumps(self.value) if contents is None else contents)
+        self.enterContext(patch.object(AUDIT, "ACCEPTED_HISTORY_SHA256",
+                                       hashlib.sha256(self.path.read_bytes()).hexdigest()))
 
     def run_cli(self, mode="full", output_format="text", default_path=False):
         import contextlib
@@ -223,7 +226,7 @@ class AcceptedHistory(unittest.TestCase):
                 with self.subTest(mode=mode, change=change):
                     rc, output = self.run_cli(mode)
                     self.assertEqual(rc, 1)
-                    self.assertIn("UNREGISTERED " + self.row["url"], output)
+                    self.assertIn(f'UNREGISTERED {self.row["url"]}', output)
                     self.assertNotIn("INFO accepted-history", output)
                     rc, output = self.run_cli(mode, "json")
                     result = json.loads(output)
@@ -249,17 +252,67 @@ class AcceptedHistory(unittest.TestCase):
         with patch.object(AUDIT, "ROOT", self.path.parent):
             self.assertEqual(self.run_cli(default_path=True)[0], 0)
 
+    def test_merge_after_frozen_at_is_unregistered(self):
+        for merged_at in ("2026-11-03T02:00:00.000001Z", "2026-11-03T03:00:00Z",
+                          "2026-11-03T01:00:01-01:00"):
+            self.row["merged_at"] = merged_at
+            for mode in ("full", "premerge"):
+                with self.subTest(mode=mode, merged_at=merged_at):
+                    rc, output = self.run_cli(mode)
+                    self.assertEqual(rc, 1)
+                    self.assertIn(f'UNREGISTERED {self.row["url"]}', output)
+                    self.assertNotIn("INFO accepted-history", output)
+                    rc, output = self.run_cli(mode, "json")
+                    self.assertEqual(rc, 1)
+                    self.assertEqual(json.loads(output)["accepted_history"], 0)
+
+    def test_merge_at_frozen_at_is_accepted(self):
+        for merged_at in (self.value["frozen_at"], "2026-11-03T10:00:00+08:00"):
+            self.row["merged_at"] = merged_at
+            for mode in ("full", "premerge"):
+                with self.subTest(mode=mode, merged_at=merged_at):
+                    rc, output = self.run_cli(mode, "json")
+                    self.assertEqual(rc, 0)
+                    self.assertEqual(json.loads(output)["accepted_history"], 1)
+
+    def test_tampered_baseline_bytes_are_incomplete(self):
+        original = self.path.read_bytes()
+        for contents in (original + b"\n", original.replace(b"2026-11-03T02", b"2026-11-04T02")):
+            self.path.write_bytes(contents)
+            with self.subTest(contents=contents):
+                with self.assertRaises(ValueError):
+                    AUDIT.baseline(self.path)
+                for default_path in (True, False):
+                    for mode in ("full", "premerge"):
+                        with patch.object(AUDIT, "ROOT", self.path.parent):
+                            rc, output = self.run_cli(mode, "json", default_path=default_path)
+                        self.assertEqual(rc, 2)
+                        self.assertFalse(json.loads(output)["complete"])
+
+    def test_cli_cannot_override_snapshot_with_another_path(self):
+        import subprocess
+        import sys
+        result = subprocess.run([sys.executable, str(ROOT / "scripts/merge-hygiene-audit.py"),
+                                 "--baseline", str(self.path), "--format", "json"],
+                                capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertFalse(json.loads(result.stdout)["complete"])
+
     def test_empty_baseline_does_not_accept_history(self):
         self.value["entries"] = []
         self.write_baseline()
-        self.assertEqual(AUDIT.baseline(self.path), {})
+        self.assertEqual(AUDIT.baseline(self.path), (AUDIT.timestamp(self.value["frozen_at"]), {}))
         self.assertEqual(self.run_cli()[0], 1)
 
     def test_invalid_baseline_is_value_error_and_incomplete(self):
         invalid_values = [None, [], {}, self.value | {"extra": True},
                           {k: v for k, v in self.value.items() if k != "approver"}]
         for field, values in (("schema", (True, "1", 2)),
-                              ("frozen_at", (None, "", "invalid", "2026-11-03T02:00:00")),
+                              ("frozen_at", (None, "", "invalid", "2026-11-03T02:00:00",
+                                             "2026-11-03", "20261103T020000Z", "2026-W45-2T02:00:00Z",
+                                             "2026-11-03X02:00:00Z", "2026-11-03T02:00:00+00:60",
+                                             "2026-11-03T02:00:00+00:00:01", "2026-11-31T02:00:00Z",
+                                             "2026-11-03T02:00:00Z\n")),
                               ("approver", (None, " ")), ("entries", (None, {}))):
             invalid_values.extend(self.value | {field: value} for value in values)
         invalid_entries = [None, [], {}, self.entry | {"extra": True},
@@ -273,7 +326,7 @@ class AcceptedHistory(unittest.TestCase):
         invalid_values.append(self.value | {"entries": [self.entry, self.entry.copy()]})
         for value in invalid_values:
             with self.subTest(value=value):
-                self.path.write_text(json.dumps(value))
+                self.write_baseline(json.dumps(value))
                 with self.assertRaises(ValueError):
                     AUDIT.baseline(self.path)
                 for mode in ("full", "premerge"):
@@ -286,7 +339,7 @@ class AcceptedHistory(unittest.TestCase):
         for bad in ('{"schema":', contents.replace('"schema": 1', '"schema": 1, "schema": 1'),
                     contents.replace('"pr": 203', '"pr": 203, "pr": 203')):
             with self.subTest(bad=bad):
-                self.path.write_text(bad)
+                self.write_baseline(bad)
                 with self.assertRaises(ValueError):
                     AUDIT.baseline(self.path)
                 self.assertEqual(self.run_cli()[0], 2)
