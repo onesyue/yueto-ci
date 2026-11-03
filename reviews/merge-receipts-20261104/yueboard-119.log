@@ -1,0 +1,17 @@
+✔ Linux baselines permit comparison and explicit Linux updates (2.040333ms)
+✔ an untracked Darwin snapshot anywhere in the repository fails (1.201875ms)
+✔ missing snapshot corpus fails closed (1.023416ms)
+✔ missing repository fails instead of passing an empty scan (0.824583ms)
+✔ all non-Linux snapshot write modes are rejected (1.153125ms)
+✔ container updater forwards spec arguments, propagates failure, and cleans resources (43.054083ms)
+✔ real global setup rejects Darwin snapshots before starting the environment (19.353125ms)
+✔ comparison mode cannot request snapshot writes (67.561125ms)
+✔ Linux browser image matches the locked Playwright package (0.3875ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 178.696375

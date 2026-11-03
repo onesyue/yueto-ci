@@ -1,0 +1,42 @@
+integration: 结账闸门放宽到 10000/min（全套件共用一个账号；生产默认仍是 10）
+2026/11/03 18:54:11 INFO traffic-check: native overage worker started interval=1m0s
+2026/11/03 18:54:11 INFO pprof not mounted: set YUEBOARD_PPROF_TOKEN to enable it
+=== RUN   TestPolicyHealthNativeRoute
+2026/11/03 18:54:11 INFO yueops_control_auth token_id="" method=GET path=/internal/yueops/usage-policy/health scope=observe result=rejected reason=missing_token client_ip=<redacted-ip>
+2026/11/03 18:54:11 INFO yueops_control_auth token_id="" method=GET path=/internal/yueops/usage-policy/health scope=observe result=rejected reason=rejected client_ip=<redacted-ip>
+2026/11/03 18:54:11 INFO yueops_control_auth token_id=legacy method=GET path=/internal/yueops/usage-policy/health scope=observe result=success reason=ok client_ip=<redacted-ip>
+2026/11/03 18:54:11 INFO yueops_control_auth token_id=legacy method=GET path=/internal/yueops/usage-policy/health scope=observe result=success reason=ok client_ip=<redacted-ip>
+2026/11/03 18:54:11 INFO yueops_control_auth token_id=legacy method=GET path=/internal/yueops/usage-policy/health scope=observe result=success reason=ok client_ip=<redacted-ip>
+2026/11/03 18:54:11 INFO yueops_control_auth token_id=legacy method=GET path=/internal/yueops/usage-policy/health scope=observe result=success reason=ok client_ip=<redacted-ip>
+2026/11/03 18:54:11 INFO yueops_control_auth token_id=legacy method=GET path=/internal/yueops/usage-policy/health scope=observe result=success reason=ok client_ip=<redacted-ip>
+2026/11/03 18:54:11 INFO yueops_control_auth token_id=legacy method=GET path=/internal/yueops/usage-policy/health scope=observe result=success reason=ok client_ip=<redacted-ip>
+--- PASS: TestPolicyHealthNativeRoute (0.01s)
+PASS
+ok  	github.com/onesyue/yueboard/test/integration	0.459s
+=== RUN   TestPointsRenewalPostgres
+=== RUN   TestPointsRenewalPostgres/flag_off
+=== RUN   TestPointsRenewalPostgres/rate_and_replay
+=== RUN   TestPointsRenewalPostgres/SGT_month_boundary
+=== RUN   TestPointsRenewalPostgres/concurrent_cap_and_exact_boundary
+=== RUN   TestPointsRenewalPostgres/concurrent_replay
+=== RUN   TestPointsRenewalPostgres/rollback_is_atomic
+=== RUN   TestPointsRenewalPostgres/renewal_only_reserve_cancel_recover
+=== RUN   TestPointsRenewalPostgres/pricing_reads_real_wallet
+=== RUN   TestPointsRenewalPostgres/minimal_exchange_role
+=== RUN   TestPointsRenewalPostgres/minimal_order_role
+=== RUN   TestPointsRenewalPostgres/erasure_foreign_keys
+--- PASS: TestPointsRenewalPostgres (0.10s)
+    --- PASS: TestPointsRenewalPostgres/flag_off (0.00s)
+    --- PASS: TestPointsRenewalPostgres/rate_and_replay (0.00s)
+    --- PASS: TestPointsRenewalPostgres/SGT_month_boundary (0.00s)
+    --- PASS: TestPointsRenewalPostgres/concurrent_cap_and_exact_boundary (0.03s)
+    --- PASS: TestPointsRenewalPostgres/concurrent_replay (0.00s)
+    --- PASS: TestPointsRenewalPostgres/rollback_is_atomic (0.00s)
+    --- PASS: TestPointsRenewalPostgres/renewal_only_reserve_cancel_recover (0.01s)
+    --- PASS: TestPointsRenewalPostgres/pricing_reads_real_wallet (0.00s)
+    --- PASS: TestPointsRenewalPostgres/minimal_exchange_role (0.00s)
+    --- PASS: TestPointsRenewalPostgres/minimal_order_role (0.00s)
+    --- PASS: TestPointsRenewalPostgres/erasure_foreign_keys (0.01s)
+PASS
+ok  	github.com/onesyue/yueboard/internal/modules/order	0.107s
+PASS: real disposable PG18 fixture and renewal-credit runtime-role cases executed without skips.
