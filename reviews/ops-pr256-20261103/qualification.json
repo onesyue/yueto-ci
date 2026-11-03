@@ -1,5 +1,5 @@
 {
-  "status": "PASS_STATIC_SHARED_INPUT_QUALIFICATION_ONLY",
+  "status": "PENDING_FINAL_HEAD_REVIEW",
   "source_before": "175860d056393697b752e21c58ae636e9466d86d",
   "source_after": "1e6f5d53a8f749f326da51ffd9c5d9f5881574ec",
   "changed_lock_records": [
@@ -12,5 +12,6 @@
   ],
   "regular_file_modes": true,
   "merge_conflicts": false,
-  "full_execution_gate": "NOT_RUN; admission is not runtime qualification"
+  "full_execution_gate": "NOT_RUN; admission is not runtime qualification",
+  "note": "Historical local-merge evidence only; active seal removed. Re-seal at the final reviewed PR head."
 }

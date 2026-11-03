@@ -15,11 +15,13 @@ SPEC.loader.exec_module(M)
 
 
 def states():
-    outer, inner = M.reviewed_pr_shared_input_transitions()
+    records = M.reviewed_pr_shared_input_transitions()
+    inner = records[-1]
     before = {p: c['before_blob'] for p, c in inner['changes'].items()}
-    first = before | {p: c['after_blob'] for p, c in inner['changes'].items()}
-    second = first | {p: c['after_blob'] for p, c in outer['changes'].items()}
-    return before, first, second
+    result = [before]
+    for record in reversed(records):
+        result.append(result[-1] | {p: c['after_blob'] for p, c in record['changes'].items()})
+    return result
 
 
 def files(common):
@@ -31,7 +33,7 @@ class PRSharedInputTransitions(unittest.TestCase):
         records = M.reviewed_pr_shared_input_transitions()
         assert tuple(r["source_after"] for r in records) == M.PR_SHARED_INPUT_SOURCE_REVISIONS
         assert {(p, c["after_blob"]) for r in records for p, c in r["changes"].items()} == M.PR_SHARED_INPUT_AFTER_BLOBS
-        for number, record in zip((256, 122), M.reviewed_pr_shared_input_transitions()):
+        for number, record in zip((seal[0] for seal in M.PR_SHARED_INPUT_SEALS), records):
             review = ROOT / f'reviews/ops-pr{number}-20261103'
             for field, name in [('independent_review_sha256', 'independent-review.md'),
                                 ('source_freeze_sha256', 'source-freeze.json'),
@@ -40,25 +42,29 @@ class PRSharedInputTransitions(unittest.TestCase):
             freeze = json.loads((review / 'source-freeze.json').read_text())
             assert record['changes'] == freeze['changes']
             assert record['source_after'] == freeze['source_after']
+            assert record['source_before'] == freeze['source_before']
+            qualification = json.loads((review / 'qualification.json').read_text())
+            assert qualification['source_after'] == freeze['source_after']
+            assert qualification['source_tree'] == freeze['source_tree']
         assert M.sha((ROOT / M.SKIP_BASELINE).read_bytes()) == '190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d'
 
 
     def test_outermost_first_and_historical_inputs_unchanged(self):
-        before, first, second = states()
-        for common in (before, first, second):
+        before, *successors = states()
+        for common in (before, *successors):
             original = copy.deepcopy(common)
             c, f = M.admit_pr_shared_inputs(common, files(common), M.first_native_policy()['source_revision'])
             assert c == before and f == files(before)
             assert common == original
-        assert M.admit_pr_shared_inputs(second, None, M.first_native_policy()['source_revision'])[0] == before
+        assert M.admit_pr_shared_inputs(successors[-1], None, M.first_native_policy()['source_revision'])[0] == before
 
 
     def test_partial_bundle_mode_and_pin_refused(self):
-        for stage in (1, 2):
+        for stage in range(1, len(states())):
             for mutation in ("missing", "blob", "mode", "old", "pin"):
                 with self.subTest(stage=stage, mutation=mutation):
-                    before, first, second = states()
-                    common = dict((before, first, second)[stage])
+                    before = states()[0]
+                    common = dict(states()[stage])
                     path = 'pyproject.toml'
                     tree = files(common)
                     pin = M.first_native_policy()['source_revision']
@@ -76,17 +82,27 @@ class PRSharedInputTransitions(unittest.TestCase):
                         M.admit_pr_shared_inputs(common, tree, pin)
 
 
+    def test_pending_pr256_bundle_is_not_admitted(self):
+        policy = json.loads((ROOT / 'ops-shared-input-successors.json').read_text())
+        assert 'reviewed_pr256_shared_input_transition' not in policy
+        review = ROOT / 'reviews/ops-pr256-20261103'
+        assert json.loads((review / 'qualification.json').read_text())['status'] == 'PENDING_FINAL_HEAD_REVIEW'
+        pending = json.loads((review / 'source-freeze.json').read_text())
+        common = states()[-1] | {p: c['after_blob'] for p, c in pending['changes'].items()}
+        with self.assertRaisesRegex(ValueError, 'bundle missing or changed'):
+            M.admit_pr_shared_inputs(common, files(common), M.first_native_policy()['source_revision'])
+
+
     def test_seal_chain_tampering_refused(self):
-        for mutation in ("outer", "inner", "history", "delete", "extra"):
+        for mutation in ("record", "history", "delete", "extra"):
             with self.subTest(mutation=mutation):
                 policy = json.loads((ROOT / 'ops-shared-input-successors.json').read_text())
-                if mutation in ('outer', 'inner'):
-                    n = 256 if mutation == 'outer' else 122
-                    policy[f'reviewed_pr{n}_shared_input_transition']['source_after'] = 'f' * 40
+                if mutation == 'record':
+                    policy['reviewed_pr122_shared_input_transition']['source_after'] = 'f' * 40
                 elif mutation == 'history':
                     policy['reviewed_miniapp_membership_transition']['reviewer'] = 'changed'
                 elif mutation == 'delete':
-                    del policy['reviewed_pr256_shared_input_transition']
+                    del policy['reviewed_pr122_shared_input_transition']
                 else:
                     policy['unreviewed'] = {}
                 with patch.object(M, 'read_json', return_value=policy), self.assertRaises(ValueError):
@@ -107,6 +123,8 @@ class PRSharedInputTransitions(unittest.TestCase):
         git('config', 'core.filemode', 'true')
         records = []
         for n in range(3):
+            if n:
+                git('commit', '-q', '--allow-empty', '-m', 'intermediate')
             (tmp_path / 'pyproject.toml').write_text(f'# stage {n}\n')
             (tmp_path / 'uv.lock').write_text(f'# lock {n}\n')
             git('add', '.')
@@ -127,6 +145,11 @@ class PRSharedInputTransitions(unittest.TestCase):
             unrelated = git('commit-tree', rev + '^{tree}', '-m', 'unrelated')
             with self.assertRaisesRegex(ValueError, 'ancestry'):
                 M.pr_shared_input_successor_proof(tmp_path, unrelated)
+            before = records[0]['source_before']
+            records[0]['source_before'] = unrelated
+            with self.assertRaisesRegex(ValueError, 'ancestry'):
+                M.pr_shared_input_successor_proof(tmp_path, rev)
+            records[0]['source_before'] = before
             for mutation in ('mode', 'delete', 'replace', 'revert_bundle'):
                 git('checkout', '-q', '-f', rev)
                 p = tmp_path / 'pyproject.toml'
@@ -140,3 +163,28 @@ class PRSharedInputTransitions(unittest.TestCase):
                 git('commit', '-qm', mutation)
                 with self.assertRaisesRegex(ValueError, 'blob or mode'):
                     M.pr_shared_input_successor_proof(tmp_path, git('rev-parse', 'HEAD'))
+
+
+    def test_shared_input_source_objects_exist_when_source_available(self):
+        source = ROOT / 'yueops-src'
+        if not source.exists() or subprocess.run(
+                ['git', '-C', str(source), 'rev-parse', '--git-dir'],
+                capture_output=True).returncode:
+            self.skipTest('yueops source checkout is unavailable')
+        policy = json.loads((ROOT / 'ops-shared-input-successors.json').read_text())
+        for name, record in policy.items():
+            if not isinstance(record, dict):
+                continue
+            for field in ('source_before', 'source_after'):
+                with self.subTest(record=name, field=field):
+                    result = subprocess.run(
+                        ['git', '-C', str(source), 'cat-file', '-e', record[field] + '^{commit}'],
+                        capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+        record = M.reviewed_pr_shared_input_transitions()[0]
+        review = ROOT / 'reviews/ops-pr122-20261103'
+        freeze = json.loads((review / 'source-freeze.json').read_text())
+        tree = subprocess.check_output(
+            ['git', '-C', str(source), 'rev-parse', record['source_after'] + '^{tree}'],
+            text=True).strip()
+        self.assertEqual(tree, freeze['source_tree'])

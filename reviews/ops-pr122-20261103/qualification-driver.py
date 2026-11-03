@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Recreate deterministic merge objects in a disposable clone and check admission.
+"""Verify real source objects and admission using a disposable policy copy.
 
 Usage: python3 qualification-driver.py /path/to/local/yueops
-No source branch or policy pin is changed. No source code is executed.
+The source checkout is read-only; no Git objects or branches are created.
 """
+import hashlib
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -13,60 +13,52 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-BASE = 'c56159246c31ede8e24b40b8626b6a3c6b0b0137'
-HEADS = {122: '56a7e0412e9bd1d297ba4a5dd3d363147fac463c',
-         256: '0d8c8f47432db7f2b11a8dd2bfc5081350929e76',
-         260: 'e4703455a8d551e498118186fcbe47ca5768efb9'}
+BASE = 'c4f60c381e9eeb6c499bdf8313170e7f6f496c95'
+HEAD = '047bbf81034093db226b81ccde9f6159a2c782aa'
 
 
 def main():
-    env = dict(os.environ, GIT_AUTHOR_NAME='Local qualification',
-               GIT_AUTHOR_EMAIL='qualification@example.invalid',
-               GIT_COMMITTER_NAME='Local qualification',
-               GIT_COMMITTER_EMAIL='qualification@example.invalid',
-               GIT_AUTHOR_DATE='2026-11-03T00:00:00Z',
-               GIT_COMMITTER_DATE='2026-11-03T00:00:00Z')
+    source = Path(sys.argv[1]).resolve()
+
+    def git(*args):
+        return subprocess.check_output(
+            ['git', '-C', str(source), *args], text=True).strip()
+
+    record = json.loads((ROOT / 'ops-shared-input-successors.json').read_text())[
+        'reviewed_pr122_shared_input_transition']
+    review = Path(__file__).resolve().parent
+    freeze = json.loads((review / 'source-freeze.json').read_text())
+    for field, filename in (
+            ('source_freeze_sha256', 'source-freeze.json'),
+            ('qualification_receipt_sha256', 'qualification.json'),
+            ('independent_review_sha256', 'independent-review.md')):
+        assert record[field] == hashlib.sha256((review / filename).read_bytes()).hexdigest()
+    assert freeze['changes'] == record['changes']
+    assert freeze['source_tree'] == git('rev-parse', record['source_after'] + '^{tree}')
+    for field in ('source_before', 'source_after'):
+        assert record[field] == freeze[field]
+        git('cat-file', '-e', record[field] + '^{commit}')
+        git('merge-base', '--is-ancestor', record[field], HEAD)
+    for path, change in record['changes'].items():
+        for field, blob in (('source_before', 'before_blob'), ('source_after', 'after_blob')):
+            mode, kind, actual, _ = git('ls-tree', record[field], path).split()
+            assert (mode, kind, actual) == (change['mode'], 'blob', change[blob])
+
     with tempfile.TemporaryDirectory() as tmp:
-        tmp = Path(tmp)
-        source = tmp / 'source'
-        subprocess.run(['git', 'clone', '-q', '--shared', '--no-checkout', sys.argv[1], str(source)], check=True)
-        def git(*args):
-            return subprocess.check_output(['git', '-C', str(source), *args], env=env, text=True).strip()
-        revs = {'master': BASE}
-        before = BASE
-        for n in (122, 256, 260):
-            if n == 260:
-                before = BASE
-            tree = git('merge-tree', '--write-tree', before, HEADS[n])
-            after = git('commit-tree', tree, '-p', before, '-p', HEADS[n], '-m', f'Local qualification merge #{n}')
-            if n != 260:
-                freeze = json.loads((ROOT / f'reviews/ops-pr{n}-20261103/source-freeze.json').read_text())
-                assert after == freeze['source_after'] and tree == freeze['source_tree']
-                for p, c in freeze['changes'].items():
-                    assert git('rev-parse', before + ':' + p) == c['before_blob']
-                    assert git('rev-parse', after + ':' + p) == c['after_blob']
-                    assert git('ls-tree', after, p).split()[0] == c['mode']
-            revs[str(n)] = after
-            before = after
-        policy = tmp / 'policy'
-        policy.mkdir()
+        policy = Path(tmp)
         shutil.copytree(ROOT / 'scripts', policy / 'scripts')
-        for p in ROOT.glob('*.json'):
-            shutil.copy2(p, policy / p.name)
+        for path in ROOT.glob('*.json'):
+            shutil.copy2(path, policy / path.name)
         pin = policy / 'ops-first-native-successors.json'
         value = json.loads(pin.read_text())
-        results = {}
-        for n, rev in revs.items():
-            value['source_revision'] = rev
-            pin.write_text(json.dumps(value, indent=2) + '\n')
-            result = subprocess.run([sys.executable, str(policy / 'scripts/admission-precheck.py'),
-                                     '--repo', 'yueops', '--source', str(source),
-                                     '--base', BASE, '--head', rev], capture_output=True, text=True)
-            expected = 1 if n == '260' else 0
-            assert result.returncode == expected, result.stdout + result.stderr
-            results[n] = {'head': rev, 'exit': result.returncode,
-                          'status': 'ADMISSION_REJECTED' if expected else 'ADMISSION_ACCEPTED'}
-        print(json.dumps(results, indent=2))
+        value['source_revision'] = HEAD
+        pin.write_text(json.dumps(value, indent=2) + '\n')
+        result = subprocess.run(
+            [sys.executable, str(policy / 'scripts/admission-precheck.py'),
+             '--repo', 'yueops', '--source', str(source), '--base', BASE, '--head', HEAD],
+            capture_output=True, text=True)
+        assert result.returncode == 0, result.stdout + result.stderr
+        print(result.stdout, end='')
 
 
 if __name__ == '__main__':
