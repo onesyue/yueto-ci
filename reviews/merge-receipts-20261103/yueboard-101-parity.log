@@ -1,0 +1,4 @@
+ok  	github.com/onesyue/yueboard/internal/platform/credentialreset	0.231s
+ok  	github.com/onesyue/yueboard/internal/modules/admin	0.567s
+ok  	github.com/onesyue/yueboard/test/integration	201.189s
+ok  	github.com/onesyue/yueboard/internal/platform/credentialreset	0.233s
