@@ -1,0 +1,6 @@
+$ bash -n scripts/run-yueboard-pg18-gauntlet.sh
+exit_code=0
+$ shellcheck scripts/run-yueboard-pg18-gauntlet.sh
+exit_code=0
+$ git diff --check
+exit_code=0
