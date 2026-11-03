@@ -1,0 +1,25 @@
+# Codex review — yueto-ci PR #168 @ 0745e504bf63f87ad82a1501e3a8530e165e4034 (Mac 5f08d00f, sanguayun, read-only)
+
+codex
+No P0–P3 findings at `0745e504bf63f87ad82a1501e3a8530e165e4034`.
+
+- Strict JSON parsing, schema validation, duplicate checks and diff whitespace checks passed.
+- Git confirms the referenced SHAs, merge parents and receipt commit ancestry.
+- Exceptions match repo/PR, but #164 postdates receipt enforcement, so this entry grants no waiver. An in-memory failing-check probe remained unregistered.
+- Git alone cannot verify CI completion, GitHub’s merge-event timestamp or bypass details. Signature verification was blocked by the read-only sandbox.
+
+No files modified.
+
+VERDICT: APPROVE
+tokens used
+44,922
+No P0–P3 findings at `0745e504bf63f87ad82a1501e3a8530e165e4034`.
+
+- Strict JSON parsing, schema validation, duplicate checks and diff whitespace checks passed.
+- Git confirms the referenced SHAs, merge parents and receipt commit ancestry.
+- Exceptions match repo/PR, but #164 postdates receipt enforcement, so this entry grants no waiver. An in-memory failing-check probe remained unregistered.
+- Git alone cannot verify CI completion, GitHub’s merge-event timestamp or bypass details. Signature verification was blocked by the read-only sandbox.
+
+No files modified.
+
+VERDICT: APPROVE
