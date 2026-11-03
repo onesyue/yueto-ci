@@ -1,0 +1,673 @@
+$ pnpm run i18n:check && vite build && tsc --noEmit && pnpm run test && pnpm run size
+$ node scripts/i18n-check.mjs --strict
+source t() keys : 1290
+catalog (app)   : 1454
+catalog (ui)    : 94
+missing (untranslated keys in source): 0
+orphans (catalog keys not in source) : 0
+bare CJK lines  : 179  (179 are catalogued table constants, 0 are real gaps)
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 2722 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                     1.64 kB │ gzip:  0.70 kB
+dist/assets/subscribe-import-dialog-OwK3aIG2.css    0.56 kB │ gzip:  0.28 kB
+dist/assets/client-aLIW2G87.css                     8.99 kB │ gzip:  2.12 kB
+dist/assets/index-bSDlk5jf.css                    106.74 kB │ gzip: 18.60 kB
+dist/assets/check-CfhrnP2Z.js                       0.15 kB │ gzip:  0.15 kB
+dist/assets/device-allowance-PwBkNa9w.js            0.15 kB │ gzip:  0.14 kB
+dist/assets/chevron-down-DtIePRqA.js                0.15 kB │ gzip:  0.15 kB
+dist/assets/chevron-left-DFlMNrmr.js                0.15 kB │ gzip:  0.16 kB
+dist/assets/chevron-right-5oBQfzfN.js               0.15 kB │ gzip:  0.15 kB
+dist/assets/plus-BKeVtVqy.js                        0.18 kB │ gzip:  0.16 kB
+dist/assets/arrow-right-hTK5evxa.js                 0.19 kB │ gzip:  0.17 kB
+dist/assets/clock-Drp5d3gP.js                       0.19 kB │ gzip:  0.18 kB
+dist/assets/search-_1yW9OQS.js                      0.20 kB │ gzip:  0.18 kB
+dist/assets/form-field-GYnX8JGZ.js                  0.20 kB │ gzip:  0.17 kB
+dist/assets/shared-DUIBF9N0.js                      0.22 kB │ gzip:  0.21 kB
+dist/assets/info-CDfvDwi7.js                        0.23 kB │ gzip:  0.19 kB
+dist/assets/circle-check-BPVlB56o.js                0.23 kB │ gzip:  0.20 kB
+dist/assets/mail-9q3NS4En.js                        0.24 kB │ gzip:  0.21 kB
+dist/assets/download-Cuuwz1iY.js                    0.26 kB │ gzip:  0.21 kB
+dist/assets/message-square-Doad7ad3.js              0.26 kB │ gzip:  0.22 kB
+dist/assets/activity-C3njtLuj.js                    0.26 kB │ gzip:  0.22 kB
+dist/assets/globe-DVnEiEPF.js                       0.27 kB │ gzip:  0.20 kB
+dist/assets/monitor-BnQ7sKol.js                     0.28 kB │ gzip:  0.22 kB
+dist/assets/wallet-DN3q-ie2.js                      0.31 kB │ gzip:  0.22 kB
+dist/assets/use-idempotent-intent-BoXo7RIg.js       0.33 kB │ gzip:  0.25 kB
+dist/assets/shield-check-CmpQXftM.js                0.34 kB │ gzip:  0.26 kB
+dist/assets/ticket-CceN4-JQ.js                      0.34 kB │ gzip:  0.23 kB
+dist/assets/order._tradeNo-ChS7DNon.js              0.35 kB │ gzip:  0.26 kB
+dist/assets/monitor-smartphone-CzJF-DkK.js          0.35 kB │ gzip:  0.26 kB
+dist/assets/server-B3BbTWPI.js                      0.36 kB │ gzip:  0.23 kB
+dist/assets/stethoscope-CWgoVDCD.js                 0.37 kB │ gzip:  0.25 kB
+dist/assets/gift-DpTcd1N8.js                        0.37 kB │ gzip:  0.27 kB
+dist/assets/usage-policy-DB1Aa43u.js                0.48 kB │ gzip:  0.33 kB
+dist/assets/external-link-Cgfx3KFt.js               0.48 kB │ gzip:  0.31 kB
+dist/assets/wifi-off-jIhsD7Rb.js                    0.48 kB │ gzip:  0.28 kB
+dist/assets/i18n-iox-mM0z.js                        0.49 kB │ gzip:  0.33 kB
+dist/assets/dist-D2Z1ScHv.js                        0.53 kB │ gzip:  0.38 kB
+dist/assets/send-qESd83Cv.js                        0.56 kB │ gzip:  0.35 kB
+dist/assets/rolldown-runtime-XKyaHtl9.js            0.72 kB │ gzip:  0.42 kB
+dist/assets/dist-CAyTO5-Y.js                        0.79 kB │ gzip:  0.48 kB
+dist/assets/order-reads-UR-iALDu.js                 0.86 kB │ gzip:  0.57 kB
+dist/assets/ticket-category-4d1bVjpE.js             0.88 kB │ gzip:  0.48 kB
+dist/assets/memories-BjWxKj3I.js                    0.89 kB │ gzip:  0.56 kB
+dist/assets/status-badge-CWQsXLET.js                0.93 kB │ gzip:  0.47 kB
+dist/assets/order-status-badge-B9ZJMs95.js          0.94 kB │ gzip:  0.53 kB
+dist/assets/activities-BsBtLsAb.js                  0.99 kB │ gzip:  0.61 kB
+dist/assets/label-BUllzkcl.js                       1.00 kB │ gzip:  0.62 kB
+dist/assets/confirm-dialog-C-DX36oh.js              1.17 kB │ gzip:  0.65 kB
+dist/assets/readable-on-EVJPSWxJ.js                 1.17 kB │ gzip:  0.73 kB
+dist/assets/user-avatar-EoLEoWG1.js                 1.17 kB │ gzip:  0.71 kB
+dist/assets/textarea-qyxq5-pi.js                    1.24 kB │ gzip:  0.72 kB
+dist/assets/traffic-summary-DrhtDs4X.js             1.26 kB │ gzip:  0.70 kB
+dist/assets/daily-limit-notice-Df-hUWHz.js          1.31 kB │ gzip:  0.71 kB
+dist/assets/messages-_nO151-0.js                    1.38 kB │ gzip:  0.60 kB
+dist/assets/badge-CUQA7TpK.js                       1.40 kB │ gzip:  0.66 kB
+dist/assets/scroll-affordance-BDNQsGAf.js           1.43 kB │ gzip:  0.83 kB
+dist/assets/input-DljhykkV.js                       1.47 kB │ gzip:  0.81 kB
+dist/assets/preload-helper-CRzLMJPS.js              1.53 kB │ gzip:  0.80 kB
+dist/assets/help-first-support-C_S1P-o7.js          1.71 kB │ gzip:  1.05 kB
+dist/assets/password-input-4tHS0R9v.js              2.20 kB │ gzip:  1.22 kB
+dist/assets/format-BFp7VVMg.js                      2.24 kB │ gzip:  0.98 kB
+dist/assets/brand-mark-D2dWCTn2.js                  2.25 kB │ gzip:  1.25 kB
+dist/assets/card-DUzrawJb.js                        2.47 kB │ gzip:  0.65 kB
+dist/assets/account-fo7957dU.js                     2.50 kB │ gzip:  1.06 kB
+dist/assets/self-service-shortcuts-DT5glF_P.js      2.60 kB │ gzip:  1.58 kB
+dist/assets/pagination-DFm6InNC.js                  3.38 kB │ gzip:  1.48 kB
+dist/assets/learn-more-Cj5O_6Ew.js                  3.43 kB │ gzip:  1.69 kB
+dist/assets/table-BraHIA0N.js                       3.51 kB │ gzip:  1.25 kB
+dist/assets/help.index-C7QWsKM9.js                  3.71 kB │ gzip:  2.09 kB
+dist/assets/password-policy-DC0XZcFp.js             4.00 kB │ gzip:  1.77 kB
+dist/assets/dist-BELHeQEg.js                        4.28 kB │ gzip:  1.88 kB
+dist/assets/dialog-DNOZgZVi.js                      4.47 kB │ gzip:  1.65 kB
+dist/assets/auth-shell-lCx4O_3N.js                  4.54 kB │ gzip:  2.17 kB
+dist/assets/first-use-steps-DeRSZK5o.js             4.61 kB │ gzip:  2.14 kB
+dist/assets/serverMessage-DyQuu0de.js               4.83 kB │ gzip:  2.14 kB
+dist/assets/credentialCancellation-5P3qpK2z.js      5.20 kB │ gzip:  2.03 kB
+dist/assets/switch-D0-s5dRn.js                      5.25 kB │ gzip:  2.28 kB
+dist/assets/dist-BAz78hoZ.js                        5.41 kB │ gzip:  2.04 kB
+dist/assets/nav-CL_GUS_9.js                         5.76 kB │ gzip:  2.76 kB
+dist/assets/status-BmfaEfqP.js                      6.04 kB │ gzip:  2.77 kB
+dist/assets/language-menu-D3MHB_5B.js               6.74 kB │ gzip:  3.32 kB
+dist/assets/en-ThCnXV3j.js                          7.36 kB │ gzip:  3.14 kB
+dist/assets/button-BZ6mrUZ7.js                      8.44 kB │ gzip:  3.93 kB
+dist/assets/dist-Chf_1fmW.js                        8.70 kB │ gzip:  3.06 kB
+dist/assets/web-vitals-b9li_OYc.js                  8.72 kB │ gzip:  3.26 kB
+dist/assets/orders.index-Dt26vBxi.js                8.72 kB │ gzip:  3.80 kB
+dist/assets/forget-JwvdAoNw.js                      9.20 kB │ gzip:  4.17 kB
+dist/assets/tooltip-BZNv_GyB.js                     9.33 kB │ gzip:  3.51 kB
+dist/assets/diagnostics-DengoeMN.js                10.10 kB │ gzip:  4.59 kB
+dist/assets/nodes-BqWBMjj4.js                      10.62 kB │ gzip:  4.26 kB
+dist/assets/emby-C61XzgYf.js                       11.12 kB │ gzip:  4.83 kB
+dist/assets/clients-BFIlBPdn.js                    11.62 kB │ gzip:  5.59 kB
+dist/assets/register-BTj6i0Qt.js                   12.74 kB │ gzip:  5.70 kB
+dist/assets/help._slug-CDX55Cnq.js                 12.83 kB │ gzip:  5.42 kB
+dist/assets/api-B30ikOe1.js                        13.10 kB │ gzip:  4.79 kB
+dist/assets/es2015-B7V8s50_.js                     13.19 kB │ gzip:  5.11 kB
+dist/assets/_app-JAJNy1C_.js                       13.40 kB │ gzip:  5.01 kB
+dist/assets/gift-7ySEwHpI.js                       13.50 kB │ gzip:  5.70 kB
+dist/assets/page-COVJOeNE.js                       14.20 kB │ gzip:  4.81 kB
+dist/assets/messages-Dzu9ILis.js                   14.23 kB │ gzip:  6.34 kB
+dist/assets/devices-Cq-EPxCT.js                    15.55 kB │ gzip:  6.56 kB
+dist/assets/withdraw-history-card-Bpibx-ze.js      17.73 kB │ gzip:  7.49 kB
+dist/assets/alert-C84xxQ1p.js                      17.80 kB │ gzip:  6.65 kB
+dist/assets/traffic-DVjDBiIs.js                    17.81 kB │ gzip:  7.66 kB
+dist/assets/dist-LJjHCwMh.js                       17.94 kB │ gzip:  6.24 kB
+dist/assets/tickets-B0TETgqf.js                    20.82 kB │ gzip:  8.38 kB
+dist/assets/select-DjkpMx3d.js                     24.59 kB │ gzip:  8.30 kB
+dist/assets/dist-DGKmXyXE.js                       25.70 kB │ gzip:  9.96 kB
+dist/assets/dropdown-menu-DDUIL5US.js              26.05 kB │ gzip:  7.05 kB
+dist/assets/subscribe-import-dialog-DFaVLu_l.js    26.86 kB │ gzip:  9.42 kB
+dist/assets/client-aJIp_1Tw.js                     27.08 kB │ gzip: 10.03 kB
+dist/assets/support-CLG4jT1b.js                    29.07 kB │ gzip: 11.27 kB
+dist/assets/index-CbuPv380.js                      30.93 kB │ gzip: 12.04 kB
+dist/assets/dist-DZgwOaOP.js                       33.54 kB │ gzip:  9.35 kB
+dist/assets/dist-V4Qe1EW4.js                       33.88 kB │ gzip: 11.36 kB
+dist/assets/plans-BUjHQ7Bp.js                      34.91 kB │ gzip: 13.38 kB
+dist/assets/orders._tradeNo-B5pjWUWx.js            37.09 kB │ gzip: 13.55 kB
+dist/assets/invite-DHZ9XE9z.js                     44.94 kB │ gzip: 16.19 kB
+dist/assets/_app-DgrfDIXa.js                       47.24 kB │ gzip: 17.77 kB
+dist/assets/markdown-Cu10WlCB.js                   47.55 kB │ gzip: 14.31 kB
+dist/assets/client-CEoJC3xO.js                     54.91 kB │ gzip: 18.60 kB
+dist/assets/articles-CqS4JrcQ.js                   86.73 kB │ gzip: 31.21 kB
+dist/assets/settings-26EWt4E9.js                   91.56 kB │ gzip: 31.68 kB
+dist/assets/vendor-tanstack-B6cq8RoS.js           115.79 kB │ gzip: 37.13 kB
+dist/assets/en-Bo8s4d_I.js                        130.35 kB │ gzip: 50.65 kB
+dist/assets/login-tJZsqpFq.js                     152.01 kB │ gzip: 41.90 kB
+dist/assets/vendor-react-DnzGekdM.js              218.92 kB │ gzip: 68.29 kB
+
+INITIAL_LOAD_GRAPH {"schema":1,"tool":"yueboard-initial-load-graph/1","index":{"path":"index.html","sha256":"05605fd8cd0684208d96f7ae26c468efcfef1e2e1ced785b7420c9259be3e1d4"},"htmlAssets":[{"path":"assets/button-BZ6mrUZ7.js","sha256":"a38d7f544c9b26f0dc326d09c8b6dea19ecdb08ef485ae8a2bd786ac7b93f1ce"},{"path":"assets/chevron-down-DtIePRqA.js","sha256":"005b0d453ac4d293deb59dd82323b6353edff91b7e468bc8304e24325ff66211"},{"path":"assets/client-CEoJC3xO.js","sha256":"ad76b908516cb6774dcc1d8ec3186942c13072b4f075b89c02318676d6c571b3"},{"path":"assets/dist-DZgwOaOP.js","sha256":"55c5635bf34b64ae44a965be2905e2543da085eaeff495c0f42ab48a5846edad"},{"path":"assets/dist-V4Qe1EW4.js","sha256":"32fa4a3d06ac8baeb4c63a5f660e877c991625fb8aea6d2bb7d9596fda7aa1e3"},{"path":"assets/i18n-iox-mM0z.js","sha256":"c5b1c17dcd88b9d065a3cbd199a28c4139da78dd63a8647f2b5ef0d58a392213"},{"path":"assets/index-CbuPv380.js","sha256":"078cb4bbb427f84f0ccc74d80d9d8ac6c87230d18c1df0f0c8ce80cc040e0ce1"},{"path":"assets/index-bSDlk5jf.css","sha256":"637e3171905bc78c47accee89862c91881aa6d1881a2120092b596b6d7e1d3f0"},{"path":"assets/language-menu-D3MHB_5B.js","sha256":"eadc1aea890232d49686ca701289b7c4425557ea4acbf2818ba5c25cd02ec458"},{"path":"assets/preload-helper-CRzLMJPS.js","sha256":"bcc465e3e61dc3878a69ffa95ccb53cb82d95b1639ada223420b281ebd150048"},{"path":"assets/rolldown-runtime-XKyaHtl9.js","sha256":"548d1dbf321e7d2ae804fcc158b588706a7c52f8ca175de1490c6ccb4dbe55b7"},{"path":"assets/vendor-react-DnzGekdM.js","sha256":"7e769917fd84a30dc273795b183bfe1e183ad7275874ce00a56f3aac3fcc5a9b"},{"path":"assets/vendor-tanstack-B6cq8RoS.js","sha256":"ca5094b06b70911beb89669224536dd5b80a8f0eba7d32113b80669b38af6e3a"}],"staticJavaScriptClosure":[{"path":"assets/button-BZ6mrUZ7.js","sha256":"a38d7f544c9b26f0dc326d09c8b6dea19ecdb08ef485ae8a2bd786ac7b93f1ce"},{"path":"assets/chevron-down-DtIePRqA.js","sha256":"005b0d453ac4d293deb59dd82323b6353edff91b7e468bc8304e24325ff66211"},{"path":"assets/client-CEoJC3xO.js","sha256":"ad76b908516cb6774dcc1d8ec3186942c13072b4f075b89c02318676d6c571b3"},{"path":"assets/dist-DZgwOaOP.js","sha256":"55c5635bf34b64ae44a965be2905e2543da085eaeff495c0f42ab48a5846edad"},{"path":"assets/dist-V4Qe1EW4.js","sha256":"32fa4a3d06ac8baeb4c63a5f660e877c991625fb8aea6d2bb7d9596fda7aa1e3"},{"path":"assets/i18n-iox-mM0z.js","sha256":"c5b1c17dcd88b9d065a3cbd199a28c4139da78dd63a8647f2b5ef0d58a392213"},{"path":"assets/index-CbuPv380.js","sha256":"078cb4bbb427f84f0ccc74d80d9d8ac6c87230d18c1df0f0c8ce80cc040e0ce1"},{"path":"assets/language-menu-D3MHB_5B.js","sha256":"eadc1aea890232d49686ca701289b7c4425557ea4acbf2818ba5c25cd02ec458"},{"path":"assets/preload-helper-CRzLMJPS.js","sha256":"bcc465e3e61dc3878a69ffa95ccb53cb82d95b1639ada223420b281ebd150048"},{"path":"assets/rolldown-runtime-XKyaHtl9.js","sha256":"548d1dbf321e7d2ae804fcc158b588706a7c52f8ca175de1490c6ccb4dbe55b7"},{"path":"assets/vendor-react-DnzGekdM.js","sha256":"7e769917fd84a30dc273795b183bfe1e183ad7275874ce00a56f3aac3fcc5a9b"},{"path":"assets/vendor-tanstack-B6cq8RoS.js","sha256":"ca5094b06b70911beb89669224536dd5b80a8f0eba7d32113b80669b38af6e3a"}],"publicBootstrapScripts":[{"path":"theme-init.js","sha256":"59dfd63a95ec10bf85c28597f9f53dcd57d35b2fb84f2cedf502aac2f3e82b7a"}],"htmlReferences":{"moduleEntries":["assets/index-CbuPv380.js"],"modulePreloads":["assets/button-BZ6mrUZ7.js","assets/chevron-down-DtIePRqA.js","assets/client-CEoJC3xO.js","assets/dist-DZgwOaOP.js","assets/dist-V4Qe1EW4.js","assets/i18n-iox-mM0z.js","assets/language-menu-D3MHB_5B.js","assets/preload-helper-CRzLMJPS.js","assets/rolldown-runtime-XKyaHtl9.js","assets/vendor-react-DnzGekdM.js","assets/vendor-tanstack-B6cq8RoS.js"],"stylesheets":["assets/index-bSDlk5jf.css"],"bootstrapScripts":["theme-init.js?v=59dfd63a"]},"staticImports":{"assets/button-BZ6mrUZ7.js":["assets/client-CEoJC3xO.js","assets/dist-V4Qe1EW4.js","assets/rolldown-runtime-XKyaHtl9.js","assets/vendor-react-DnzGekdM.js","assets/vendor-tanstack-B6cq8RoS.js"],"assets/chevron-down-DtIePRqA.js":["assets/dist-V4Qe1EW4.js"],"assets/client-CEoJC3xO.js":["assets/preload-helper-CRzLMJPS.js","assets/rolldown-runtime-XKyaHtl9.js","assets/vendor-react-DnzGekdM.js"],"assets/dist-DZgwOaOP.js":["assets/rolldown-runtime-XKyaHtl9.js","assets/vendor-react-DnzGekdM.js"],"assets/dist-V4Qe1EW4.js":["assets/rolldown-runtime-XKyaHtl9.js","assets/vendor-react-DnzGekdM.js"],"assets/i18n-iox-mM0z.js":["assets/rolldown-runtime-XKyaHtl9.js","assets/vendor-react-DnzGekdM.js"],"assets/index-CbuPv380.js":["assets/button-BZ6mrUZ7.js","assets/client-CEoJC3xO.js","assets/dist-DZgwOaOP.js","assets/i18n-iox-mM0z.js","assets/language-menu-D3MHB_5B.js","assets/preload-helper-CRzLMJPS.js","assets/rolldown-runtime-XKyaHtl9.js","assets/vendor-react-DnzGekdM.js","assets/vendor-tanstack-B6cq8RoS.js"],"assets/language-menu-D3MHB_5B.js":["assets/button-BZ6mrUZ7.js","assets/chevron-down-DtIePRqA.js","assets/client-CEoJC3xO.js","assets/dist-DZgwOaOP.js","assets/dist-V4Qe1EW4.js","assets/i18n-iox-mM0z.js","assets/preload-helper-CRzLMJPS.js","assets/rolldown-runtime-XKyaHtl9.js","assets/vendor-react-DnzGekdM.js","assets/vendor-tanstack-B6cq8RoS.js"],"assets/preload-helper-CRzLMJPS.js":[],"assets/rolldown-runtime-XKyaHtl9.js":[],"assets/vendor-react-DnzGekdM.js":["assets/rolldown-runtime-XKyaHtl9.js"],"assets/vendor-tanstack-B6cq8RoS.js":["assets/rolldown-runtime-XKyaHtl9.js","assets/vendor-react-DnzGekdM.js"]},"targetModules":{"src/api/index.ts":[{"path":"assets/api-B30ikOe1.js","sha256":"00680f63c745a679cf720d34b4343f5cce5220b394b3fe3701ef4efddac83fde","initial":false,"retainedAdapters":["apiReceipt","apiImage"]}],"src/api/client.ts":[{"path":"assets/client-CEoJC3xO.js","sha256":"ad76b908516cb6774dcc1d8ec3186942c13072b4f075b89c02318676d6c571b3","initial":true,"retainedAdapters":[]}]}}
+✓ built in 7.16s
+[plugin yue-brotli-precompress] brotli-precompressed 82 assets
+[33m[PLUGIN_TIMINGS] [0mJavaScript callbacks ran for 8.8s. The build took 7.1s. Callbacks such as `closeBundle` run after the build ends, so callback time can be more than build time.
+The slowest callbacks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - plugin @rolldown/plugin-babel transform (78%, 5.5s, 260 calls)
+  - plugin @tailwindcss/vite:generate:build transform (76%, 5.4s, 3 calls)
+  - plugin yue-brotli-precompress closeBundle (26%, 1.9s, 1 call)
+These rows add up to more than the total. Callbacks can overlap, so the same time counts for more than one row.
+See https://rolldown.rs/reference/InputOptions.checks#bundlertimings for more details.
+
+$ node --test src/lib/*.test.ts
+✔ account_banned is the stable login code (0.945768ms)
+✔ Telegram discovery and account failures remain visible and retryable (0.740111ms)
+✔ passkey transport failure cannot masquerade as an unsupported or disabled feature (0.175137ms)
+✔ plan pause loading and failure states never collapse the card (0.208824ms)
+✔ a failed deletion precheck stays visible and retryable, without locking the button (0.245507ms)
+✔ a failed email-change status never renders as a mute, empty card (0.217317ms)
+✔ the other-sign-ins card follows the same visible-and-retryable rule (0.108032ms)
+✔ account deletion accepts Board's committed boolean receipt (0.774155ms)
+✔ account deletion accepts only an exact true receipt (0.819526ms)
+✔ a delayed account locale cannot cross logout and replace the next account (1.160238ms)
+✔ a newer local language intent fences an older account response (0.174184ms)
+✔ browser auth projection never retains the legacy subscription token (1.070132ms)
+✔ subscription overview drops every account-level subscription authority (0.184247ms)
+✔ user info whitelist strips the legacy account UUID before query caching (0.123959ms)
+✔ user info keeps the bonus balance the account page renders (0.118733ms)
+✔ account projections fail closed on non-object responses (0.256067ms)
+✔ password-login passkey enrollment does not use the logout client (1.03687ms)
+✔ locale, unread counts and notices are advisory reads (0.532985ms)
+✔ only whitelisted structured confirmations become cards (1.805385ms)
+✔ cards are deduplicated, capped at four and never carry unknown fields (0.337539ms)
+✔ refund cards require a complete native quote and retain only its display fields (0.392745ms)
+✔ a confirm response counts only as this card's receipt and only executed completes it (0.223629ms)
+✔ confirmation tokens stay in memory and retries reuse the same key and token (1.761718ms)
+✔ AI support uses the modal focus model and explicitly focuses the composer (0.69955ms)
+✔ AI support keeps continuity only within one open in-memory session (0.274965ms)
+✔ AI support exposes a live log and keyboard send without stealing Shift+Enter (0.1273ms)
+✔ successful requests never fetch the error-message catalog (47.263639ms)
+✔ rejected identity is cleared before optional localization completes (8.052039ms)
+✔ localized business failures preserve status, stable code, data and retry delay (6.597583ms)
+✔ an unavailable optional chunk preserves the original business error (15.363515ms)
+✔ a stalled optional chunk cannot keep a failed action pending (2003.066097ms)
+✔ latest queue cannot publish a deferred stale language selection (5.435588ms)
+✔ ordered queue starts the latest remote write only after the old write settles (0.406194ms)
+✔ a failed old remote write does not block the latest preference (0.63372ms)
+✔ ordered queue returns the outcome belonging to each submitted write (1.01403ms)
+✔ api: a delayed JSON success cannot complete after replace (31.86477ms)
+✔ api: a delayed JSON success cannot complete after logout (0.703198ms)
+✔ api: a delayed JSON success cannot complete after login (0.966544ms)
+✔ api: the session is checked after consuming the whole response body (8.545879ms)
+✔ api: an unchanged session still receives its successful response (1.370351ms)
+✔ apiImage: the session is checked after consuming the whole response body (2.117325ms)
+✔ apiImage: an unchanged session still receives its successful response (0.946136ms)
+✔ apiReceipt: preserves HTTP 200 and the applied receipt (2.379324ms)
+✔ apiReceipt: preserves HTTP 202 and the pending receipt (0.777429ms)
+✔ apiReceipt: rejects malformed and non-success envelopes (1.578984ms)
+✔ multipart keeps browser boundary and private images reject stale-account responses (1.242408ms)
+✔ money requests send the supplied idempotency key unchanged on retries (1.246748ms)
+✔ api: 409 (credential reset staging) is a business failure, never a logout (0.577539ms)
+✔ api: 423 (credential reset staging) is a business failure, never a logout (1.0202ms)
+✔ api: delayed 401 preserves a newer session; current-session rejection still logs out (1.671792ms)
+✔ api: delayed 403 preserves a newer session; current-session rejection still logs out (0.976129ms)
+✔ apiImage: delayed 401 preserves a newer session; current-session rejection still logs out (0.683729ms)
+✔ apiImage: delayed 403 preserves a newer session; current-session rejection still logs out (0.833592ms)
+✔ api: an advisory 401/403 keeps the bearer that user/info would still accept (1.038054ms)
+✔ api: logout aborts the real transport and twelve stale private reads send nothing (1.569261ms)
+✔ api: caller cancellation stays cancellation and does not clear the principal (0.336887ms)
+✔ login and registration preserve the validated purchase destination (1.403113ms)
+✔ fulfilled orders embed the client setup steps without another route (0.375343ms)
+✔ principal is guest when logged out and stable per auth_data (1.419586ms)
+✔ the same query key maps to a different cache identity per principal (0.224784ms)
+✔ auth boundary fires the cache reset exactly on principal changes (0.173477ms)
+✔ B cannot read any of A's user-scoped entries even without a clear (3.837662ms)
+✔ A logs in, loads data, logs out, B logs in: cache is empty for B (0.58283ms)
+✔ a slow in-flight response for A never surfaces after B logs in (6.297103ms)
+✔ SPA persists only the web session and actively removes legacy subscription tokens (0.171956ms)
+✔ admin session flag is explicit and cleared with the session (0.635683ms)
+✔ denied storage keeps only the current session and preserves account cache isolation (0.967967ms)
+✔ failed persistent removal cannot resurrect a locally cleared bearer (0.483172ms)
+✔ only an explicit live mode counts as automatic charging (0.694408ms)
+✔ undo is offered only for a still-revertible, not yet reverted renewal (0.144773ms)
+✔ the card never words a saved preference as live charging (0.451685ms)
+✔ the default is the configured mainland panel mirror (1.139456ms)
+✔ an empty mirror list disables fallback without retrying the payment (3.49172ms)
+✔ parse accepts one https origin and rejects everything else (0.175171ms)
+✔ remember stores the origin and preserves off across reload (0.235514ms)
+✔ a network failure posts once to the mirror with the same attempt (0.746437ms)
+✔ a timeout polls the stored result and does not post again (0.348335ms)
+✔ an in-flight result becomes the processing state without another post (0.302809ms)
+✔ a missing stored result is not posted again (0.253714ms)
+✔ a quote timeout is not posted to the mirror (0.158151ms)
+✔ a business error is not retried or polled (0.203964ms)
+✔ a later click only polls the same pending key at its original mirror (0.264837ms)
+✔ server payment receipt binds order, method, expiry and both money sums (1.220473ms)
+✔ the paste sentence is only for guides whose step is a manual URL import (1.465356ms)
+✔ Shadowrocket copy targets keep the credential and the selected node filter (0.620866ms)
+✔ Shadowrocket copy targets reject raw controls before URL normalization (0.441525ms)
+✔ Shadowrocket copy targets refuse unsafe URLs (0.243201ms)
+✔ Shadowrocket copy targets reject percent-encoded CRLF before URL normalization (0.156598ms)
+✔ Shadowrocket copy targets reject raw newline before URL normalization (0.093412ms)
+✔ Shadowrocket copy targets reject raw CRLF before URL normalization (0.091689ms)
+✔ tickets: one composer instance, new ticket gets selected, closed tickets keep an exit (0.826338ms)
+✔ devices: a completed credential reset leaves a re-import exit on the page (0.218084ms)
+✔ clients: the import step opens the real wizard instead of faking a copied state (0.143218ms)
+✔ the subscription import wizard has exactly one dialog shell (0.098976ms)
+✔ support search keeps previous hits while typing and nodes refresh their online state (1.211605ms)
+✔ 409 needs the exact stable code; other conflicts keep their own handling (0.603422ms)
+✔ only 409 qualifies: Board never sends 423, and 401/403 stay the logout signal (0.123358ms)
+✔ persistent reset operations replay per account and kind, and clear only their own receipt (4.699318ms)
+✔ denied or silently discarded storage fails before a reset can receive an operation id (0.631512ms)
+✔ cleanup after an applied receipt cannot turn successful reset into a storage error (0.223154ms)
+✔ subscription reset accepts the current receipts and binds the subject (1.004856ms)
+✔ device reset accepts the current receipts and binds the subject (0.258971ms)
+✔ unknown fields added by the server are tolerated and not passed through (1.058696ms)
+✔ diagnostic counters are optional and never block the reset (0.225255ms)
+✔ credential-bearing fields are rejected on every receipt (0.715632ms)
+✔ a pending acknowledgement must not claim completion (0.385623ms)
+✔ required fields and the HTTP status/state pairing are still enforced (0.605737ms)
+✔ the 200 GiB pause is the notice while both sanctions are active (0.619055ms)
+✔ an empty node list with a notice is the 200 GiB pause (0.13923ms)
+✔ account deletion is pre-flighted before the button, not after the password (0.586801ms)
+✔ every blocker reason is rendered with its remedy (0.118056ms)
+✔ waivable blockers are opt-in and gate the button until all are accepted (0.095686ms)
+✔ the promise no longer lists 余额 among the things deletion removes (0.09005ms)
+✔ device allowance keeps each plan value and treats non-positive as unlimited (0.612258ms)
+✔ the devices fixture is non-trivial (0.666928ms)
+✔ Portal parses Board's real GET /user/devices shape: exact_identity_online (0.461001ms)
+✔ Portal parses Board's real GET /user/devices shape: heuristic_network_only (0.108578ms)
+✔ Portal parses Board's real GET /user/devices shape: measured_over_limit (0.090688ms)
+✔ Portal parses Board's real GET /user/devices shape: unknown_projection_above_limit (0.09483ms)
+✔ Portal parses Board's real GET /user/devices shape: nobody_online_never_seen (0.060104ms)
+✔ an observed identity is one device (0.990395ms)
+✔ registration handles support removal without exposing hardware identifiers (0.36431ms)
+✔ shared_online is authoritative even when memory presence exposes no IPs (0.620012ms)
+✔ five observed IPs remain one shared identity (0.160036ms)
+✔ an identity and a network line are one device, not two (0.114755ms)
+✔ device presence parser rejects inferred, inconsistent or secret-bearing shapes (0.188226ms)
+✔ hardware identifiers are preserved without inventing IDs for older responses (0.504693ms)
+✔ fields added by Board are tolerated, not treated as a broken response (0.13997ms)
+✔ a restart projection above the limit is shown, not rejected (0.115261ms)
+✔ online source is declared metadata, not a guessed count or address tally (0.360734ms)
+✔ 把失败项的 name/detail/hint 全部带进工单正文 (0.832259ms)
+✔ 没有异常项时只回计数，不留空的小标题 (0.125312ms)
+✔ 缺 detail/hint 的项不产出空的详情/建议行 (0.119709ms)
+✔ 超长时按整条检查项截断，且明确告知有省略 (0.339977ms)
+✔ 上限是导出常量，改它必须是一次有意的改动 (0.092523ms)
+✔ the email reward is promised only while Board says this month's pool still fits one (0.608168ms)
+✔ a verification that paid nothing because the pool ran out says so (0.102909ms)
+✔ emby 400 offers buying a plan only when a plan could actually fix it (0.587555ms)
+✔ the emby page gates its plans CTA on the subscription state (0.461265ms)
+✔ emby access failures: only emby_credential_required opens the inline form (1.153163ms)
+✔ only the coded 409 opens the inline password form (0.578003ms)
+✔ the Emby page wires the inline form to the credential endpoint (0.602763ms)
+✔ a blocked popup is not reported as a later ticket failure (0.688915ms)
+✔ the user closing the window stays distinct from a mint failure (0.117087ms)
+✔ a completed navigation is only a handoff (0.091975ms)
+✔ ui package exports the flags module with the three entry points (0.64854ms)
+✔ guest config projection is wired into the SPA exactly once (0.151737ms)
+✔ registry names follow yue.<domain>.<name> and are non-empty (0.249262ms)
+✔ byte formatter preserves the binary-scale KB/MB/GB business contract (12.581969ms)
+✔ account quota formatter keeps exact sold GB and meaningful hundredths (0.367218ms)
+✔ byte formatter never presents unknown or invalid input as zero (0.114103ms)
+✔ optional traffic parsing preserves real zero and rejects missing or negative values (0.121444ms)
+✔ business-day formatters stay on the same Shanghai date across a UTC date change (4.177419ms)
+✔ gift balance is shown only when the server actually returns it (0.144791ms)
+✔ the gift card page shows the reset-card bank named by the redemption copy (1.041823ms)
+✔ golden contracts validate Array elements and discover Record parsers with typeParameters (23.947494ms)
+✔ golden contracts validate Array elements and discover Record parsers with typeArguments (3.700132ms)
+✔ every loose-input Portal parser is exercised against a Board golden fixture (441.048831ms)
+✔ hash query values survive document-level language and recovery parameters (0.75695ms)
+✔ nested hash and empty route are parsed without changing browser state (0.627457ms)
+✔ native hash navigation can supply null history state (4.172393ms)
+✔ headings, paragraphs and CJK soft line breaks (1.731406ms)
+✔ level-1 and level-4 headings are not headings (0.203494ms)
+✔ lists: one level, continuation lines, ordered start (0.245449ms)
+✔ inline: strong, code, https link, help link; other schemes degrade to text (0.398458ms)
+✔ raw HTML stays literal text (rendered as a text node, never markup) (0.178074ms)
+✔ fenced code keeps content verbatim, including markdown-looking lines (0.868209ms)
+✔ callouts: TIP/NOTE/WARNING with paragraphs and lists inside (0.478423ms)
+✔ parseHelpRef accepts only help:<slug> with a contract-shaped slug (0.903003ms)
+✔ resolveHelpRef maps to the public /help/$slug route and falls back to the help home (0.743997ms)
+✔ helpPublicUrl uses the same hash-query lang form as the Bot projection (0.130303ms)
+✔ help search keeps a bounded query and drops anything else (0.213374ms)
+✔ parseHelpLang only admits the two product languages (0.115013ms)
+✔ groupHelpArticles orders categories, drops empty ones and unlisted articles (0.191667ms)
+✔ searchHelpArticles requires every term, ranks title hits first and skips unlisted (1.379338ms)
+✔ findHelpArticle opens unlisted articles by deep link (0.141778ms)
+✔ ambiguous retries keep their key; a changed body or completed intent gets a new key (1.026806ms)
+✔ distinct forms do not share an operation key (3.770333ms)
+✔ initial graph reads the complete static closure and preserves written bytes (13.306781ms)
+▶ initial graph rejects each missing or initial adapter obligation
+  ✔ direct entry (4.890728ms)
+  ✔ dynamic entry also modulepreloaded (1.488133ms)
+  ✔ transitive static dependency (1.272077ms)
+  ✔ receipt export missing (1.310173ms)
+  ✔ image export missing (2.01422ms)
+  ✔ adapter metadata absent (1.016346ms)
+  ✔ adapter metadata not an exact source path (1.381053ms)
+  ✔ adapter tree shaken (1.36564ms)
+  ✔ client missing (1.605962ms)
+  ✔ client lazy only (0.948561ms)
+  ✔ no module entry (1.211958ms)
+  ✔ unknown static edge (0.916053ms)
+  ✔ missing initial metadata (1.93229ms)
+  ✔ ambiguous filename (0.883222ms)
+  ✔ missing written file (2.478787ms)
+  ✔ stale written file (1.303261ms)
+  ✔ external module entry (0.836945ms)
+  ✔ inline module (0.776843ms)
+  ✔ inline executable body (0.748399ms)
+  ✔ duplicate source attribute (0.746481ms)
+  ✔ base element (0.758689ms)
+  ✔ unclosed comment (1.115799ms)
+✔ initial graph rejects each missing or initial adapter obligation (33.904179ms)
+✔ initial graph resolves the configured base and keeps URL identity (2.739868ms)
+▶ real Vite writeBundle runs once and rejects the static-import mutation
+  ✔ dynamic adapter import passes (454.531141ms)
+  ✔ static adapter import fails (428.719147ms)
+✔ real Vite writeBundle runs once and rejects the static-import mutation (883.733648ms)
+✔ the portal never calls the invite-alias endpoints whose point deduction lives in the bot (17.50772ms)
+✔ invite page: precheck before Telegram, server-issued zone, and no blank withdraw tab (1.407323ms)
+✔ mirror base accepts only absolute http(s) URLs (0.919053ms)
+✔ links keep the published /#/register?code= route (0.143486ms)
+✔ portal exposes one consistent language menu on auth, app and settings surfaces (1.841757ms)
+✔ portal root error and not-found states keep language, title and focus recovery reachable (0.175442ms)
+✔ portal language menu is one of the top-bar entries, not a form control (0.212943ms)
+✔ the shared language control offers exactly two fixed languages and no follow-the-environment option (0.764786ms)
+✔ the portal locale store cannot express a follow-the-environment preference (0.182914ms)
+✔ all portal entry points share account persistence and node-rename notification (0.096949ms)
+✔ portal language changes fence stale UI work, remote writes and notices (0.105467ms)
+✔ portal locale store synchronizes page language and other tabs (0.079207ms)
+✔ portal first paint still follows navigator when storage access is denied (1.650297ms)
+✔ portal global action cluster is language → theme on every shell, with the shared 44px theme toggle (0.528015ms)
+✔ shared loading phases honor the 100ms / 400ms contract (0.514589ms)
+✔ logged-in: refresh waits for the users.locale write (it outranks Accept-Language) (2.029451ms)
+✔ anonymous or failed write still refreshes once the catalog has switched (0.337625ms)
+✔ a superseded switch does not refresh (the latest one will) (1.136539ms)
+✔ BCP-47 tags collapse to the two supported runtime locales (0.715612ms)
+✔ an account preference is always one of the two fixed languages (0.214629ms)
+✔ a stored legacy auto preference is resolved once and written back (0.40246ms)
+✔ a first visit resolves the browser language once and then stops following it (0.127952ms)
+✔ an unreadable navigator falls back to the default language (0.127961ms)
+✔ the store refuses to persist a follow-the-environment preference (0.203697ms)
+✔ language choice updates html lang and survives storage denial in this session (0.163201ms)
+✔ local logout completes while the server revocation has no response (28.528515ms)
+✔ local logout completes even when server revocation rejects (0.375882ms)
+✔ storage-denied logout still revokes the captured memory bearer and clears the tab (0.678581ms)
+✔ bare token2Login response projects only auth_data and is_admin (1.239747ms)
+✔ Portal exchanges verify only in a POST JSON body (15.553497ms)
+✔ magic-link projection rejects envelope and malformed bare shapes (0.414461ms)
+✔ claim removes verify and redirect while preserving unrelated URL state (0.305494ms)
+✔ mount consumer replaces history before one and only one exchange (0.401737ms)
+✔ malformed capability is erased before failing and is never exchanged (0.544386ms)
+✔ redirect allowlist accepts only existing protected Portal routes (0.174351ms)
+✔ failure copy makes one-time consumption explicit (0.156619ms)
+✔ every native checkbox is tinted with the theme accent (33.075835ms)
+✔ every legacy wire key maps to its native name (0.964249ms)
+✔ native and unknown names pass through unchanged (0.144787ms)
+✔ a paused node list shows the server notice instead of the empty-plan copy (1.307773ms)
+✔ announcement windows include the start and exclude the end (0.680752ms)
+✔ cancelling the blocking order invalidates the order list, that order and the balance (0.83103ms)
+✔ a typed-but-unverified coupon is verified before the order is placed, never silently dropped (0.377617ms)
+✔ order list keeps its status filter in the URL and surfaces unpaid orders (0.165097ms)
+✔ a paused-subscription plan change rejection reaches the user (0.178406ms)
+✔ quotes preserve server pricing including balance and surplus credit (1.669756ms)
+✔ malformed and mismatched quote receipts cannot authorize purchase (0.439697ms)
+✔ conditional re-arm waits for the challenge lifetime, not 50 seconds (0.698292ms)
+✔ a hidden page does not re-arm in the background (0.12737ms)
+✔ a conditional re-arm hands back the session it abandons (0.124374ms)
+✔ a conditional passkey attempt never surfaces a toast (0.728378ms)
+✔ user-initiated passkey failures still surface (0.166641ms)
+✔ the pre-existing cancel/abort exemptions are not dropped (0.113266ms)
+✔ signals use the complete authenticated credential set and current account details (1.173842ms)
+✔ missing credential identifiers and switched accounts never delete provider credentials (0.205496ms)
+✔ provider rejection is optional and empty lists can remove the last deleted key (0.216555ms)
+✔ ticket is read only from the structured failure (0.556744ms)
+✔ login page routes a passkey totp challenge before any conditional/toast early return (0.212089ms)
+✔ new-password policy mirrors the server: 8 chars minimum, 72 bytes maximum (0.588937ms)
+✔ every new-password form uses the policy, and the login form imposes no length gate (0.797179ms)
+✔ an existing pause remains recoverable after issuance is disabled (0.535435ms)
+✔ a disabled feature stays hidden for accounts with no pause (0.143583ms)
+✔ only fulfilled server orders are success; paid-but-provisioning stays pending (0.572558ms)
+✔ missing, malformed and gateway-like statuses never imply payment success (0.125945ms)
+✔ only cashier pages and wallet app schemes may be handed to the browser (0.999785ms)
+✔ full-page redirect accepts web cashiers only (0.199152ms)
+✔ pending polling backs off and finally gives up (0.110752ms)
+✔ the order page wires the boundary, keeps polling while fulfilment is in progress, and offers the QR link on phones (2.303282ms)
+✔ the checkout dialog warns before a purchase replaces the current plan (0.800776ms)
+✔ a plan change cannot be ordered without the explicit acknowledgement step (0.221858ms)
+✔ every quote carries plan_change: facts on an upgrade, null otherwise (0.709363ms)
+✔ Portal reads Board's 409 plan_change_unconfirmed with its facts (0.264263ms)
+✔ other failures and malformed facts never pass as a plan-change rejection (0.646617ms)
+✔ less than a day left is not shown as zero days (0.951652ms)
+✔ starting price excludes the cheaper traffic reset package (0.623764ms)
+✔ traffic reset is purchasable only for an active subscription to this plan (0.873388ms)
+✔ active subscription requires the same plan, quota and future expiry (0.139432ms)
+✔ billing groups follow available periods, including mixed, free and malformed offers (0.164738ms)
+✔ the shop keeps a holder's stopped-sale plan and drops everyone else's (1.148484ms)
+✔ renew off still offers a traffic reset to the entitled holder (0.234385ms)
+✔ capacity blocks strangers and a stopped renewal still names the reset (0.191727ms)
+✔ the plans page uses the sale helpers instead of dropping stopped sales (0.470565ms)
+✔ both live parsers ignore fast/slow wall clocks and preserve request time across query data copies (1.322455ms)
+✔ short server TTL and legacy fixed TTL deduct the whole RTT without restarting on receipt (0.131202ms)
+✔ invalid server times and exhausted response budgets fail closed rather than auto-refreshing (2.303379ms)
+✔ light backgrounds (gold/bright yellow gift cards) get dark text, no shadow (1.040482ms)
+✔ dark backgrounds keep white text with a legibility shadow (0.207807ms)
+✔ unparseable or missing colors return undefined so callers fall back to default styling (0.11353ms)
+✔ 3-digit hex expands and keeps the background it was given (0.094284ms)
+✔ mid-luminance brand colors pick whichever foreground actually has more contrast (0.275466ms)
+✔ the light/dark decision flips at the real WCAG crossover, not at 0.4 (0.086091ms)
+✔ oklch swatches are judged by real luminance, on both sides of the crossover (0.349871ms)
+✔ readableForeground agrees with readableOnStyle on hex and refuses what it cannot parse (0.143808ms)
+✔ every shipped palette swatch is parseable, so its check colour is computed rather than defaulted (1.111371ms)
+✔ works: persistent module failure stops after two document retries (30.523508ms)
+✔ works: a router redirect cannot erase the document's retry budget (5.383379ms)
+✔ works: successful recovery preserves router state and re-arms a later release (7.70912ms)
+✔ throws: persistent module failure stops after two document retries (11.225246ms)
+✔ throws: a router redirect cannot erase the document's retry budget (3.141697ms)
+✔ throws: successful recovery preserves router state and re-arms a later release (6.583844ms)
+✔ amnesiac: persistent module failure stops after two document retries (4.365597ms)
+✔ amnesiac: a router redirect cannot erase the document's retry budget (4.818119ms)
+✔ amnesiac: successful recovery preserves router state and re-arms a later release (1.224192ms)
+✔ failed navigation returns control to the retry UI (1.079613ms)
+✔ credential mutations outlive the 20 second node apply barrier (9.59437ms)
+✔ account deletion has time to finish the reviewed cross-table erasure (0.250159ms)
+✔ reads and lookalike paths keep the bounded ordinary deadline (0.134355ms)
+✔ timeout classification preserves canonical paths and rejects near matches (0.107132ms)
+✔ Retry-After accepts delta-seconds and HTTP dates, never a negative or a guess (0.719106ms)
+✔ only 429 responses carry retryAfterSeconds, and login/change-password count it down (0.840956ms)
+✔ internal hash routes survive with their query string (0.737995ms)
+✔ anything that could leave the SPA or loop through guest pages falls back to home (0.24199ms)
+✔ the current hash only becomes a return target when it is worth returning to (0.136022ms)
+✔ the shell, the API client and every login success path honour the return target (1.855488ms)
+✔ purchase intent survives sign-in with a validated plan and period (0.499828ms)
+✔ route fallback recommends reload only for stale chunks (0.85725ms)
+✔ route fallback never reflects internal error details (0.135377ms)
+✔ subscription reset: Portal accepts Board's applied (200) and pending (202) receipts (1.569845ms)
+✔ device reset: Portal accepts Board's applied (200) and pending (202) receipts (0.334268ms)
+✔ AI confirm: Portal trusts Board's receipt only for its own card and only 'executed' completes (0.271712ms)
+✔ Telegram bind: Portal's exact-key parser accepts every Board mint (incl. the TTL cap) (0.437569ms)
+✔ YueLink handoff: Portal accepts Board's one-time import capability (34.85159ms)
+✔ payment quote: Portal accepts Board's ordinary, rebalanced and free receipts (1.170948ms)
+✔ order quote: Portal accepts Board's signed quote for the period it asked for (0.92138ms)
+✔ quote clock: real order and checkout receipts bind server TTL and fail closed (0.413579ms)
+✔ refund eligibility / refund receipt satisfy RefundQuote (13.478141ms)
+✔ order list items satisfy Order (balance_amount, refunded_at, refunded_amount) (4.789656ms)
+✔ auto-renew preference and revert receipt satisfy their types (1.889108ms)
+✔ login / register / passkey sessions and the bare token2Login body (0.337463ms)
+✔ passkey second factor: the ticket survives Board's 422/400 exactly while retryable (0.251311ms)
+✔ pause-state satisfies PauseState and a paused account keeps its resume card (1.05582ms)
+✔ email-verify status satisfies EmailVerifyStatus, including reward_pool_available null (2.153987ms)
+✔ invite/fetch satisfies InviteFetchFull and the mirror base is read exactly as Board sends it (2.488865ms)
+✔ credential reset pending: Board's 409 + code keeps the session (never the 403 logout path) (0.229288ms)
+✔ chart x-axis labels keep first/last and never crowd the forced last label (3.050281ms)
+✔ chart y-axis padding grows with the widest tick label instead of a fixed 44px (0.288067ms)
+✔ niceTicks stays defined at zero and covers the max value (0.289718ms)
+✔ charts always expose the screen-reader data list and never a nameless role=img (0.418453ms)
+✔ pagination math clamps, tolerates bad page sizes and rejects non-numeric jumps (0.154655ms)
+✔ pagination is a labelled nav landmark with a live count and a numeric jump field (0.221497ms)
+✔ button owns the pending state: aria-busy, focus kept, click blocked, spinner injected (3.543123ms)
+✔ dialog lets Radix restore focus to the opener and only falls back when it truly did not (0.356891ms)
+✔ confirm dialogs are alertdialogs, keep destructive ones from outside-dismissal and use Button pending (0.390631ms)
+✔ select content defaults to popper positioning (2025+ shadcn/ui) (0.23003ms)
+✔ tooltip reuses an ancestor provider instead of nesting one per tooltip (0.14915ms)
+✔ skeleton is decorative and LoadingState offers content-shaped skeletons (0.258006ms)
+✔ switch hit area meets WCAG 2.2 24px without changing its 36×20 visual (0.147775ms)
+✔ status badge forwards native span props (title/aria/data) (0.12526ms)
+✔ theme toggle is an APG toggle button: constant label + aria-pressed (1.162925ms)
+✔ overlay surfaces use the shared elevation token and no raw hex (0.381721ms)
+✔ every t() key in packages/ui exists in its catalog and the catalog has no orphans (3.872337ms)
+✔ node_modules/@yueto/ui is the current packages/ui source (run pnpm install after editing packages/ui) (6.852545ms)
+✔ formatSLO keeps at most two decimals (11.269647ms)
+✔ formatLatency rejects a missing sample (0.145615ms)
+✔ the export boundary rejects anything that could redirect the receiving app (2.517623ms)
+✔ third-party one-click URI goldens carry the subscription URL unchanged (0.292337ms)
+✔ copy-only clients return no scheme rather than an unverified one (0.148ms)
+✔ Shadowrocket's discoverable choices preserve credentials and set only supported node filters (0.354045ms)
+✔ the portal does not recommend clients without a proven managed profile (0.135545ms)
+✔ web runtime sources never offer a Shadowrocket one-click URI (14.564105ms)
+✔ Clash Verge-compatible url suffix and Loon node-list grammar stay pinned (0.324671ms)
+✔ YueLink handoff uses canonical account sync without a subscription credential (1.252219ms)
+✔ YueLink direct import accepts only a server-minted short-lived capability (1.71237ms)
+✔ YueLink import rejects credential URLs and response/code disagreement (0.60102ms)
+✔ direct third-party export is explicitly classified as long-lived (0.217528ms)
+✔ direct export rejects insecure remote and credentialed URLs (0.182512ms)
+✔ direct export permits HTTP only for local development (0.130263ms)
+✔ direct export rejects raw and percent-encoded control characters (0.109662ms)
+✔ masked subscription display does not contain path or query credentials (0.144442ms)
+✔ masked display also hides short final path segments (0.449147ms)
+✔ malformed subscription values are never echoed by the mask (0.220588ms)
+✔ AI support language is explicit only for English (1.501312ms)
+✔ AI support accepts only a successful non-empty reply envelope (1.055643ms)
+✔ AI support sends only the latest bounded in-memory turns (0.24343ms)
+✔ AI support projects confirmation cards from data.actions (checkin-api envelope) (0.266396ms)
+✔ AI support still accepts the legacy root.actions envelope (0.179004ms)
+✔ 生产在用的每个分类码都有展示名，不会把内部标识摆给用户 (0.815748ms)
+✔ 落进同一个桶的两个码不会渲染出两个同名分组 (0.133937ms)
+✔ 未登记的自定义分类原样透出，而不是被藏起来 (0.148076ms)
+✔ 空分类落进未分类桶，且该桶键不可能与服务端分类名相撞 (0.123327ms)
+✔ 每个展示名都在 i18n 目录里（否则英文用户看到中文分组标题） (2.78873ms)
+✔ Telegram binding uses only a short-lived purpose-bound code (0.792104ms)
+✔ Telegram bind response rejects subscription authorities and malformed TTLs (0.361305ms)
+✔ the one-tap deep link carries the code and refuses anything that is not t.me (0.271993ms)
+✔ a bind code too long for Telegram's start payload falls back instead of silently truncating (0.135425ms)
+✔ WCAG arithmetic and normal/large-icon thresholds have independent anchors (1.933949ms)
+✔ all theme colour roles are classified; missing and unsupported inputs fail closed (36.184405ms)
+✔ the guard rejects blue-brand text/fill regressions and respects CSS specificity (7.175767ms)
+✔ purchase surfaces keep white text on the blue fills (0.533113ms)
+✔ web: theme imports and per-app overrides remain covered (0.820441ms)
+✔ web: app theme imports cannot bypass enrollment (0.670367ms)
+✔ web: missing brand bridge imports cannot bypass enrollment (0.377145ms)
+✔ web: app toast overrides participate in the active contrast checks (12.912952ms)
+✔ web/default/light/srgb/normal: every text/background pair meets WCAG AA (1.982904ms)
+✔ web/default/light/srgb/more: every text/background pair meets WCAG AA (1.38407ms)
+✔ web/default/light/oklch/normal: every text/background pair meets WCAG AA (1.375198ms)
+✔ web/default/light/oklch/more: every text/background pair meets WCAG AA (1.121123ms)
+✔ web/default/light/oklch-p3/normal: every text/background pair meets WCAG AA (1.451643ms)
+✔ web/default/light/oklch-p3/more: every text/background pair meets WCAG AA (0.850445ms)
+✔ web/default/dark/srgb/normal: every text/background pair meets WCAG AA (1.436714ms)
+✔ web/default/dark/srgb/more: every text/background pair meets WCAG AA (1.42239ms)
+✔ web/default/dark/oklch/normal: every text/background pair meets WCAG AA (1.575176ms)
+✔ web/default/dark/oklch/more: every text/background pair meets WCAG AA (1.285504ms)
+✔ web/default/dark/oklch-p3/normal: every text/background pair meets WCAG AA (1.827471ms)
+✔ web/default/dark/oklch-p3/more: every text/background pair meets WCAG AA (0.947013ms)
+✔ web/ocean/light/srgb/normal: every text/background pair meets WCAG AA (0.913788ms)
+✔ web/ocean/light/srgb/more: every text/background pair meets WCAG AA (1.189319ms)
+✔ web/ocean/light/oklch/normal: every text/background pair meets WCAG AA (0.958139ms)
+✔ web/ocean/light/oklch/more: every text/background pair meets WCAG AA (1.248583ms)
+✔ web/ocean/light/oklch-p3/normal: every text/background pair meets WCAG AA (0.934401ms)
+✔ web/ocean/light/oklch-p3/more: every text/background pair meets WCAG AA (1.979926ms)
+✔ web/ocean/dark/srgb/normal: every text/background pair meets WCAG AA (1.219234ms)
+✔ web/ocean/dark/srgb/more: every text/background pair meets WCAG AA (0.843003ms)
+✔ web/ocean/dark/oklch/normal: every text/background pair meets WCAG AA (1.048454ms)
+✔ web/ocean/dark/oklch/more: every text/background pair meets WCAG AA (1.07147ms)
+✔ web/ocean/dark/oklch-p3/normal: every text/background pair meets WCAG AA (1.201416ms)
+✔ web/ocean/dark/oklch-p3/more: every text/background pair meets WCAG AA (0.824654ms)
+✔ web/graphite/light/srgb/normal: every text/background pair meets WCAG AA (1.077553ms)
+✔ web/graphite/light/srgb/more: every text/background pair meets WCAG AA (0.814849ms)
+✔ web/graphite/light/oklch/normal: every text/background pair meets WCAG AA (1.121686ms)
+✔ web/graphite/light/oklch/more: every text/background pair meets WCAG AA (0.809171ms)
+✔ web/graphite/light/oklch-p3/normal: every text/background pair meets WCAG AA (0.934893ms)
+✔ web/graphite/light/oklch-p3/more: every text/background pair meets WCAG AA (1.131247ms)
+✔ web/graphite/dark/srgb/normal: every text/background pair meets WCAG AA (0.835312ms)
+✔ web/graphite/dark/srgb/more: every text/background pair meets WCAG AA (0.836376ms)
+✔ web/graphite/dark/oklch/normal: every text/background pair meets WCAG AA (1.179954ms)
+✔ web/graphite/dark/oklch/more: every text/background pair meets WCAG AA (0.817171ms)
+✔ web/graphite/dark/oklch-p3/normal: every text/background pair meets WCAG AA (0.965482ms)
+✔ web/graphite/dark/oklch-p3/more: every text/background pair meets WCAG AA (0.999168ms)
+✔ web/forest/light/srgb/normal: every text/background pair meets WCAG AA (0.782071ms)
+✔ web/forest/light/srgb/more: every text/background pair meets WCAG AA (0.765365ms)
+✔ web/forest/light/oklch/normal: every text/background pair meets WCAG AA (1.173058ms)
+✔ web/forest/light/oklch/more: every text/background pair meets WCAG AA (0.794868ms)
+✔ web/forest/light/oklch-p3/normal: every text/background pair meets WCAG AA (0.880371ms)
+✔ web/forest/light/oklch-p3/more: every text/background pair meets WCAG AA (0.949947ms)
+✔ web/forest/dark/srgb/normal: every text/background pair meets WCAG AA (0.788008ms)
+✔ web/forest/dark/srgb/more: every text/background pair meets WCAG AA (0.779093ms)
+✔ web/forest/dark/oklch/normal: every text/background pair meets WCAG AA (1.135896ms)
+✔ web/forest/dark/oklch/more: every text/background pair meets WCAG AA (0.749026ms)
+✔ web/forest/dark/oklch-p3/normal: every text/background pair meets WCAG AA (1.171442ms)
+✔ web/forest/dark/oklch-p3/more: every text/background pair meets WCAG AA (0.794088ms)
+✔ web/violet/light/srgb/normal: every text/background pair meets WCAG AA (0.685598ms)
+✔ web/violet/light/srgb/more: every text/background pair meets WCAG AA (1.012249ms)
+✔ web/violet/light/oklch/normal: every text/background pair meets WCAG AA (0.883442ms)
+✔ web/violet/light/oklch/more: every text/background pair meets WCAG AA (0.778465ms)
+✔ web/violet/light/oklch-p3/normal: every text/background pair meets WCAG AA (1.190122ms)
+✔ web/violet/light/oklch-p3/more: every text/background pair meets WCAG AA (0.834919ms)
+✔ web/violet/dark/srgb/normal: every text/background pair meets WCAG AA (0.734939ms)
+✔ web/violet/dark/srgb/more: every text/background pair meets WCAG AA (1.016183ms)
+✔ web/violet/dark/oklch/normal: every text/background pair meets WCAG AA (0.943904ms)
+✔ web/violet/dark/oklch/more: every text/background pair meets WCAG AA (0.753314ms)
+✔ web/violet/dark/oklch-p3/normal: every text/background pair meets WCAG AA (1.29927ms)
+✔ web/violet/dark/oklch-p3/more: every text/background pair meets WCAG AA (0.993969ms)
+✔ tokens.g literals equal the generated CSS fences they stand in for (0.8756ms)
+✔ theme.ts hand-copies no hex; its fallbacks come from the generated module (0.379601ms)
+✔ first-frame theme-color literals in theme-init.js match the generated canvas (0.128952ms)
+✔ palette swatches are the colours the palettes actually apply (0.782866ms)
+✔ denied browser storage still starts and applies current-session theme choices (0.653267ms)
+✔ persisted theme changes in another tab and storage reset update the page (3.93348ms)
+✔ appeal prefixes and default subjects match the Go source (0.920648ms)
+✔ a ban mention outranks a generic appeal mention (0.288064ms)
+✔ usage restrictions become an appeal ticket and a suspension becomes a ban ticket (0.205317ms)
+✔ a stored prefix is the category when the response omits it (0.128722ms)
+✔ choosing appeal or ban fills the shared default subject and keeps a typed one (0.135037ms)
+✔ Shanghai day and month boundaries do not depend on the viewer timezone (0.672798ms)
+✔ traffic summary merges rate rows and separates upload from download (0.805273ms)
+✔ calendar trend fills zero days and daily average denominator is elapsed calendar days (0.184261ms)
+✔ traffic summary rejects prior-month, future, malformed and negative values (0.175877ms)
+✔ missing traffic directions stay unknown while real zero stays zero (0.170885ms)
+✔ one malformed rate row taints only its incomplete direction (0.110184ms)
+✔ traffic surfaces refresh every minute and use the shared Shanghai summary (0.667639ms)
+✔ relative usage bars are decorative instead of fake task progress (0.203259ms)
+✔ traffic detail consistently presents upload before download (0.115463ms)
+✔ daily usage remains visible on narrow screens and on the first day of a month (0.132605ms)
+✔ traffic views preserve unknown values instead of manufacturing zero usage (0.133762ms)
+✔ brand text consumers use the readable action role, including variants (0.857865ms)
+✔ default light brand text reaches AA on surfaces and primary-tinted cards (0.981157ms)
+✔ default dark brand text reaches AA on surfaces and primary-tinted cards (0.37615ms)
+✔ dark graphite/forest/violet primary buttons reach WCAG AA on their fill (0.495022ms)
+✔ purchase buttons retain WCAG AA foregrounds over blue fills in dark tenant palettes (0.6272ms)
+✔ toasts follow the resolved theme and use the shared token override (0.130098ms)
+✔ glass surfaces degrade under reduced transparency and chrome respects safe areas (0.364417ms)
+✔ every tenant palette drives fill and link in both modes, at WCAG AA (0.990942ms)
+✔ unsampled page loads never download the library (3.175911ms)
+✔ sampled page batches values into one beacon on first hide, each metric once (4.252253ms)
+✔ a final value that arrives after our hide listener still goes out (0.660772ms)
+✔ a refused beacon is retried on the next hide or pagehide (1.659891ms)
+✔ unknown names and non-finite or negative values are dropped (1.645975ms)
+✔ rounding keeps CLS precision and integer milliseconds (0.195433ms)
+✔ the SPA starts the sampler with a lazily imported library (0.387533ms)
+✔ coarse language is sent once and script overrides region (0.704718ms)
+ℹ tests 497
+ℹ suites 0
+ℹ pass 497
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2291.385495
+$ node scripts/bundle-size.mjs dist bundle-size.json
+[bundle-size] 首屏 13 个文件（12 JS）：
+    67402 gz    58167 br  assets/vendor-react-DnzGekdM.js
+    36684 gz    33128 br  assets/vendor-tanstack-B6cq8RoS.js
+    18406 gz    16387 br  assets/client-CEoJC3xO.js
+    18401 gz    15344 br  assets/index-bSDlk5jf.css
+    11970 gz    10168 br  assets/index-CbuPv380.js
+    11252 gz     9892 br  assets/dist-V4Qe1EW4.js
+     9325 gz     8272 br  assets/dist-DZgwOaOP.js
+     3928 gz     3459 br  assets/button-BZ6mrUZ7.js
+[bundle-size] JS gzip 163994 / br 143887；CSS gzip 18401 / br 15344
+[bundle-size] 目标 JS gzip ≤ 170000 B：已达成（余量 6006 B）
+[bundle-size] ✓ 未超出基线
