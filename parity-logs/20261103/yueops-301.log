@@ -1,0 +1,3919 @@
+## yueops #301 parity (box): targeted pytest at head 1f0c2adb5 vs base 8b8d38401, same command
+### HEAD
+head=1f0c2adb56876e18dee7d3aea0bd97c04cda8390 cmd=pytest --continue-on-collection-errors targeted(41): tests/test_admin_secret_boundary_20260730.py tests/test_agent_install_per_sid_token_20260926.py tests/test_agent_relay_udp_probe_not_applicable_20260927.py tests/test_agent_secret_boundary_20260730.py tests/test_agent_token_decrypt_failure_is_fail_closed_20260901.py tests/test_agent_token_per_sid_20260830.py tests/test_auth_password_concurrency_20260814.py tests/test_auth_session_revocation_20260814.py tests/test_bastion_service_boundary_20260803.py tests/test_central_ddns_20260923.py tests/test_console_miniapp_deepaudit_20260927.py tests/test_console_static_release_20260925.py tests/test_dashboard_nullable_kpis_20260822.py tests/test_dashboard_quality_observation.py tests/test_delete_server_dns_before_ledger_20260825.py tests/test_dns_add_ip_no_silent_overwrite_20260825.py tests/test_dns_replace_ip_multi_a_safe_20260831.py tests/test_emby_api.py tests/test_host_service_contracts_20261013.py tests/test_import_boundaries_20261030.py tests/test_machine_metrics_ownership_20260727.py tests/test_maintenance_deploy_mode.py tests/test_metrics_fixed_ingress_20260910.py tests/test_metrics_ip_change_corroboration_20260830.py tests/test_native_control_hard_cut.py tests/test_native_session_consumer_20261018.py tests/test_node_health_pipeline_20260801.py tests/test_openapi_contract_20261030.py tests/test_process_metrics_20261027.py tests/test_relay_agent_delivery_20260927.py tests/test_relay_dns_delegated_20260923.py tests/test_release_orchestration_20260831.py tests/test_rollout_ring_chain_20260727.py tests/test_schemas.py tests/test_service_readiness.py tests/test_task_created_at_utc_20260926.py tests/test_task_runner_target_safety.py tests/test_task_secret_boundary_20260730.py tests/test_yueboard_internal.py tests/test_yueboard_internal_contract.py tests/test_yueops_ddns_central_report_20260923.py 
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+...................................FFFFFFF...........EEEEFFF............ [ 12%]
+..........EEEEEEE..............F.......................................s [ 24%]
+...........................................ss........................... [ 36%]
+......F...........F....................................EEEEE............ [ 48%]
+...FFFFFFFF......................................FF..................... [ 60%]
+.....................................F.................................. [ 72%]
+...EEE.................................................................. [ 84%]
+..............s............................................F............ [ 96%]
+..................                                                       [100%]
+==================================== ERRORS ====================================
+________ ERROR collecting tests/test_admin_secret_boundary_20260730.py _________
+ImportError while importing test module '/workspace/lane/wt/nz301/tests/test_admin_secret_boundary_20260730.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_admin_secret_boundary_20260730.py:10: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+______ ERROR collecting tests/test_auth_password_concurrency_20260814.py _______
+ImportError while importing test module '/workspace/lane/wt/nz301/tests/test_auth_password_concurrency_20260814.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_auth_password_concurrency_20260814.py:10: in <module>
+    from web import auth, database
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_______ ERROR collecting tests/test_auth_session_revocation_20260814.py ________
+ImportError while importing test module '/workspace/lane/wt/nz301/tests/test_auth_session_revocation_20260814.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_auth_session_revocation_20260814.py:12: in <module>
+    from web import auth, models
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_____________ ERROR collecting tests/test_central_ddns_20260923.py _____________
+ImportError while importing test module '/workspace/lane/wt/nz301/tests/test_central_ddns_20260923.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_central_ddns_20260923.py:33: in <module>
+    from web.api import metrics  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_______ ERROR collecting tests/test_dashboard_nullable_kpis_20260822.py ________
+ImportError while importing test module '/workspace/lane/wt/nz301/tests/test_dashboard_nullable_kpis_20260822.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_dashboard_nullable_kpis_20260822.py:6: in <module>
+    from web.api import dashboard as dashboard_api
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_________ ERROR collecting tests/test_dashboard_quality_observation.py _________
+ImportError while importing test module '/workspace/lane/wt/nz301/tests/test_dashboard_quality_observation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_dashboard_quality_observation.py:7: in <module>
+    from web.api.dashboard import _quality_signal_counts
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+________ ERROR collecting tests/test_metrics_fixed_ingress_20260910.py _________
+ImportError while importing test module '/workspace/lane/wt/nz301/tests/test_metrics_fixed_ingress_20260910.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_metrics_fixed_ingress_20260910.py:11: in <module>
+    from web.api import metrics
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+________ ERROR collecting tests/test_release_orchestration_20260831.py _________
+ImportError while importing test module '/workspace/lane/wt/nz301/tests/test_release_orchestration_20260831.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_release_orchestration_20260831.py:27: in <module>
+    from web.api import release as release_api  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web/api/release.py:32: in <module>
+    from ..audit import write_audit
+web/audit.py:19: in <module>
+    from .auth import require_role
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_______________ ERROR collecting tests/test_service_readiness.py _______________
+ImportError while importing test module '/workspace/lane/wt/nz301/tests/test_service_readiness.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_service_readiness.py:13: in <module>
+    from web import app as web_app
+web/app.py:17: in <module>
+    from .api import (
+web/api/antispam.py:16: in <module>
+    from ..auth import get_current_user
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_______ ERROR at setup of test_create_task_rejects_redacted_placeholder ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fa9ef4d0>
+
+    @pytest.fixture()
+    def tasks_api(monkeypatch):
+>       from web import audit
+
+tests/test_console_miniapp_deepaudit_20260927.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_retry_reuses_the_stored_ciphertext_not_the_redacted_projection _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fa9eda20>
+
+    @pytest.fixture()
+    def tasks_api(monkeypatch):
+>       from web import audit
+
+tests/test_console_miniapp_deepaudit_20260927.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+______ ERROR at setup of test_retry_refuses_running_and_poisoned_sources _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fa9ed710>
+
+    @pytest.fixture()
+    def tasks_api(monkeypatch):
+>       from web import audit
+
+tests/test_console_miniapp_deepaudit_20260927.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+___ ERROR at setup of test_list_tasks_filters_server_side_and_reports_total ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7faf27a80>
+
+    @pytest.fixture()
+    def tasks_api(monkeypatch):
+>       from web import audit
+
+tests/test_console_miniapp_deepaudit_20260927.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_dnspod_cleanup_refuses_to_delete_the_unrecoverable_ledger_row _
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_____________ ERROR at setup of test_unconfigured_dns_refuses_too ______________
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+________ ERROR at setup of test_last_a_record_refusal_blocks_the_delete ________
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_________ ERROR at setup of test_a_cleanup_exception_blocks_the_delete _________
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+___ ERROR at setup of test_successful_cleanup_deletes_dns_first_then_the_row ___
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_________ ERROR at setup of test_partial_cleanup_is_reported_as_not_ok _________
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+__________ ERROR at setup of test_delete_only_path_makes_no_dns_claim __________
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_real_api_persists_oversized_core_then_dashboard_uses_sessions _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fd53ff50>
+
+    @pytest.fixture
+    def integration(monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+    
+        import web.notifier
+        import web.scheduler
+        import web.scheduler_health as health
+        from web import models
+>       from web.api import dashboard, metrics
+
+tests/test_native_session_consumer_20261018.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_dashboard_never_turns_partial_or_stale_into_zero[missing_slot] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fd53c210>
+
+    @pytest.fixture
+    def integration(monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+    
+        import web.notifier
+        import web.scheduler
+        import web.scheduler_health as health
+        from web import models
+>       from web.api import dashboard, metrics
+
+tests/test_native_session_consumer_20261018.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_dashboard_never_turns_partial_or_stale_into_zero[invalid] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fd5b73f0>
+
+    @pytest.fixture
+    def integration(monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+    
+        import web.notifier
+        import web.scheduler
+        import web.scheduler_health as health
+        from web import models
+>       from web.api import dashboard, metrics
+
+tests/test_native_session_consumer_20261018.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_dashboard_never_turns_partial_or_stale_into_zero[stale] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fd5b4520>
+
+    @pytest.fixture
+    def integration(monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+    
+        import web.notifier
+        import web.scheduler
+        import web.scheduler_health as health
+        from web import models
+>       from web.api import dashboard, metrics
+
+tests/test_native_session_consumer_20261018.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+______ ERROR at setup of test_real_scheduler_notifier_uses_counter_growth ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fcdecc20>
+
+    @pytest.fixture
+    def integration(monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+    
+        import web.notifier
+        import web.scheduler
+        import web.scheduler_health as health
+        from web import models
+>       from web.api import dashboard, metrics
+
+tests/test_native_session_consumer_20261018.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_create_task_refuses_a_bad_ring_batch_before_creating_the_task _
+
+task_modules = (<module 'web.task_runner' from '/workspace/lane/wt/nz301/web/task_runner/__init__.py'>, <module 'web.models' from '/workspace/lane/wt/nz301/web/models.py'>, <module 'web.chain' from '/workspace/lane/wt/nz301/web/chain.py'>)
+
+    @pytest.fixture(scope="module")
+    def api_modules(task_modules):
+        return (
+>           importlib.import_module("web.api.tasks"),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            importlib.import_module("web.api.servers"),
+            importlib.import_module("web.api.incidents"),
+        )
+
+tests/test_rollout_ring_chain_20260727.py:439: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/tasks.py:13: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_rollout_ring_summary_excludes_maintenance_and_exposes_thresholds _
+
+task_modules = (<module 'web.task_runner' from '/workspace/lane/wt/nz301/web/task_runner/__init__.py'>, <module 'web.models' from '/workspace/lane/wt/nz301/web/models.py'>, <module 'web.chain' from '/workspace/lane/wt/nz301/web/chain.py'>)
+
+    @pytest.fixture(scope="module")
+    def api_modules(task_modules):
+        return (
+>           importlib.import_module("web.api.tasks"),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            importlib.import_module("web.api.servers"),
+            importlib.import_module("web.api.incidents"),
+        )
+
+tests/test_rollout_ring_chain_20260727.py:439: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/tasks.py:13: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+____ ERROR at setup of test_incident_attribution_rejects_a_dangling_task_id ____
+
+task_modules = (<module 'web.task_runner' from '/workspace/lane/wt/nz301/web/task_runner/__init__.py'>, <module 'web.models' from '/workspace/lane/wt/nz301/web/models.py'>, <module 'web.chain' from '/workspace/lane/wt/nz301/web/chain.py'>)
+
+    @pytest.fixture(scope="module")
+    def api_modules(task_modules):
+        return (
+>           importlib.import_module("web.api.tasks"),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            importlib.import_module("web.api.servers"),
+            importlib.import_module("web.api.incidents"),
+        )
+
+tests/test_rollout_ring_chain_20260727.py:439: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/tasks.py:13: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+=================================== FAILURES ===================================
+_________________________ test_per_sid_token_accepted __________________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7fa7fcd7aa50>
+
+    def test_per_sid_token_accepted(db):
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _seed_server(db, "yue-a", PERSID)
+>       _verify("yue-a", PERSID, db)  # 不抛 = 通过
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_agent_token_per_sid_20260830.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_______________ test_wrong_sid_token_rejected_when_fallback_off ________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7fa7fcd79160>
+
+    def test_wrong_sid_token_rejected_when_fallback_off(db):
+        # 稳态：回退关闭。yue-a 用 yue-b 的 token（= 被拿下节点冒充）必须被拒。
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _set(db, "agent_token_global_fallback", "0")
+        _seed_server(db, "yue-a", PERSID)
+        _seed_server(db, "yue-b", "q" * 48)
+        with pytest.raises(HTTPException) as e:
+>           _verify("yue-a", "q" * 48, db)
+
+tests/test_agent_token_per_sid_20260830.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+______ test_shared_token_is_never_accepted_even_with_fallback_setting_on _______
+
+db = <sqlalchemy.orm.session.Session object at 0x7fa7fcd7acf0>
+
+    def test_shared_token_is_never_accepted_even_with_fallback_setting_on(db):
+        # 2026-09-26：过渡期结束。回退开关不再被读取；共享 token 对任何 sid 都 403。
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _set(db, "agent_token_global_fallback", "1")
+        _seed_server(db, "yue-a", PERSID)
+>       _verify("yue-a", PERSID, db)
+
+tests/test_agent_token_per_sid_20260830.py:78: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_____________ test_server_without_per_sid_token_cannot_use_shared ______________
+
+db = <sqlalchemy.orm.session.Session object at 0x7fa7fcd7b0e0>
+
+    def test_server_without_per_sid_token_cannot_use_shared(db):
+        # 此前「per_sid is None」这条让共享 token 冒充任何一台还没铸 token 的机器。
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _seed_server(db, "yue-new", token=None)
+        with pytest.raises(HTTPException) as e:
+>           _verify("yue-new", SHARED, db)
+
+tests/test_agent_token_per_sid_20260830.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+______________________ test_unknown_sid_cannot_use_shared ______________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7fa7fcd7b4d0>
+
+    def test_unknown_sid_cannot_use_shared(db):
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        with pytest.raises(HTTPException):
+>           _verify("yue-ghost", SHARED, db)
+
+tests/test_agent_token_per_sid_20260830.py:96: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_____________ test_backfilled_but_never_rotated_value_is_rejected ______________
+
+db = <sqlalchemy.orm.session.Session object at 0x7fa7fcd7b8c0>
+
+    def test_backfilled_but_never_rotated_value_is_rejected(db):
+        # per-sid 列里存的就是共享值（backfill 过从未轮换）= 认它就是认共享 token。
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _seed_server(db, "yue-vn-relay-1", SHARED)
+        with pytest.raises(HTTPException) as e:
+>           _verify("yue-vn-relay-1", SHARED, db)
+
+tests/test_agent_token_per_sid_20260830.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+__________________________ test_empty_token_rejected ___________________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7fa7fcd7bcb0>
+
+    def test_empty_token_rejected(db):
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _seed_server(db, "yue-a", PERSID)
+        with pytest.raises(HTTPException):
+>           _verify("yue-a", None, db)
+
+tests/test_agent_token_per_sid_20260830.py:112: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_________ test_support_query_failure_is_reported_as_degraded_not_empty _________
+
+sqlite_session = <sqlalchemy.orm.session.Session object at 0x7fa7fcd7b230>
+
+    def test_support_query_failure_is_reported_as_degraded_not_empty(sqlite_session):
+>       from web.api import support
+
+tests/test_console_miniapp_deepaudit_20260927.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/support.py:28: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+________ test_support_recent_lists_return_503_when_the_main_query_fails ________
+
+sqlite_session = <sqlalchemy.orm.session.Session object at 0x7fa7fcd7ae40>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fb61a5f0>
+
+    def test_support_recent_lists_return_503_when_the_main_query_fails(sqlite_session, monkeypatch):
+>       from web.api import support
+
+tests/test_console_miniapp_deepaudit_20260927.py:190: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/support.py:28: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_________ test_support_missing_table_still_reads_as_missing_not_error __________
+
+sqlite_session = <sqlalchemy.orm.session.Session object at 0x7fa7fcd7b8c0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fb61acf0>
+
+    def test_support_missing_table_still_reads_as_missing_not_error(sqlite_session, monkeypatch):
+        """反向对照：缺表仍走 table_missing 通道，不被误报成失败。"""
+>       from web.api import support
+
+tests/test_console_miniapp_deepaudit_20260927.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/support.py:28: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+________ test_servers_dns_replace_endpoint_uses_replace_ip_not_clobber _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fa7fc735f60>
+
+    def test_servers_dns_replace_endpoint_uses_replace_ip_not_clobber(monkeypatch):
+        """管理端 POST /{sid}/dns/replace 的 DNSPod 分支此前是 replace_a_record→update
+        降级，多 A 池填错 old_ip 会盲改第一条 A 记录摘掉健康兄弟。现统一 replace_ip：
+        多 A 无匹配则拒绝，绝不降级 update_subdomain_ip。"""
+        import os
+    
+        prev = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "sqlite://"
+        try:
+>           from web.api import servers as servers_mod
+
+tests/test_dns_replace_ip_multi_a_safe_20260831.py:190: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_________________ test_runtime_contract_exports_are_identical __________________
+
+    def test_runtime_contract_exports_are_identical():
+        from runtime_config import board_snapshot, help_articles, html_sanitize, publish, schemas, store
+    
+>       from web.api import content_docs
+
+tests/test_import_boundaries_20261030.py:225: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/content_docs.py:14: in <module>
+    from ..audit import write_audit
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+____ test_content_runtime_uses_shipped_owner_objects_without_path_mutation _____
+
+    def test_content_runtime_uses_shipped_owner_objects_without_path_mutation():
+        import sys
+    
+        from runtime_config import publish
+    
+>       from web.api.content_docs import _runtime
+
+tests/test_import_boundaries_20261030.py:277: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/content_docs.py:14: in <module>
+    from ..audit import write_audit
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+________________ test_sanitize_node_health_passthrough_and_cap _________________
+
+    def test_sanitize_node_health_passthrough_and_cap():
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES, _sanitize_node_health
+
+tests/test_node_health_pipeline_20260801.py:43: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_______ test_oversized_readyz_body_really_exceeds_cap[all-double-quotes] _______
+
+body = '"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""...""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""'
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            pytest.param('"' * 2400, id="all-double-quotes"),
+            pytest.param("\x01" * 800, id="control-chars-6x-escape"),
+            pytest.param("节点拒绝面板下发配置" * 300, id="chinese-bytes-not-chars"),
+            pytest.param("x" * 4200, id="plain-oversized"),
+        ],
+    )
+    def test_oversized_readyz_body_really_exceeds_cap(body):
+        """B 的取证：readyz 正文经 JSON 转义后确实能越过 8192 字节。
+    
+        上限不能只靠采集侧：新版 agent.sh 有 READYZ_BODY_MAX=600，但字段来自 40 台
+        各自升级节奏的机器，旧/损坏的采集器随时可能报出这种 payload。
+        """
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES
+
+tests/test_node_health_pipeline_20260801.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+____ test_oversized_readyz_body_really_exceeds_cap[control-chars-6x-escape] ____
+
+body = '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\...01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            pytest.param('"' * 2400, id="all-double-quotes"),
+            pytest.param("\x01" * 800, id="control-chars-6x-escape"),
+            pytest.param("节点拒绝面板下发配置" * 300, id="chinese-bytes-not-chars"),
+            pytest.param("x" * 4200, id="plain-oversized"),
+        ],
+    )
+    def test_oversized_readyz_body_really_exceeds_cap(body):
+        """B 的取证：readyz 正文经 JSON 转义后确实能越过 8192 字节。
+    
+        上限不能只靠采集侧：新版 agent.sh 有 READYZ_BODY_MAX=600，但字段来自 40 台
+        各自升级节奏的机器，旧/损坏的采集器随时可能报出这种 payload。
+        """
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES
+
+tests/test_node_health_pipeline_20260801.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+____ test_oversized_readyz_body_really_exceeds_cap[chinese-bytes-not-chars] ____
+
+body = '节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下...拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置'
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            pytest.param('"' * 2400, id="all-double-quotes"),
+            pytest.param("\x01" * 800, id="control-chars-6x-escape"),
+            pytest.param("节点拒绝面板下发配置" * 300, id="chinese-bytes-not-chars"),
+            pytest.param("x" * 4200, id="plain-oversized"),
+        ],
+    )
+    def test_oversized_readyz_body_really_exceeds_cap(body):
+        """B 的取证：readyz 正文经 JSON 转义后确实能越过 8192 字节。
+    
+        上限不能只靠采集侧：新版 agent.sh 有 READYZ_BODY_MAX=600，但字段来自 40 台
+        各自升级节奏的机器，旧/损坏的采集器随时可能报出这种 payload。
+        """
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES
+
+tests/test_node_health_pipeline_20260801.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+________ test_oversized_readyz_body_really_exceeds_cap[plain-oversized] ________
+
+body = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            pytest.param('"' * 2400, id="all-double-quotes"),
+            pytest.param("\x01" * 800, id="control-chars-6x-escape"),
+            pytest.param("节点拒绝面板下发配置" * 300, id="chinese-bytes-not-chars"),
+            pytest.param("x" * 4200, id="plain-oversized"),
+        ],
+    )
+    def test_oversized_readyz_body_really_exceeds_cap(body):
+        """B 的取证：readyz 正文经 JSON 转义后确实能越过 8192 字节。
+    
+        上限不能只靠采集侧：新版 agent.sh 有 READYZ_BODY_MAX=600，但字段来自 40 台
+        各自升级节奏的机器，旧/损坏的采集器随时可能报出这种 payload。
+        """
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES
+
+tests/test_node_health_pipeline_20260801.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+____________ test_sanitize_node_health_degrades_instead_of_dropping ____________
+
+    def test_sanitize_node_health_degrades_instead_of_dropping():
+        """🚨 payload 最大之时正是健康最差之时：超限必须降级保留判据，不能整份丢成 NULL。"""
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES, _sanitize_node_health
+
+tests/test_node_health_pipeline_20260801.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+___________ test_sanitize_node_health_measures_utf8_bytes_not_chars ____________
+
+    def test_sanitize_node_health_measures_utf8_bytes_not_chars():
+        """中文正文：字符数没超但 UTF-8 字节数超了，必须按字节判。"""
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES, _sanitize_node_health
+
+tests/test_node_health_pipeline_20260801.py:131: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+___________ test_sanitize_node_health_bounded_for_corrupt_collector ____________
+
+    def test_sanitize_node_health_bounded_for_corrupt_collector():
+        """采集器损坏成上千个巨型槽也必须收敛（第 3 级有确定上界）。"""
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES, _sanitize_node_health
+
+tests/test_node_health_pipeline_20260801.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_____ test_ingest_keeps_the_three_new_dimensions_through_the_decision_core _____
+
+    def test_ingest_keeps_the_three_new_dimensions_through_the_decision_core():
+        """超限降级时，环门判据不能正好是被丢掉的那一半。"""
+>       from web.api.metrics import (
+            _NODE_HEALTH_DECISION_KEYS,
+            _NODE_HEALTH_MAX_BYTES,
+            _sanitize_node_health,
+        )
+
+tests/test_node_health_pipeline_20260801.py:791: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+___________ test_code_snapshot_routes_and_disabled_docs[yueops-web] ____________
+
+exporter = <module 'export_openapi.py' from '/workspace/lane/wt/nz301/scripts/export-openapi.py'>
+service = 'yueops-web'
+
+    @pytest.mark.parametrize("service", ["yueops-web", "yue-bot"])
+    def test_code_snapshot_routes_and_disabled_docs(exporter, service):
+        # Fresh process avoids bot/config module pollution across central CI shards.
+        code = """
+    import json, runpy
+    from fastapi.routing import APIRoute, iter_route_contexts
+    from fastapi.testclient import TestClient
+    m = runpy.run_path('scripts/export-openapi.py')
+    app = m['load_app'](SERVICE)
+    schema = m['snapshot'](app, SERVICE)
+    contexts = list(iter_route_contexts(app.routes))
+    expected = {(method.lower(), route.path_format) for route in contexts
+                if isinstance(route.original_route, APIRoute) for method in route.methods}
+    actual = {(method, path) for path, item in schema['paths'].items() for method in item}
+    assert expected and expected == actual
+    assert sum(len(route.methods) for route in contexts
+               if isinstance(route.original_route, APIRoute)) == len(actual)
+    inventory = schema['x-yue-contract']['routes']
+    assert len(contexts) == len(inventory)
+    assert sorted((r.path, type(r.original_route).__name__, sorted(r.methods or []))
+                  for r in contexts) == sorted((r['path'], r['kind'], r['methods']) for r in inventory)
+    assert app.openapi_url is None and app.docs_url is None and app.redoc_url is None
+    # No context manager: deliberately do not start the production lifespan.
+    client = TestClient(app)
+    for path in ('/openapi.json', '/docs', '/redoc'):
+        assert client.get(path).status_code == 404
+    print(m['canonical'](schema), end='')
+    """.replace("SERVICE", repr(service))
+        result = subprocess.run(
+            [sys.executable, "-c", code], cwd=ROOT, env=exporter.worker_env(), capture_output=True, text=True, timeout=90
+        )
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: /home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+E           from starlette.testclient import TestClient as TestClient  # noqa
+E         Traceback (most recent call last):
+E           File "<string>", line 6, in <module>
+E             app = m['load_app']('yueops-web')
+E           File "scripts/export-openapi.py", line 60, in load_app
+E             return importlib.import_module("web.app").app
+E                    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+E           File "/usr/lib/python3.13/importlib/__init__.py", line 88, in import_module
+E             return _bootstrap._gcd_import(name[level:], package, level)
+E                    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+E           File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+E           File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+E           File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+E           File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+E           File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+E           File "/workspace/lane/wt/nz301/web/app.py", line 17, in <module>
+E             from .api import (
+E             ...<29 lines>...
+E             )
+E           File "/workspace/lane/wt/nz301/web/api/antispam.py", line 16, in <module>
+E             from ..auth import get_current_user
+E           File "/workspace/lane/wt/nz301/web/auth.py", line 13, in <module>
+E             import jwt
+E         ModuleNotFoundError: No module named 'jwt'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/home/box/Projects/yueto/yueops/.venv/bin/python', '-c', "\nimport json, runpy\nfrom fastapi.r...pace/lane/wt/nz301/web/auth.py", line 13, in <module>\n    import jwt\nModuleNotFoundError: No module named \'jwt\'\n').returncode
+
+tests/test_openapi_contract_20261030.py:66: AssertionError
+______ test_relay_proof_survives_ingest_and_every_slot_reader_ignores_it _______
+
+    def test_relay_proof_survives_ingest_and_every_slot_reader_ignores_it():
+>       from web.api.metrics import _sanitize_node_health
+
+tests/test_relay_agent_delivery_20260927.py:238: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_______ test_certificate_native_wire_fields_match_actual_board_checkout ________
+
+    def test_certificate_native_wire_fields_match_actual_board_checkout():
+>       revision = subprocess.check_output(['git','-C',str(YUEBOARD),'rev-parse','HEAD'], text=True).strip()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_yueboard_internal.py:484: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/subprocess.py:472: in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = False, timeout = None, check = True
+popenargs = (['git', '-C', '/workspace/lane/wt/yueboard', 'rev-parse', 'HEAD'],)
+kwargs = {'stdout': -1, 'text': True}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', '-C', '/workspace/lane/wt/yueboard', 'rev-parse', 'HEAD']' returned non-zero exit status 128.
+
+/usr/lib/python3.13/subprocess.py:577: CalledProcessError
+----------------------------- Captured stderr call -----------------------------
+fatal: cannot change to '/workspace/lane/wt/yueboard': No such file or directory
+=============================== warnings summary ===============================
+../../../../home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../../../home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/starlette/testclient.py:53
+  /home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_agent_token_per_sid_20260830.py::test_per_sid_token_accepted
+FAILED tests/test_agent_token_per_sid_20260830.py::test_wrong_sid_token_rejected_when_fallback_off
+FAILED tests/test_agent_token_per_sid_20260830.py::test_shared_token_is_never_accepted_even_with_fallback_setting_on
+FAILED tests/test_agent_token_per_sid_20260830.py::test_server_without_per_sid_token_cannot_use_shared
+FAILED tests/test_agent_token_per_sid_20260830.py::test_unknown_sid_cannot_use_shared
+FAILED tests/test_agent_token_per_sid_20260830.py::test_backfilled_but_never_rotated_value_is_rejected
+FAILED tests/test_agent_token_per_sid_20260830.py::test_empty_token_rejected
+FAILED tests/test_console_miniapp_deepaudit_20260927.py::test_support_query_failure_is_reported_as_degraded_not_empty
+FAILED tests/test_console_miniapp_deepaudit_20260927.py::test_support_recent_lists_return_503_when_the_main_query_fails
+FAILED tests/test_console_miniapp_deepaudit_20260927.py::test_support_missing_table_still_reads_as_missing_not_error
+FAILED tests/test_dns_replace_ip_multi_a_safe_20260831.py::test_servers_dns_replace_endpoint_uses_replace_ip_not_clobber
+FAILED tests/test_import_boundaries_20261030.py::test_runtime_contract_exports_are_identical
+FAILED tests/test_import_boundaries_20261030.py::test_content_runtime_uses_shipped_owner_objects_without_path_mutation
+FAILED tests/test_node_health_pipeline_20260801.py::test_sanitize_node_health_passthrough_and_cap
+FAILED tests/test_node_health_pipeline_20260801.py::test_oversized_readyz_body_really_exceeds_cap[all-double-quotes]
+FAILED tests/test_node_health_pipeline_20260801.py::test_oversized_readyz_body_really_exceeds_cap[control-chars-6x-escape]
+FAILED tests/test_node_health_pipeline_20260801.py::test_oversized_readyz_body_really_exceeds_cap[chinese-bytes-not-chars]
+FAILED tests/test_node_health_pipeline_20260801.py::test_oversized_readyz_body_really_exceeds_cap[plain-oversized]
+FAILED tests/test_node_health_pipeline_20260801.py::test_sanitize_node_health_degrades_instead_of_dropping
+FAILED tests/test_node_health_pipeline_20260801.py::test_sanitize_node_health_measures_utf8_bytes_not_chars
+FAILED tests/test_node_health_pipeline_20260801.py::test_sanitize_node_health_bounded_for_corrupt_collector
+FAILED tests/test_node_health_pipeline_20260801.py::test_ingest_keeps_the_three_new_dimensions_through_the_decision_core
+FAILED tests/test_openapi_contract_20261030.py::test_code_snapshot_routes_and_disabled_docs[yueops-web]
+FAILED tests/test_relay_agent_delivery_20260927.py::test_relay_proof_survives_ingest_and_every_slot_reader_ignores_it
+FAILED tests/test_yueboard_internal.py::test_certificate_native_wire_fields_match_actual_board_checkout
+ERROR tests/test_admin_secret_boundary_20260730.py
+ERROR tests/test_auth_password_concurrency_20260814.py
+ERROR tests/test_auth_session_revocation_20260814.py
+ERROR tests/test_central_ddns_20260923.py
+ERROR tests/test_dashboard_nullable_kpis_20260822.py
+ERROR tests/test_dashboard_quality_observation.py
+ERROR tests/test_metrics_fixed_ingress_20260910.py
+ERROR tests/test_release_orchestration_20260831.py
+ERROR tests/test_service_readiness.py
+ERROR tests/test_console_miniapp_deepaudit_20260927.py::test_create_task_rejects_redacted_placeholder
+ERROR tests/test_console_miniapp_deepaudit_20260927.py::test_retry_reuses_the_stored_ciphertext_not_the_redacted_projection
+ERROR tests/test_console_miniapp_deepaudit_20260927.py::test_retry_refuses_running_and_poisoned_sources
+ERROR tests/test_console_miniapp_deepaudit_20260927.py::test_list_tasks_filters_server_side_and_reports_total
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_dnspod_cleanup_refuses_to_delete_the_unrecoverable_ledger_row
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_unconfigured_dns_refuses_too
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_last_a_record_refusal_blocks_the_delete
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_a_cleanup_exception_blocks_the_delete
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_successful_cleanup_deletes_dns_first_then_the_row
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_partial_cleanup_is_reported_as_not_ok
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_delete_only_path_makes_no_dns_claim
+ERROR tests/test_native_session_consumer_20261018.py::test_real_api_persists_oversized_core_then_dashboard_uses_sessions
+ERROR tests/test_native_session_consumer_20261018.py::test_dashboard_never_turns_partial_or_stale_into_zero[missing_slot]
+ERROR tests/test_native_session_consumer_20261018.py::test_dashboard_never_turns_partial_or_stale_into_zero[invalid]
+ERROR tests/test_native_session_consumer_20261018.py::test_dashboard_never_turns_partial_or_stale_into_zero[stale]
+ERROR tests/test_native_session_consumer_20261018.py::test_real_scheduler_notifier_uses_counter_growth
+ERROR tests/test_rollout_ring_chain_20260727.py::test_create_task_refuses_a_bad_ring_batch_before_creating_the_task
+ERROR tests/test_rollout_ring_chain_20260727.py::test_rollout_ring_summary_excludes_maintenance_and_exposes_thresholds
+ERROR tests/test_rollout_ring_chain_20260727.py::test_incident_attribution_rejects_a_dangling_task_id
+25 failed, 546 passed, 4 skipped, 2 warnings, 28 errors in 19.22s
+--- base 8b8d3840 same command: 25 failed, 546 passed, 4 skipped, 2 warnings, 28 errors in 19.25s; fail/error set identical
+### BASE
+/home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:300: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+...................................FFFFFFF...........EEEEFFF............ [ 12%]
+..........EEEEEEE..............F.......................................s [ 24%]
+...........................................ss........................... [ 36%]
+......F...........F....................................EEEEE............ [ 48%]
+...FFFFFFFF......................................FF..................... [ 60%]
+.....................................F.................................. [ 72%]
+...EEE.................................................................. [ 84%]
+..............s............................................F............ [ 96%]
+..................                                                       [100%]
+==================================== ERRORS ====================================
+________ ERROR collecting tests/test_admin_secret_boundary_20260730.py _________
+ImportError while importing test module '/workspace/lane/wt/nz301base/tests/test_admin_secret_boundary_20260730.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_admin_secret_boundary_20260730.py:10: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+______ ERROR collecting tests/test_auth_password_concurrency_20260814.py _______
+ImportError while importing test module '/workspace/lane/wt/nz301base/tests/test_auth_password_concurrency_20260814.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_auth_password_concurrency_20260814.py:10: in <module>
+    from web import auth, database
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_______ ERROR collecting tests/test_auth_session_revocation_20260814.py ________
+ImportError while importing test module '/workspace/lane/wt/nz301base/tests/test_auth_session_revocation_20260814.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_auth_session_revocation_20260814.py:12: in <module>
+    from web import auth, models
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_____________ ERROR collecting tests/test_central_ddns_20260923.py _____________
+ImportError while importing test module '/workspace/lane/wt/nz301base/tests/test_central_ddns_20260923.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_central_ddns_20260923.py:33: in <module>
+    from web.api import metrics  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_______ ERROR collecting tests/test_dashboard_nullable_kpis_20260822.py ________
+ImportError while importing test module '/workspace/lane/wt/nz301base/tests/test_dashboard_nullable_kpis_20260822.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_dashboard_nullable_kpis_20260822.py:6: in <module>
+    from web.api import dashboard as dashboard_api
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_________ ERROR collecting tests/test_dashboard_quality_observation.py _________
+ImportError while importing test module '/workspace/lane/wt/nz301base/tests/test_dashboard_quality_observation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_dashboard_quality_observation.py:7: in <module>
+    from web.api.dashboard import _quality_signal_counts
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+________ ERROR collecting tests/test_metrics_fixed_ingress_20260910.py _________
+ImportError while importing test module '/workspace/lane/wt/nz301base/tests/test_metrics_fixed_ingress_20260910.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_metrics_fixed_ingress_20260910.py:11: in <module>
+    from web.api import metrics
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+________ ERROR collecting tests/test_release_orchestration_20260831.py _________
+ImportError while importing test module '/workspace/lane/wt/nz301base/tests/test_release_orchestration_20260831.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_release_orchestration_20260831.py:27: in <module>
+    from web.api import release as release_api  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+web/api/release.py:32: in <module>
+    from ..audit import write_audit
+web/audit.py:19: in <module>
+    from .auth import require_role
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_______________ ERROR collecting tests/test_service_readiness.py _______________
+ImportError while importing test module '/workspace/lane/wt/nz301base/tests/test_service_readiness.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_service_readiness.py:13: in <module>
+    from web import app as web_app
+web/app.py:17: in <module>
+    from .api import (
+web/api/antispam.py:16: in <module>
+    from ..auth import get_current_user
+web/auth.py:13: in <module>
+    import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+_______ ERROR at setup of test_create_task_rejects_redacted_placeholder ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0c630b40>
+
+    @pytest.fixture()
+    def tasks_api(monkeypatch):
+>       from web import audit
+
+tests/test_console_miniapp_deepaudit_20260927.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_retry_reuses_the_stored_ciphertext_not_the_redacted_projection _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0c633e70>
+
+    @pytest.fixture()
+    def tasks_api(monkeypatch):
+>       from web import audit
+
+tests/test_console_miniapp_deepaudit_20260927.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+______ ERROR at setup of test_retry_refuses_running_and_poisoned_sources _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0c632cf0>
+
+    @pytest.fixture()
+    def tasks_api(monkeypatch):
+>       from web import audit
+
+tests/test_console_miniapp_deepaudit_20260927.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+___ ERROR at setup of test_list_tasks_filters_server_side_and_reports_total ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0c630830>
+
+    @pytest.fixture()
+    def tasks_api(monkeypatch):
+>       from web import audit
+
+tests/test_console_miniapp_deepaudit_20260927.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_dnspod_cleanup_refuses_to_delete_the_unrecoverable_ledger_row _
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_____________ ERROR at setup of test_unconfigured_dns_refuses_too ______________
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+________ ERROR at setup of test_last_a_record_refusal_blocks_the_delete ________
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_________ ERROR at setup of test_a_cleanup_exception_blocks_the_delete _________
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+___ ERROR at setup of test_successful_cleanup_deletes_dns_first_then_the_row ___
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_________ ERROR at setup of test_partial_cleanup_is_reported_as_not_ok _________
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+__________ ERROR at setup of test_delete_only_path_makes_no_dns_claim __________
+
+    @pytest.fixture(scope="module")
+    def api_modules():
+        previous_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@<ip>:1/test"
+        try:
+            if "web.api.servers" not in sys.modules:
+                sys.modules.pop("web.database", None)
+                sys.modules.pop("web.models", None)
+>           servers = importlib.import_module("web.api.servers")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_delete_server_dns_before_ledger_20260825.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_real_api_persists_oversized_core_then_dashboard_uses_sessions _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0cc66c80>
+
+    @pytest.fixture
+    def integration(monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+    
+        import web.notifier
+        import web.scheduler
+        import web.scheduler_health as health
+        from web import models
+>       from web.api import dashboard, metrics
+
+tests/test_native_session_consumer_20261018.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_dashboard_never_turns_partial_or_stale_into_zero[missing_slot] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0b213700>
+
+    @pytest.fixture
+    def integration(monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+    
+        import web.notifier
+        import web.scheduler
+        import web.scheduler_health as health
+        from web import models
+>       from web.api import dashboard, metrics
+
+tests/test_native_session_consumer_20261018.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_dashboard_never_turns_partial_or_stale_into_zero[invalid] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0ca96200>
+
+    @pytest.fixture
+    def integration(monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+    
+        import web.notifier
+        import web.scheduler
+        import web.scheduler_health as health
+        from web import models
+>       from web.api import dashboard, metrics
+
+tests/test_native_session_consumer_20261018.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_dashboard_never_turns_partial_or_stale_into_zero[stale] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0ca975b0>
+
+    @pytest.fixture
+    def integration(monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+    
+        import web.notifier
+        import web.scheduler
+        import web.scheduler_health as health
+        from web import models
+>       from web.api import dashboard, metrics
+
+tests/test_native_session_consumer_20261018.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+______ ERROR at setup of test_real_scheduler_notifier_uses_counter_growth ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0ca95240>
+
+    @pytest.fixture
+    def integration(monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+    
+        import web.notifier
+        import web.scheduler
+        import web.scheduler_health as health
+        from web import models
+>       from web.api import dashboard, metrics
+
+tests/test_native_session_consumer_20261018.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/dashboard.py:14: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_create_task_refuses_a_bad_ring_batch_before_creating_the_task _
+
+task_modules = (<module 'web.task_runner' from '/workspace/lane/wt/nz301base/web/task_runner/__init__.py'>, <module 'web.models' from '/workspace/lane/wt/nz301base/web/models.py'>, <module 'web.chain' from '/workspace/lane/wt/nz301base/web/chain.py'>)
+
+    @pytest.fixture(scope="module")
+    def api_modules(task_modules):
+        return (
+>           importlib.import_module("web.api.tasks"),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            importlib.import_module("web.api.servers"),
+            importlib.import_module("web.api.incidents"),
+        )
+
+tests/test_rollout_ring_chain_20260727.py:439: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/tasks.py:13: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_ ERROR at setup of test_rollout_ring_summary_excludes_maintenance_and_exposes_thresholds _
+
+task_modules = (<module 'web.task_runner' from '/workspace/lane/wt/nz301base/web/task_runner/__init__.py'>, <module 'web.models' from '/workspace/lane/wt/nz301base/web/models.py'>, <module 'web.chain' from '/workspace/lane/wt/nz301base/web/chain.py'>)
+
+    @pytest.fixture(scope="module")
+    def api_modules(task_modules):
+        return (
+>           importlib.import_module("web.api.tasks"),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            importlib.import_module("web.api.servers"),
+            importlib.import_module("web.api.incidents"),
+        )
+
+tests/test_rollout_ring_chain_20260727.py:439: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/tasks.py:13: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+____ ERROR at setup of test_incident_attribution_rejects_a_dangling_task_id ____
+
+task_modules = (<module 'web.task_runner' from '/workspace/lane/wt/nz301base/web/task_runner/__init__.py'>, <module 'web.models' from '/workspace/lane/wt/nz301base/web/models.py'>, <module 'web.chain' from '/workspace/lane/wt/nz301base/web/chain.py'>)
+
+    @pytest.fixture(scope="module")
+    def api_modules(task_modules):
+        return (
+>           importlib.import_module("web.api.tasks"),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            importlib.import_module("web.api.servers"),
+            importlib.import_module("web.api.incidents"),
+        )
+
+tests/test_rollout_ring_chain_20260727.py:439: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:1026: in exec_module
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+web/api/tasks.py:13: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+=================================== FAILURES ===================================
+_________________________ test_per_sid_token_accepted __________________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7f7e0a7c5a90>
+
+    def test_per_sid_token_accepted(db):
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _seed_server(db, "yue-a", PERSID)
+>       _verify("yue-a", PERSID, db)  # 不抛 = 通过
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_agent_token_per_sid_20260830.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_______________ test_wrong_sid_token_rejected_when_fallback_off ________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7f7e0a7c6120>
+
+    def test_wrong_sid_token_rejected_when_fallback_off(db):
+        # 稳态：回退关闭。yue-a 用 yue-b 的 token（= 被拿下节点冒充）必须被拒。
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _set(db, "agent_token_global_fallback", "0")
+        _seed_server(db, "yue-a", PERSID)
+        _seed_server(db, "yue-b", "q" * 48)
+        with pytest.raises(HTTPException) as e:
+>           _verify("yue-a", "q" * 48, db)
+
+tests/test_agent_token_per_sid_20260830.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+______ test_shared_token_is_never_accepted_even_with_fallback_setting_on _______
+
+db = <sqlalchemy.orm.session.Session object at 0x7f7e0a7c63c0>
+
+    def test_shared_token_is_never_accepted_even_with_fallback_setting_on(db):
+        # 2026-09-26：过渡期结束。回退开关不再被读取；共享 token 对任何 sid 都 403。
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _set(db, "agent_token_global_fallback", "1")
+        _seed_server(db, "yue-a", PERSID)
+>       _verify("yue-a", PERSID, db)
+
+tests/test_agent_token_per_sid_20260830.py:78: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_____________ test_server_without_per_sid_token_cannot_use_shared ______________
+
+db = <sqlalchemy.orm.session.Session object at 0x7f7e0a7c5fd0>
+
+    def test_server_without_per_sid_token_cannot_use_shared(db):
+        # 此前「per_sid is None」这条让共享 token 冒充任何一台还没铸 token 的机器。
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _seed_server(db, "yue-new", token=None)
+        with pytest.raises(HTTPException) as e:
+>           _verify("yue-new", SHARED, db)
+
+tests/test_agent_token_per_sid_20260830.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+______________________ test_unknown_sid_cannot_use_shared ______________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7f7e0a7c5940>
+
+    def test_unknown_sid_cannot_use_shared(db):
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        with pytest.raises(HTTPException):
+>           _verify("yue-ghost", SHARED, db)
+
+tests/test_agent_token_per_sid_20260830.py:96: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_____________ test_backfilled_but_never_rotated_value_is_rejected ______________
+
+db = <sqlalchemy.orm.session.Session object at 0x7f7e0a7c57f0>
+
+    def test_backfilled_but_never_rotated_value_is_rejected(db):
+        # per-sid 列里存的就是共享值（backfill 过从未轮换）= 认它就是认共享 token。
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _seed_server(db, "yue-vn-relay-1", SHARED)
+        with pytest.raises(HTTPException) as e:
+>           _verify("yue-vn-relay-1", SHARED, db)
+
+tests/test_agent_token_per_sid_20260830.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+__________________________ test_empty_token_rejected ___________________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7f7e0a7c6660>
+
+    def test_empty_token_rejected(db):
+        _set(db, "agent_token", encrypt_secret(SHARED))
+        _seed_server(db, "yue-a", PERSID)
+        with pytest.raises(HTTPException):
+>           _verify("yue-a", None, db)
+
+tests/test_agent_token_per_sid_20260830.py:112: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_agent_token_per_sid_20260830.py:44: in _verify
+    from web.api.metrics import _verify_agent, invalidate_agent_token_cache
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_________ test_support_query_failure_is_reported_as_degraded_not_empty _________
+
+sqlite_session = <sqlalchemy.orm.session.Session object at 0x7f7e0cad3a10>
+
+    def test_support_query_failure_is_reported_as_degraded_not_empty(sqlite_session):
+>       from web.api import support
+
+tests/test_console_miniapp_deepaudit_20260927.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/support.py:28: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+________ test_support_recent_lists_return_503_when_the_main_query_fails ________
+
+sqlite_session = <sqlalchemy.orm.session.Session object at 0x7f7e0a7c4440>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0c3e3770>
+
+    def test_support_recent_lists_return_503_when_the_main_query_fails(sqlite_session, monkeypatch):
+>       from web.api import support
+
+tests/test_console_miniapp_deepaudit_20260927.py:190: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/support.py:28: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_________ test_support_missing_table_still_reads_as_missing_not_error __________
+
+sqlite_session = <sqlalchemy.orm.session.Session object at 0x7f7e0a7c6900>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0c3e1b00>
+
+    def test_support_missing_table_still_reads_as_missing_not_error(sqlite_session, monkeypatch):
+        """反向对照：缺表仍走 table_missing 通道，不被误报成失败。"""
+>       from web.api import support
+
+tests/test_console_miniapp_deepaudit_20260927.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/support.py:28: in <module>
+    from ..auth import get_current_user
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+________ test_servers_dns_replace_endpoint_uses_replace_ip_not_clobber _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f7e0cbc5cc0>
+
+    def test_servers_dns_replace_endpoint_uses_replace_ip_not_clobber(monkeypatch):
+        """管理端 POST /{sid}/dns/replace 的 DNSPod 分支此前是 replace_a_record→update
+        降级，多 A 池填错 old_ip 会盲改第一条 A 记录摘掉健康兄弟。现统一 replace_ip：
+        多 A 无匹配则拒绝，绝不降级 update_subdomain_ip。"""
+        import os
+    
+        prev = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = "sqlite://"
+        try:
+>           from web.api import servers as servers_mod
+
+tests/test_dns_replace_ip_multi_a_safe_20260831.py:190: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/servers.py:11: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_________________ test_runtime_contract_exports_are_identical __________________
+
+    def test_runtime_contract_exports_are_identical():
+        from runtime_config import board_snapshot, help_articles, html_sanitize, publish, schemas, store
+    
+>       from web.api import content_docs
+
+tests/test_import_boundaries_20261030.py:225: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/content_docs.py:14: in <module>
+    from ..audit import write_audit
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+____ test_content_runtime_uses_shipped_owner_objects_without_path_mutation _____
+
+    def test_content_runtime_uses_shipped_owner_objects_without_path_mutation():
+        import sys
+    
+        from runtime_config import publish
+    
+>       from web.api.content_docs import _runtime
+
+tests/test_import_boundaries_20261030.py:277: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/content_docs.py:14: in <module>
+    from ..audit import write_audit
+web/audit.py:19: in <module>
+    from .auth import require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+________________ test_sanitize_node_health_passthrough_and_cap _________________
+
+    def test_sanitize_node_health_passthrough_and_cap():
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES, _sanitize_node_health
+
+tests/test_node_health_pipeline_20260801.py:43: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_______ test_oversized_readyz_body_really_exceeds_cap[all-double-quotes] _______
+
+body = '"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""...""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""'
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            pytest.param('"' * 2400, id="all-double-quotes"),
+            pytest.param("\x01" * 800, id="control-chars-6x-escape"),
+            pytest.param("节点拒绝面板下发配置" * 300, id="chinese-bytes-not-chars"),
+            pytest.param("x" * 4200, id="plain-oversized"),
+        ],
+    )
+    def test_oversized_readyz_body_really_exceeds_cap(body):
+        """B 的取证：readyz 正文经 JSON 转义后确实能越过 8192 字节。
+    
+        上限不能只靠采集侧：新版 agent.sh 有 READYZ_BODY_MAX=600，但字段来自 40 台
+        各自升级节奏的机器，旧/损坏的采集器随时可能报出这种 payload。
+        """
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES
+
+tests/test_node_health_pipeline_20260801.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+____ test_oversized_readyz_body_really_exceeds_cap[control-chars-6x-escape] ____
+
+body = '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\...01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            pytest.param('"' * 2400, id="all-double-quotes"),
+            pytest.param("\x01" * 800, id="control-chars-6x-escape"),
+            pytest.param("节点拒绝面板下发配置" * 300, id="chinese-bytes-not-chars"),
+            pytest.param("x" * 4200, id="plain-oversized"),
+        ],
+    )
+    def test_oversized_readyz_body_really_exceeds_cap(body):
+        """B 的取证：readyz 正文经 JSON 转义后确实能越过 8192 字节。
+    
+        上限不能只靠采集侧：新版 agent.sh 有 READYZ_BODY_MAX=600，但字段来自 40 台
+        各自升级节奏的机器，旧/损坏的采集器随时可能报出这种 payload。
+        """
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES
+
+tests/test_node_health_pipeline_20260801.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+____ test_oversized_readyz_body_really_exceeds_cap[chinese-bytes-not-chars] ____
+
+body = '节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下...拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置节点拒绝面板下发配置'
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            pytest.param('"' * 2400, id="all-double-quotes"),
+            pytest.param("\x01" * 800, id="control-chars-6x-escape"),
+            pytest.param("节点拒绝面板下发配置" * 300, id="chinese-bytes-not-chars"),
+            pytest.param("x" * 4200, id="plain-oversized"),
+        ],
+    )
+    def test_oversized_readyz_body_really_exceeds_cap(body):
+        """B 的取证：readyz 正文经 JSON 转义后确实能越过 8192 字节。
+    
+        上限不能只靠采集侧：新版 agent.sh 有 READYZ_BODY_MAX=600，但字段来自 40 台
+        各自升级节奏的机器，旧/损坏的采集器随时可能报出这种 payload。
+        """
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES
+
+tests/test_node_health_pipeline_20260801.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+________ test_oversized_readyz_body_really_exceeds_cap[plain-oversized] ________
+
+body = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            pytest.param('"' * 2400, id="all-double-quotes"),
+            pytest.param("\x01" * 800, id="control-chars-6x-escape"),
+            pytest.param("节点拒绝面板下发配置" * 300, id="chinese-bytes-not-chars"),
+            pytest.param("x" * 4200, id="plain-oversized"),
+        ],
+    )
+    def test_oversized_readyz_body_really_exceeds_cap(body):
+        """B 的取证：readyz 正文经 JSON 转义后确实能越过 8192 字节。
+    
+        上限不能只靠采集侧：新版 agent.sh 有 READYZ_BODY_MAX=600，但字段来自 40 台
+        各自升级节奏的机器，旧/损坏的采集器随时可能报出这种 payload。
+        """
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES
+
+tests/test_node_health_pipeline_20260801.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+____________ test_sanitize_node_health_degrades_instead_of_dropping ____________
+
+    def test_sanitize_node_health_degrades_instead_of_dropping():
+        """🚨 payload 最大之时正是健康最差之时：超限必须降级保留判据，不能整份丢成 NULL。"""
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES, _sanitize_node_health
+
+tests/test_node_health_pipeline_20260801.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+___________ test_sanitize_node_health_measures_utf8_bytes_not_chars ____________
+
+    def test_sanitize_node_health_measures_utf8_bytes_not_chars():
+        """中文正文：字符数没超但 UTF-8 字节数超了，必须按字节判。"""
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES, _sanitize_node_health
+
+tests/test_node_health_pipeline_20260801.py:131: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+___________ test_sanitize_node_health_bounded_for_corrupt_collector ____________
+
+    def test_sanitize_node_health_bounded_for_corrupt_collector():
+        """采集器损坏成上千个巨型槽也必须收敛（第 3 级有确定上界）。"""
+>       from web.api.metrics import _NODE_HEALTH_MAX_BYTES, _sanitize_node_health
+
+tests/test_node_health_pipeline_20260801.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_____ test_ingest_keeps_the_three_new_dimensions_through_the_decision_core _____
+
+    def test_ingest_keeps_the_three_new_dimensions_through_the_decision_core():
+        """超限降级时，环门判据不能正好是被丢掉的那一半。"""
+>       from web.api.metrics import (
+            _NODE_HEALTH_DECISION_KEYS,
+            _NODE_HEALTH_MAX_BYTES,
+            _sanitize_node_health,
+        )
+
+tests/test_node_health_pipeline_20260801.py:791: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+___________ test_code_snapshot_routes_and_disabled_docs[yueops-web] ____________
+
+exporter = <module 'export_openapi.py' from '/workspace/lane/wt/nz301base/scripts/export-openapi.py'>
+service = 'yueops-web'
+
+    @pytest.mark.parametrize("service", ["yueops-web", "yue-bot"])
+    def test_code_snapshot_routes_and_disabled_docs(exporter, service):
+        # Fresh process avoids bot/config module pollution across central CI shards.
+        code = """
+    import json, runpy
+    from fastapi.routing import APIRoute, iter_route_contexts
+    from fastapi.testclient import TestClient
+    m = runpy.run_path('scripts/export-openapi.py')
+    app = m['load_app'](SERVICE)
+    schema = m['snapshot'](app, SERVICE)
+    contexts = list(iter_route_contexts(app.routes))
+    expected = {(method.lower(), route.path_format) for route in contexts
+                if isinstance(route.original_route, APIRoute) for method in route.methods}
+    actual = {(method, path) for path, item in schema['paths'].items() for method in item}
+    assert expected and expected == actual
+    assert sum(len(route.methods) for route in contexts
+               if isinstance(route.original_route, APIRoute)) == len(actual)
+    inventory = schema['x-yue-contract']['routes']
+    assert len(contexts) == len(inventory)
+    assert sorted((r.path, type(r.original_route).__name__, sorted(r.methods or []))
+                  for r in contexts) == sorted((r['path'], r['kind'], r['methods']) for r in inventory)
+    assert app.openapi_url is None and app.docs_url is None and app.redoc_url is None
+    # No context manager: deliberately do not start the production lifespan.
+    client = TestClient(app)
+    for path in ('/openapi.json', '/docs', '/redoc'):
+        assert client.get(path).status_code == 404
+    print(m['canonical'](schema), end='')
+    """.replace("SERVICE", repr(service))
+        result = subprocess.run(
+            [sys.executable, "-c", code], cwd=ROOT, env=exporter.worker_env(), capture_output=True, text=True, timeout=90
+        )
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: /home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+E           from starlette.testclient import TestClient as TestClient  # noqa
+E         Traceback (most recent call last):
+E           File "<string>", line 6, in <module>
+E             app = m['load_app']('yueops-web')
+E           File "scripts/export-openapi.py", line 60, in load_app
+E             return importlib.import_module("web.app").app
+E                    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+E           File "/usr/lib/python3.13/importlib/__init__.py", line 88, in import_module
+E             return _bootstrap._gcd_import(name[level:], package, level)
+E                    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+E           File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+E           File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+E           File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+E           File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+E           File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+E           File "/workspace/lane/wt/nz301base/web/app.py", line 17, in <module>
+E             from .api import (
+E             ...<29 lines>...
+E             )
+E           File "/workspace/lane/wt/nz301base/web/api/antispam.py", line 16, in <module>
+E             from ..auth import get_current_user
+E           File "/workspace/lane/wt/nz301base/web/auth.py", line 13, in <module>
+E             import jwt
+E         ModuleNotFoundError: No module named 'jwt'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/home/box/Projects/yueto/yueops/.venv/bin/python', '-c', "\nimport json, runpy\nfrom fastapi.r.../lane/wt/nz301base/web/auth.py", line 13, in <module>\n    import jwt\nModuleNotFoundError: No module named \'jwt\'\n').returncode
+
+tests/test_openapi_contract_20261030.py:66: AssertionError
+______ test_relay_proof_survives_ingest_and_every_slot_reader_ignores_it _______
+
+    def test_relay_proof_survives_ingest_and_every_slot_reader_ignores_it():
+>       from web.api.metrics import _sanitize_node_health
+
+tests/test_relay_agent_delivery_20260927.py:238: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+web/api/metrics.py:43: in <module>
+    from ..auth import get_current_user, require_role
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """JWT authentication."""
+    from __future__ import annotations
+    
+    import hashlib
+    import hmac
+    import logging
+    import os
+    import secrets
+    import time
+    from pathlib import Path
+    from typing import Optional
+    
+>   import jwt
+E   ModuleNotFoundError: No module named 'jwt'
+
+web/auth.py:13: ModuleNotFoundError
+_______ test_certificate_native_wire_fields_match_actual_board_checkout ________
+
+    def test_certificate_native_wire_fields_match_actual_board_checkout():
+>       revision = subprocess.check_output(['git','-C',str(YUEBOARD),'rev-parse','HEAD'], text=True).strip()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_yueboard_internal.py:484: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.13/subprocess.py:472: in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = False, timeout = None, check = True
+popenargs = (['git', '-C', '/workspace/lane/wt/yueboard', 'rev-parse', 'HEAD'],)
+kwargs = {'stdout': -1, 'text': True}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', '-C', '/workspace/lane/wt/yueboard', 'rev-parse', 'HEAD']' returned non-zero exit status 128.
+
+/usr/lib/python3.13/subprocess.py:577: CalledProcessError
+----------------------------- Captured stderr call -----------------------------
+fatal: cannot change to '/workspace/lane/wt/yueboard': No such file or directory
+=============================== warnings summary ===============================
+../../../../home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../../../home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/starlette/testclient.py:53
+  /home/box/Projects/yueto/yueops/.venv/lib/python3.13/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_agent_token_per_sid_20260830.py::test_per_sid_token_accepted
+FAILED tests/test_agent_token_per_sid_20260830.py::test_wrong_sid_token_rejected_when_fallback_off
+FAILED tests/test_agent_token_per_sid_20260830.py::test_shared_token_is_never_accepted_even_with_fallback_setting_on
+FAILED tests/test_agent_token_per_sid_20260830.py::test_server_without_per_sid_token_cannot_use_shared
+FAILED tests/test_agent_token_per_sid_20260830.py::test_unknown_sid_cannot_use_shared
+FAILED tests/test_agent_token_per_sid_20260830.py::test_backfilled_but_never_rotated_value_is_rejected
+FAILED tests/test_agent_token_per_sid_20260830.py::test_empty_token_rejected
+FAILED tests/test_console_miniapp_deepaudit_20260927.py::test_support_query_failure_is_reported_as_degraded_not_empty
+FAILED tests/test_console_miniapp_deepaudit_20260927.py::test_support_recent_lists_return_503_when_the_main_query_fails
+FAILED tests/test_console_miniapp_deepaudit_20260927.py::test_support_missing_table_still_reads_as_missing_not_error
+FAILED tests/test_dns_replace_ip_multi_a_safe_20260831.py::test_servers_dns_replace_endpoint_uses_replace_ip_not_clobber
+FAILED tests/test_import_boundaries_20261030.py::test_runtime_contract_exports_are_identical
+FAILED tests/test_import_boundaries_20261030.py::test_content_runtime_uses_shipped_owner_objects_without_path_mutation
+FAILED tests/test_node_health_pipeline_20260801.py::test_sanitize_node_health_passthrough_and_cap
+FAILED tests/test_node_health_pipeline_20260801.py::test_oversized_readyz_body_really_exceeds_cap[all-double-quotes]
+FAILED tests/test_node_health_pipeline_20260801.py::test_oversized_readyz_body_really_exceeds_cap[control-chars-6x-escape]
+FAILED tests/test_node_health_pipeline_20260801.py::test_oversized_readyz_body_really_exceeds_cap[chinese-bytes-not-chars]
+FAILED tests/test_node_health_pipeline_20260801.py::test_oversized_readyz_body_really_exceeds_cap[plain-oversized]
+FAILED tests/test_node_health_pipeline_20260801.py::test_sanitize_node_health_degrades_instead_of_dropping
+FAILED tests/test_node_health_pipeline_20260801.py::test_sanitize_node_health_measures_utf8_bytes_not_chars
+FAILED tests/test_node_health_pipeline_20260801.py::test_sanitize_node_health_bounded_for_corrupt_collector
+FAILED tests/test_node_health_pipeline_20260801.py::test_ingest_keeps_the_three_new_dimensions_through_the_decision_core
+FAILED tests/test_openapi_contract_20261030.py::test_code_snapshot_routes_and_disabled_docs[yueops-web]
+FAILED tests/test_relay_agent_delivery_20260927.py::test_relay_proof_survives_ingest_and_every_slot_reader_ignores_it
+FAILED tests/test_yueboard_internal.py::test_certificate_native_wire_fields_match_actual_board_checkout
+ERROR tests/test_admin_secret_boundary_20260730.py
+ERROR tests/test_auth_password_concurrency_20260814.py
+ERROR tests/test_auth_session_revocation_20260814.py
+ERROR tests/test_central_ddns_20260923.py
+ERROR tests/test_dashboard_nullable_kpis_20260822.py
+ERROR tests/test_dashboard_quality_observation.py
+ERROR tests/test_metrics_fixed_ingress_20260910.py
+ERROR tests/test_release_orchestration_20260831.py
+ERROR tests/test_service_readiness.py
+ERROR tests/test_console_miniapp_deepaudit_20260927.py::test_create_task_rejects_redacted_placeholder
+ERROR tests/test_console_miniapp_deepaudit_20260927.py::test_retry_reuses_the_stored_ciphertext_not_the_redacted_projection
+ERROR tests/test_console_miniapp_deepaudit_20260927.py::test_retry_refuses_running_and_poisoned_sources
+ERROR tests/test_console_miniapp_deepaudit_20260927.py::test_list_tasks_filters_server_side_and_reports_total
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_dnspod_cleanup_refuses_to_delete_the_unrecoverable_ledger_row
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_unconfigured_dns_refuses_too
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_last_a_record_refusal_blocks_the_delete
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_a_cleanup_exception_blocks_the_delete
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_successful_cleanup_deletes_dns_first_then_the_row
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_partial_cleanup_is_reported_as_not_ok
+ERROR tests/test_delete_server_dns_before_ledger_20260825.py::test_delete_only_path_makes_no_dns_claim
+ERROR tests/test_native_session_consumer_20261018.py::test_real_api_persists_oversized_core_then_dashboard_uses_sessions
+ERROR tests/test_native_session_consumer_20261018.py::test_dashboard_never_turns_partial_or_stale_into_zero[missing_slot]
+ERROR tests/test_native_session_consumer_20261018.py::test_dashboard_never_turns_partial_or_stale_into_zero[invalid]
+ERROR tests/test_native_session_consumer_20261018.py::test_dashboard_never_turns_partial_or_stale_into_zero[stale]
+ERROR tests/test_native_session_consumer_20261018.py::test_real_scheduler_notifier_uses_counter_growth
+ERROR tests/test_rollout_ring_chain_20260727.py::test_create_task_refuses_a_bad_ring_batch_before_creating_the_task
+ERROR tests/test_rollout_ring_chain_20260727.py::test_rollout_ring_summary_excludes_maintenance_and_exposes_thresholds
+ERROR tests/test_rollout_ring_chain_20260727.py::test_incident_attribution_rejects_a_dangling_task_id
+25 failed, 546 passed, 4 skipped, 2 warnings, 28 errors in 19.25s
+### ADMISSION (yueto-ci pin PR #183 policy)
+base==head 8b8d38401: ADMISSION_ACCEPTED; head 1f0c2adb5: REJECTED 'PR shared-input successor requires the signed release pin' (no shared-input paths changed; needs pin successor at ship time)

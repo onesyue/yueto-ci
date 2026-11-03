@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 301,
+  "head": "1f0c2adb56876e18dee7d3aea0bd97c04cda8390",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "1f0c2adb56876e18dee7d3aea0bd97c04cda8390",
+    "artifact": "reviews/merge-receipts-20261103/yueops-301-review.txt",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T04:15:10Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "1f0c2adb56876e18dee7d3aea0bd97c04cda8390",
+    "command": "pytest targeted (Nezha/OpenAPI/ip-literals/contracts) head vs base 8b8d38401: identical fail set (box venv lacks jwt)",
+    "log_sha256": "05db2780d6deef23ced0de229ee497fc01db6aa3a7735f109340183e6b98efc0",
+    "ran_at": "2026-11-03T04:13:46Z",
+    "runner": "box"
+  }
+}
