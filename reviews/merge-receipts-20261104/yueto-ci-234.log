@@ -1,0 +1,3 @@
+security_scan.sh (working-tree):
+  FAIL=0  NOTE=40  ALLOWED=17
+PASS: exactly eight payload replacements; all other transcript bytes unchanged; diff --check.

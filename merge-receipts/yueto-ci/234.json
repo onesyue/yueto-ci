@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto-ci",
+  "pr": 234,
+  "head": "339ed6a8139dca2cee922fe170b09d33dafa26b1",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "339ed6a8139dca2cee922fe170b09d33dafa26b1",
+    "artifact": "reviews/merge-receipts-20261104/yueto-ci-234.md",
+    "reviewer": "primary-codex-independent",
+    "reviewed_at": "2026-11-03T18:29:52.559749Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "339ed6a8139dca2cee922fe170b09d33dafa26b1",
+    "command": "native security_scan.sh --repo-root candidate; exact eight payload replacements; diff --check",
+    "log_sha256": "ce70e8023870d69d95a7c01cd126f531ba2b4e182c05e91c6c4be91bd708f22d",
+    "ran_at": "2026-11-03T18:29:52.559749Z",
+    "runner": "mac-5f08d00f"
+  }
+}
