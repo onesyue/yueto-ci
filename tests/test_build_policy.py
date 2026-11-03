@@ -2193,7 +2193,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(self.native_contract["schema_floor"], 151)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
-            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+            "40a0026d71395ac37fb9ab5943bd8c2693440036",
         )
         self.assertEqual(
             self.native_contract["presence"],
