@@ -1,12 +1,7 @@
-# Codex exact-head review: yueto-ci #185 @bee330db4ad5de6d68b4c0e2311fd506f30bbfd3 (mac-5f08d00f, codex exec read-only)
+yueto-ci #185 exact-head Codex read-only review at 33ed898883a4272bebf6a89f014f043a3c3287f8 (bee330db + signed master merge-in)
+Source transcript: mac-5f08d00f ~/Projects/lane-cx1103/r185.review1.log (sha256 8b1a1fd92d2fadfd214e25acd0fb08a3cf2dee55d81c64070ca895fb21b44ccd), 2026-11-03T13:56:45Z.
 
-## Round 1 (12:09-12:2x SGT)
-历史 seal 检查通过：重建字节与 `e05012e` 完全一致，SHA-256 为 `190f2ad9…6332d`；只删掉指定两项，其余 1000 项未变，`reviews/**` 的 Git tree 也一致。现有最终定向测试记录为 38 通过、1 跳过，尚无 Linux 门禁通过证据。
-VERDICT: request-changes (validation gap: no passing Linux policy-gate evidence for bee330db4; recorded final targeted run has 1 skipped test. Hashes, unchanged reviews, 20 read-only tests, and 35 rejection checks passed.)
+No [P1]/[P2]/[P3] findings. Reviewed the diff at 33ed8988; tree clean. Change only removes two retired skips, keeps historical checks, rejects retired modules inheriting skips. No secrets, IP literals, scope creep or weakened tests.
+Targeted: 36 tests / 373 subtests passed; 9 not run (read-only / missing extra checkouts). Full Linux CI not run by the reviewer.
 
-## Round 2 (12:25-12:26 SGT), with box Linux full-suite log (663 passed, 0 skipped, yueops-src present)
-指定 HEAD 仍为 `bee330db4`，补充日志记录同一提交在 Linux 上完成 663 项测试、无跳过。差异中 `reviews/**` 没有改动。
-Legitimate historical-skip control passed; skip statuses remain unexecuted.
-35 independent mutation checks rejected as expected; no baseline mutation.
-test_ops_npm_security_transition: Ran 2 tests OK
-VERDICT: approve @bee330db4
+VERDICT: APPROVE

@@ -2,22 +2,22 @@
   "schema": 1,
   "repo": "yueto-ci",
   "pr": 185,
-  "head": "bee330db4ad5de6d68b4c0e2311fd506f30bbfd3",
+  "head": "33ed898883a4272bebf6a89f014f043a3c3287f8",
   "backfilled": false,
   "review": {
     "tool": "codex",
     "verdict": "approve",
-    "reviewed_head": "bee330db4ad5de6d68b4c0e2311fd506f30bbfd3",
+    "reviewed_head": "33ed898883a4272bebf6a89f014f043a3c3287f8",
     "artifact": "reviews/merge-receipts-20261103/yueto-ci-185-review.txt",
     "reviewer": "codex",
-    "reviewed_at": "2026-11-03T04:26:33Z"
+    "reviewed_at": "2026-11-03T13:56:45Z"
   },
   "parity": {
     "result": "pass",
-    "head": "bee330db4ad5de6d68b4c0e2311fd506f30bbfd3",
-    "command": "python -m pytest -q -rs tests (Linux, yueops-src present): 663 passed, 0 skipped",
-    "log_sha256": "7b9fa96bbaaf5a2d745d627052fb04a624127ce36583101fb93b54e10bcff8cc",
-    "ran_at": "2026-11-03T04:24:50Z",
+    "head": "33ed898883a4272bebf6a89f014f043a3c3287f8",
+    "command": "python -m pytest -q tests (Linux box): 686 passed, 1 skipped",
+    "log_sha256": "52452afee5539c6e96b861fdb6134bf1f988eece76f18c85c6afedcf192a2b1a",
+    "ran_at": "2026-11-03T13:46:33Z",
     "runner": "box"
   }
 }
