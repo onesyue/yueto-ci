@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yuelink",
+  "pr": 54,
+  "head": "242d93e196658346f023f25f6b845282ea707245",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "242d93e196658346f023f25f6b845282ea707245",
+    "artifact": "reviews/merge-receipts-20261103/yuelink-54-r6.md",
+    "reviewer": "codex-root-independent",
+    "reviewed_at": "2026-11-03T17:34:08.085787+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "242d93e196658346f023f25f6b845282ea707245",
+    "command": "scripts/with-release-sdk.sh bash scripts/pre-commit (Flutter 3.47.8; full suite 5080 passed, 16 skipped; analyze, security, format, imports passed)",
+    "log_sha256": "1040a159a245cd28f33682f500f46acc653c5981b26539ad94319d416fc26681",
+    "ran_at": "2026-11-03T17:34:08.085787+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}
