@@ -1,0 +1,5 @@
+PARITY: withheld
+head: 837675c2e2cb89676a386a6034c302e46476a80b
+base: 79a20284eb1947f84dd663ac743ff5d2a7cd1c64
+The removed transcript ended EXIT 1 (8 failed, 7 errors) and did not compare against this base.
+No parity.result pass is claimed.
