@@ -127,6 +127,40 @@ def exceptions(path):
     return result
 
 
+def baseline(path):
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate baseline key")
+            result[key] = value
+        return result
+
+    def nonempty(value):
+        return isinstance(value, str) and bool(value.strip())
+
+    value = json.loads(path.read_text(), object_pairs_hook=unique)
+    if (not isinstance(value, dict) or set(value) != {"schema", "frozen_at", "approver", "entries"}
+            or type(value["schema"]) is not int or value["schema"] != 1
+            or not nonempty(value["frozen_at"]) or not nonempty(value["approver"])
+            or not isinstance(value["entries"], list)):
+        raise ValueError("invalid baseline schema")
+    timestamp(value["frozen_at"])
+    result = {}
+    for entry in value["entries"]:
+        if (not isinstance(entry, dict) or set(entry) != {"repo", "pr", "head", "findings", "reason"}
+                or entry["repo"] not in REPOS or type(entry["pr"]) is not int or entry["pr"] <= 0
+                or not isinstance(entry["head"], str) or not re.fullmatch(r"[0-9a-fA-F]{40}", entry["head"])
+                or not isinstance(entry["findings"], list) or not all(map(nonempty, entry["findings"]))
+                or len(set(entry["findings"])) != len(entry["findings"]) or not nonempty(entry["reason"])):
+            raise ValueError("invalid baseline entry")
+        key = (entry["repo"], entry["pr"], entry["head"])
+        if key in result:
+            raise ValueError("duplicate baseline entry")
+        result[key] = entry
+    return result
+
+
 # Receipt schema 1 is deliberately closed: misspelled or additional fields fail
 # rather than silently weakening the evidence contract.
 def committed_text(path):
@@ -320,6 +354,7 @@ def main():
     parser.add_argument("--repos", nargs="+", choices=REPOS, default=list(REPOS))
     parser.add_argument("--hours", type=int, default=24)
     parser.add_argument("--exceptions", type=Path, default=ROOT / "merge-hygiene-exceptions.json")
+    parser.add_argument("--baseline", type=Path, default=ROOT / "accepted-history-20261103.json")
     parser.add_argument("--format", choices=("json", "text"), default="text")
     parser.add_argument("--premerge", nargs=2, metavar=("REPO", "PR"),
                         help="also require committed evidence and passing current checks for an open PR")
@@ -331,25 +366,35 @@ def main():
         parser.error("positive --hours and valid GitHub --owner required")
     now = datetime.now(timezone.utc)
     try:
+        accepted = baseline(args.baseline)
         rows = audit(args.owner, args.repos, now - timedelta(hours=args.hours),
                      exceptions(args.exceptions), now)
+        # Apply only to merged history, before the open premerge candidate exists.
+        for row in rows:
+            entry = accepted.get((row["repo"], row["pr"], row["head"]))
+            if row["merged_at"] and entry and set(row["findings"]) <= set(entry["findings"]):
+                row["accepted_history"] = entry
         if args.premerge:
             rows.append(premerge(args.owner, args.premerge[0], int(args.premerge[1])))
         result = {"schema": 1, "complete": True, "findings": rows,
-                  "unregistered": sum(r["exception"] is None
-                                      and not ((r.get("receipt") or r.get("evidence_only"))
-                                               and not r["findings"])
+                  "accepted_history": sum(bool(r.get("accepted_history")) for r in rows),
+                  "unregistered": sum(bool(r["findings"]) and r["exception"] is None
+                                      and not r.get("accepted_history")
                                       for r in rows)}
     except (ValueError, OSError, KeyError, TypeError):
         # Never turn inaccessible private repositories or malformed evidence into green.
         result = {"schema": 1, "complete": False,
-                  "error": "API/evidence/exception input unavailable or invalid; audit incomplete"}
+                  "error": "API/evidence/exception/baseline input unavailable or invalid; audit incomplete"}
     if args.format == "json":
         print(json.dumps(result, indent=2))
     elif not result["complete"]:
         print(result["error"])
     else:
-        for row in rows:
+        for row in result["findings"]:
+            if row.get("accepted_history"):
+                print(f'INFO accepted-history {row["url"]}: {", ".join(row["findings"])}')
+                print(f'  {row["accepted_history"]["reason"]}')
+                continue
             if row.get("evidence_only") and not row["findings"]:
                 print(f'EVIDENCE-ONLY {row["url"]}')
                 continue
@@ -357,8 +402,8 @@ def main():
                 print(f'RECEIPT {row["url"]}: head={row["head"]} '
                       f'backfilled={str(row["receipt"]["backfilled"]).lower()} '
                       f'satisfies={", ".join(row["satisfied_by_receipt"]) or "supplemental evidence"}')
-                if not row["findings"]:
-                    continue
+            if not row["findings"]:
+                continue
             state = "REGISTERED" if row["exception"] else "UNREGISTERED"
             print(f'{state} {row["url"]}: {", ".join(row["findings"])}')
             if row["exception"]:

@@ -1,0 +1,201 @@
+{
+  "schema": 1,
+  "frozen_at": "2026-11-03T02:00:00Z",
+  "approver": "coordinator (owner mandate t454u) 2026-11-03",
+  "entries": [
+    {
+      "repo": "yueboard",
+      "pr": 52,
+      "head": "4cef3672de11336d76d739728ad482aecf99558a",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yuelink",
+      "pr": 53,
+      "head": "c36b5c92ad6694419e7177973580310fce3ecf5d",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueops",
+      "pr": 100,
+      "head": "91fad7cfd234a84b6fbae85dff0634bd5d4cc500",
+      "findings": [
+        "check_history_unavailable:update-pip-graph",
+        "check_history_unavailable:update-uv-graph"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueops",
+      "pr": 267,
+      "head": "9c63e04f3be50e115d319d01ced5dc694b22f4b6",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueops",
+      "pr": 273,
+      "head": "15b21d4d72c26d65fba9e7fe4a9eea017b362b27",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueops",
+      "pr": 292,
+      "head": "9f06d9f11ce9f51e824ba64e56b45e2ad669d65b",
+      "findings": [
+        "check_history_unavailable:Dependabot"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto",
+      "pr": 51,
+      "head": "c9d086905bcdec6cfd6d7c66a221c8c1f9ad5aa7",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto",
+      "pr": 65,
+      "head": "68716aa28631e81ebf17e2682f6e3c2a9c1159b7",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 95,
+      "head": "ed2b8083b03714649ca9a36e107446418493e4b2",
+      "findings": [
+        "check_pending_at_merge:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 104,
+      "head": "5f790f84f47f56bdaf572418a7961986aebf5c9b",
+      "findings": [
+        "check_pending_at_merge:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 107,
+      "head": "b250d39c1f5bcf968d89952dfd08772f2ba07567",
+      "findings": [
+        "check_pending_at_merge:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 146,
+      "head": "ae01b32fd533e80147da347dad26366dce179bbf",
+      "findings": [
+        "check_pending_at_merge:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 147,
+      "head": "e4db5ce29d51de32dfba2d53cb0270fcb2839c45",
+      "findings": [
+        "check_history_unavailable:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 150,
+      "head": "acdf160153bf661a31d990c2677d900f01431267",
+      "findings": [
+        "check_history_unavailable:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 156,
+      "head": "697f740fa284d271ede9ef88014738f20ffc1701",
+      "findings": [
+        "check_pending_at_merge:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 157,
+      "head": "26a288564231fb0795ce6799c08c3961b44c4e65",
+      "findings": [
+        "check_history_unavailable:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 158,
+      "head": "14b2caacd56855390e9b63fee5e045183dba7c40",
+      "findings": [
+        "check_pending_at_merge:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 160,
+      "head": "9c83dd89d92c1b8c65d189cdd4b425e27111e46f",
+      "findings": [
+        "check_pending_at_merge:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 161,
+      "head": "137e0502bc89505da7ab9b787a2c93e8f5985b99",
+      "findings": [
+        "check_history_unavailable:policy tests + workflow lint"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 166,
+      "head": "8678b21becbf9a1249c6a1952b4a6e0593975c61",
+      "findings": [
+        "no_approving_review_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    }
+  ]
+}
