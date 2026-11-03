@@ -363,6 +363,87 @@ class AcceptedHistory(unittest.TestCase):
                 self.assertFalse(json.loads(output)["complete"])
 
 
+class FrozenAcceptedHistoryExtension(unittest.TestCase):
+    def setUp(self):
+        # Independent literals from the 2026-11-04 GitHub evidence, never from
+        # the snapshot under test. These merges were not compliant.
+        no_checks = ["no_approving_review_at_merge", "no_check_evidence_at_merge",
+                     "required_merge_receipt_missing"]
+        no_review = ["no_approving_review_at_merge", "required_merge_receipt_missing"]
+        historical = [
+            ("yueboard", 104, "501911cbe5f69e38bfbebf048c9cbcc548c3998b",
+             "2026-11-03T09:29:43Z", no_checks),
+            ("yueboard", 106, "7151cf3f2cae8f0d2ae8de2d0011a374ba02a747",
+             "2026-11-03T09:22:31Z", no_checks),
+            ("yueboard", 107, "3a1a224d43400157ae4dcc722c70874731f440f3",
+             "2026-11-03T09:43:21Z", no_checks),
+            ("yueboard", 108, "ae53f2f31f6dcce2d338c365edee1a92ffe0d8bd",
+             "2026-11-03T10:07:36Z", no_checks),
+            ("yueops", 298, "837675c2e2cb89676a386a6034c302e46476a80b",
+             "2026-11-03T04:01:07Z", no_checks),
+            ("yueto-ci", 179, "bd051adae75a3f924b2cb9faae5b933c1aa66283",
+             "2026-11-03T04:18:34Z", no_review),
+            ("yueto-ci", 187, "b525bfa5d6c9ca22fc881f2ea5f1b883ab46c216",
+             "2026-11-03T04:59:10Z", no_review),
+            ("yueto-ci", 188, "112a795ff72d357e3df6278c5a7b63d172107948",
+             "2026-11-03T04:51:37Z", no_review),
+            ("yueto-ci", 190, "c92237522f1193002cd3f00a8941289b4efbc80c",
+             "2026-11-03T14:10:43Z", no_review),
+            ("yueto-ci", 191, "f66a1b762072c568ab76f9fd467ae2869fcf5a4e",
+             "2026-11-03T05:03:46Z", no_review),
+            ("yueto-ci", 212, "2b4db0f396cf234a35f83f1912b8ad6d8cfc9c48",
+             "2026-11-03T12:24:14Z", no_review),
+        ]
+        self.rows = [{"repo": repo, "pr": pr, "head": head, "merged_at": merged_at,
+                      "url": f"https://github.com/onesyue/{repo}/pull/{pr}",
+                      "findings": findings[:], "exception": None, "receipt": None,
+                      "satisfied_by_receipt": []}
+                     for repo, pr, head, merged_at, findings in historical]
+
+    def run_cli(self, rows):
+        import contextlib
+        import io
+        with patch("sys.argv", ["audit", "--format", "json"]), patch.object(
+                AUDIT, "audit", return_value=rows), patch.object(
+                AUDIT, "exceptions", return_value={}), contextlib.redirect_stdout(io.StringIO()) as output:
+            rc = AUDIT.main()
+        return rc, json.loads(output.getvalue())
+
+    def test_frozen_cutoff_matches_latest_verified_merge(self):
+        path = ROOT / "accepted-history-20261103.json"
+        frozen_at, accepted = AUDIT.baseline(path)
+        self.assertEqual(frozen_at, max(AUDIT.timestamp(row["merged_at"]) for row in self.rows))
+        self.assertEqual(json.loads(path.read_text())["approver"],
+                         "coordinator (owner mandate t497u) 2026-11-03")
+        self.assertEqual(len(accepted), 31)
+        for row in self.rows:
+            with self.subTest(repo=row["repo"], pr=row["pr"]):
+                entry = accepted[(row["repo"], row["pr"], row["head"])]
+                self.assertEqual(entry["findings"], row["findings"])
+
+    def test_verified_historical_rows_are_accepted(self):
+        rc, result = self.run_cli(self.rows)
+        self.assertEqual(rc, 0)
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["accepted_history"], 11)
+        self.assertEqual(result["unregistered"], 0)
+        for row in result["findings"]:
+            with self.subTest(repo=row["repo"], pr=row["pr"]):
+                self.assertIn("accepted_history", row)
+
+    def test_identical_findings_after_cutoff_are_rejected(self):
+        # Keep the same repo, PR, head and findings; move only the timestamp
+        # one second past the independently recorded latest historical merge.
+        rows = [row | {"merged_at": "2026-11-03T14:10:44Z"} for row in self.rows]
+        rc, result = self.run_cli(rows)
+        self.assertEqual(rc, 1)
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["accepted_history"], 0)
+        self.assertEqual(result["unregistered"], 11)
+        for row in result["findings"]:
+            self.assertNotIn("accepted_history", row)
+
+
 class MergeReceipts(unittest.TestCase):
     def setUp(self):
         fresh_remote_evidence(self)

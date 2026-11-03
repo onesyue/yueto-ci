@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "frozen_at": "2026-11-03T02:00:00Z",
-  "approver": "coordinator (owner mandate t454u) 2026-11-03",
+  "frozen_at": "2026-11-03T14:10:43Z",
+  "approver": "coordinator (owner mandate t497u) 2026-11-03",
   "entries": [
     {
       "repo": "yueboard",
@@ -196,6 +196,121 @@
         "required_merge_receipt_missing"
       ],
       "reason": "pre-rule/early-merge accepted history, coordinator decision 11-03 (owner mandate t454u)"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 104,
+      "head": "501911cbe5f69e38bfbebf048c9cbcc548c3998b",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T09:29:43Z; merged_by=app/cursor; url=https://github.com/onesyue/yueboard/pull/104; note: merged by app/cursor (another Cursor agent lane) without our receipt flow; exact-head review CHANGES, follow-up fixes landed in later PRs"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 106,
+      "head": "7151cf3f2cae8f0d2ae8de2d0011a374ba02a747",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T09:22:31Z; merged_by=app/cursor; url=https://github.com/onesyue/yueboard/pull/106; note: merged by app/cursor without receipt flow; exact-head review CHANGES; re-review vs master clean 11-03"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 107,
+      "head": "3a1a224d43400157ae4dcc722c70874731f440f3",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T09:43:21Z; merged_by=onesyue; url=https://github.com/onesyue/yueboard/pull/107; note: merged by onesyue before receipt; exact-head review CHANGES; drift fixed later (yueto #77)"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 108,
+      "head": "ae53f2f31f6dcce2d338c365edee1a92ffe0d8bd",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T10:07:36Z; merged_by=app/cursor; url=https://github.com/onesyue/yueboard/pull/108; note: merged by app/cursor; exact-head review CHANGES, fix landed in #112; exception receipt yueto-ci #212"
+    },
+    {
+      "repo": "yueops",
+      "pr": 298,
+      "head": "837675c2e2cb89676a386a6034c302e46476a80b",
+      "findings": [
+        "no_approving_review_at_merge",
+        "no_check_evidence_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T04:01:07Z; merged_by=onesyue; url=https://github.com/onesyue/yueops/pull/298; note: merged before receipt; parity not pass at merge head; verdict-only record yueto-ci #182"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 179,
+      "head": "bd051adae75a3f924b2cb9faae5b933c1aa66283",
+      "findings": [
+        "no_approving_review_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T04:18:34Z; merged_by=app/cursor; url=https://github.com/onesyue/yueto-ci/pull/179; note: incident: merged 12:18 SGT without valid receipt (LOW-LEVEL ERROR); incident receipt #193"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 187,
+      "head": "b525bfa5d6c9ca22fc881f2ea5f1b883ab46c216",
+      "findings": [
+        "no_approving_review_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T04:59:10Z; merged_by=app/cursor; url=https://github.com/onesyue/yueto-ci/pull/187; note: backfill review at exact head returned CHANGES; no honest approve receipt possible"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 188,
+      "head": "112a795ff72d357e3df6278c5a7b63d172107948",
+      "findings": [
+        "no_approving_review_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T04:51:37Z; merged_by=onesyue; url=https://github.com/onesyue/yueto-ci/pull/188; note: receipt PR merged without its own review; backfill review CHANGES"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 190,
+      "head": "c92237522f1193002cd3f00a8941289b4efbc80c",
+      "findings": [
+        "no_approving_review_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T14:10:43Z; merged_by=onesyue; url=https://github.com/onesyue/yueto-ci/pull/190; note: companion receipt PR for #185 merged without its own exact-head review"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 191,
+      "head": "f66a1b762072c568ab76f9fd467ae2869fcf5a4e",
+      "findings": [
+        "no_approving_review_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T05:03:46Z; merged_by=onesyue; url=https://github.com/onesyue/yueto-ci/pull/191; note: backfill review at exact head returned CHANGES; no honest approve receipt possible"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 212,
+      "head": "2b4db0f396cf234a35f83f1912b8ad6d8cfc9c48",
+      "findings": [
+        "no_approving_review_at_merge",
+        "required_merge_receipt_missing"
+      ],
+      "reason": "Accepted history, not a compliant merge (owner mandate t497u); merged_at=2026-11-03T12:24:14Z; merged_by=onesyue; url=https://github.com/onesyue/yueto-ci/pull/212; note: merged after evmerge printed POLICY FAIL (stale worktree); post-hoc box policy rc=0 at 2b4db0f3; logged incident"
     }
   ]
 }
