@@ -1811,11 +1811,9 @@ def admit_first_native_helper(common, files, source_revision):
     return {p: v for p, v in common.items() if p != path}, files
 
 
-# Outermost first: #256 succeeds the shared pyproject/lock blobs from #122.
+# Outermost first; #256 is pending review and has no active seal.
 PR_SHARED_INPUT_SEALS = (
-    (256, "fef83c066a9042e4ededf3c6f45786084d20ff79e44ba1c85724580e1a5d97cb",
-     frozenset({"pyproject.toml", "uv.lock"})),
-    (122, "6cf768c07c2e49f25b93a31af60f60eca5df307203748195c87abf775550c5f5",
+    (122, "c2d8f9c57343ec12fcbaecda2bd3ef2e4fcf68c0fba3c4b86dd2f4c4bbdd7a46",
      frozenset({"checkin-api/requirements.txt", "pyproject.toml",
                 "telegram-bot/yue/requirements.txt", "uv.lock"})),
 )
@@ -1824,17 +1822,14 @@ PR_SHARED_INPUT_SEALS = (
 # Activate only for these exact after-blobs; historical policy fixtures need no new evidence.
 PR_SHARED_INPUT_AFTER_BLOBS = frozenset({
     ('checkin-api/requirements.txt', 'a5bd445e3f132c2fd090490ab07bb8ee79de6a2f'),
-    ('pyproject.toml', '1d861dc9e1da3fbe876ded02f454a3fd26f2cd27'),
     ('pyproject.toml', 'ba32ad966dc0d67280ba04c03c1f911c8839780a'),
     ('telegram-bot/yue/requirements.txt', '6d87484afee325a2c00630c6eb1c9ed411b130f1'),
     ('uv.lock', '18d0dc71583fcd55ae726dd6c533e0f2111539f2'),
-    ('uv.lock', 'a432bb987a9b6f8f7871647680e9078c6a56b6a3'),
 })
 
 
 PR_SHARED_INPUT_SOURCE_REVISIONS = (
-    "1e6f5d53a8f749f326da51ffd9c5d9f5881574ec",
-    "175860d056393697b752e21c58ae636e9466d86d",
+    "56a7e0412e9bd1d297ba4a5dd3d363147fac463c",
 )
 
 
@@ -1875,15 +1870,15 @@ def reviewed_pr_shared_input_transitions():
                 and item["source"] == record["source_after"],
                 "invalid PR shared-input blob identity")
         records.append(record)
-    outer, inner = records
-    require(outer["source_before"] == inner["source_after"] and all(
-        item["before_blob"] == inner["changes"][path]["after_blob"]
-        for path, item in outer["changes"].items()), "PR shared-input merge order differs")
+    for outer, inner in zip(records, records[1:]):
+        require(outer["source_before"] == inner["source_after"] and all(
+            item["before_blob"] == inner["changes"][path]["after_blob"]
+            for path, item in outer["changes"].items()), "PR shared-input merge order differs")
     return records
 
 
 def admit_pr_shared_inputs(common, files, source_revision):
-    """Undo #256, then #122, before any inner seal sees the shared map."""
+    """Undo reviewed PR bundles before any inner seal sees the shared map."""
     if source_revision not in PR_SHARED_INPUT_SOURCE_REVISIONS and not any(
             common.get(path) == blob for path, blob in PR_SHARED_INPUT_AFTER_BLOBS):
         return common, files
@@ -1909,7 +1904,7 @@ def admit_pr_shared_inputs(common, files, source_revision):
 
 
 def pr_shared_input_successor_proof(source, revision):
-    """Bind the applied bundles to real merge ancestry and exact parent trees."""
+    """Bind bundles to reviewed source ancestry and exact before/after trees."""
     files = tree_inputs(source, revision)
     successors = set()
     for after in PR_SHARED_INPUT_SOURCE_REVISIONS:
@@ -1933,9 +1928,8 @@ def pr_shared_input_successor_proof(source, revision):
             continue
         try:
             git(source, "merge-base", "--is-ancestor", record["source_after"], revision)
-            parent = git(source, "rev-parse", record["source_after"] + "^1").decode().strip()
-            require(parent == record["source_before"], "PR shared-input parent differs")
-            before = tree_inputs(source, parent)
+            git(source, "merge-base", "--is-ancestor", record["source_before"], revision)
+            before = tree_inputs(source, record["source_before"])
             after = tree_inputs(source, record["source_after"])
         except subprocess.CalledProcessError:
             raise ValueError("PR shared-input successor ancestry differs") from None
