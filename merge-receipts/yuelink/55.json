@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yuelink",
+  "pr": 55,
+  "head": "d81d7e496dd2aaa2aa60a212639825b3f2ff18f5",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "d81d7e496dd2aaa2aa60a212639825b3f2ff18f5",
+    "artifact": "reviews/merge-receipts-20261103/yuelink-55-review-release.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T03:22:00Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "d81d7e496dd2aaa2aa60a212639825b3f2ff18f5",
+    "command": "pre-commit: full flutter test + version gates (Mac, outside sandbox)",
+    "log_sha256": "1c809aa1a52ab5974b8da46a2e7e89f711ed4b87e5c1b04393be58e405598683",
+    "ran_at": "2026-11-03T03:15:00Z",
+    "runner": "mac-5f08d00f"
+  }
+}
