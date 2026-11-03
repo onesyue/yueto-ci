@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 118,
+  "head": "f53277649204efb710486177ebb9b0192be1932c",
+  "backfilled": false,
+  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "f53277649204efb710486177ebb9b0192be1932c", "artifact": "reviews/merge-receipts-20261103/yueboard-118.md", "reviewer": "codex", "reviewed_at": "2026-11-03T16:33:48Z"},
+  "parity": {"result": "pass", "head": "f53277649204efb710486177ebb9b0192be1932c", "command": "cd web && vitest run (browser chromium; 37 files, 234 tests)", "log_sha256": "f797e1cd94a339a68d3bffa5b72dafb6f5664e96b95e6d19ef5048c991786f43", "ran_at": "2026-11-03T16:33:18Z", "runner": "mac-5f08d00f"}
+}
