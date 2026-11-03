@@ -1008,6 +1008,12 @@
       "pr": 164,
       "approver": "coordinator 2026-11-03 09:20 SGT decision (receipt exceptions delegated by owner)",
       "reason": "PR #164 itself merged correctly: signed merge 6a3b2cf5019086bb92c107f2024d4d2db26670bd at head 77ccf163402216c0caca5c3e3b0de166e6e6dbb3, required check \"policy tests + workflow lint\" completed success 2026-11-03T00:58:50Z before merge at 00:59:32Z. Its receipt commit 922610ba72d586c86d9c3c743599b047812b37f2 (merge-receipts/yueto-ci/164.json, signed FE2659E6) was pushed directly to master via owner bypass of branch rules instead of a receipt PR. Content is correct; not reverted because reverting the receipt would remove admission evidence. Accepted history; rule \"receipts only via PR with required CI green, never direct push to master\" adopted 11-03. Missing evidence: a PR and required check for the receipt commit."
+    },
+    {
+      "repo": "yueops",
+      "pr": 298,
+      "reason": "Exact-head independent Codex review approved 837675c2e2cb89676a386a6034c302e46476a80b (yueto-ci #182 artifact). Full suite at head ended EXIT 1. Re-run of the failure set on head and base 79a20284eb1947f84dd663ac743ff5d2a7cd1c64 with the same environment: 14 failures on head, all also failing on base (base 15, extra one a known flaky); 0 head-only failures. Recorded as no regression vs base; parity is NOT pass. Evidence: reviews/merge-receipts-20261103/yueops-298-exception.md (head log SHA256 05775be5f8b830a890684089be11aaae54a26b13755febfa25f534610bf616c3). Missing evidence: a passing exact-head parity log.",
+      "approver": "coordinator 2026-11-03 decision under owner standing mandate (decide autonomously): exception, no-regression-vs-base"
     }
   ]
 }
