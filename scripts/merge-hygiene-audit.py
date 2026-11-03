@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CACHE_VERSION = 2
 # Exact approved snapshot bytes; every path uses this pin. Tests may patch it,
 # but CLI arguments cannot authorize a replacement snapshot.
-ACCEPTED_HISTORY_SHA256 = "fca512aa5e0519ac878e9f5df01111bf995c8d7286a3f0e5360a2ce4bce25324"
+ACCEPTED_HISTORY_SHA256 = "efa830551206279f59f794ee34e2d28118355ac20c96eea74318bb3d1e489f8b"
 
 
 class RateFloorError(ValueError):
