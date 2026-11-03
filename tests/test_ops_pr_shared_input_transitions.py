@@ -46,7 +46,7 @@ class PRSharedInputTransitions(unittest.TestCase):
             qualification = json.loads((review / 'qualification.json').read_text())
             assert qualification['source_after'] == freeze['source_after']
             assert qualification['source_tree'] == freeze['source_tree']
-        assert M.sha((ROOT / M.SKIP_BASELINE).read_bytes()) == '190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d'
+        assert M.sha(M.historical_skip_baseline_bytes()) == '190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d'
 
 
     def test_outermost_first_and_historical_inputs_unchanged(self):

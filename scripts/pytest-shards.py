@@ -745,6 +745,49 @@ def baseline_bytes(baseline):
     return (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()
 
 
+NEZHA_RETIREMENT_KEY = "owner_nezha_retirement_20261103"
+NEZHA_RETIRED_MODULE = "tests/test_nezha_retirement_20261013.py"
+NEZHA_PRIOR_BASELINE_SHA256 = "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d"
+
+
+def restore_nezha_history(baseline):
+    """Restore only the owner's two retired cases for existing historical seals."""
+    if NEZHA_RETIREMENT_KEY not in baseline:
+        return baseline
+    original = dict(baseline)
+    record = original.pop(NEZHA_RETIREMENT_KEY)
+    require(isinstance(record, dict) and type(record.get("schema")) is int
+            and type(record.get("removed_case_count")) is int
+            and record == {"schema": 1, "prior_baseline_sha256": NEZHA_PRIOR_BASELINE_SHA256,
+                           "removed_case_count": 2}, "invalid Nezha retirement record")
+    cases = original["cases"]
+    require(not any(n.split("::", 1)[0] == NEZHA_RETIRED_MODULE for n in cases),
+            "retired Nezha cases remain in active baseline")
+    items = list(cases.items())
+    for index, name in enumerate(("test_apply_archives_then_removes_only_reviewed_bytes",
+                                  "test_changed_file_blocks_before_stop"), start=445):
+        items.insert(index, (NEZHA_RETIRED_MODULE + "::" + name, {
+            "outcome": "skipped",
+            "reason": "Skipped: real archive ownership requires isolated Linux root",
+            "module_blob": "f378f0ec5098b6f2664e97b266efd4031df0165c",
+        }))
+    # Existing inner seals verify these exact bytes, including insertion order.
+    original["cases"] = dict(items)
+    return original
+
+
+def historical_skip_baseline_bytes():
+    # Sidecar seals bind the repository baseline, not a caller's execution fixture.
+    raw = (ROOT / "ops-pytest-skip-baseline.json").read_bytes()
+    baseline = json.loads(raw)
+    if NEZHA_RETIREMENT_KEY not in baseline:
+        return raw
+    restored = baseline_bytes(restore_nezha_history(baseline))
+    require(sha(restored) == NEZHA_PRIOR_BASELINE_SHA256,
+            "Nezha retirement changed historical baseline")
+    return restored
+
+
 SECURITY_INPUT_KEY = "reviewed_npm_security_transition"
 SECURITY_INPUT_PATHS = frozenset({"frontend/package.json", "frontend/package-lock.json",
     "telegram-bot/yue/miniapp/package.json", "telegram-bot/yue/miniapp/package-lock.json"})
@@ -752,6 +795,7 @@ SECURITY_INPUT_TRANSITION_SHA256 = "92aae6604a0d8a027c667313be6fbaf9dc1f87ee260c
 
 
 def reviewed_npm_security_transition(baseline):
+    baseline = restore_nezha_history(baseline)
     if SECURITY_INPUT_KEY not in baseline:
         return baseline, None
     original = dict(baseline)
@@ -1848,7 +1892,7 @@ def reviewed_pr_shared_input_transitions():
         require(sha(encoded(record)) == identity, "unreviewed PR shared-input transition")
         require(record["prior_successors_sha256"] == sha(baseline_bytes(original))
                 and record["prior_baseline_sha256"] == sha(
-                    (ROOT / "ops-pytest-skip-baseline.json").read_bytes()),
+                    historical_skip_baseline_bytes()),
                 "PR shared-input transition changed historical predecessor")
         require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
                     for k in ("source_before", "source_after"))
@@ -1960,7 +2004,7 @@ def reviewed_miniapp_membership_transition():
     } and record["schema"] == 1, "invalid miniapp membership transition")
     require(sha(encoded(record)) == MINIAPP_MEMBERSHIP_TRANSITION_SHA256,
             "unreviewed miniapp membership transition identity")
-    require(record["prior_baseline_sha256"] == sha((ROOT / "ops-pytest-skip-baseline.json").read_bytes()),
+    require(record["prior_baseline_sha256"] == sha(historical_skip_baseline_bytes()),
             "miniapp membership transition changed historical baseline")
     require(all(re.fullmatch(r"[0-9a-f]{64}", record[k]) and record[k] != "0" * 64
                 for k in ("independent_review_sha256", "source_freeze_sha256",
@@ -2021,7 +2065,7 @@ def reviewed_pr_input_transition(name):
             "invalid reviewed PR input transition: " + name)
     require(sha(encoded(record)) == identity,
             "unreviewed PR input transition identity: " + name)
-    require(record["prior_baseline_sha256"] == sha((ROOT / "ops-pytest-skip-baseline.json").read_bytes()),
+    require(record["prior_baseline_sha256"] == sha(historical_skip_baseline_bytes()),
             "reviewed PR input transition changed historical baseline: " + name)
     require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
                 for k in ("source_before", "source_after"))
@@ -3398,6 +3442,8 @@ def admit_skips(value, result, native):
         for row in session["nonpassing_outcomes"]:
             nodeid = row["nodeid"]
             module = nodeid.split("::", 1)[0]
+            require(NEZHA_RETIREMENT_KEY not in sealed_baseline or module != NEZHA_RETIRED_MODULE,
+                    "retired Nezha test cannot inherit a historical skip: " + nodeid)
             if retirement is not None and module == RETIRED_HOST_MODULE:
                 require(nodeid in retirement["surviving_ids"]
                         and {"outcome": row["outcome"], "reason": row.get("reason"),

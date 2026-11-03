@@ -69,7 +69,7 @@ def check_full_admission_exact_successor_and_predecessor_preserve_history(name):
                              estate_successor_of=estate)
     assert baseline == historical
     assert common == original_common and files == original_files
-    assert M.sha((ROOT / M.SKIP_BASELINE).read_bytes()) == record['prior_baseline_sha256']
+    assert M.sha(M.historical_skip_baseline_bytes()) == record['prior_baseline_sha256']
 
 
 def check_full_admission_rejects_partial_bundles_unknown_bytes_modes_and_wrong_pin(name, mutation):

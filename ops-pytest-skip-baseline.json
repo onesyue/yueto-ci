@@ -2290,16 +2290,6 @@
       "reason": "Skipped: requires explicitly selected local Compose CLI and cached fixture image",
       "module_blob": "b96d5dbb495e765588ef97e9e69583d36ec5b056"
     },
-    "tests/test_nezha_retirement_20261013.py::test_apply_archives_then_removes_only_reviewed_bytes": {
-      "outcome": "skipped",
-      "reason": "Skipped: real archive ownership requires isolated Linux root",
-      "module_blob": "f378f0ec5098b6f2664e97b266efd4031df0165c"
-    },
-    "tests/test_nezha_retirement_20261013.py::test_changed_file_blocks_before_stop": {
-      "outcome": "skipped",
-      "reason": "Skipped: real archive ownership requires isolated Linux root",
-      "module_blob": "f378f0ec5098b6f2664e97b266efd4031df0165c"
-    },
     "tests/test_nginx_timing_native_20261013.py::test_required_native_environment_has_not_silently_skipped": {
       "outcome": "skipped",
       "reason": "Skipped: native Linux UID0 NGINX execution required",
@@ -7976,5 +7966,10 @@
     "independent_review_sha256": "490f0bd577ec83885cbdda675d473dbf8519aa51ac19dc206e7d4d32df3d36f6",
     "source_freeze_sha256": "dd70a0fe1fa4be9e91e3faf9e9a26e8f494aadce709a86c8d9bf6495ad531ea2",
     "qualification_receipt_sha256": "c03214cce5d9f3cb4fbcafb7685c8515c6331e5203c7cbcc096f2c409e690976"
+  },
+  "owner_nezha_retirement_20261103": {
+    "schema": 1,
+    "prior_baseline_sha256": "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d",
+    "removed_case_count": 2
   }
 }

@@ -181,6 +181,9 @@ review; the coordinator verifies its signed source and actual artifacts first.
 Historical skips retain their source/run identity. Admission never reuses prior
 successful jobs or replaces same-run native, reference, serial and ordinary
 execution. Host/root skips are not Linux acceptance.
+The owner's 2026-11-03 Nezha retirement removes two active skip IDs. Historical
+seal verification reconstructs their exact predecessor bytes; admission rejects
+skips from the retired module, and historical review artifacts stay unchanged.
 
 The serial pytest entry records collection and every setup/call/teardown phase.
 [lens_report.py](scripts/lens_report.py) is a generated projection; use root
