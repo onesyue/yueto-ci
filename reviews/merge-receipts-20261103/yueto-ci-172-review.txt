@@ -1,0 +1,82 @@
+pshot[\"entries\"][0] | {\"pr\": 999999}]}).encode()):
+    for extra in ((), (\"--baseline\", \"/nonexistent/custom-snapshot.json\")):
+        for candidate in (None, row_for(snapshot[\"entries\"][0]) | {\"merged_at\": None}):
+            with patch.object(Path, \"read_bytes\", return_value=contents):
+                rc, result = run_main([], candidate, extra=extra)
+            assert rc == 2 and result[\"complete\"] is False, result
+            tamper_cases += 1
+print(\"Tampered bytes/default/alternate-path scenarios passed:\", tamper_cases)
+
+entry = next(e for e in snapshot[\"entries\"] if e[\"repo\"] == \"yueops\" and e[\"pr\"] == 267)
+fixture = json.loads(Path(\"tests/fixtures/merge-hygiene/approved.json\").read_text())
+pr = fixture[\"pr\"] | {\"number\": entry[\"pr\"], \"head\": {\"sha\": entry[\"head\"]},
+                       \"base\": {\"sha\": \"c\" * 40}, \"state\": \"closed\"}
+anchor = {\"number\": 71, \"state\": \"closed\", \"merged_at\": \"2026-11-01T00:00:00Z\",
+          \"base\": {\"repo\": {\"full_name\": \"onesyue/yueto-ci\"}}}
+class Clock(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return datetime(2026, 11, 4, 12, tzinfo=timezone.utc)
+integrated = 0
+for merged, expected in ((\"2026-11-02T10:00:00Z\", 0),
+                         (\"2026-11-03T02:00:00.000001Z\", 1),
+                         (None, 1)):
+    live = pr | {\"merged_at\": merged, \"updated_at\": merged or \"2026-11-04T10:00:00Z\",
+                 \"state\": \"open\" if merged is None else \"closed\"}
+    def api(endpoint):
+        if endpoint == \"repos/onesyue/yueto-ci/pulls/71\":
+            return copy.deepcopy(anchor)
+        if \"/pulls?\" in endpoint:
+            return [copy.deepcopy(live)] if merged is not None else []
+        if endpoint.endswith(\"/pulls/267\"):
+            return copy.deepcopy(live)
+        if \"/check-runs?\" in endpoint:
+            return {\"check_runs\": []}
+        if \"/reviews?\" in endpoint or \"/statuses?\" in endpoint:
+            return []
+        raise AssertionError(endpoint)
+    for fmt in (\"text\", \"json\"):
+        args = [\"audit\", \"--repos\", \"yueops\", \"--format\", fmt]
+        if merged is None:
+            args += [\"--premerge\", \"yueops\", \"267\"]
+        with patch(\"sys.argv\", args), patch.object(a, \"api\", side_effect=api), patch.object(a, \"receipt\", return_value=None), patch.object(a, \"datetime\", Clock), contextlib.redirect_stdout(io.StringIO()) as output:
+            rc = a.main()
+        assert rc == expected, (merged, output.getvalue())
+        if fmt == \"json\":
+            result = json.loads(output.getvalue())
+            assert result[\"accepted_history\"] == (expected == 0), result
+            assert result[\"unregistered\"] == expected, result
+        integrated += 1
+print(\"Real audit/premerge/main with API fixtures and absent-receipt stub passed:\", integrated)
+'" in /Users/j/Projects/yueto-ci-worktrees/baseline
+ succeeded in 1150ms:
+Pinned snapshot matching and candidate isolation scenarios passed: 1160
+Tampered bytes/default/alternate-path scenarios passed: 16
+Real audit/premerge/main with API fixtures and absent-receipt stub passed: 6
+
+exec
+/bin/zsh -lc 'git rev-parse HEAD; git status --porcelain=v1' in /Users/j/Projects/yueto-ci-worktrees/baseline
+ succeeded in 0ms:
+8735a16e6abaec79517d99897db411712aa4b16b
+
+codex
+未发现 P0–P3 问题。首轮 P1 已修复：
+
+- [scripts/merge-hygiene-audit.py:147](/Users/j/Projects/yueto-ci-worktrees/baseline/scripts/merge-hygiene-audit.py:147)：默认及自定义基线路径均校验固定 SHA-256。
+- [scripts/merge-hygiene-audit.py:385](/Users/j/Projects/yueto-ci-worktrees/baseline/scripts/merge-hygiene-audit.py:385)：要求 repo、PR、head 精确匹配，合并时间不晚于 `frozen_at`，且无额外 findings。
+- [scripts/merge-hygiene-audit.py:389](/Users/j/Projects/yueto-ci-worktrees/baseline/scripts/merge-hygiene-audit.py:389)：开放候选在基线处理后加入，违规仍导致退出码 1。
+
+25 个现有测试及 1,182 个内存夹具场景通过。完整套件因只读限制未运行。审查 head 保持指定值，未修改文件。
+
+VERDICT: APPROVE
+tokens used
+73,320
+未发现 P0–P3 问题。首轮 P1 已修复：
+
+- [scripts/merge-hygiene-audit.py:147](/Users/j/Projects/yueto-ci-worktrees/baseline/scripts/merge-hygiene-audit.py:147)：默认及自定义基线路径均校验固定 SHA-256。
+- [scripts/merge-hygiene-audit.py:385](/Users/j/Projects/yueto-ci-worktrees/baseline/scripts/merge-hygiene-audit.py:385)：要求 repo、PR、head 精确匹配，合并时间不晚于 `frozen_at`，且无额外 findings。
+- [scripts/merge-hygiene-audit.py:389](/Users/j/Projects/yueto-ci-worktrees/baseline/scripts/merge-hygiene-audit.py:389)：开放候选在基线处理后加入，违规仍导致退出码 1。
+
+25 个现有测试及 1,182 个内存夹具场景通过。完整套件因只读限制未运行。审查 head 保持指定值，未修改文件。
+
+VERDICT: APPROVE
