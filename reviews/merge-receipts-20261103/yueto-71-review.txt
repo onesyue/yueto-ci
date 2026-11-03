@@ -1,0 +1,2286 @@
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /Users/j/Projects/yt71
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a1a080-255d-7761-919e-a429b0336f18
+--------
+user
+Read-only review of yueto PR #71 head d1d7aa97e6278fd673a562c69592e789be3f5eda vs cb0c221e: ledger update of release.yaml(+.asc) to generation 328 recording yueops d06b7da0 digests (yueops-web df046f58…, yue-bot 1ecf76af…, checkin-api be17b3b7…). Verify gpg signature validity (gpg --verify release.yaml.asc release.yaml), schema sanity, that only expected fields changed, and note the yueboard desired 40a0026d entry. End with 'VERDICT: APPROVE' or 'VERDICT: REQUEST_CHANGES' and 'reviewed_head: <sha>'.
+2026-11-03T08:22:00.145131Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+hook: SessionStart
+hook: SessionStart Completed
+codex
+我会按“PR #71 发布账本只读审阅”核对签名、schema 和字段差异，并确认 yueboard 的 desired 40a0026d 条目。
+
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'cat .claude/rules/release-pins.md' in /Users/j/Projects/yt71
+ succeeded in 0ms:
+---
+paths:
+  - "yueto-ci/native-node-contract.json"
+  - "yueboard/schema-floor.txt"
+  - "scripts/converge-yueboard-release-pin.py"
+  - "release.yaml"
+---
+
+# Release identity must remain consistent
+
+At release completion, the **reviewed pin, signed desired state, promoted image
+and running production artifact** must identify the same release. Source HEAD
+may be a successor with proven identical build inputs. Keep the image's actual
+build revision; never relabel an older artifact as a new HEAD.
+
+- Do not hand-edit pins. The authorized writer is
+  `scripts/converge-yueboard-release-pin.py --from-head --deployed-board-revision <production-board> --deployed-node-revision <production-fleet>`.
+  It updates the copies atomically and derives the schema floor from
+  `git show <rev>:schema-floor.txt`; the floor is not an input.
+- The two `--deployed-*` revisions validate ancestry only: deployed Board must
+  precede the candidate, and deployed Node must precede the sidecar candidate.
+  They are no longer recorded in files. The Release-A predecessor/target contract
+  was removed on 2026-09-14. Incorrect inputs are rejected; omitting them performs
+  pin convergence only.
+- Since 2026-09-24 (P2 section 4 A3), convergence writes only the two yueto-ci
+  files: the contract and central policy test. It does not write YueOps; those
+  three former projections caused a Board-to-Ops release cycle. Commit yueto-ci
+  after convergence; promotion reads that reviewed state.
+- Do not hand-edit `release.yaml`. `ship.sh` writes it and `release-yaml.py seal`
+  signs it. YueOps deployers, rollouts and migrators consume only verified signed
+  state. Deliberate rollback uses `release-yaml.py write --rollback` then `seal`;
+  late older candidates cannot overwrite newer desired state.
+- The 2026-09-24 build-input rule replaced the old rule allowing only
+  `.gitleaksignore` to lead the pin. Use the existing fingerprints in
+  `scripts/release-state.py --fleet --inputs` to establish equality for every
+  input. Unreadable or unproven inputs are UNKNOWN; calling a change documentation
+  or tests is not an exemption.
+- `schema-compat.txt` records the production floor only after successful actual
+  deployment. Tests still read it, but it has been excluded from Board image
+  inputs since 2026-09-30. Advancing it alone does not move the reviewed pin,
+  rebuild an image or relabel production. `schema-floor.txt` and migration SQL
+  remain build inputs and require a reviewed release when changed.
+- For a new candidate, converge the reviewed pin first, then run
+  `release-yaml.py source-check` for ancestry and floor. Do not declare release
+  consistency before promotion and production readback.
+
+Use `release-chain` for constraints, `docs/release-chain-runbook.md` for commands,
+and `scripts/release-state.py` to read the release identities.
+
+exec
+/bin/zsh -lc 'cat .claude/skills/release-chain/SKILL.md' in /Users/j/Projects/yt71
+ succeeded in 0ms:
+---
+name: release-chain
+description: 'Use before Yue.to release planning/execution, image promotion, panel deployment, node rollout or YueLink publishing. Follow the signed ledger, reviewed pins and exact source-to-production readback.'
+---
+
+# Release chain (Yue.to)
+
+The authoritative commands are in `docs/release-chain-runbook.md`, calibrated
+through a real run on 2026-08-24. This skill records constraints needed during
+planning, before copying commands.
+
+## Start by establishing current state
+
+For a readback-only task, use evidence-discipline's
+[read-only checklist](../evidence-discipline/references/readonly-operations.md#1-post-release-readback).
+That task does not authorize the release operations described below.
+
+```bash
+scripts/release-state.py            # HEAD / reviewed pin / promoted artifact / running production.
+scripts/release-state.py --fleet -v # Actual revisions across direct hosts; detects split fleets.
+scripts/release-state.py --packages # Tuning .deb inventory, which image digest/pin checks cannot see.
+```
+
+Unreachable rows are **UNKNOWN, never OK**. Identify them before any claim that
+all hosts run the target version.
+
+Run local YueLink commands and Git tag pushes through
+`scripts/with-release-sdk.sh <command> [arguments...]`. It reuses release SDK
+verification and sets PATH/FLUTTER_ROOT for Flutter, Dart and Git hooks. Gauntlet
+selects the same SDK, but its child environment cannot propagate back to the
+calling shell. Passing gauntlet does not validate a later bare git push's SDK.
+
+## The 2026-09-15 simplification superseded the former chain
+
+On 2026-09-20, `ratchet-agent-runtime-fault-baseline.sh` was confirmed absent.
+YueOps `f9cb4fe0` had removed it together with the canonical agent-evidence set,
+exact-fleet root gate, seven dated one-time migrators/meta-guard and
+`yueboard-retirement-release-a.env`. See the 09-15 implementation of
+`docs/2026-09-14-release-chain-simplification-proposal.md` §III.1 and closeout
+`docs/2026-09-15-simplification-and-fleet-closeout.md`.
+
+This skill had still prescribed `ratchet --adopt-proved-identity` for ordinary
+cross-revision work. That path no longer existed. A complete 09-20 release plan
+was based on it before checking the files. This was the second stale-skill
+incident here; on 09-09 obsolete guidance had already caused a fifth unnecessary
+dated migrator. Check the latest closeout before planning from historical text.
+
+### Actual simplified sequence
+
+```
+image rollout → route-sync → Board schema migration if migrate status is Pending → panel deployment
+```
+
+Board schema migration is decoupled from fleet identity (§III.2). Its constraints
+are expand/contract backward compatibility and clean migrate status, independent
+of fleet revision. An unreachable host no longer creates the former circular
+panel-release prerequisite; zero DEFER is not a prerequisite either.
+
+Do not restore fault baseline, canonical evidence, `CROSSING_PREDECESSOR_*`,
+`CROSSING_TARGET_NODE_REVISION`, `--adopt-proved-identity` or
+`--required-node-revision`. `rollout-yueops-agent.sh` remains, but its old
+baseline gate does not.
+
+### `release.yaml` is the sole deployment expectation; ship.sh writes it
+
+Root `release.yaml` separates promoted `components` history from approved
+`desired` state. After promotion and signature/SBOM/provenance verification,
+`scripts/ship.sh` writes, seals with a detached GPG signature
+`release.yaml.asc`, signs the commit, pushes, and projects to bastion
+`/var/lib/yueops/fleet-reconcile/release.yaml(+.asc)` and panel
+`/root/release.yaml(+.asc)`. The seal uses the same signing subkey as commits.
+release-state's pin column reads desired. **Never hand-edit without the native
+write/seal chain**; readers reject unsealed changes.
+
+Since P2 §4 A3 (2026-09-24), Ops deployers, the one-phase panel deployer, schema
+migrator, fleet rollout (signed roots and weekly runtime bundles), Docker
+ceremony, fleet-reconcile and the web container read only verified
+`desired.production`. Missing/bad signatures, generation rollback or unwritable
+generation state fail closed; there is no projection fallback.
+`yueops/scripts/yue-node.image(.revision)`, `yueboard.image` and
+`yueboard-schema-release.env` were removed. ship.sh no longer writes image pins
+back into Ops. `SHIP_WRITE_YUEOPS_PROJECTIONS=1` is only for a coordinated A3
+rollback including the matching Ops rollback, not ordinary delivery.
+
+If sealing fails, ship stops after promotion/write. Repair GPG, run
+`release-yaml.py seal`, commit, then resume with `--from-promoted`.
+
+P2 #11 records desired generation at startup and writes with
+`--expect-generation`. New revisions must be descendants of or equal to current
+desired; older, forked or unprovable candidates fail. Intentional rollback uses
+`scripts/release-yaml.py write --component <c> --revision <old-rev> --digest <old-digest> --rollback`,
+then seal and projection, targeting an already promoted GHCR image.
+
+B1 permits Ops' three desired images to span revisions only when older members
+are ancestors of the newest and their image-input fingerprints are identical.
+The deployer recomputes this, including provenance-verified recipes. See
+`docs/2026-09-24-p2-p4-release-decoupling-design.md` §9–§10.
+
+### The deployment ledger does not replace the reviewed Board promotion pin
+
+On 2026-09-20, a new Board schema release failed because promotion resolved
+source f435bb70 while `yueto-ci/native-node-contract.json` still pinned e0d6b1e0.
+The remedy was signed cross-repository reviewed-pin convergence, not a ledger
+edit.
+
+**Every Board release**, including schema-neutral performance changes, requires
+convergence first. The 2026-09-21 check of authorize-yueboard-build-plan.sh
+confirmed exact SHA matching, not only schema-floor checks. Commit the candidate,
+converge pins, then run cross-repository tests to avoid
+`test_exact_release_pin_matches_the_reviewed_yueboard_release_bytes` failures
+on dirty candidates.
+
+```bash
+scripts/converge-yueboard-release-pin.py --check
+scripts/converge-yueboard-release-pin.py --from-head \
+  --deployed-board-revision <production-board-revision> --deployed-node-revision <production-node-revision>
+```
+
+Convergence writes **4 values in 2 files in 1 repository**:
+`yueto-ci/native-node-contract.json` and `test_build_policy.py`. Since A3 it
+never writes Ops. Both deployed arguments validate Git ancestry only; they do
+not project predecessor targets. The schema floor is derived from
+`git show <rev>:schema-floor.txt`, never manually supplied. Changes are all or
+nothing. Only yueto-ci needs pushing to unlock promotion.
+
+If ship cannot associate an identity-matching run within 180 seconds, inspect
+`gh run list -R onesyue/yueto-ci` and the plan job's `--log-failed`; that message
+may be a symptom of immediate planning failure rather than missing dispatch.
+
+### fleet-reconcile: measure actual mode
+
+The 2026-10-07 check found a read-only reconciliation timer and zero deployment
+drift. That did not establish unblocked network paths. The owner canceled a new
+persistent automatic-release write-mode experiment and its seven-day manual
+review; existing quarantine, DNS convergence and recovery retain their owners.
+Read effective ExecStart, environment and latest receipt mode before each claim.
+A running reconciler does not prove automatic deployment, and canceling an
+experiment does not deliver write mode. See `yueops/docs/runbook/fleet-reconcile.md`.
+
+## A push to Board is not merely local
+
+Desired, Board HEAD, promoted image and running panel must reconcile under the
+release rules. Since P2 #11 (2026-09-24), promotion accepts a candidate that is
+on the default branch (HEAD or ancestor), has image inputs identical to HEAD,
+and is no older than latest. `yueto-ci/scripts/promote-source-gate.py` repeats
+checks immediately before moving tags. Input-neutral pushes do not invalidate
+promotion; changed image inputs do. The exact reviewed-pin requirement remains.
+
+A Board push requires checking the existing release identities and effective
+image inputs. When the actual comparator proves a clean default-branch successor
+has unchanged inputs and the same schema floor, retain the reviewed pin and the
+actual promoted/running image revision. A documentation or schema-compat-only
+successor does not itself require a rebuild or ship under those conditions.
+Names such as documentation or tests are not exemptions: COPY and ignore rules
+determine inputs, and UNKNOWN must refuse. Changed inputs require normal reviewed
+pin convergence (only yueto-ci), the signed release chain and production readback.
+Never relabel the older image as the new HEAD. Use the existing fingerprint
+consumer and identity rules in `.claude/rules/release-pins.md`.
+
+## One-phase panel deployment through ship.sh
+
+Since 2026-09-15, the former mint/converge/deploy three-phase procedure and its
+per-Ops-revision sealed deadman are no longer the ordinary path. Real runs on
+09-15 and 09-20 verified the replacement.
+
+```bash
+scripts/ship.sh yueboard --foreground    # Build → promote → verify → project → deploy.
+scripts/ship.sh yueboard --from-promoted --foreground # Resume after promotion; no duplicate build.
+scripts/ship.sh --auto --foreground      # Select work using release-state.
+scripts/ship.sh <svc> --detach           # Durable local logs under ~/.yueto-ship-logs/.
+```
+
+Non-TTY and recognized agent calls detach by default. Sequential release steps
+must use `--foreground` or wait for the printed `<log>.run.json` to contain a
+numeric `exit_code` of zero. Startup acknowledgment is not release success;
+null, missing or unreadable final status cannot authorize a dependent step.
+
+`ship.sh yue-node --foreground` builds, promotes, verifies and projects signed desired only;
+it **does not roll the fleet**. Actual rollout runs
+`rollout-yue-node-image.sh` from a signed Ops release root and requires slot
+readback. Published images do not prove installed nodes.
+
+ship.sh projects ten explicit dependencies to the panel, which cannot reach
+GitHub: six deployment scripts, a public env template, a verification keyring,
+release.yaml and its signature. It then runs `panel-deploy.sh <digest>`:
+signature + two SBOMs + provenance; exact desired digest; the candidate image's
+own migrate status with no Pending; atomic env update from image labels;
+container start; two consecutive readyz checks; retain the stopped predecessor
+for rollback; remove older rollback containers. Pending migrations refuse
+deployment and point to `run-yueboard-schema-migration.sh --apply`.
+
+The panel's `/opt/yueops` is a **detached, remote-less projection directory**.
+On 2026-09-20 its HEAD still had schema floor 43 while projected files contained
+09-14 scripts and status showed many M/D paths. Never git pull there or judge
+installed bytes by git log. Use actual file bytes/mtime and ship projection
+receipts. Connect through the bastion; the recorded panel address was
+`ssh root@66.55.76.208`, not a locally reachable key path.
+
+## Promotion criteria observed in practice
+
+- Take digests **only from promotion-step logs**, never build-step logs.
+- Promotion is not atomic across services. Ops' three independent jobs can leave
+  partial promotion (two latest tags moved, one did not). Deployment validates
+  signed desired per image. Same-revision images or B1-proven ancestor/input-
+  equivalent members are permitted; partial promotion is not full deployment.
+- Freeze relevant source during promotion for both Ops and Board.
+- ship's run-association queue window is up to 100 minutes (`queue_cap`, raised
+  from 45 on 2026-10-11). A same-revision poll-sources build ahead of it can spend
+  40–50 minutes validating Ops. Long queued state is not a reason to restart.
+  Absence of any new matching run within 180 seconds is a distinct failure.
+- Concurrent ship writes use a generation gate; rejection of the later writer
+  is correct. If promotion and verification already succeeded, resume with
+  `scripts/ship.sh <svc> --from-promoted --foreground`. Locks are session-scoped; deliberately
+  concurrent releases first acquire their complete repository set with
+  `release-lock.py acquire --repos <all-repositories>` (three parallel runs were
+  measured on 2026-10-11).
+
+## SSH authority ACTIVE since 2026-10-12 09:49
+
+Bastion release-preflight confirmed `mode=ACTIVE`, `bindings_verified=true` and
+`active_generation == last_good_generation`. There is no fallback to the former
+bootstrap gate.
+
+Before using any new Ops revision for panel/Ops deployment or A/B direct entry
+publication, complete all three for that revision:
+
+1. Host auto-pull reaches it.
+2. `make-release-root.sh --strict <rev>` creates its complete signed root.
+3. Root `scripts/ship-sshd-authority.py --repository yueops --revision <rev> --apply`
+   signs only this release's bindings, without creating a generation or handling
+   private keys. ship.sh's mint_release_root chains steps 2 and 3; omitting step 3
+   on a manual path makes deployers refuse.
+
+OpenSSH upgrades require a newly signed authority generation because credentials
+bind the sshd binary. emby/storage/bastion have `apt-mark hold openssh-*`; do not
+remove holds incidentally. New hosts must pass hardened_gate before enrollment
+(`node-lifecycle`).
+
+Run Python inside signed roots with `python3 -I -B` or
+`PYTHONDONTWRITEBYTECODE=1`. Generated pycache makes roots non-pristine and blocks
+rollout/deployment (observed 2026-10-11).
+
+## Releasing under bastion CPU steal
+
+The 2026-10-11 measurement was 60–78% steal and load 30–80 due to provider-host
+contention. Confirm current evidence using `fleet-diagnose` before applying any
+mitigation.
+
+| Symptom | Evidence | Bounded mitigation |
+|---|---|---|
+| Root mint/deploy `command_failed_78`, with TimeoutExpired or related reason | High vmstat st and CPU pressure; same revision passes at lower load | `ssh bastion 'systemctl set-property --runtime ssh.service CPUWeight=5000'`; noninteractive SSH runs in ssh.service, not user slice. Measured 5m40s→2m05s. At closeout run `systemctl revert ssh.service` and read back |
+| `current service is not healthy` refusal | Service handles requests but healthcheck times out | Record and pause selected pure-monitoring timers within the window; deploy after all three services are healthy, then restore/read back each timer. Do not run auto-pull/install.sh while paused: inactive timers make it fail |
+| Sunday 04:00–04:20 canary recheck failure | Geodata distribution restarts Reality during observation | Avoid the window; after pre-proof refusal wait ≥5 minutes since the last restart. Since Ops `f8c18eb8`, distribution during rollout stages files without restarting |
+
+## A/B direct-entry publication (`publish-native-entry-pairs.py prepare/apply`)
+
+Verified 2026-10-12:
+
+- Authority must be ACTIVE. Post-activation bootstrap seal anchors **must exist
+  and match exactly**, not be treated as a refusal reason (`6d894537`).
+- With `all_native_pairs_required`, Board renders account information
+  (remaining traffic/expiry) as an unusable proxy at `127.0.0.1:9`, reusing the
+  first product's server_id. Binding/liveness scans exempt exactly that
+  loopback:9 shape, never its display name. Wrong real product ports still fail
+  (`57108d8b`).
+- Apply reuses prepare's authority verdict only on the same boot, at
+  `CLOCK_BOOTTIME` age ≤600s, wall/monotonic skew ≤5s and exact identity match.
+  Otherwise it refuses; it never silently reruns preflight (`f42b46c8`).
+- IPv6 observation points started by prepare reuse the parent verdict
+  (`e1361f1a`). Previously each ran another 30–90s preflight, exhausting the
+  600s budget across six pools before apply. Standalone observation points still
+  run full preflight.
+
+## Automation boundaries for combined v4/host changes
+
+For combined entry, ACL and host-executor changes, drain work as specified in
+`docs/release-chain-runbook.md`'s combined-release section. Stopping shield's
+timer does not prevent DNS coordinator/peers-sync from starting its service;
+Ops deployment can reactivate direct-pool DNS timers. Immediately before mutation,
+reread all relevant timers/services/Jobs and preserve original states and failures.
+Stop only this window's timers, let running transactions finish, and do not
+clear locks.
+
+Start durable oneshots with `systemd-run --no-block` and track Invocation/journal.
+An SSH wait timeout does not prove startup failed. Restoration must establish
+new topology, executed bytes and actual protocol/ACL consistency. A single HK
+host's recovery marker cannot stand in for every previously staged ACL. Keep
+exact lists and sequencing only in the runbook.
+
+## Fleet rollout pitfalls
+
+### A. `/opt/yueops` is not a signed release root
+
+Its operational .env/data/pycache and other ignored files make pristine-root
+assertions structurally impossible. Mint a clean root:
+
+```sh
+ssh bastion 'cd /opt/yueops && ROOT=$(bash scripts/make-release-root.sh)'
+```
+
+### B. Detach the fleet rollout
+
+An SSH-bound driver dies with the session, leaving
+`transaction=prepared-for-soak` and lost stdout. Restarting then encounters
+`a durable Yue-Node transaction is already active`. Use the native detached
+path (`setsid nohup … & disown` on the remote Linux host). Authoritative logs
+are always in `/var/log/yueops-rollout/`, not inferred from stdout. After manual
+finalization, wait the full 240-second lease before another rollout.
+
+**Concurrency defaults to 4; higher values lack evidence.** Earlier skill text
+said ≤3, but Ops `3161d06` had moved the default from 2 to 4. A stale literal
+assertion `CONCURRENCY=${CONCURRENCY:-2}` failed the batch; the test now guards
+the supported 1..4 interval in
+`yueops/tests/test_yue_node_host_convergence.py`.
+
+Evidence for 4: `/var/log/yueops-rollout/20260831-214836.log`,
+21:48:49→22:19:26, 30.6 minutes for 20 hosts, ok=20 fail=0 unreachable=1;
+no `RETRY|throttl|Connection refused|Too many|max startups` matches and zero
+accounting-drain FATAL. The same night's concurrency=2 comparison took roughly
+81 minutes for 27 hosts, about 3 minutes/host versus 1.5 at 4. This is one real
+data point, **not a load study**. No separate control-plane or billing-queue
+pressure curve was collected; measure both before increasing concurrency.
+
+### Editing rollout scripts
+
+- `readonly` inside rollout_one is not function-local. The second host can fail
+  with readonly variable and leave prepared transactions although the first
+  canary passed. Put constants at top level. Guard:
+  `tests/test_rollout_per_host_scope_20260830.py`.
+- Transport failure is not mutation failure. Both yue-sg slots had been rebuilt,
+  healthy and RUNTIME_PREPARED when commit SSH timed out with 255, blocking the
+  remaining 17 hosts. `finalize_remote_transaction` retries **only SSH's 255**,
+  3×15s. Return finalizer verdicts unchanged; retrying a verdict can disguise a
+  real defect as an intermittent event.
+
+An interrupted rollout leaves prepared transactions. The host
+`yue-node-rollout-recovery.timer` has been observed to finalize them. If manual
+finalization is necessary, use the verified SHA256 of
+`finalize-yue-node-rollout-runtime.sh` with `--action commit`, then wait the
+full 240-second lease before retrying.
+
+## Validation when private Actions are frozen
+
+Determine actual execution from job steps and annotations each time. Historical
+zero-step runs are not permanent state. Public yueto-ci poll-sources is scheduled
+every 20 minutes to compare source HEAD with built-<sha>; actual scheduling can
+lag, so 20 minutes is not an SLA. `validate-<repo>` performs product tests, but
+cannot replace uncovered scans or workspace contracts. Local gauntlet remains
+the real gate: missing tools/repos are SKIP, never PASS, and insufficient executed
+stages fail. Only the account owner can resolve billing/spending-limit freezes.
+
+## Closeout criteria
+
+```bash
+scripts/release-state.py --fleet -v   # Reconcile all released components; distinguish unrelated pending work.
+scripts/check-all-contracts.sh        # Full current set; --list supplies its size.
+ssh bastion 'systemctl --failed'      # Also inspect oneshot Result values individually.
+```
+
+A complete three-component server release requires all three server rows OK.
+Recheck nodes after **every Board deployment or rollback**; brief 502s can be
+fatal to an already backlogged outbox. A partial-component release must not be
+reported as a fully converged product release.
+
+## Other release gates
+
+- YueLink: version triplet + final signed source → push → exact source-attestation
+  → private signed stable tag → public release.sh → five-platform build →
+  automatic signed promotion + R2. There is no prerelease build channel; a
+  successful build goes stable. Complete gates before building. Public tags are
+  immutable; a change requires a version bump. Promotion's ed25519 private key
+  is not on the workstation; emergency manual promotion runs only on bastion
+  through the runbook.
+- Measure feature-flag timing. Current `FeatureFlags` fetches at startup, not
+  instantaneous circuit breaking for active sessions. Until refresh is delivered,
+  receipts can claim only startup/next-fetch effect.
+- Board requires the fixed GPG release signer. Disabling commit signing blocks
+  the release gate.
+- `yuelink-ci` is generated: after changing YueLink build.yml, run
+  `./sync-build.sh ../yuelink` in the mirror repository.
+
+## Panel deployment and fleet rollout must not overlap
+
+On 2026-08-29, a panel rebuild caused reconnects and 94 distinct
+node_presence_streams instance IDs in the following minute, compared with 2
+before. `nodeProcessFenceAfter` is 4 minutes; old/new presence coexist,
+(server,machine) leases are not exclusive and accounting queues block. The
+rollout's 30-second drain gate then failed with prepare_exit=43.
+
+Serialize them. After panel deployment, wait at least 5 minutes before fleet
+rollout; do not deploy the panel during rollout. A single-host stop/start has
+the same fence: repeated immediate retries create new conflicts. Prove outbox
+drain before stopping a container under the applicable storage/transaction rules;
+after failure, allow 5 minutes before a clean retry. Docker StartedAt is UTC.
+See runbook §3.6 / §3.7.
+
+## Finish pushes before building
+
+Images bake their source revision and deployment validates exact identity.
+On 2026-08-29, building before pin convergence failed five builds; building before
+pushing Node pins produced three undeployable images.
+
+Sequence: commit/push source → converge/push yueto-ci → build/promote with inputs
+frozen → take promotion digest → verify → write/seal/project release.yaml →
+deploy. A3 removed the intervening Ops image-pin commit.
+
+Since P2 #11, only pushes changing this image's build inputs invalidate promotion.
+Since P3, `poll-skip-decision.py` skips builds whose input-equivalent promoted
+image has verified provenance; unknown means build. A HEAD without built-<sha>
+can therefore be legitimate. ship.sh's explicit promotion builds are unaffected.
+See runbook §3.5b.
+
+## Private Actions freeze state changes; measure it each time
+
+Neither "all frozen" nor "running" is a permanent fact. This guidance was
+corrected three times after snapshots had been mistaken for standing rules:
+
+- 08-14: all frozen. Treating every red cross as billing noise then hid a real
+  Board production revision `dc1b6c40` failure: unit's first gofmt step failed
+  `internal/platform/apiresp/problem_test.go`.
+- 09-03: Board/Ops/Link actually ran; only Node remained frozen.
+- 2026-09-07: all four private repositories again showed the freeze signature.
+
+| Repository | 2026-09-03 observation | 2026-09-07 observation |
+|---|---|---|
+| yueboard | ci ~3 minutes / 7 jobs / unit 14 steps: executing | ci 6 seconds / 7 jobs / 0 steps each: frozen |
+| yueops | Security gate / Notify ~2 minutes: executing | Notify 4 seconds / 0 steps: frozen |
+| yuelink | CI ~5 minutes: executing | Nightly 3 seconds / 0 steps: frozen |
+| yue-node | 4 seconds / 0 steps / no runner: frozen | Same; GitHub's own Dependabot graph job does not establish unfreezing |
+
+Use current observations, not this historical table:
+
+```bash
+gh run list -R onesyue/<repo> -L 1 --json databaseId,name,createdAt,updatedAt
+gh run view <id> -R onesyue/<repo> --json jobs -q '[.jobs[]|{name,steps:(.steps|length)}]'
+```
+
+Seconds with zero steps match billing blocking; minutes with executed steps
+require investigation of actual failures. Zero-step jobs may lack logs; inspect
+the decisive annotations:
+
+```bash
+gh api repos/onesyue/<repo>/check-runs/<job_id>/annotations -q '.[].message'
+```
+
+The observed annotation reported failed account payments or a spending limit
+requiring adjustment in Billing & plans. Only the account owner can resolve it.
+The public yueto-ci/yuelink-ci repositories were unaffected, which is why central
+build/promotion and policy tests live there.
+
+| Repository | Coverage elsewhere | Coverage still requiring local gauntlet/workspace |
+|---|---|---|
+| yuelink | Public exact-SHA source-attestation and tagged release preflight; analysis/tests/platform/vulnerability gates | Complete cross-repository contracts; an ordinary source push does not replace explicit public attestation |
+| yueboard | Central validate-yueboard: Go unit/race, PG18, both SPAs, then image build | Sibling-dependent or local-platform contracts |
+| yueops | Central validate-yueops: full pytest, lint/compile, frontend, then three image builds | Siblings absent from central checkout and local-platform branches |
+| yue-node | Central validate-yue-node make test: both profiles and real Linux paths, then image | Complete workspace contracts and local-platform branches |
+
+The 2026-09-21 correction replaced obsolete claims that public CI only built
+images and Node make test ran nowhere. Runs `35572863872` (Node validation) and
+`35572883990` (Board validation) executed and passed. Public validation still
+does not replace the complete local gate or actual deployment readback.
+
+Gauntlet once omitted gofmt, contributing to the hidden real failure above.
+The 2026-09-03 addition used
+`! gofmt -l . | tee /dev/stderr | grep -q .`; with pipefail and ≥2 unformatted
+files, early grep exit could SIGPIPE tee and invert failure into PASS. A
+200-file mutation falsely passed 20/20 times. On 2026-09-27 it was changed to
+capture output before testing and made MANDATORY. Related tests live in
+`scripts/test-shell-early-exit-pipes.py`.
+
+## Build triggers and manual promotion
+
+`yueto-ci/poll-sources.yml` pulls source HEADs on a 20-minute schedule and compares
+GHCR built-<short sha> tags. It **builds only, never promotes**. The former private
+repository_dispatch path required `YUETO_CI_DISPATCH_PAT`, absent from all three
+repositories: 428 runs across Board/Node/Ops, zero success. Persistent red hid a
+broken frontend gate and a pytest suite dead for two days. Pulling reuses existing
+`YUETO_CI_PAT`, without a new credential.
+
+Moving `:sha-*` / `:latest` remains deliberate:
+
+```bash
+gh workflow run build.yml -R onesyue/yueto-ci -f service=<svc> -f ref=<40-hex> -f promote=true
+```
+
+Ops, including a single image or all, additionally requires
+`-f migration_base=<40-hex-previous-release>`. ship.sh reads the verified prior
+root desired and supplies it. Public gates verify existence/ancestry and lint
+SQL across the entire range, not a guessed HEAD^ boundary. Polling uses the
+promoted revision with verified master provenance. If the baseline cannot be
+proved, fail rather than dispatching an empty range as success.
+`scripts/kick-builds.sh` dispatches poll-sources immediately instead of waiting
+for scheduling. GitHub throttles that cron to roughly one run per 2–5 h
+(measured 2026-09-14), so do not wait on the 20-minute schedule.
+
+### Central CI is part of the supply-chain trust boundary
+
+`yueops/scripts/verify-image-signature.sh` anchors cosign certificate identity to
+`^https://github.com/onesyue/yueto-ci/\.github/workflows/build\.yml@refs/heads/master$`.
+The 2026-09-27 tightening accepted only master: all 223 historical ledger digests
+had promotion runs from master; main is no longer accepted. SLSA provenance
+anchors `--repo onesyue/yueto-ci`. Signature, SBOM and provenance gates cannot be
+disabled. Production GHCR digests are signed under that identity. Moving builds
+would reanchor the supply chain and invalidate pins; it requires an explicit
+reviewed change, never an incidental cleanup. Central CI also owns
+native-node-contract.json.
+
+YueLink CI remains a generated mirror: sync-build.sh applies four anchored
+patches to YueLink build.yml, using `SRC_DEPLOY_KEY` for cross-repo checkout.
+After changing the source workflow, run `./sync-build.sh ../yuelink` in the
+mirror. YueLink does not use cosign, so the central-CI argument does not apply
+unchanged. Returning builds to onesyue/yuelink is a possible separately planned
+migration of roughly 13 signing/R2 secrets and re-enabling Build YueLink,
+previously deliberately disabled to prevent duplicate builds.
+
+Client distribution uses Cloudflare R2 (`yuetong.app`), not GitHub releases.
+Only yuelink-ci owns R2 cleanup. The duplicate YueLink cron was removed on
+2026-08-02: two jobs deleted from one bucket, with the local copy roughly
+70 lines behind.
+
+## Two release-state scan switches
+
+Image release truths do not prove installation of Debian tuning packages,
+which have no image digest/promotion/pin. On 2026-08-25, three fleet rollouts
+had built artifacts and matching reviewed hashes but had never executed for
+weeks: relays were 15 days behind and 48 of 51 direct hosts had old packages.
+
+- `--fleet` reads actual running YueNode revisions on every direct host to detect
+  split deployment.
+- `--packages` reads `yueops-tuning[-relay]` versions on direct hosts and relays.
+
+Missing measurements are **UNKNOWN, never OK**. Establish reachability before
+claiming universal target-version installation.
+
+exec
+/bin/zsh -lc pwd in /Users/j/Projects/yt71
+ succeeded in 0ms:
+/Users/j/Projects/yt71
+
+exec
+/bin/zsh -lc 'cat CLAUDE.md' in /Users/j/Projects/yt71
+ succeeded in 0ms:
+# CLAUDE.md
+
+@AGENTS.md
+
+Shared workspace guidance for Claude Code and Codex (`AGENTS.md` loads this file).
+
+**All owner-facing replies must be in Chinese**, including progress updates,
+tables and final reports. Keep code identifiers, commands and SHAs unchanged.
+Repository engineering documentation and explanatory comments use English.
+
+This is the **`yue.to` workspace root** — an umbrella over a family of independent git repos that together make up a privatized (from-Xboard) VPN/proxy service: panel, node fleet, client apps, and ops. It is NOT a monorepo. Each subdirectory is its own repository; the root repo tracks nine directories — `docs/`, `scripts/`, `design/`, `i18n/`, `schedule/`, `help/`, `.claude/` (skills/rules/agents/hooks/settings only; `worktrees/`/`projects/`/`state/` stay ignored), `.agents/` (Codex skill links), `.grok/` (Grok rules, LSP, and three skill overrides; estate skills stay in `.claude/skills/`) — plus `.codex/hooks.json` and a few top-level files: `yueto.code-workspace`, `.gitleaksignore`, and the signed release desired state `release.yaml` + `release.yaml.asc` (`.gitignore` is `/*/` + allowlist, so root *files* are not ignored). Root `reports/` is a local, untracked scratch area — never commit it or cite it as current state. Most real work happens **inside** a component repo, each of which has its own richer `CLAUDE.md` — read that one too when working in it.
+
+## Where the knowledge lives: this file, skills, rules
+
+This file is **always-loaded context** and is kept under the official ~200-line target. Everything
+else has a home that loads on demand — that is the whole design, not a filing convenience:
+
+- **`.claude/skills/` — workspace skills**, symlinked into `~/.claude/skills/` so they load
+  through `.agents/skills/` for Codex and installed for both agents by `scripts/sync-agent-skills.py --apply --user`. Procedural knowledge: worthless most of the time, and must be
+  word-for-word correct the rest of the time.
+- **`.claude/rules/` — path-scoped rules** (`paths:` frontmatter). A rule enters context only when
+  a file it names is read. Use it for "this *file class* has a trap", never for prose.
+- **`.claude/agents/` — project subagents**: `component-worker` (edits a component repo from its own
+  worktree under root `.claude/worktrees/` — never `isolation: worktree`) and `readonly-investigator`.
+
+| Skill (routes by **domain**) | Load it when |
+|---|---|
+| `guard-authoring` | changing/reviewing guard coverage, contract checks, CI assertions or probes; diagnosing test import/fixture leakage; ordinary fixes that only run existing checks do not trigger it |
+| `release-chain` | planning or running any release, image roll, promote or production deploy |
+| `node-lifecycle` | classifying maintenance/retirement or supplier-quota availability; provisioning, cloning, rebuilding or hard-deleting a fleet node |
+| `fleet-diagnose` | diagnosing node/fleet/network/latency/loss/resource problems, **before** changing production |
+| `pg-safety` | writing a Postgres migration, GRANT/role manifest, cross-ownership table access, erasure change, or a spend/eligibility query |
+| `generated-blocks` | changing design tokens, user-facing strings/translations, help articles, or any recurring job |
+| `round-closeout` | closing out an audit / optimization / incident round |
+| `yueto-orchestration` | running an authorized multi-session round under the current coordinator (Claude or Codex): one release exit, side-branch candidates, inbox, release train and shutdown; no fixed-model approval prerequisite |
+
+| Skill (routes by **action**) | Load it when |
+|---|---|
+| `yueto-agent-maintenance` | equipping, configuring or diagnosing coding-agent capabilities for this workspace |
+| `evidence-discipline` | interpreting operational measurements or asserting production/fleet health or runtime improvement; match the claim to its evidence |
+| `landed-not-written` | installing executable scripts/configuration/automation or claiming an installed change took effect; verify the actual consumer |
+| `change-blast-radius` | removing a boundary, renaming, moving a file, zeroing a parameter, dropping a wait, or touching a constant other code pins |
+| `concurrent-git-safety` | committing/pushing, spawning concurrent agents into one repo, or editing anything while a long-running script executes |
+| `patrol` | routine read-only patrol of failed units, DNS sentinel receipts, relay-pool evidence and local workload admission; never changes production |
+| `readonly-reconcile` | read-only balance/points reconciliation or release accounting comparisons; never repairs data |
+| `release-readback` | after a signed release: reconcile promoted, desired and running images, migration receipts and before/after accounting evidence |
+
+Select skills by the actual change and claim. Related-skill links are conditional,
+not a recursive reading list. Reuse loaded guidance and read only relevant reference sections.
+
+Component repos use the same mechanism: **yueops** nine (`yueops-agent-deploy`, `-host-hardening`, `-deploy-gotchas`,
+`-panel-db-gotchas`, `-business-gotchas`, `-emby`, `-ai-support`, `-telegram`, `-business-features`) and **yuelink**
+five (`yuelink-platform-gotchas`, `-core-ffi`, `-panel-api`, `-environment`, `-release-ci`), moved **verbatim** from each `CLAUDE.md`.
+
+**Measure before proposing another split** (`wc -l` + tokens over the real byte/CJK mix, same unit on
+both sides; dated readings live in `round-closeout`). **yueboard and yue-node are at target — do not split them.**
+🚨 Moving doc text into a skill silently shrinks the scan surface of **negative** doc-truth guards
+("must no longer say Y") while they stay green. 📎 `change-blast-radius`.
+
+`.claude/hooks/` (wired in `settings.json`, tests beside them): `yueto-notice.py` reminds, never
+blocks, on a `git push` touching yueboard or an edit to a generated token file, `schedule/registry.yaml`
+or an i18n catalog; `session-status.py` (SessionStart) injects any side branch / dirty tree / unpushed
+commit / pin mismatch / release lock — UNKNOWN, never "clean". `defaultMode: "bypassPermissions"` is
+the owner's 2026-08-31 decision: **zero permission prompts** (`ask-gate.py` is deliberately un-wired;
+don't re-wire it); 2026-10-13 extended to subagents (`permissionMode` + a `PermissionRequest` auto-allow). The one
+blocking hook is `secret-read-guard.py` (2026-10-17: denies unredacted secret-file/container-env reads); else reminders, rules, guards.
+
+**Owner decision — 2026-09-10:** never run local download-and-verify acceptance after YueLink
+releases; CI package/runtime checks, artifact verification, signed provenance and the promotion result suffice.
+
+## Workspace commands (root scope)
+
+```bash
+scripts/status-all.sh          # branch / dirty / unpushed for every component repo (+ yuelink/core/mihomo)
+scripts/pull-all.sh            # git pull --ff-only across all; repos with local changes fetch-only
+scripts/check-all-contracts.sh # run every cross-cutting guard, print one summary (--list to see them)
+scripts/gauntlet-launch.sh     # clean login environment, fail-fast admission, exclusive log
+                               # THE pre-release gate: every private repo's own CI stages + all contracts
+                               # (run it only under heavy-run; a direct scripts/gauntlet.sh exits 2)
+scripts/release-state.py       # read-only: source HEAD vs reviewed pin vs promoted image vs production
+scripts/ship.sh <yueops|yueboard|yue-node> [--auto|--no-deploy|--detach|--from-promoted]
+                               # the whole release chain unattended: build → promote → verify → deploy
+scripts/kick-builds.sh [--dry-run]     # trigger yueto-ci poll-sources now instead of waiting for its cron
+scripts/scan-workspace-secrets.sh      # yueops' secret scanner over ALL private repos + root (in gauntlet)
+scripts/run-yueboard-pg18-gauntlet.sh  # release-only yueboard integration gate on a disposable PG18
+scripts/linux-lens-gate.sh             # yueops full suite in the central-CI Linux lens; proves darwin-skipped tests ran
+scripts/disk-hygiene.sh --check|--apply  # the ONLY sanctioned worktree/docker/cache cleanup (keep-list + safety criteria)
+scripts/heavy-run.sh / new-session.sh  # orchestration entry points (semaphore, Codex sessions) 📎 `yueto-orchestration`
+```
+
+The root's own tests are the guard self-tests (`scripts/test-*.py`, `.claude/hooks/test_*.py`), run
+from the workspace venv `~/.venvs/yueto` (3.13 + pytest + pyyaml; system `python3` is 3.9 with neither).
+Hyphenated `test-*.py` names escape pytest discovery — `pytest scripts` silently collects nothing:
+
+```bash
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-root-doc-truth.py                        # one guard's tests
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-schedule-registry.py -k baseline_is_green # one case
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-*.py .claude/hooks                        # all root self-tests
+```
+
+- `ship.sh` only chains the audited per-step scripts, scraping digests from the *promote* step's log
+  (never the build's). 📎 constraints: **`release-chain`**; commands: `docs/release-chain-runbook.md`.
+- `release-state.py` names the next action per row; `--fleet`/`--packages` sweep the fleet, where an
+  unreachable row is **UNKNOWN, never OK**. 📎 `release-chain`.
+- `gauntlet.sh` is the only fail-closed "did everything actually run" gate; `--fast` drops the
+  network stages and **does not qualify for a release**. 📎 `guard-authoring`.
+- `status-all.sh`/`pull-all.sh` also cover `yuelink/core/mihomo`, a *separate* repo inside `yuelink`.
+
+🚨 **Before believing a red guard or a four-truths mismatch, run `scripts/status-all.sh`.** Cross-repo
+guards read each repo's **main checkout**, so whatever branch it is on is a hidden input (2026-09-06:
+one repo left on a side branch → 8 red contracts, 6 pure artifacts). 📎 `concurrent-git-safety`.
+
+`check-all-contracts.sh` is the one place that knows the **full** guard set (`--list`; never copy the
+count). Every comparator that reads two repos at once runs **here and nowhere else** — single-repo CI
+lacks the sibling checkout. 📎 `guard-authoring` (incl. the `guard-ci-claims` meta-guard).
+
+## The cross-repo sources of truth the root repo itself owns
+
+Four small root directories are the **single upstream** for values duplicated across five surfaces
+and four runtimes — so an edit inside a component repo to any generated block is a regression, not a fix.
+
+- **`design/tokens/yue.tokens.json`** — the design scale. `node design/build-tokens.mjs` regenerates
+  one fenced block per surface plus the scale tables in `docs/yue-visual-language-2026.md` §2.
+- **`i18n/catalog/*.json`** — the zh-CN → en catalog; `scripts/i18n/CONTRACT.md` is the one binding spec.
+- **`schedule/registry.yaml`** — the generated inventory of every recurring job across six layers,
+  from `scripts/schedule/extract.py --write`.
+- **`help/articles/*.md`** — the unified help center (`help/CONTRACT.md`); UIs reference `help:<slug>`.
+
+📎 **Before touching any of these, read the `generated-blocks` skill** (generated vs. hand-written,
+fence rules, never-translate set, ratchets).
+
+## The system: four planes
+
+Data flows **panel → subscription → client**, and **panel ⇄ node** for control.
+
+| Repo | Plane | Stack | Role |
+|---|---|---|---|
+| **yueboard** | Control (panel) | Go (chi + sqlc + goose + pgx/PG, ConnectRPC) | Native panel backend for user/admin APIs, login, **subscription generation**, and the only node control-plane server. The former REST/WS node protocol and fallback proxy are gone. Native admin/user SPAs (React 19) are embedded with `go:embed`; `my.yue.to` runs this. |
+| **yue-node** | Data (nodes) | Go (`cmd/` + `internal/…`, kernels as adapters) | Native node agent on the anti-GFW fleet, with direct hosts and shared relays. **Never restate the fleet size from memory or from this file**: the three counts (direct hosts / serving assignments / unique enabled nodes) come only from the live inventory (`servers` where `deploy_mode='direct'`; 📎 `.claude/rules/fleet-baseline.md`); `docs/yue-product-surface-inventory-2026.md` carries only a **dated snapshot** (dated, self-consistent, pointing at the live source — a second hand-copy caused the 2026-08-18 guard that *refused* to let a stale fact be corrected). Runs Reality/VLESS and Hysteria2 and talks to yueboard only through machine-scoped ConnectRPC. `/home/yue-node` on each machine. |
+| **yuelink** | Client | Flutter UI + mihomo (Clash.Meta) Go core via FFI | The Yue.to cross-platform app (Android/iOS/macOS/Windows/Linux, id `com.yueto.yuelink`). The server template is authoritative; the client adds only bounded compatibility defaults and seeds bundled `.mrs` rule sets for offline startup. |
+| **yueops** | Ops / services | Python (FastAPI, python-telegram-bot, RAG) monorepo | Supporting services: `checkin-api` (check-in), `yue-bot`/yubot (Telegram) + TG mini-app, AI support (Xiaoyue; RAG uses API embeddings and in-process NumPy cosine similarity, not pgvector), DNS/Cloudflare automation, telemetry ingest. Deployed as containers on the bastion. |
+
+Supporting repos: **yuelink-ci** / **yueto-ci** are public build-only CI repos (they began as a workaround for the private-repo Actions billing freeze, which comes and goes — see the CI section — but `yueto-ci` has since become load-bearing for a supply-chain reason that holds regardless); **hysteria**, **Xray-core** and **quic-go** are the maintained data-plane kernel forks (yue-node's HY2 and Reality/VLESS engines plus HY2's QUIC dependency — each carries real yue-specific fixes, so "just track upstream" is wrong there); **clash-verge-rev / ClashMetaForAndroid / clashmi** are historical Yue product forks, frozen migration-only and no longer checked out in this workspace (status: `docs/yue-product-surface-inventory-2026.md`). **yuetube-video** is the private Remotion project that renders the Yue.to QA promo video (Node 24 / Remotion pinned, `src/data/video-script.json` is the single source for copy, subtitles, shot lengths and audio SHA-256; `npm run verify` gates supply chain + assets + `tsc`). It ships no runtime and is coupled to nothing else here. The old PHP panel and its local repository are retired and must not be reintroduced as a runtime, build, template, or fallback dependency.
+
+## Cross-repo coupling that isn't visible in any single repo
+
+- **Subscription generation is a contract between yueboard and every client family.** `yueboard/internal/modules/subscribe/` renders Clash Meta, Surge, Loon, Quantumult X, Surfboard, sing-box, and general links from native templates. There is no `?yl=1` or device-specific server branch. When one client fails, render its exact User-Agent and compare fields against a working renderer before changing the fleet.
+- **The server template is the YueLink source of truth.** YueLink no longer inlines `GeoIP.dat`/`GeoSite.dat`; it seeds the exact bundled `.mrs` set and preserves server routing. Keep client transforms bounded to compatibility defaults, and use the reference clients to justify any divergence.
+- **The schema is native; remaining cross-service reads are explicit migration debt.** Tables use native names, `numeric` amounts, `jsonb`, and `timestamptz`. YueBoard owns panel-domain writes. Any temporary YueOps read must be catalogued and moved behind a scoped native internal API before its DB credential is removed.
+- **Panel↔node control is ConnectRPC only.** The protobuf contract is shared by yueboard and yue-node. Every physical host must use a machine-scoped credential and exact assignment; a fleet-wide token, REST polling, or WS push is a migration regression.
+- **🚨 Never rebuild a node by copying another node's `/home/yue-node` wholesale.** The runtime tree
+  contains `node-*/data/report-outbox`, which is the machine's **billing identity**. Cloning it either
+  double-bills or wedges the node forever on `report sequence gap`, which has no recovery path. This
+  has now happened twice (2026-08-01, 2026-08-11). **Wipe `node-*/data/report-outbox` before first
+  start** — the in-code owner guard only protects hosts already running yue-node `4bf9ada` or newer.
+  📎 Full provisioning / cloning / retiring / hard-delete procedure: the **`node-lifecycle`** skill.
+
+## Authoritative planning docs (read before large work)
+
+Start with `docs/README.md` for task-oriented navigation.
+
+- **`docs/2026-10-17-whole-estate-execution-plan.md`** is the sole production plan.
+  Use current r4 control and its backlog; update it in place. The 10-16 plan retains acceptance contracts only.
+- **The newest relevant closeout/handoff** supplies dated evidence and supersession
+  links. Verify its revision against current source and production; it cannot override the current plan.
+  Removing a report never closes an obligation;
+  preserve Git recovery records per `docs/2026-10-16-repository-cleanup.md`.
+- **`docs/release-chain-runbook.md`** supplies procedures; `release-chain` supplies
+  planning constraints. Dated examples do not authorize old targets or new owners.
+- **`docs/2026-endgame-plan.md`** is a historical obligation map and guard input.
+  Its predecessor `docs/2026-master-plan.md` was deleted; recover it with
+  `git show 2ac56121:docs/2026-master-plan.md`. Neither is a current plan.
+- **`docs/tech-stack-2026.md`** records choices and rejected alternatives.
+  Database contracts: `docs/v2-shared-db-decoupling-map.md`, `docs/v2-timestamp-decoupling-roadmap.md`.
+Raw build logs, `.exit`/`.stderr` files and per-run samples do not belong in `docs/`.
+Use private/temporary evidence or component performance storage; see `docs/performance/README.md`.
+
+## Release / CI: what is true in every session
+
+Four things must name the same commit: the reviewed **pin**, the source repo **HEAD**, the
+**promoted** image, and what **production** actually runs. `release-state.py` prints all four.
+- **2026-10-12: SSH authority is ACTIVE.** Every new yueops revision needs auto-pull + `make-release-root.sh
+  --strict` + `scripts/ship-sshd-authority.py --apply` before Ops/panel deploys or A/B publishing (ship.sh chains them).
+- **2026-10-11: bastion is CPU-steal-bound** (60–78%): no heavy tests there; check `vmstat` st first. 📎 `release-chain`.
+
+**Before pushing `yueboard/master`, establish its effect on the active release.**
+Promotion requires default-branch ancestry, inputs identical to HEAD and a candidate
+not older than `:latest`. A changed input can invalidate a running release.
+When inputs change, the integration owner must complete these steps:
+
+1. Read the revision labels off the **running production** panel image and node fleet, then run
+   `scripts/converge-yueboard-release-pin.py --from-head --deployed-board-revision <prod-board>
+   --deployed-node-revision <prod-node>`. Both are explicit because reviewed candidates may never
+   have been deployed. It updates yueto-ci's two copies atomically and **derives** the schema
+   floor from `git show <rev>:schema-floor.txt`; since P2 §4 A3 it no longer writes yueops.
+2. Coordinate the required rebuild and panel deployment with the release owner.
+   The desired state yueops deploys from is the **signed** root `release.yaml`
+   (ship.sh writes + seals it; no pin is committed back into yueops). 📎 `release-chain`.
+
+Promote, `release-state.py` and the schema-migrator contract accept a descendant
+with unchanged native image inputs and the same schema floor while retaining the
+reviewed pin. Use the actual input comparator: a Markdown or test filename alone
+does not establish equivalence. Changed or unknown inputs retain the normal pin
+convergence and release requirements. Preserve each active writer's source custody.
+
+🚨 **The private repos' Actions billing freeze comes and goes** — measure it (wall-clock + step count,
+job annotation decisive) before reading any red run; the local `gauntlet.sh` is the real gate either way.
+Builds are **pulled** by `yueto-ci/poll-sources.yml` (**build only, never promote**; GitHub throttles
+its cron, hence `kick-builds.sh`), and `yueto-ci` is **load-bearing**: every production digest is
+cosign-signed under its workflow identity. 📎 criterion, cadence and trust anchor: `release-chain`.
+
+codex
+本次采用 `release-chain` 技能中与签名账本相关的约束；审阅范围限定为指定提交的静态验证。
+
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'cat .claude/skills/release-chain/SKILL.md' in /Users/j/Projects/yt71
+exec
+/bin/zsh -lc 'cat .claude/rules/release-pins.md' in /Users/j/Projects/yt71
+ succeeded in 0ms:
+---
+name: release-chain
+description: 'Use before Yue.to release planning/execution, image promotion, panel deployment, node rollout or YueLink publishing. Follow the signed ledger, reviewed pins and exact source-to-production readback.'
+---
+
+# Release chain (Yue.to)
+
+The authoritative commands are in `docs/release-chain-runbook.md`, calibrated
+through a real run on 2026-08-24. This skill records constraints needed during
+planning, before copying commands.
+
+## Start by establishing current state
+
+For a readback-only task, use evidence-discipline's
+[read-only checklist](../evidence-discipline/references/readonly-operations.md#1-post-release-readback).
+That task does not authorize the release operations described below.
+
+```bash
+scripts/release-state.py            # HEAD / reviewed pin / promoted artifact / running production.
+scripts/release-state.py --fleet -v # Actual revisions across direct hosts; detects split fleets.
+scripts/release-state.py --packages # Tuning .deb inventory, which image digest/pin checks cannot see.
+```
+
+Unreachable rows are **UNKNOWN, never OK**. Identify them before any claim that
+all hosts run the target version.
+
+Run local YueLink commands and Git tag pushes through
+`scripts/with-release-sdk.sh <command> [arguments...]`. It reuses release SDK
+verification and sets PATH/FLUTTER_ROOT for Flutter, Dart and Git hooks. Gauntlet
+selects the same SDK, but its child environment cannot propagate back to the
+calling shell. Passing gauntlet does not validate a later bare git push's SDK.
+
+## The 2026-09-15 simplification superseded the former chain
+
+On 2026-09-20, `ratchet-agent-runtime-fault-baseline.sh` was confirmed absent.
+YueOps `f9cb4fe0` had removed it together with the canonical agent-evidence set,
+exact-fleet root gate, seven dated one-time migrators/meta-guard and
+`yueboard-retirement-release-a.env`. See the 09-15 implementation of
+`docs/2026-09-14-release-chain-simplification-proposal.md` §III.1 and closeout
+`docs/2026-09-15-simplification-and-fleet-closeout.md`.
+
+This skill had still prescribed `ratchet --adopt-proved-identity` for ordinary
+cross-revision work. That path no longer existed. A complete 09-20 release plan
+was based on it before checking the files. This was the second stale-skill
+incident here; on 09-09 obsolete guidance had already caused a fifth unnecessary
+dated migrator. Check the latest closeout before planning from historical text.
+
+### Actual simplified sequence
+
+```
+image rollout → route-sync → Board schema migration if migrate status is Pending → panel deployment
+```
+
+Board schema migration is decoupled from fleet identity (§III.2). Its constraints
+are expand/contract backward compatibility and clean migrate status, independent
+of fleet revision. An unreachable host no longer creates the former circular
+panel-release prerequisite; zero DEFER is not a prerequisite either.
+
+Do not restore fault baseline, canonical evidence, `CROSSING_PREDECESSOR_*`,
+`CROSSING_TARGET_NODE_REVISION`, `--adopt-proved-identity` or
+`--required-node-revision`. `rollout-yueops-agent.sh` remains, but its old
+baseline gate does not.
+
+### `release.yaml` is the sole deployment expectation; ship.sh writes it
+
+Root `release.yaml` separates promoted `components` history from approved
+`desired` state. After promotion and signature/SBOM/provenance verification,
+`scripts/ship.sh` writes, seals with a detached GPG signature
+`release.yaml.asc`, signs the commit, pushes, and projects to bastion
+`/var/lib/yueops/fleet-reconcile/release.yaml(+.asc)` and panel
+`/root/release.yaml(+.asc)`. The seal uses the same signing subkey as commits.
+release-state's pin column reads desired. **Never hand-edit without the native
+write/seal chain**; readers reject unsealed changes.
+
+Since P2 §4 A3 (2026-09-24), Ops deployers, the one-phase panel deployer, schema
+migrator, fleet rollout (signed roots and weekly runtime bundles), Docker
+ceremony, fleet-reconcile and the web container read only verified
+`desired.production`. Missing/bad signatures, generation rollback or unwritable
+generation state fail closed; there is no projection fallback.
+`yueops/scripts/yue-node.image(.revision)`, `yueboard.image` and
+`yueboard-schema-release.env` were removed. ship.sh no longer writes image pins
+back into Ops. `SHIP_WRITE_YUEOPS_PROJECTIONS=1` is only for a coordinated A3
+rollback including the matching Ops rollback, not ordinary delivery.
+
+If sealing fails, ship stops after promotion/write. Repair GPG, run
+`release-yaml.py seal`, commit, then resume with `--from-promoted`.
+
+P2 #11 records desired generation at startup and writes with
+`--expect-generation`. New revisions must be descendants of or equal to current
+desired; older, forked or unprovable candidates fail. Intentional rollback uses
+`scripts/release-yaml.py write --component <c> --revision <old-rev> --digest <old-digest> --rollback`,
+then seal and projection, targeting an already promoted GHCR image.
+
+B1 permits Ops' three desired images to span revisions only when older members
+are ancestors of the newest and their image-input fingerprints are identical.
+The deployer recomputes this, including provenance-verified recipes. See
+`docs/2026-09-24-p2-p4-release-decoupling-design.md` §9–§10.
+
+### The deployment ledger does not replace the reviewed Board promotion pin
+
+On 2026-09-20, a new Board schema release failed because promotion resolved
+source f435bb70 while `yueto-ci/native-node-contract.json` still pinned e0d6b1e0.
+The remedy was signed cross-repository reviewed-pin convergence, not a ledger
+edit.
+
+**Every Board release**, including schema-neutral performance changes, requires
+convergence first. The 2026-09-21 check of authorize-yueboard-build-plan.sh
+confirmed exact SHA matching, not only schema-floor checks. Commit the candidate,
+converge pins, then run cross-repository tests to avoid
+`test_exact_release_pin_matches_the_reviewed_yueboard_release_bytes` failures
+on dirty candidates.
+
+```bash
+scripts/converge-yueboard-release-pin.py --check
+scripts/converge-yueboard-release-pin.py --from-head \
+  --deployed-board-revision <production-board-revision> --deployed-node-revision <production-node-revision>
+```
+
+Convergence writes **4 values in 2 files in 1 repository**:
+`yueto-ci/native-node-contract.json` and `test_build_policy.py`. Since A3 it
+never writes Ops. Both deployed arguments validate Git ancestry only; they do
+not project predecessor targets. The schema floor is derived from
+`git show <rev>:schema-floor.txt`, never manually supplied. Changes are all or
+nothing. Only yueto-ci needs pushing to unlock promotion.
+
+If ship cannot associate an identity-matching run within 180 seconds, inspect
+`gh run list -R onesyue/yueto-ci` and the plan job's `--log-failed`; that message
+may be a symptom of immediate planning failure rather than missing dispatch.
+
+### fleet-reconcile: measure actual mode
+
+The 2026-10-07 check found a read-only reconciliation timer and zero deployment
+drift. That did not establish unblocked network paths. The owner canceled a new
+persistent automatic-release write-mode experiment and its seven-day manual
+review; existing quarantine, DNS convergence and recovery retain their owners.
+Read effective ExecStart, environment and latest receipt mode before each claim.
+A running reconciler does not prove automatic deployment, and canceling an
+experiment does not deliver write mode. See `yueops/docs/runbook/fleet-reconcile.md`.
+
+## A push to Board is not merely local
+
+Desired, Board HEAD, promoted image and running panel must reconcile under the
+release rules. Since P2 #11 (2026-09-24), promotion accepts a candidate that is
+on the default branch (HEAD or ancestor), has image inputs identical to HEAD,
+and is no older than latest. `yueto-ci/scripts/promote-source-gate.py` repeats
+checks immediately before moving tags. Input-neutral pushes do not invalidate
+promotion; changed image inputs do. The exact reviewed-pin requirement remains.
+
+A Board push requires checking the existing release identities and effective
+image inputs. When the actual comparator proves a clean default-branch successor
+has unchanged inputs and the same schema floor, retain the reviewed pin and the
+actual promoted/running image revision. A documentation or schema-compat-only
+successor does not itself require a rebuild or ship under those conditions.
+Names such as documentation or tests are not exemptions: COPY and ignore rules
+determine inputs, and UNKNOWN must refuse. Changed inputs require normal reviewed
+pin convergence (only yueto-ci), the signed release chain and production readback.
+Never relabel the older image as the new HEAD. Use the existing fingerprint
+consumer and identity rules in `.claude/rules/release-pins.md`.
+
+## One-phase panel deployment through ship.sh
+
+Since 2026-09-15, the former mint/converge/deploy three-phase procedure and its
+per-Ops-revision sealed deadman are no longer the ordinary path. Real runs on
+09-15 and 09-20 verified the replacement.
+
+```bash
+scripts/ship.sh yueboard --foreground    # Build → promote → verify → project → deploy.
+scripts/ship.sh yueboard --from-promoted --foreground # Resume after promotion; no duplicate build.
+scripts/ship.sh --auto --foreground      # Select work using release-state.
+scripts/ship.sh <svc> --detach           # Durable local logs under ~/.yueto-ship-logs/.
+```
+
+Non-TTY and recognized agent calls detach by default. Sequential release steps
+must use `--foreground` or wait for the printed `<log>.run.json` to contain a
+numeric `exit_code` of zero. Startup acknowledgment is not release success;
+null, missing or unreadable final status cannot authorize a dependent step.
+
+`ship.sh yue-node --foreground` builds, promotes, verifies and projects signed desired only;
+it **does not roll the fleet**. Actual rollout runs
+`rollout-yue-node-image.sh` from a signed Ops release root and requires slot
+readback. Published images do not prove installed nodes.
+
+ship.sh projects ten explicit dependencies to the panel, which cannot reach
+GitHub: six deployment scripts, a public env template, a verification keyring,
+release.yaml and its signature. It then runs `panel-deploy.sh <digest>`:
+signature + two SBOMs + provenance; exact desired digest; the candidate image's
+own migrate status with no Pending; atomic env update from image labels;
+container start; two consecutive readyz checks; retain the stopped predecessor
+for rollback; remove older rollback containers. Pending migrations refuse
+deployment and point to `run-yueboard-schema-migration.sh --apply`.
+
+The panel's `/opt/yueops` is a **detached, remote-less projection directory**.
+On 2026-09-20 its HEAD still had schema floor 43 while projected files contained
+09-14 scripts and status showed many M/D paths. Never git pull there or judge
+installed bytes by git log. Use actual file bytes/mtime and ship projection
+receipts. Connect through the bastion; the recorded panel address was
+`ssh root@66.55.76.208`, not a locally reachable key path.
+
+## Promotion criteria observed in practice
+
+- Take digests **only from promotion-step logs**, never build-step logs.
+- Promotion is not atomic across services. Ops' three independent jobs can leave
+  partial promotion (two latest tags moved, one did not). Deployment validates
+  signed desired per image. Same-revision images or B1-proven ancestor/input-
+  equivalent members are permitted; partial promotion is not full deployment.
+- Freeze relevant source during promotion for both Ops and Board.
+- ship's run-association queue window is up to 100 minutes (`queue_cap`, raised
+  from 45 on 2026-10-11). A same-revision poll-sources build ahead of it can spend
+  40–50 minutes validating Ops. Long queued state is not a reason to restart.
+  Absence of any new matching run within 180 seconds is a distinct failure.
+- Concurrent ship writes use a generation gate; rejection of the later writer
+  is correct. If promotion and verification already succeeded, resume with
+  `scripts/ship.sh <svc> --from-promoted --foreground`. Locks are session-scoped; deliberately
+  concurrent releases first acquire their complete repository set with
+  `release-lock.py acquire --repos <all-repositories>` (three parallel runs were
+  measured on 2026-10-11).
+
+## SSH authority ACTIVE since 2026-10-12 09:49
+
+Bastion release-preflight confirmed `mode=ACTIVE`, `bindings_verified=true` and
+`active_generation == last_good_generation`. There is no fallback to the former
+bootstrap gate.
+
+Before using any new Ops revision for panel/Ops deployment or A/B direct entry
+publication, complete all three for that revision:
+
+1. Host auto-pull reaches it.
+2. `make-release-root.sh --strict <rev>` creates its complete signed root.
+3. Root `scripts/ship-sshd-authority.py --repository yueops --revision <rev> --apply`
+   signs only this release's bindings, without creating a generation or handling
+   private keys. ship.sh's mint_release_root chains steps 2 and 3; omitting step 3
+   on a manual path makes deployers refuse.
+
+OpenSSH upgrades require a newly signed authority generation because credentials
+bind the sshd binary. emby/storage/bastion have `apt-mark hold openssh-*`; do not
+remove holds incidentally. New hosts must pass hardened_gate before enrollment
+(`node-lifecycle`).
+
+Run Python inside signed roots with `python3 -I -B` or
+`PYTHONDONTWRITEBYTECODE=1`. Generated pycache makes roots non-pristine and blocks
+rollout/deployment (observed 2026-10-11).
+
+## Releasing under bastion CPU steal
+
+The 2026-10-11 measurement was 60–78% steal and load 30–80 due to provider-host
+contention. Confirm current evidence using `fleet-diagnose` before applying any
+mitigation.
+
+| Symptom | Evidence | Bounded mitigation |
+|---|---|---|
+| Root mint/deploy `command_failed_78`, with TimeoutExpired or related reason | High vmstat st and CPU pressure; same revision passes at lower load | `ssh bastion 'systemctl set-property --runtime ssh.service CPUWeight=5000'`; noninteractive SSH runs in ssh.service, not user slice. Measured 5m40s→2m05s. At closeout run `systemctl revert ssh.service` and read back |
+| `current service is not healthy` refusal | Service handles requests but healthcheck times out | Record and pause selected pure-monitoring timers within the window; deploy after all three services are healthy, then restore/read back each timer. Do not run auto-pull/install.sh while paused: inactive timers make it fail |
+| Sunday 04:00–04:20 canary recheck failure | Geodata distribution restarts Reality during observation | Avoid the window; after pre-proof refusal wait ≥5 minutes since the last restart. Since Ops `f8c18eb8`, distribution during rollout stages files without restarting |
+
+## A/B direct-entry publication (`publish-native-entry-pairs.py prepare/apply`)
+
+Verified 2026-10-12:
+
+- Authority must be ACTIVE. Post-activation bootstrap seal anchors **must exist
+  and match exactly**, not be treated as a refusal reason (`6d894537`).
+- With `all_native_pairs_required`, Board renders account information
+  (remaining traffic/expiry) as an unusable proxy at `127.0.0.1:9`, reusing the
+  first product's server_id. Binding/liveness scans exempt exactly that
+  loopback:9 shape, never its display name. Wrong real product ports still fail
+  (`57108d8b`).
+- Apply reuses prepare's authority verdict only on the same boot, at
+  `CLOCK_BOOTTIME` age ≤600s, wall/monotonic skew ≤5s and exact identity match.
+  Otherwise it refuses; it never silently reruns preflight (`f42b46c8`).
+- IPv6 observation points started by prepare reuse the parent verdict
+  (`e1361f1a`). Previously each ran another 30–90s preflight, exhausting the
+  600s budget across six pools before apply. Standalone observation points still
+  run full preflight.
+
+## Automation boundaries for combined v4/host changes
+
+For combined entry, ACL and host-executor changes, drain work as specified in
+`docs/release-chain-runbook.md`'s combined-release section. Stopping shield's
+timer does not prevent DNS coordinator/peers-sync from starting its service;
+Ops deployment can reactivate direct-pool DNS timers. Immediately before mutation,
+reread all relevant timers/services/Jobs and preserve original states and failures.
+Stop only this window's timers, let running transactions finish, and do not
+clear locks.
+
+Start durable oneshots with `systemd-run --no-block` and track Invocation/journal.
+An SSH wait timeout does not prove startup failed. Restoration must establish
+new topology, executed bytes and actual protocol/ACL consistency. A single HK
+host's recovery marker cannot stand in for every previously staged ACL. Keep
+exact lists and sequencing only in the runbook.
+
+## Fleet rollout pitfalls
+
+### A. `/opt/yueops` is not a signed release root
+
+Its operational .env/data/pycache and other ignored files make pristine-root
+assertions structurally impossible. Mint a clean root:
+
+```sh
+ssh bastion 'cd /opt/yueops && ROOT=$(bash scripts/make-release-root.sh)'
+```
+
+### B. Detach the fleet rollout
+
+An SSH-bound driver dies with the session, leaving
+`transaction=prepared-for-soak` and lost stdout. Restarting then encounters
+`a durable Yue-Node transaction is already active`. Use the native detached
+path (`setsid nohup … & disown` on the remote Linux host). Authoritative logs
+are always in `/var/log/yueops-rollout/`, not inferred from stdout. After manual
+finalization, wait the full 240-second lease before another rollout.
+
+**Concurrency defaults to 4; higher values lack evidence.** Earlier skill text
+said ≤3, but Ops `3161d06` had moved the default from 2 to 4. A stale literal
+assertion `CONCURRENCY=${CONCURRENCY:-2}` failed the batch; the test now guards
+the supported 1..4 interval in
+`yueops/tests/test_yue_node_host_convergence.py`.
+
+Evidence for 4: `/var/log/yueops-rollout/20260831-214836.log`,
+21:48:49→22:19:26, 30.6 minutes for 20 hosts, ok=20 fail=0 unreachable=1;
+no `RETRY|throttl|Connection refused|Too many|max startups` matches and zero
+accounting-drain FATAL. The same night's concurrency=2 comparison took roughly
+81 minutes for 27 hosts, about 3 minutes/host versus 1.5 at 4. This is one real
+data point, **not a load study**. No separate control-plane or billing-queue
+pressure curve was collected; measure both before increasing concurrency.
+
+### Editing rollout scripts
+
+- `readonly` inside rollout_one is not function-local. The second host can fail
+  with readonly variable and leave prepared transactions although the first
+  canary passed. Put constants at top level. Guard:
+  `tests/test_rollout_per_host_scope_20260830.py`.
+- Transport failure is not mutation failure. Both yue-sg slots had been rebuilt,
+  healthy and RUNTIME_PREPARED when commit SSH timed out with 255, blocking the
+  remaining 17 hosts. `finalize_remote_transaction` retries **only SSH's 255**,
+  3×15s. Return finalizer verdicts unchanged; retrying a verdict can disguise a
+  real defect as an intermittent event.
+
+An interrupted rollout leaves prepared transactions. The host
+`yue-node-rollout-recovery.timer` has been observed to finalize them. If manual
+finalization is necessary, use the verified SHA256 of
+`finalize-yue-node-rollout-runtime.sh` with `--action commit`, then wait the
+full 240-second lease before retrying.
+
+## Validation when private Actions are frozen
+
+Determine actual execution from job steps and annotations each time. Historical
+zero-step runs are not permanent state. Public yueto-ci poll-sources is scheduled
+every 20 minutes to compare source HEAD with built-<sha>; actual scheduling can
+lag, so 20 minutes is not an SLA. `validate-<repo>` performs product tests, but
+cannot replace uncovered scans or workspace contracts. Local gauntlet remains
+the real gate: missing tools/repos are SKIP, never PASS, and insufficient executed
+stages fail. Only the account owner can resolve billing/spending-limit freezes.
+
+## Closeout criteria
+
+```bash
+scripts/release-state.py --fleet -v   # Reconcile all released components; distinguish unrelated pending work.
+scripts/check-all-contracts.sh        # Full current set; --list supplies its size.
+ssh bastion 'systemctl --failed'      # Also inspect oneshot Result values individually.
+```
+
+A complete three-component server release requires all three server rows OK.
+Recheck nodes after **every Board deployment or rollback**; brief 502s can be
+fatal to an already backlogged outbox. A partial-component release must not be
+reported as a fully converged product release.
+
+## Other release gates
+
+- YueLink: version triplet + final signed source → push → exact source-attestation
+  → private signed stable tag → public release.sh → five-platform build →
+  automatic signed promotion + R2. There is no prerelease build channel; a
+  successful build goes stable. Complete gates before building. Public tags are
+  immutable; a change requires a version bump. Promotion's ed25519 private key
+  is not on the workstation; emergency manual promotion runs only on bastion
+  through the runbook.
+- Measure feature-flag timing. Current `FeatureFlags` fetches at startup, not
+  instantaneous circuit breaking for active sessions. Until refresh is delivered,
+  receipts can claim only startup/next-fetch effect.
+- Board requires the fixed GPG release signer. Disabling commit signing blocks
+  the release gate.
+- `yuelink-ci` is generated: after changing YueLink build.yml, run
+  `./sync-build.sh ../yuelink` in the mirror repository.
+
+## Panel deployment and fleet rollout must not overlap
+
+On 2026-08-29, a panel rebuild caused reconnects and 94 distinct
+node_presence_streams instance IDs in the following minute, compared with 2
+before. `nodeProcessFenceAfter` is 4 minutes; old/new presence coexist,
+(server,machine) leases are not exclusive and accounting queues block. The
+rollout's 30-second drain gate then failed with prepare_exit=43.
+
+Serialize them. After panel deployment, wait at least 5 minutes before fleet
+rollout; do not deploy the panel during rollout. A single-host stop/start has
+the same fence: repeated immediate retries create new conflicts. Prove outbox
+drain before stopping a container under the applicable storage/transaction rules;
+after failure, allow 5 minutes before a clean retry. Docker StartedAt is UTC.
+See runbook §3.6 / §3.7.
+
+## Finish pushes before building
+
+Images bake their source revision and deployment validates exact identity.
+On 2026-08-29, building before pin convergence failed five builds; building before
+pushing Node pins produced three undeployable images.
+
+Sequence: commit/push source → converge/push yueto-ci → build/promote with inputs
+frozen → take promotion digest → verify → write/seal/project release.yaml →
+deploy. A3 removed the intervening Ops image-pin commit.
+
+Since P2 #11, only pushes changing this image's build inputs invalidate promotion.
+Since P3, `poll-skip-decision.py` skips builds whose input-equivalent promoted
+image has verified provenance; unknown means build. A HEAD without built-<sha>
+can therefore be legitimate. ship.sh's explicit promotion builds are unaffected.
+See runbook §3.5b.
+
+## Private Actions freeze state changes; measure it each time
+
+Neither "all frozen" nor "running" is a permanent fact. This guidance was
+corrected three times after snapshots had been mistaken for standing rules:
+
+- 08-14: all frozen. Treating every red cross as billing noise then hid a real
+  Board production revision `dc1b6c40` failure: unit's first gofmt step failed
+  `internal/platform/apiresp/problem_test.go`.
+- 09-03: Board/Ops/Link actually ran; only Node remained frozen.
+- 2026-09-07: all four private repositories again showed the freeze signature.
+
+| Repository | 2026-09-03 observation | 2026-09-07 observation |
+|---|---|---|
+| yueboard | ci ~3 minutes / 7 jobs / unit 14 steps: executing | ci 6 seconds / 7 jobs / 0 steps each: frozen |
+| yueops | Security gate / Notify ~2 minutes: executing | Notify 4 seconds / 0 steps: frozen |
+| yuelink | CI ~5 minutes: executing | Nightly 3 seconds / 0 steps: frozen |
+| yue-node | 4 seconds / 0 steps / no runner: frozen | Same; GitHub's own Dependabot graph job does not establish unfreezing |
+
+Use current observations, not this historical table:
+
+```bash
+gh run list -R onesyue/<repo> -L 1 --json databaseId,name,createdAt,updatedAt
+gh run view <id> -R onesyue/<repo> --json jobs -q '[.jobs[]|{name,steps:(.steps|length)}]'
+```
+
+Seconds with zero steps match billing blocking; minutes with executed steps
+require investigation of actual failures. Zero-step jobs may lack logs; inspect
+the decisive annotations:
+
+```bash
+gh api repos/onesyue/<repo>/check-runs/<job_id>/annotations -q '.[].message'
+```
+
+The observed annotation reported failed account payments or a spending limit
+requiring adjustment in Billing & plans. Only the account owner can resolve it.
+The public yueto-ci/yuelink-ci repositories were unaffected, which is why central
+build/promotion and policy tests live there.
+
+| Repository | Coverage elsewhere | Coverage still requiring local gauntlet/workspace |
+|---|---|---|
+| yuelink | Public exact-SHA source-attestation and tagged release preflight; analysis/tests/platform/vulnerability gates | Complete cross-repository contracts; an ordinary source push does not replace explicit public attestation |
+| yueboard | Central validate-yueboard: Go unit/race, PG18, both SPAs, then image build | Sibling-dependent or local-platform contracts |
+| yueops | Central validate-yueops: full pytest, lint/compile, frontend, then three image builds | Siblings absent from central checkout and local-platform branches |
+| yue-node | Central validate-yue-node make test: both profiles and real Linux paths, then image | Complete workspace contracts and local-platform branches |
+
+The 2026-09-21 correction replaced obsolete claims that public CI only built
+images and Node make test ran nowhere. Runs `35572863872` (Node validation) and
+`35572883990` (Board validation) executed and passed. Public validation still
+does not replace the complete local gate or actual deployment readback.
+
+Gauntlet once omitted gofmt, contributing to the hidden real failure above.
+The 2026-09-03 addition used
+`! gofmt -l . | tee /dev/stderr | grep -q .`; with pipefail and ≥2 unformatted
+files, early grep exit could SIGPIPE tee and invert failure into PASS. A
+200-file mutation falsely passed 20/20 times. On 2026-09-27 it was changed to
+capture output before testing and made MANDATORY. Related tests live in
+`scripts/test-shell-early-exit-pipes.py`.
+
+## Build triggers and manual promotion
+
+`yueto-ci/poll-sources.yml` pulls source HEADs on a 20-minute schedule and compares
+GHCR built-<short sha> tags. It **builds only, never promotes**. The former private
+repository_dispatch path required `YUETO_CI_DISPATCH_PAT`, absent from all three
+repositories: 428 runs across Board/Node/Ops, zero success. Persistent red hid a
+broken frontend gate and a pytest suite dead for two days. Pulling reuses existing
+`YUETO_CI_PAT`, without a new credential.
+
+Moving `:sha-*` / `:latest` remains deliberate:
+
+```bash
+gh workflow run build.yml -R onesyue/yueto-ci -f service=<svc> -f ref=<40-hex> -f promote=true
+```
+
+Ops, including a single image or all, additionally requires
+`-f migration_base=<40-hex-previous-release>`. ship.sh reads the verified prior
+root desired and supplies it. Public gates verify existence/ancestry and lint
+SQL across the entire range, not a guessed HEAD^ boundary. Polling uses the
+promoted revision with verified master provenance. If the baseline cannot be
+proved, fail rather than dispatching an empty range as success.
+`scripts/kick-builds.sh` dispatches poll-sources immediately instead of waiting
+for scheduling. GitHub throttles that cron to roughly one run per 2–5 h
+(measured 2026-09-14), so do not wait on the 20-minute schedule.
+
+### Central CI is part of the supply-chain trust boundary
+
+`yueops/scripts/verify-image-signature.sh` anchors cosign certificate identity to
+`^https://github.com/onesyue/yueto-ci/\.github/workflows/build\.yml@refs/heads/master$`.
+The 2026-09-27 tightening accepted only master: all 223 historical ledger digests
+had promotion runs from master; main is no longer accepted. SLSA provenance
+anchors `--repo onesyue/yueto-ci`. Signature, SBOM and provenance gates cannot be
+disabled. Production GHCR digests are signed under that identity. Moving builds
+would reanchor the supply chain and invalidate pins; it requires an explicit
+reviewed change, never an incidental cleanup. Central CI also owns
+native-node-contract.json.
+
+YueLink CI remains a generated mirror: sync-build.sh applies four anchored
+patches to YueLink build.yml, using `SRC_DEPLOY_KEY` for cross-repo checkout.
+After changing the source workflow, run `./sync-build.sh ../yuelink` in the
+mirror. YueLink does not use cosign, so the central-CI argument does not apply
+unchanged. Returning builds to onesyue/yuelink is a possible separately planned
+migration of roughly 13 signing/R2 secrets and re-enabling Build YueLink,
+previously deliberately disabled to prevent duplicate builds.
+
+Client distribution uses Cloudflare R2 (`yuetong.app`), not GitHub releases.
+Only yuelink-ci owns R2 cleanup. The duplicate YueLink cron was removed on
+2026-08-02: two jobs deleted from one bucket, with the local copy roughly
+70 lines behind.
+
+## Two release-state scan switches
+
+Image release truths do not prove installation of Debian tuning packages,
+which have no image digest/promotion/pin. On 2026-08-25, three fleet rollouts
+had built artifacts and matching reviewed hashes but had never executed for
+weeks: relays were 15 days behind and 48 of 51 direct hosts had old packages.
+
+- `--fleet` reads actual running YueNode revisions on every direct host to detect
+  split deployment.
+- `--packages` reads `yueops-tuning[-relay]` versions on direct hosts and relays.
+
+Missing measurements are **UNKNOWN, never OK**. Establish reachability before
+claiming universal target-version installation.
+
+ succeeded in 0ms:
+---
+paths:
+  - "yueto-ci/native-node-contract.json"
+  - "yueboard/schema-floor.txt"
+  - "scripts/converge-yueboard-release-pin.py"
+  - "release.yaml"
+---
+
+# Release identity must remain consistent
+
+At release completion, the **reviewed pin, signed desired state, promoted image
+and running production artifact** must identify the same release. Source HEAD
+may be a successor with proven identical build inputs. Keep the image's actual
+build revision; never relabel an older artifact as a new HEAD.
+
+- Do not hand-edit pins. The authorized writer is
+  `scripts/converge-yueboard-release-pin.py --from-head --deployed-board-revision <production-board> --deployed-node-revision <production-fleet>`.
+  It updates the copies atomically and derives the schema floor from
+  `git show <rev>:schema-floor.txt`; the floor is not an input.
+- The two `--deployed-*` revisions validate ancestry only: deployed Board must
+  precede the candidate, and deployed Node must precede the sidecar candidate.
+  They are no longer recorded in files. The Release-A predecessor/target contract
+  was removed on 2026-09-14. Incorrect inputs are rejected; omitting them performs
+  pin convergence only.
+- Since 2026-09-24 (P2 section 4 A3), convergence writes only the two yueto-ci
+  files: the contract and central policy test. It does not write YueOps; those
+  three former projections caused a Board-to-Ops release cycle. Commit yueto-ci
+  after convergence; promotion reads that reviewed state.
+- Do not hand-edit `release.yaml`. `ship.sh` writes it and `release-yaml.py seal`
+  signs it. YueOps deployers, rollouts and migrators consume only verified signed
+  state. Deliberate rollback uses `release-yaml.py write --rollback` then `seal`;
+  late older candidates cannot overwrite newer desired state.
+- The 2026-09-24 build-input rule replaced the old rule allowing only
+  `.gitleaksignore` to lead the pin. Use the existing fingerprints in
+  `scripts/release-state.py --fleet --inputs` to establish equality for every
+  input. Unreadable or unproven inputs are UNKNOWN; calling a change documentation
+  or tests is not an exemption.
+- `schema-compat.txt` records the production floor only after successful actual
+  deployment. Tests still read it, but it has been excluded from Board image
+  inputs since 2026-09-30. Advancing it alone does not move the reviewed pin,
+  rebuild an image or relabel production. `schema-floor.txt` and migration SQL
+  remain build inputs and require a reviewed release when changed.
+- For a new candidate, converge the reviewed pin first, then run
+  `release-yaml.py source-check` for ancestry and floor. Do not declare release
+  consistency before promotion and production readback.
+
+Use `release-chain` for constraints, `docs/release-chain-runbook.md` for commands,
+and `scripts/release-state.py` to read the release identities.
+
+exec
+/bin/zsh -lc 'git diff --stat cb0c221e d1d7aa97e6278fd673a562c69592e789be3f5eda' in /Users/j/Projects/yt71
+exec
+/bin/zsh -lc 'git rev-parse --show-toplevel HEAD cb0c221e d1d7aa97e6278fd673a562c69592e789be3f5eda' in /Users/j/Projects/yt71
+exec
+/bin/zsh -lc "rg --files docs scripts | rg 'release.*(schema|ledger|contract|test)|closeout|handoff|2026-11-03|release-manifest'" in /Users/j/Projects/yt71
+ succeeded in 0ms:
+ release.yaml     | 50 +++++++++++++++++++++++++-------------------------
+ release.yaml.asc | 26 +++++++++++++-------------
+ 2 files changed, 38 insertions(+), 38 deletions(-)
+
+ succeeded in 0ms:
+/Users/j/Projects/yt71
+d1d7aa97e6278fd673a562c69592e789be3f5eda
+cb0c221edf949619adcaf8bc0dbccd4e9481926b
+d1d7aa97e6278fd673a562c69592e789be3f5eda
+
+ succeeded in 0ms:
+docs/2026-10-06-terminal-recheck-and-support-closeout.md
+docs/2026-09-07-production-closeout-round.md
+docs/2026-10-14-codex-d-handoff.md
+docs/2026-09-11-production-handoff.md
+docs/2026-10-07-antigfw-and-delivery-closeout-round.md
+docs/2026-09-15-simplification-and-fleet-closeout.md
+docs/2026-09-05-production-handoff.md
+docs/2026-08-15-full-repo-production-closeout.md
+docs/2026-08-03-fourth-round-audit-and-production-closeout.md
+docs/2026-09-24-yue-node-performance-stop-handoff.md
+docs/2026-09-23-ultimate-modernization-handoff.md
+docs/2026-10-01-ultimate-closeout-round.md
+docs/2026-10-02-final-release-handoff.md
+docs/2026-09-20-handoff.md
+docs/2026-09-24-product-surface-stop-handoff.md
+docs/2026-10-05-final-repository-release-closeout.md
+docs/2026-09-10-node-panel-round4-closeout.md
+docs/2026-10-14-reaudit-closeout-status.md
+docs/2026-09-23-production-pause-handoff.md
+docs/2026-10-14-codex-main-handoff.md
+docs/2026-10-13-codex-b3-r5-closeout.md
+docs/2026-08-08-full-debt-closeout.md
+docs/2026-10-14-codex-d-handoff.json
+docs/audits/2026-10-14-codex-j-checker-closeout.md
+docs/2026-09-08-round-tail-closeout.md
+docs/2026-08-17-final-round-closeout.md
+docs/2026-10-09-v4-user-stop-handoff.md
+docs/2026-09-14-global-native-alignment-closeout.md
+docs/2026-09-08-global-closeout.md
+docs/2026-08-04-payment-incident-final-closeout.md
+docs/2026-10-02-executable-closeout-round.md
+docs/2026-10-08-complete-delivery-and-campaign-closeout-round.md
+docs/2026-09-06-global-closeout.md
+docs/2026-09-14-machine-net-and-gamble-ledger-handoff.md
+docs/2026-09-24-full-delivery-stop-handoff.md
+docs/evidence/2026-09-30-ops-host-closeout.json
+docs/evidence/2026-10-02-execution-closeout.json
+docs/evidence/2026-10-25-taiwan-dns-closeout.json
+docs/evidence/2026-10-18-client-136-closeout.json
+docs/evidence/2026-09-30-yuelink-v1.3.96-handoff.json
+docs/evidence/2026-10-23-v153-production-slice-closeout.json
+docs/evidence/2026-10-02-final-release-closeout.json
+docs/evidence/2026-09-30-release-closeout.json
+docs/evidence/2026-10-01-ultimate-closeout.json
+docs/evidence/2026-10-26-authority-transport-source-handoff.json
+docs/evidence/2026-10-25-all-dns-relay-closeout.json
+docs/evidence/2026-10-06-final-closeout-receipt.json
+docs/evidence/2026-10-23-estate-coordinator-handoff.md
+docs/evidence/2026-10-06-terminal-recheck-and-support-closeout.json
+docs/evidence/2026-10-23-continuation-finite-closeout.json
+
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "rg -n 'def |schema|verify|check|generation|signer|fingerprint|keyring' scripts/release-yaml.py" in /Users/j/Projects/yt71
+ succeeded in 0ms:
+7:yueboard.image、yueboard-schema-release.env、native-node-contract.json、测试里的
+16:`verify` 守三件事——记录对得上 GHCR（`sha-<rev>` 标签真指向这个 digest）、被删的投影没有
+21:    schema: 1
+30:    desired:            # schema 2（P2 §4 A2，2026-09-24）：签名的部署期望
+31:      generation: <正整数，每次内容变化 +1，单调>
+42:schema 2 与 desired（P2 §4 A2 → A3）
+46:promote 过的镜像，账本不动）。`desired.generation` 在每次内容变化时 +1。`seal` 在写完之后用
+49:`release_yaml.py`）**只**读验签通过的 desired——无签名/验不过/generation 回退一律拒绝。
+52:* `--expect-generation G`（ship.sh 在开始时读取）：当前 desired generation 不是 G 就拒绝——
+57:  指纹相同（yueto-ci/scripts/input-fingerprint.py，与部署器复算的是同一实现）。
+63:           [--promoted-by S] [--expect-generation G] [--rollback]
+64:    generation           # 打印当前 desired generation（没有则 0；ship.sh 开始时读）
+67:    verify [--offline] [--component C]
+68:    source-check [--component C]  # permits a reviewed descendant candidate, not deployment proof
+69:    seal                 # 升到 schema 2（若需要）+ 用固定签名者做 detached 签名（幂等；ship.sh 调用）
+70:    verify-signature     # release.yaml.asc 是否对当前字节、由固定签名者签出（契约门）
+72:退出码（verify）：0 = 全部一致；1 = 记录形状错 / 投影漂移 / GHCR 不符；
+74:退出码（verify-signature）：0 = 签名有效；1 = 没签名 / 签名无效 / 签的不是当前字节
+75:（A3 起 schema 1 的未签名兼容窗口关闭）；75 = gpgv 或钥匙环不在（测不到）。
+101:READABLE_SCHEMAS = ("1", "2")     # 兼容窗口：schema 1（无 desired）仍可读
+103:# until their first promote; verify still accepts a ledger that only has images.
+104:IMAGE_COMPONENTS: tuple[str, ...] = ("yue-node", "yueboard", "yueops-web", "yue-bot", "checkin-api")
+108:    "yueops": ("yueops-web", "yue-bot", "checkin-api"),
+120:# 钥匙环是 yueops 里提交的 scripts/lib/release-signer.gpg（消费端同一份）；钥匙环被换也伪造
+125:                      or ROOT / "yueops" / "scripts" / "lib" / "release-signer.gpg")
+137:# 会说谎的真源——verify / source-check 会因此变红（扫描地板 = 这四条都被检查过）。
+142:    "yueops/scripts/yueboard-schema-release.env",
+147:    "yue-bot": "yueops", "checkin-api": "yueops",
+157:    "ui-site": ("checkin-api", "yueboard"),
+171:                         or ROOT / "yueto-ci" / "scripts" / "input-fingerprint.py")
+178:# yueops 部署器/滚动/迁移器（只读签名的 desired）、check-all-contracts.sh 的 release-yaml-*。
+179:# 不要手改：scripts/release-yaml.py verify 会把每条记录与 GHCR 的 sha-<revision> 标签比对。
+193:def _unquote(value: str) -> str:
+200:def parse(text: str) -> dict:
+241:def _emit_scalar(value: str) -> str:
+249:def emit(record: dict) -> str:
+250:    out = [HEADER.rstrip("\n"), f"schema: {record.get('schema', SCHEMA)}", "components:"]
+261:        out.append(f"  generation: {desired['generation']}")
+279:def validate(record: dict) -> list[str]:
+281:    schema = str(record.get("schema", ""))
+282:    if schema not in READABLE_SCHEMAS:
+283:        problems.append(f"schema 必须是 {' / '.join(READABLE_SCHEMAS)}，读到 {record.get('schema')!r}")
+331:    # 那需要 git 与指纹实现，由 group_consistency() 在 write / verify / source-check 里判。
+332:    problems.extend(_validate_desired(record, schema, comps))
+334:        if key not in ("schema", "components", "desired", "yuelink"):
+339:def _validate_desired(record: dict, schema: str, comps: dict) -> list[str]:
+340:    """schema 1 不许有 desired；schema 2 必须有，且覆盖恰好 components 里的组件集合。
+343:    if schema == "1":
+344:        return ["schema 1 不许带 desired（desired 从 schema 2 起）"] if desired is not None else []
+345:    if schema != "2":
+348:        return ["schema 2 缺 desired 段"]
+351:        if key not in ("generation", "production"):
+353:    if not GENERATION_RE.match(str(desired.get("generation", ""))):
+354:        problems.append(f"desired.generation 不是正整数：{desired.get('generation')!r}")
+375:def advance(record: dict, desired_updates: dict[str, dict] | None = None) -> dict:
+376:    """内容变了：升到 schema 2，generation +1。
+379:    （schema 1 升级 / 首次出现的组件从 components 取）。只由写者调用。"""
+381:    generation = int(previous.get("generation", "0") or 0) + 1
+388:    record["schema"] = SCHEMA
+390:        "generation": str(generation),
+394:    return {key: record[key] for key in ("schema", "components", "desired", "yuelink") if key in record}
+397:def desired_generation(record: dict) -> int:
+398:    return int((record.get("desired") or {}).get("generation", "0") or 0)
+401:def desired_entry(record: dict, name: str) -> dict:
+402:    """desired.production.<name>（schema 1 回退到 components 账本）。"""
+409:def _git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
+411:                          timeout=60, check=check)
+414:def ancestry(repo: Path, older: str, newer: str) -> str:
+422:            if _git(repo, "cat-file", "-e", f"{rev}^{{commit}}", check=False).returncode != 0:
+424:        if _git(repo, "merge-base", "--is-ancestor", older, newer, check=False).returncode == 0:
+426:        if _git(repo, "merge-base", "--is-ancestor", newer, older, check=False).returncode == 0:
+433:def _fingerprint_module():
+438:    spec = importlib.util.spec_from_file_location("release_yaml_input_fingerprint", INPUT_FINGERPRINT)
+444:def group_consistency(production: dict, root: Path = ROOT) -> list[str]:
+465:            fp = _fingerprint_module()
+480:def load(path: Path = RELEASE_YAML, strict: bool = True) -> dict:
+494:def component(record: dict, name: str) -> dict:
+501:def save(record: dict, path: Path = RELEASE_YAML) -> None:
+522:def retired_projections(root: Path = ROOT) -> tuple[list[str], list[str], int]:
+526:    checked = 0
+530:        checked += 1
+536:    return oks, drifts, checked
+539:def node_identity(field: str, root: Path = ROOT, *, on_divergence: str = "refuse") -> tuple[str, str]:
+557:def reviewed_board_candidate(root: Path, promoted: str, candidate: str, candidate_floor: int) -> bool:
+568:        floor = _git(repo, "show", f"{candidate}:schema-floor.txt").stdout.strip()
+569:        previous_floor = _git(repo, "show", f"{promoted}:schema-floor.txt").stdout.strip()
+576:def reviewed_pin_parity(record: dict, root: Path = ROOT, *, source_check: bool = False) -> tuple[list[str], list[str], int]:
+578:    相等，或（source-check）是一个正确评审的后继候选。"""
+582:    pin, floor = str(contract.get("yueboard_contract_pin", "")), int(contract.get("schema_floor", 0) or 0)
+586:    if source_check and reviewed_board_candidate(root, desired, pin, floor):
+589:                + ("" if source_check else "——发版后应相等；发版前用 source-check 判候选")], 1
+595:def ghcr_tag_digest(image: str, tag: str) -> str | None:
+603:            capture_output=True, text=True, timeout=180, check=False,
+621:def ghcr_parity(record: dict, only: str | None = None) -> tuple[list[str], list[str], list[str]]:
+660:def cmd_read(args: argparse.Namespace) -> int:
+688:def _now_utc() -> str:
+692:def desired_revision(record: dict, target: str, root: Path = ROOT) -> str:
+726:def cmd_desired_revision(args: argparse.Namespace) -> int:
+735:def cmd_generation(args: argparse.Namespace) -> int:
+740:        print(desired_generation(load(RELEASE_YAML)))
+747:def _promoted_digest_ok(name: str, revision: str, digest: str) -> str | None:
+762:def cmd_write(args: argparse.Namespace) -> int:
+779:        record = {"schema": SCHEMA, "components": {}}
+796:    base_generation = desired_generation(record)
+854:        # §7.4 / P2 #11：期望的 generation。别的写者在这次发版期间批准了更新的 desired，
+856:        if args.expect_generation is not None and base_generation != args.expect_generation:
+857:            print(f"FAIL: desired generation 已是 {base_generation}，而本次写入基于 {args.expect_generation}——"
+880:        lines.append(f"desired generation → {record['desired']['generation']}{suffix}")
+900:def cmd_write_yuelink(args: argparse.Namespace) -> int:
+919:    print(f"desired generation → {record['desired']['generation']}（release.yaml 需重新 seal 签名）")
+926:def signature_path(path: Path = RELEASE_YAML) -> Path:
+930:def verify_signature_bytes(data: bytes, signature: bytes) -> tuple[str, str]:
+939:    with tempfile.TemporaryDirectory(prefix="release-yaml-verify.") as work:
+943:        proc = subprocess.run([gpgv, "--homedir", work, "--keyring", str(SIGNER_KEYRING.resolve()),
+945:                              capture_output=True, text=True, timeout=30, check=False)
+953:def verify_signature_file(path: Path = RELEASE_YAML) -> tuple[str, str]:
+960:        return verify_signature_bytes(path.read_bytes(), sig.read_bytes())
+965:def desired_state(snapshot: tuple[bytes, bytes]) -> str:
+970:def assert_desired_unchanged(snapshot: tuple[bytes, bytes]) -> None:
+979:def verified_desired(expected: str | None = None) -> tuple[dict, tuple[bytes, bytes]]:
+983:        status, detail = verify_signature_bytes(*snapshot)
+998:def publish_signed_ui(record: dict, before: tuple[bytes, bytes]) -> tuple[bytes, bytes]:
+1013:                capture_output=True, text=True, timeout=120, check=False)
+1017:            status, detail = verify_signature_bytes(body, signed)
+1037:def cmd_ui_state(args: argparse.Namespace) -> int:
+1045:    print(f"{desired_state(snapshot)} {desired_generation(record)} {ops_revision}")
+1049:def cmd_seal(args: argparse.Namespace) -> int:
+1050:    """幂等：schema 1 → 升级（generation 1，或旧值 +1）；签名缺失/失效 → 重签并当场验。"""
+1056:    if str(record.get("schema")) != SCHEMA:
+1063:        print(f"upgraded release.yaml → schema {SCHEMA}, desired generation {record['desired']['generation']}")
+1064:    status, detail = verify_signature_file(RELEASE_YAML)
+1078:                              capture_output=True, text=True, timeout=120, check=False)
+1084:        status, detail = verify_signature_file(RELEASE_YAML)
+1097:    print(f"signed release.yaml.asc generation {record['desired']['generation']}（{detail}）")
+1101:def cmd_verify_signature(args: argparse.Namespace) -> int:
+1107:    status, detail = verify_signature_file(RELEASE_YAML)
+1108:    schema = str(record.get("schema"))
+1109:    generation = (record.get("desired") or {}).get("generation", "-")
+1111:        print(f"  OK    release.yaml.asc 有效，schema {schema}，desired generation {generation}：{detail}")
+1116:    # P2 §4 A3：消费端对未签名一律拒绝，schema 1 的「未签名 WARN」兼容窗口随之关闭。
+1117:    print(f"  FAIL  release.yaml 签名 {status}：{detail}（schema {schema} 必须由 scripts/release-yaml.py seal 签出）",
+1122:def _git_bytes(repo: Path, *args: str) -> subprocess.CompletedProcess:
+1123:    return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, timeout=60, check=False)
+1126:def ship_instant() -> _dt.datetime:
+1138:def ui_freeze_active(now: _dt.datetime | None = None) -> bool:
+1146:def read_ui_manifest(component: str, revision: str, root: Path = ROOT) -> dict:
+1156:    proc = _git(repo, "show", f"{revision}:{rel}", check=False)
+1180:def ui_manifest_compatible(component: str, revision: str, backend_revisions: dict[str, str],
+1201:def ui_api_problems(record: dict, root: Path = ROOT) -> list[str]:
+1220:def previous_signed_desired(component: str, root: Path = ROOT) -> dict[str, str]:
+1228:    log = _git(root, "log", "--format=%H", "--", "release.yaml", check=False)
+1237:        status, _detail = verify_signature_bytes(yaml_blob.stdout, asc_blob.stdout)
+1257:def cmd_ui_compat(args: argparse.Namespace) -> int:
+1275:def cmd_previous_desired(args: argparse.Namespace) -> int:
+1285:def cmd_ui_freeze(_args: argparse.Namespace) -> int:
+1293:def cmd_verify(args: argparse.Namespace) -> int:
+1303:    if args.source_check:
+1305:    oks, drifts, checked = retired_projections(ROOT)
+1306:    p_oks, p_drifts, p_checked = reviewed_pin_parity(record, ROOT, source_check=args.source_check)
+1320:    if checked == 0:
+1323:    print(f"  已退役投影检查：{checked}/{len(RETIRED_PROJECTIONS)} 份；reviewed pin 比较 {p_checked}；漂移 {len(drifts)}")
+1343:def ledger_transaction():
+1370:def release_registry():
+1378:def foreign_release_locks() -> list[dict]:
+1382:def main(argv: list[str] | None = None) -> int:
+1402:    p.add_argument("--expect-generation", dest="expect_generation", type=int,
+1403:                   help="本次写入基于的 desired generation（ship.sh 开始时读取）；不等即拒绝")
+1410:                   help="UI-only update: verify the original snapshot and sign the immutable candidate")
+1419:    p = sub.add_parser("generation", help="打印当前 desired generation（没有 release.yaml 时 0）")
+1420:    p.set_defaults(func=cmd_generation)
+1434:    p = sub.add_parser("ui-state", help="authenticate desired bytes and print state, generation and Ops revision")
+1445:    p = sub.add_parser("verify", help="记录 ↔ 已退役投影不回来 ↔ reviewed pin ↔ B1 ↔ UI API ↔ GHCR sha-<rev>/latest")
+1448:    p.set_defaults(func=cmd_verify, source_check=False)
+1450:    p = sub.add_parser("source-check", help="发版前源码检查：允许正确评审的 Board 后继候选，不改变已发布事实")
+1452:    p.set_defaults(func=cmd_verify, source_check=True, offline=True)
+1454:    p = sub.add_parser("seal", help="升到 schema 2（若需要）并用固定签名者做 detached 签名（幂等；ship.sh 调用）")
+1457:    p = sub.add_parser("verify-signature", help="release.yaml.asc 是否对当前字节、由固定签名者签出")
+1458:    p.set_defaults(func=cmd_verify_signature)
+
+exec
+/bin/zsh -lc 'git diff --no-ext-diff cb0c221e d1d7aa97e6278fd673a562c69592e789be3f5eda -- release.yaml' in /Users/j/Projects/yt71
+ succeeded in 0ms:
+diff --git a/release.yaml b/release.yaml
+index 6036f256..6df0184a 100644
+--- a/release.yaml
++++ b/release.yaml
+@@ -12,47 +12,47 @@ components:
+     run_id: unknown
+     promoted_by: ship.sh --from-promoted
+   yueboard:
+-    revision: f7102350a149d4dbcb72ea212596a86f12ddca21
+-    digest: "sha256:9b56cd9466040862e4318f69f2e32ba390a4e79670496aecb47ee170be742246"
+-    promoted_at: "2026-11-03T00:07:42Z"
+-    run_id: 41549573835
++    revision: 40a0026d71395ac37fb9ab5943bd8c2693440036
++    digest: "sha256:d9a88687588f41535949dfa97535d427b3f895bd885d293fe5d6153edf579b98"
++    promoted_at: "2026-11-03T03:47:36Z"
++    run_id: 41573648967
+     promoted_by: ship.sh --from-promoted
+   yueops-web:
+-    revision: c2fe96139e41bead0a1c6f454fe3c603a3c98223
+-    digest: "sha256:8fc61944861878916d88033ecc98ca6ec52bfcf5cd9c70d6f5c7131d604af023"
+-    promoted_at: "2026-11-02T23:29:51Z"
+-    run_id: 41545130104
++    revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
++    digest: "sha256:df046f58e27e51153bc2479849946c87b62586276410fc863cdc46cd5b9c5c77"
++    promoted_at: "2026-11-03T07:49:26Z"
++    run_id: 41598504061
+     promoted_by: ship.sh --from-promoted
+   yue-bot:
+-    revision: c2fe96139e41bead0a1c6f454fe3c603a3c98223
+-    digest: "sha256:61dc7cc382e72515f006c34298e9c9d8d3cc6e0e6216e63fe04ee980c01d33ed"
+-    promoted_at: "2026-11-02T23:29:51Z"
+-    run_id: 41545130104
++    revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
++    digest: "sha256:1ecf76af3f53dd8331c2288ada5b7ca4a9214ac4a913d0192176993bb168b5c4"
++    promoted_at: "2026-11-03T07:49:26Z"
++    run_id: 41598504061
+     promoted_by: ship.sh --from-promoted
+   checkin-api:
+-    revision: c2fe96139e41bead0a1c6f454fe3c603a3c98223
+-    digest: "sha256:58d662651646f49e5c07691e3a16ce6e030ee1fa1e2542b1a6d0122a37ddf1c3"
+-    promoted_at: "2026-11-02T23:29:51Z"
+-    run_id: 41545130104
++    revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
++    digest: "sha256:be17b3b7d004cd6599194cfcaf1b11ca8650684ebf45bcfc66ab54762080c7c3"
++    promoted_at: "2026-11-03T07:49:26Z"
++    run_id: 41598504061
+     promoted_by: ship.sh --from-promoted
+ desired:
+-  generation: 324
++  generation: 328
+   production:
+     yue-node:
+       revision: 7445d9fc04b03c714f9c7eba9e52d1dae5200d51
+       digest: "sha256:f91323140d169f78c83c71494a2f9afb62179f74d464356c70430321513fdf31"
+     yueboard:
+-      revision: f7102350a149d4dbcb72ea212596a86f12ddca21
+-      digest: "sha256:9b56cd9466040862e4318f69f2e32ba390a4e79670496aecb47ee170be742246"
++      revision: 40a0026d71395ac37fb9ab5943bd8c2693440036
++      digest: "sha256:d9a88687588f41535949dfa97535d427b3f895bd885d293fe5d6153edf579b98"
+     yueops-web:
+-      revision: c2fe96139e41bead0a1c6f454fe3c603a3c98223
+-      digest: "sha256:8fc61944861878916d88033ecc98ca6ec52bfcf5cd9c70d6f5c7131d604af023"
++      revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
++      digest: "sha256:df046f58e27e51153bc2479849946c87b62586276410fc863cdc46cd5b9c5c77"
+     yue-bot:
+-      revision: c2fe96139e41bead0a1c6f454fe3c603a3c98223
+-      digest: "sha256:61dc7cc382e72515f006c34298e9c9d8d3cc6e0e6216e63fe04ee980c01d33ed"
++      revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
++      digest: "sha256:1ecf76af3f53dd8331c2288ada5b7ca4a9214ac4a913d0192176993bb168b5c4"
+     checkin-api:
+-      revision: c2fe96139e41bead0a1c6f454fe3c603a3c98223
+-      digest: "sha256:58d662651646f49e5c07691e3a16ce6e030ee1fa1e2542b1a6d0122a37ddf1c3"
++      revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
++      digest: "sha256:be17b3b7d004cd6599194cfcaf1b11ca8650684ebf45bcfc66ab54762080c7c3"
+ yuelink:
+   version: 1.3.159
+   source_commit: cca9b2beee72c6593c0c7a3030a425e6626b4ef0
+
+exec
+/bin/zsh -lc 'git diff --no-ext-diff d1d7aa97e6278fd673a562c69592e789be3f5eda -- release.yaml release.yaml.asc scripts/release-yaml.py' in /Users/j/Projects/yt71
+ succeeded in 0ms:
+error: fsmonitor_ipc__send_query: unspecified error on '/Users/j/Projects/yueto/.git/worktrees/yt71/fsmonitor--daemon.ipc'
+
+exec
+/bin/zsh -lc "rg -n 'd1d7aa97|cb0c221e|d06b7da0|generation 328|40a0026d' docs/2026-10-17-whole-estate-execution-plan.md docs/evidence docs/*round* docs/*handoff* docs/*closeout*" in /Users/j/Projects/yt71
+ exited 1 in 0ms:
+exec
+/bin/zsh -lc 'git show --no-patch --format=fuller d1d7aa97e6278fd673a562c69592e789be3f5eda' in /Users/j/Projects/yt71
+ succeeded in 0ms:
+commit d1d7aa97e6278fd673a562c69592e789be3f5eda
+Author:     onesyue <47652916+onesyue@users.noreply.github.com>
+AuthorDate: Tue Nov 3 16:20:09 2026 +0800
+Commit:     onesyue <47652916+onesyue@users.noreply.github.com>
+CommitDate: Tue Nov 3 16:20:09 2026 +0800
+
+    release: record yueops d06b7da00c22 promote in release.yaml (gen 328)
+
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'ls -l /Users/j/Projects/yueto/yueops/scripts/lib/release-signer.gpg /Users/j/Projects/yt71/yueops/scripts/lib/release-signer.gpg /Users/j/.venvs/yueto/bin/python' in /Users/j/Projects/yt71
+ exited 1 in 0ms:
+ls: /Users/j/Projects/yt71/yueops/scripts/lib/release-signer.gpg: No such file or directory
+lrwxr-xr-x  1 j  staff    78 Aug 25 11:55 /Users/j/.venvs/yueto/bin/python -> /Users/j/.local/share/uv/python/cpython-3.13-macos-aarch64-none/bin/python3.13
+-rw-r--r--  1 j  staff  2841 Sep 24 07:21 /Users/j/Projects/yueto/yueops/scripts/lib/release-signer.gpg
+
+exec
+/bin/zsh -lc "sed -n '80,135p' scripts/release-yaml.py
+sed -n '193,373p' scripts/release-yaml.py
+sed -n '926,965p' scripts/release-yaml.py" in /Users/j/Projects/yt71
+ succeeded in 0ms:
+import argparse
+import datetime as _dt
+import fcntl
+import hashlib
+import importlib.util
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from contextlib import contextmanager
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+ROOT = Path(os.environ.get("YUETO_ROOT") or Path(__file__).resolve().parents[1])
+RELEASE_YAML = ROOT / "release.yaml"
+
+SCHEMA = "2"                      # 写者总是写 2
+READABLE_SCHEMAS = ("1", "2")     # 兼容窗口：schema 1（无 desired）仍可读
+# Image components are required in the signed ledger. UI components are absent
+# until their first promote; verify still accepts a ledger that only has images.
+IMAGE_COMPONENTS: tuple[str, ...] = ("yue-node", "yueboard", "yueops-web", "yue-bot", "checkin-api")
+UI_COMPONENTS: tuple[str, ...] = ("ui-console", "ui-miniapp", "ui-site", "ui-board-web")
+COMPONENTS: tuple[str, ...] = IMAGE_COMPONENTS + UI_COMPONENTS
+GROUPS: dict[str, tuple[str, ...]] = {
+    "yueops": ("yueops-web", "yue-bot", "checkin-api"),
+    "ui": UI_COMPONENTS,
+}
+# B1 input-equivalence is the yueops image group only. UI units publish
+# independently and do not share one source revision.
+B1_GROUPS = frozenset({"yueops"})
+FIELDS: tuple[str, ...] = ("revision", "digest", "promoted_at", "run_id", "promoted_by")
+YUELINK_FIELDS: tuple[str, ...] = ("version", "source_commit", "update_manifest_sha256")
+DESIRED_FIELDS: tuple[str, ...] = ("revision", "digest")
+GENERATION_RE = re.compile(r"^[1-9][0-9]{0,17}$")
+
+# 固定发布签名者（P2 §4 A2）。VALIDSIG 的第 1 个字段是签名子钥、最后一个是主钥；两个都钉。
+# 钥匙环是 yueops 里提交的 scripts/lib/release-signer.gpg（消费端同一份）；钥匙环被换也伪造
+# 不了，因为判据是这两个指纹，不是「钥匙环里有谁」。环境变量覆盖只给测试用。
+PINNED_SIGNER = os.environ.get("YUETO_RELEASE_SIGNER_FPR", "CEF96E9A4ECB741C78329CA3FE2659E6AC769954")
+PINNED_PRIMARY = os.environ.get("YUETO_RELEASE_SIGNER_PRIMARY", "D9D3C6E59E7465BD07C2177142239A996FDA9F55")
+SIGNER_KEYRING = Path(os.environ.get("YUETO_RELEASE_SIGNER_KEYRING")
+                      or ROOT / "yueops" / "scripts" / "lib" / "release-signer.gpg")
+IMAGE_PREFIX = "ghcr.io/onesyue/"
+
+SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
+TS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+RUN_ID_RE = re.compile(r"^(?:[0-9]{1,20}|unknown)$")
+VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:[+-][0-9A-Za-z.]+)?$")
+KEY_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+def _unquote(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+        return value[1:-1]
+    return value
+
+
+def parse(text: str) -> dict:
+    """把扁平子集 YAML 解析成嵌套 dict（所有标量都是 str）。
+
+    只接受：2 空格缩进、`key:`（开映射）与 `key: value`、以 # 起头的整行注释、空行。
+    任何别的东西都报错并带行号——release.yaml 是机器写的，形状之外的内容就是手改。
+    """
+    root: dict = {}
+    stack: list[tuple[int, dict]] = [(-1, root)]
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        indent = len(raw) - len(raw.lstrip(" "))
+        if indent % 2:
+            raise ReleaseYamlError(f"第 {lineno} 行缩进不是 2 的倍数")
+        line = raw.strip()
+        if ":" not in line:
+            raise ReleaseYamlError(f"第 {lineno} 行不是 key: value 形式：{line!r}")
+        key, _, value = line.partition(":")
+        key = key.strip()
+        if not KEY_RE.match(key):
+            raise ReleaseYamlError(f"第 {lineno} 行的键不合法：{key!r}")
+        while stack and stack[-1][0] >= indent:
+            stack.pop()
+        if not stack:
+            raise ReleaseYamlError(f"第 {lineno} 行缩进回退过头")
+        parent_indent, parent = stack[-1]
+        if indent != parent_indent + 2 and not (parent is root and indent == 0):
+            raise ReleaseYamlError(f"第 {lineno} 行缩进 {indent} 与上层 {parent_indent} 不衔接")
+        if key in parent:
+            raise ReleaseYamlError(f"第 {lineno} 行重复的键：{key!r}")
+        if value.strip() == "":
+            child: dict = {}
+            parent[key] = child
+            stack.append((indent, child))
+        else:
+            if value.strip().startswith("#"):
+                raise ReleaseYamlError(f"第 {lineno} 行的值为空（只有注释）")
+            parent[key] = _unquote(value.split(" #", 1)[0])
+    return root
+
+
+def _emit_scalar(value: str) -> str:
+    # 时间戳带冒号与 T/Z，真 YAML 解析器会把它变成 datetime；统一加引号，
+    # 让 PyYAML 与本解析器读出同一个字符串。
+    if TS_RE.match(value) or ":" in value or value.strip() != value or value == "":
+        return json.dumps(value)
+    return value
+
+
+def emit(record: dict) -> str:
+    out = [HEADER.rstrip("\n"), f"schema: {record.get('schema', SCHEMA)}", "components:"]
+    comps = record.get("components", {})
+    for name in COMPONENTS:
+        if name not in comps:
+            continue
+        out.append(f"  {name}:")
+        for field in FIELDS:
+            out.append(f"    {field}: {_emit_scalar(str(comps[name][field]))}")
+    desired = record.get("desired")
+    if desired:
+        out.append("desired:")
+        out.append(f"  generation: {desired['generation']}")
+        out.append("  production:")
+        for name in COMPONENTS:
+            if name not in desired.get("production", {}):
+                continue
+            out.append(f"    {name}:")
+            for field in DESIRED_FIELDS:
+                out.append(f"      {field}: {_emit_scalar(str(desired['production'][name][field]))}")
+    if record.get("yuelink"):
+        out.append("yuelink:")
+        for field in YUELINK_FIELDS:
+            out.append(f"  {field}: {_emit_scalar(str(record['yuelink'][field]))}")
+    return "\n".join(out) + "\n"
+
+
+# ── 形状 ────────────────────────────────────────────────────────────────────
+
+
+def validate(record: dict) -> list[str]:
+    problems: list[str] = []
+    schema = str(record.get("schema", ""))
+    if schema not in READABLE_SCHEMAS:
+        problems.append(f"schema 必须是 {' / '.join(READABLE_SCHEMAS)}，读到 {record.get('schema')!r}")
+    comps = record.get("components")
+    if not isinstance(comps, dict) or not comps:
+        problems.append("components 缺失或为空")
+        comps = {}
+    for name, body in comps.items():
+        if name not in COMPONENTS:
+            problems.append(f"未知组件 {name!r}（合法：{', '.join(COMPONENTS)}）")
+            continue
+        if not isinstance(body, dict):
+            problems.append(f"{name}: 不是映射")
+            continue
+        for field in FIELDS:
+            if field not in body:
+                problems.append(f"{name}: 缺字段 {field}")
+        for field in body:
+            if field not in FIELDS:
+                problems.append(f"{name}: 多出字段 {field}")
+        rev, dig = body.get("revision", ""), body.get("digest", "")
+        if not SHA_RE.match(str(rev)):
+            problems.append(f"{name}: revision 不是 40 位十六进制：{rev!r}")
+        if not DIGEST_RE.match(str(dig)):
+            problems.append(f"{name}: digest 不是 sha256:<64-hex>：{dig!r}")
+        if not TS_RE.match(str(body.get("promoted_at", ""))):
+            problems.append(f"{name}: promoted_at 不是 UTC 秒级 ISO-8601（Z 结尾）：{body.get('promoted_at')!r}")
+        if not RUN_ID_RE.match(str(body.get("run_id", ""))):
+            problems.append(f"{name}: run_id 不是数字或 unknown：{body.get('run_id')!r}")
+        by = str(body.get("promoted_by", ""))
+        if not by.strip() or "\n" in by:
+            problems.append(f"{name}: promoted_by 为空")
+    yl = record.get("yuelink")
+    if yl is not None:
+        if not isinstance(yl, dict):
+            problems.append("yuelink: 不是映射")
+        else:
+            for field in YUELINK_FIELDS:
+                if field not in yl:
+                    problems.append(f"yuelink: 缺字段 {field}")
+            for field in yl:
+                if field not in YUELINK_FIELDS:
+                    problems.append(f"yuelink: 多出字段 {field}")
+            if not VERSION_RE.match(str(yl.get("version", ""))):
+                problems.append(f"yuelink: version 形状不对：{yl.get('version')!r}")
+            if not SHA_RE.match(str(yl.get("source_commit", ""))):
+                problems.append("yuelink: source_commit 不是 40 位十六进制")
+            if not HEX64_RE.match(str(yl.get("update_manifest_sha256", ""))):
+                problems.append("yuelink: update_manifest_sha256 不是 64 位十六进制")
+    # yueops 三镜像同 revision 不再是形状规则（P2 §5.2 B1）：跨 revision 必须输入等价，
+    # 那需要 git 与指纹实现，由 group_consistency() 在 write / verify / source-check 里判。
+    problems.extend(_validate_desired(record, schema, comps))
+    for key in record:
+        if key not in ("schema", "components", "desired", "yuelink"):
+            problems.append(f"顶层多出键 {key!r}")
+    return problems
+
+
+def _validate_desired(record: dict, schema: str, comps: dict) -> list[str]:
+    """schema 1 不许有 desired；schema 2 必须有，且覆盖恰好 components 里的组件集合。
+    A3 起 desired 的值可以与 components 不同（--rollback 显式回退），但形状必须合法。"""
+    desired = record.get("desired")
+    if schema == "1":
+        return ["schema 1 不许带 desired（desired 从 schema 2 起）"] if desired is not None else []
+    if schema != "2":
+        return []
+    if not isinstance(desired, dict):
+        return ["schema 2 缺 desired 段"]
+    problems: list[str] = []
+    for key in desired:
+        if key not in ("generation", "production"):
+            problems.append(f"desired: 多出字段 {key}")
+    if not GENERATION_RE.match(str(desired.get("generation", ""))):
+        problems.append(f"desired.generation 不是正整数：{desired.get('generation')!r}")
+    production = desired.get("production")
+    if not isinstance(production, dict):
+        return problems + ["desired.production 缺失或不是映射"]
+    if set(production) != set(comps):
+        problems.append(f"desired.production 的组件集合 {sorted(production)} 不等于 components 的 {sorted(comps)}"
+                        "（desired 必须覆盖每一个已 promote 的组件）")
+    for name, body in production.items():
+        if name not in COMPONENTS:
+            problems.append(f"desired.production: 未知组件 {name!r}")
+            continue
+        if not isinstance(body, dict) or set(body) != set(DESIRED_FIELDS):
+            problems.append(f"desired.production.{name}: 字段必须恰好是 {', '.join(DESIRED_FIELDS)}")
+            continue
+        if not SHA_RE.match(str(body["revision"])):
+            problems.append(f"desired.production.{name}.revision 不是 40 位十六进制：{body['revision']!r}")
+        if not DIGEST_RE.match(str(body["digest"])):
+            problems.append(f"desired.production.{name}.digest 不是 sha256:<64-hex>：{body['digest']!r}")
+    return problems
+
+def signature_path(path: Path = RELEASE_YAML) -> Path:
+    return path.with_name(path.name + SIGNATURE_SUFFIX)
+
+
+def verify_signature_bytes(data: bytes, signature: bytes) -> tuple[str, str]:
+    """(status, detail)；status ∈ unsigned / unverifiable / invalid / verified。"""
+    if not signature:
+        return "unsigned", "签名字节为空"
+    gpgv = shutil.which("gpgv")
+    if gpgv is None:
+        return "unverifiable", "gpgv 没装"
+    if not SIGNER_KEYRING.is_file():
+        return "unverifiable", f"钥匙环 {SIGNER_KEYRING} 不在（yueops 未检出？）"
+    with tempfile.TemporaryDirectory(prefix="release-yaml-verify.") as work:
+        body, sig = Path(work) / "release.yaml", Path(work) / "release.yaml.asc"
+        body.write_bytes(data)
+        sig.write_bytes(signature)
+        proc = subprocess.run([gpgv, "--homedir", work, "--keyring", str(SIGNER_KEYRING.resolve()),
+                               "--status-fd", "1", str(sig), str(body)],
+                              capture_output=True, text=True, timeout=30, check=False)
+    valid = [line.split() for line in proc.stdout.splitlines() if line.startswith("[GNUPG:] VALIDSIG ")]
+    if proc.returncode == 0 and len(valid) == 1 and valid[0][2] == PINNED_SIGNER and valid[0][-1] == PINNED_PRIMARY:
+        return "verified", f"由 {PINNED_SIGNER}（主钥 {PINNED_PRIMARY}）签出"
+    seen = ",".join(v[2] for v in valid) or "无"
+    return "invalid", f"gpgv rc={proc.returncode}，VALIDSIG={seen}，钉住的是 {PINNED_SIGNER}"
+
+
+def verify_signature_file(path: Path = RELEASE_YAML) -> tuple[str, str]:
+    """(status, detail)；status ∈ unsigned / unverifiable / invalid / verified。
+    与 yueops 消费端同一判据：gpgv + 固定钥匙环，VALIDSIG 恰好一条、子钥与主钥指纹都等于钉住的值。"""
+    sig = signature_path(path)
+    if not sig.is_file():
+        return "unsigned", f"{sig} 不存在"
+    try:
+        return verify_signature_bytes(path.read_bytes(), sig.read_bytes())
+    except OSError as exc:
+        return "unverifiable", str(exc)
+
+
+def desired_state(snapshot: tuple[bytes, bytes]) -> str:
+
+exec
+/bin/zsh -lc 'git show d1d7aa97e6278fd673a562c69592e789be3f5eda:release.yaml' in /Users/j/Projects/yt71
+ succeeded in 0ms:
+# 悦通发版清单 —— 「已 promote 的镜像」的唯一真源。
+# 由 scripts/ship.sh 在 promote 成功且签名/SBOM/provenance 三门通过后自动写入
+# （scripts/release-yaml.py write）。读者：scripts/release-state.py、ship.sh --from-promoted、
+# yueops 部署器/滚动/迁移器（只读签名的 desired）、check-all-contracts.sh 的 release-yaml-*。
+# 不要手改：scripts/release-yaml.py verify 会把每条记录与 GHCR 的 sha-<revision> 标签比对。
+schema: 2
+components:
+  yue-node:
+    revision: 7445d9fc04b03c714f9c7eba9e52d1dae5200d51
+    digest: "sha256:f91323140d169f78c83c71494a2f9afb62179f74d464356c70430321513fdf31"
+    promoted_at: "2026-11-02T08:50:44Z"
+    run_id: unknown
+    promoted_by: ship.sh --from-promoted
+  yueboard:
+    revision: 40a0026d71395ac37fb9ab5943bd8c2693440036
+    digest: "sha256:d9a88687588f41535949dfa97535d427b3f895bd885d293fe5d6153edf579b98"
+    promoted_at: "2026-11-03T03:47:36Z"
+    run_id: 41573648967
+    promoted_by: ship.sh --from-promoted
+  yueops-web:
+    revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
+    digest: "sha256:df046f58e27e51153bc2479849946c87b62586276410fc863cdc46cd5b9c5c77"
+    promoted_at: "2026-11-03T07:49:26Z"
+    run_id: 41598504061
+    promoted_by: ship.sh --from-promoted
+  yue-bot:
+    revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
+    digest: "sha256:1ecf76af3f53dd8331c2288ada5b7ca4a9214ac4a913d0192176993bb168b5c4"
+    promoted_at: "2026-11-03T07:49:26Z"
+    run_id: 41598504061
+    promoted_by: ship.sh --from-promoted
+  checkin-api:
+    revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
+    digest: "sha256:be17b3b7d004cd6599194cfcaf1b11ca8650684ebf45bcfc66ab54762080c7c3"
+    promoted_at: "2026-11-03T07:49:26Z"
+    run_id: 41598504061
+    promoted_by: ship.sh --from-promoted
+desired:
+  generation: 328
+  production:
+    yue-node:
+      revision: 7445d9fc04b03c714f9c7eba9e52d1dae5200d51
+      digest: "sha256:f91323140d169f78c83c71494a2f9afb62179f74d464356c70430321513fdf31"
+    yueboard:
+      revision: 40a0026d71395ac37fb9ab5943bd8c2693440036
+      digest: "sha256:d9a88687588f41535949dfa97535d427b3f895bd885d293fe5d6153edf579b98"
+    yueops-web:
+      revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
+      digest: "sha256:df046f58e27e51153bc2479849946c87b62586276410fc863cdc46cd5b9c5c77"
+    yue-bot:
+      revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
+      digest: "sha256:1ecf76af3f53dd8331c2288ada5b7ca4a9214ac4a913d0192176993bb168b5c4"
+    checkin-api:
+      revision: d06b7da00c22461d75d9e411ec4b731b596f7dfc
+      digest: "sha256:be17b3b7d004cd6599194cfcaf1b11ca8650684ebf45bcfc66ab54762080c7c3"
+yuelink:
+  version: 1.3.159
+  source_commit: cca9b2beee72c6593c0c7a3030a425e6626b4ef0
+  update_manifest_sha256: 9c1e8fb1e29585b0f90905947acfef5fc9e441ff5d49804ff42a70b2777b375c
+
+exec
+/bin/zsh -lc "git -c core.fsmonitor=false diff --exit-code d1d7aa97e6278fd673a562c69592e789be3f5eda -- release.yaml release.yaml.asc scripts/release-yaml.py
+ git log --format='%h %s' cb0c221e..d1d7aa97e6278fd673a562c69592e789be3f5eda" in /Users/j/Projects/yt71
+ succeeded in 0ms:
+d1d7aa97 release: record yueops d06b7da00c22 promote in release.yaml (gen 328)
+
+codex
+差异仅涉及 `release.yaml` 和签名文件：generation 由 324 升至 328，包含 Ops 三个镜像及 yueboard `40a0026d` 的记录更新。原样执行 GPG 命令时，沙箱拒绝访问个人 trustdb；我将改用仓库固定公钥环验证，并运行原生 schema 校验。
+
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'git diff --check cb0c221e d1d7aa97e6278fd673a562c69592e789be3f5eda' in /Users/j/Projects/yt71
+ succeeded in 0ms:
+exec
+/bin/zsh -lc 'gpg --batch --no-options --no-default-keyring --keyring /Users/j/Projects/yueto/yueops/scripts/lib/release-signer.gpg --trust-model always --no-auto-check-trustdb --lock-never --status-fd 1 --verify release.yaml.asc release.yaml' in /Users/j/Projects/yt71
+ succeeded in 0ms:
+[GNUPG:] NEWSIG
+gpg: Signature made Tue Nov  3 15:52:13 2026 +08
+gpg:                using RSA key CEF96E9A4ECB741C78329CA3FE2659E6AC769954
+[GNUPG:] KEY_CONSIDERED D9D3C6E59E7465BD07C2177142239A996FDA9F55 0
+[GNUPG:] SIG_ID yMJxT9Tn7fYNoQ73lkCZOvRAr2U 2026-11-03 1793692333
+gpg: Good signature from "onesyue <47652916+onesyue@users.noreply.github.com>" [unknown]
+[GNUPG:] GOODSIG FE2659E6AC769954 onesyue <47652916+onesyue@users.noreply.github.com>
+[GNUPG:] VALIDSIG CEF96E9A4ECB741C78329CA3FE2659E6AC769954 2026-11-03 1793692333 0 4 0 1 10 00 D9D3C6E59E7465BD07C2177142239A996FDA9F55
+gpg: WARNING: Using untrusted key!
+
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "/Users/j/.venvs/yueto/bin/python -B -c 'import datetime
+import runpy
+import subprocess
+from pathlib import Path
+head = '\\''d1d7aa97e6278fd673a562c69592e789be3f5eda'\\''
+base = '\\''cb0c221edf949619adcaf8bc0dbccd4e9481926b'\\''
+def git(*args):
+    return subprocess.check_output(['\\''git'\\'', '\\''-c'\\'', '\\''core.fsmonitor=false'\\'', *args])
+for name in ('\\''release.yaml'\\'', '\\''release.yaml.asc'\\'', '\\''scripts/release-yaml.py'\\''):
+    assert Path(name).read_bytes() == git('\\''show'\\'', f'\\''{head}:{name}'\\''), name
+print('\\''PASS: inspected files are byte-identical to reviewed head'\\'')
+assert git('\\''diff'\\'', '\\''--name-only'\\'', base, head).decode().splitlines() == ['\\''release.yaml'\\'', '\\''release.yaml.asc'\\'']
+m = runpy.run_path('\\''scripts/release-yaml.py'\\'', run_name='\\''review_release_yaml'\\'')
+old = m['\\''parse'\\''](git('\\''show'\\'', f'\\''{base}:release.yaml'\\'').decode())
+new = m['\\''parse'\\''](git('\\''show'\\'', f'\\''{head}:release.yaml'\\'').decode())
+for label, record in [('\\''base'\\'', old), ('\\''head'\\'', new)]:
+    errors = m['\\''validate'\\''](record)
+    assert not errors, (label, errors)
+    for entry in record['\\''components'\\''].values():
+        datetime.datetime.strptime(entry['\\''promoted_at'\\''], '\\''%Y-%m-%dT%H:%M:%SZ'\\'')
+print('\\''PASS: native parse/validate and timestamp validation (base/head); schema 2'\\'')
+assert new['\\''schema'\\''] == old['\\''schema'\\''] == '\\''2'\\''
+assert old['\\''desired'\\'']['\\''generation'\\''] == '\\''324'\\''
+assert new['\\''desired'\\'']['\\''generation'\\''] == '\\''328'\\''
+def flatten(obj, prefix='\\'''\\''):
+    out = {}
+    for key, value in obj.items():
+        path = f'\\''{prefix}.{key}'\\'' if prefix else key
+        if isinstance(value, dict):
+            out.update(flatten(value, path))
+        else:
+            out[path] = value
+    return out
+old_flat, new_flat = flatten(old), flatten(new)
+assert old_flat.keys() == new_flat.keys()
+actual = {key for key in new_flat if old_flat[key] "'!= new_flat[key]}
+expected = {'"'\\''desired.generation'\\''}
+for component in ('\\''yueboard'\\'', '\\''yueops-web'\\'', '\\''yue-bot'\\'', '\\''checkin-api'\\''):
+    expected.update(f'\\''components.{component}.{field}'\\'' for field in ('\\''revision'\\'', '\\''digest'\\'', '\\''promoted_at'\\'', '\\''run_id'\\''))
+    expected.update(f'\\''desired.production.{component}.{field}'\\'' for field in ('\\''revision'\\'', '\\''digest'\\''))
+assert actual == expected, (actual - expected, expected - actual)
+print(f'\\''PASS: exact allowed field set ({len(actual)} scalar changes); no added/removed keys'\\'')
+ops_revision = '\\''d06b7da00c22461d75d9e411ec4b731b596f7dfc'\\''
+digests = {
+    '\\''yueops-web'\\'': '\\''sha256:df046f58e27e51153bc2479849946c87b62586276410fc863cdc46cd5b9c5c77'\\'',
+    '\\''yue-bot'\\'': '\\''sha256:1ecf76af3f53dd8331c2288ada5b7ca4a9214ac4a913d0192176993bb168b5c4'\\'',
+    '\\''checkin-api'\\'': '\\''sha256:be17b3b7d004cd6599194cfcaf1b11ca8650684ebf45bcfc66ab54762080c7c3'\\'',
+}
+for name, digest in digests.items():
+    assert new['\\''components'\\''][name] == dict(revision=ops_revision, digest=digest, promoted_at='\\''2026-11-03T07:49:26Z'\\'', run_id='\\''41598504061'\\'', promoted_by='\\''ship.sh --from-promoted'\\'')
+    assert new['\\''desired'\\'']['\\''production'\\''][name] == dict(revision=ops_revision, digest=digest)
+board_revision = '\\''40a0026d71395ac37fb9ab5943bd8c2693440036'\\''
+board_digest = '\\''sha256:d9a88687588f41535949dfa97535d427b3f895bd885d293fe5d6153edf579b98'\\''
+assert new['\\''components'\\'']['\\''yueboard'\\''] == dict(revision=board_revision, digest=board_digest, promoted_at='\\''2026-11-03T03:47:36Z'\\'', run_id='\\''41573648967'\\'', promoted_by='\\''ship.sh --from-promoted'\\'')
+assert new['\\''desired'\\'']['\\''production'\\'']['\\''yueboard'\\''] == dict(revision=board_revision, digest=board_digest)
+assert set(new['\\''components'\\'']) == set(m['\\''IMAGE_COMPONENTS'\\''])
+for name, entry in new['\\''components'\\''].items():
+    assert new['\\''desired'\\'']['\\''production'\\''][name] == {field: entry[field] for field in ('\\''revision'\\'', '\\''digest'\\'')}
+assert new['\\''components'\\'']['\\''yue-node'\\''] == old['\\''components'\\'']['\\''yue-node'\\'']
+assert new['\\''yuelink'\\''] == old['\\''yuelink'\\'']
+assert m['\\''emit'\\''](new).encode() == git('\\''show'\\'', f'\\''{head}:release.yaml'\\'')
+print('\\''PASS: Ops revision/digests, Board desired, all desired/promoted identities, unchanged Node/YueLink, canonical serialization'\\'')
+'" in /Users/j/Projects/yt71
+ succeeded in 185ms:
+PASS: inspected files are byte-identical to reviewed head
+PASS: native parse/validate and timestamp validation (base/head); schema 2
+PASS: exact allowed field set (25 scalar changes); no added/removed keys
+PASS: Ops revision/digests, Board desired, all desired/promoted identities, unchanged Node/YueLink, canonical serialization
+
+codex
+DONE：未发现需要修改的问题。
+
+- 签名有效：原命令受沙箱 trustdb 限制；改用仓库固定公钥环后，GPG 返回 0，`VALIDSIG` 的签名子钥和主钥均匹配固定指纹。
+- 原生 schema 校验、规范序列化及 `git diff --check` 均通过；generation 为 `324 → 328`。
+- 仅 `release.yaml` 和 `.asc` 改变，25 个标量变化均符合预期；Ops 三项均为 `d06b7da0…`，对应 digest 为 `df046f58…`、`1ecf76af…`、`be17b3b7…`。
+- yueboard 的 promoted 和 desired 同步更新为 `40a0026d71395ac37fb9ab5943bd8c2693440036`，digest 为 `sha256:d9a88687…`。yue-node、YueLink 未变。
+
+VERDICT: APPROVE  
+reviewed_head: d1d7aa97e6278fd673a562c69592e789be3f5eda
+tokens used
+48,716
+DONE：未发现需要修改的问题。
+
+- 签名有效：原命令受沙箱 trustdb 限制；改用仓库固定公钥环后，GPG 返回 0，`VALIDSIG` 的签名子钥和主钥均匹配固定指纹。
+- 原生 schema 校验、规范序列化及 `git diff --check` 均通过；generation 为 `324 → 328`。
+- 仅 `release.yaml` 和 `.asc` 改变，25 个标量变化均符合预期；Ops 三项均为 `d06b7da0…`，对应 digest 为 `df046f58…`、`1ecf76af…`、`be17b3b7…`。
+- yueboard 的 promoted 和 desired 同步更新为 `40a0026d71395ac37fb9ab5943bd8c2693440036`，digest 为 `sha256:d9a88687…`。yue-node、YueLink 未变。
+
+VERDICT: APPROVE  
+reviewed_head: d1d7aa97e6278fd673a562c69592e789be3f5eda
