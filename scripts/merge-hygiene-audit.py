@@ -7,18 +7,75 @@ This retrospective audit does not override GitHub branch rules.
 """
 import argparse
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
+import time
 
 REPOS = ("yueops", "yueboard", "yueto", "yueto-ci", "yuelink", "yuelink-ci", "yue-node")
 ROOT = Path(__file__).resolve().parents[1]
+# Bump when the interpretation of cached remote evidence changes.
+CACHE_VERSION = 2
 # Exact approved snapshot bytes; every path uses this pin. Tests may patch it,
 # but CLI arguments cannot authorize a replacement snapshot.
 ACCEPTED_HISTORY_SHA256 = "fca512aa5e0519ac878e9f5df01111bf995c8d7286a3f0e5360a2ce4bce25324"
+
+
+class RateFloorError(ValueError):
+    pass
+
+
+def cache_path(kind, key):
+    root = Path(os.environ.get("MERGE_HYGIENE_CACHE_DIR", "~/.cache/yueto/merge-hygiene")).expanduser()
+    digest = hashlib.sha256(json.dumps(key, sort_keys=True).encode()).hexdigest()
+    return root / f"v{CACHE_VERSION}" / kind / f"{digest}.json"
+
+
+def read_cache(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        # A missing, corrupt or incompatible entry is a miss, never a clean audit.
+        return None
+
+
+def write_cache(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump(value, stream)
+        temporary.replace(path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def response_parts(output):
+    headers, separator, body = output.replace("\r\n", "\n").partition("\n\n")
+    lines = headers.splitlines()
+    match = re.fullmatch(r"HTTP/\S+ (\d{3})(?: .*)?", lines[0] if lines else "")
+    if not separator or not match:
+        raise ValueError("invalid GitHub HTTP response; audit incomplete")
+    return int(match[1]), {key.lower(): value.strip() for key, value in
+                          (line.split(":", 1) for line in lines[1:] if ":" in line)}, body
+
+
+def retry_delay(headers, attempt):
+    delay = 60 * 2 ** attempt
+    if "retry-after" in headers:
+        value = headers["retry-after"]
+        delay = float(value) if value.isdigit() else parsedate_to_datetime(value).timestamp() - time.time()
+    if headers.get("x-ratelimit-remaining") == "0" and "x-ratelimit-reset" in headers:
+        delay = max(delay, float(headers["x-ratelimit-reset"]) - time.time() + 1)
+    return max(1, delay)
 
 
 def timestamp(value):
@@ -29,11 +86,48 @@ def timestamp(value):
 
 
 def api(endpoint):
-    # Do not echo gh stderr: authentication/transport diagnostics may contain secrets.
-    result = subprocess.run(["gh", "api", endpoint], capture_output=True, text=True)
-    if result.returncode:
-        raise ValueError("GitHub API request failed; audit incomplete")
-    return json.loads(result.stdout)
+    floor = int(os.environ.get("MERGE_HYGIENE_RATE_FLOOR", "300"))
+    if floor < 0:
+        raise ValueError("invalid rate floor")
+    path = cache_path("http", endpoint)
+    cached = read_cache(path)
+    if not (isinstance(cached, dict) and cached.get("endpoint") == endpoint
+            and isinstance(cached.get("etag"), str) and cached["etag"]
+            and "\n" not in cached["etag"] and "\r" not in cached["etag"] and "body" in cached):
+        cached = None
+    command = ["gh", "api", endpoint, "--include"]
+    if cached:
+        command += ["-H", "If-None-Match: " + cached["etag"]]
+    for attempt in range(3):
+        # Never echo headers, bodies or gh stderr: they may contain secrets.
+        result = subprocess.run(command, capture_output=True, text=True)
+        status, headers, body = response_parts(result.stdout)
+        remaining = headers.get("x-ratelimit-remaining")
+        if remaining is not None and int(remaining) < floor:
+            raise RateFloorError("incomplete: rate-floor")
+        if status == 304:
+            if cached is None:
+                raise ValueError("304 without cached body; audit incomplete")
+            return cached["body"]
+        if status in (403, 429):
+            if attempt == 2:
+                break
+            delay = retry_delay(headers, attempt)
+            # Avoid holding a premerge gate for an entire hourly reset window.
+            # Exiting incomplete is preferable to retrying before GitHub allows it.
+            if delay > 300:
+                break
+            time.sleep(delay)
+            continue
+        if result.returncode or status != 200:
+            break
+        data = json.loads(body)
+        if headers.get("etag"):
+            write_cache(path, {"endpoint": endpoint, "etag": headers["etag"], "body": data})
+        else:
+            path.unlink(missing_ok=True)
+        return data
+    raise ValueError("GitHub API request failed; audit incomplete")
 
 
 def pages(endpoint, key=None):
@@ -279,6 +373,35 @@ def evidence_only(owner, repo, base_sha, head_sha):
                                and allowed(entry["filename"]) for entry in files)
 
 
+def merged_findings(owner, repo, pr):
+    merge_sha = pr["merge_commit_sha"]
+    if not isinstance(merge_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", merge_sha):
+        raise ValueError("invalid PR merge commit SHA")
+    key = [owner, repo, pr["number"], merge_sha]
+    path = cache_path("compare", key)
+    inputs = {"key": key, "head": pr["head"]["sha"], "base": pr["base"]["sha"],
+              "merged_at": pr["merged_at"], "author": pr["user"]["login"]}
+    prefix = f"repos/{owner}/{repo}"
+    sha = pr["head"]["sha"]
+    # Reviews and check runs can change after merge without changing the PR's
+    # refs or updated_at. Revalidate every evidence page via HTTP/ETag before
+    # deriving a verdict; an unavailable endpoint must never reuse old green.
+    reasons = findings(
+        pr, all_rows(f'{prefix}/pulls/{pr["number"]}/reviews'),
+        all_rows(f"{prefix}/commits/{sha}/check-runs?filter=all", "check_runs"),
+        all_rows(f"{prefix}/commits/{sha}/statuses"))
+    cached = read_cache(path)
+    if (isinstance(cached, dict) and cached.get("inputs") == inputs
+            and type(cached.get("evidence_only")) is bool):
+        only_evidence = cached["evidence_only"]
+    else:
+        # Only the file comparison between immutable commit SHAs is reusable
+        # without HTTP validation. Version 2 ignores all old verdict snapshots.
+        only_evidence = evidence_only(owner, repo, pr["base"]["sha"], sha)
+        write_cache(path, {"inputs": inputs, "evidence_only": only_evidence})
+    return reasons, only_evidence
+
+
 def audit(owner, repos, cutoff, registered, now):
     enforced_since = enforcement_cutoff(owner)
     # Post-activation violations cannot age out through --hours or a quiet repo.
@@ -294,11 +417,7 @@ def audit(owner, repos, cutoff, registered, now):
                 sha = pr["head"]["sha"]
                 if not re.fullmatch(r"[0-9a-f]{40}", sha):
                     raise ValueError("invalid PR head SHA")
-                reasons = findings(
-                    pr, all_rows(f'{prefix}/pulls/{pr["number"]}/reviews'),
-                    all_rows(f"{prefix}/commits/{sha}/check-runs?filter=all", "check_runs"),
-                    all_rows(f"{prefix}/commits/{sha}/statuses"))
-                only_evidence = evidence_only(owner, repo, pr["base"]["sha"], sha)
+                reasons, only_evidence = merged_findings(owner, repo, pr)
                 if only_evidence:
                     reasons = [r for r in reasons if r not in (
                         "no_approving_review_at_merge", "no_check_evidence_at_merge")]
@@ -318,6 +437,8 @@ def audit(owner, repos, cutoff, registered, now):
                                     "receipt": evidence, "satisfied_by_receipt": satisfied,
                                     **({"evidence_only": True} if only_evidence else {})})
             if batch and timestamp(batch[-1]["updated_at"]) < cutoff:
+                # merged_at alone is unsafe: an older merge can be updated today
+                # and precede newer merges in this updated-descending listing.
                 break
     return results
 
@@ -393,7 +514,9 @@ def main():
                   "unregistered": sum(bool(r["findings"]) and r["exception"] is None
                                       and not r.get("accepted_history")
                                       for r in rows)}
-    except (ValueError, OSError, KeyError, TypeError):
+    except RateFloorError:
+        result = {"schema": 1, "complete": False, "error": "incomplete: rate-floor"}
+    except (ValueError, OSError, KeyError, TypeError, OverflowError):
         # Never turn inaccessible private repositories or malformed evidence into green.
         result = {"schema": 1, "complete": False,
                   "error": "API/evidence/exception/baseline input unavailable or invalid; audit incomplete"}

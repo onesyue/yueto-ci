@@ -1,0 +1,50 @@
+{
+  "baseline": "2c150a3",
+  "network_calls": 0,
+  "fixtures": [
+    {
+      "repo": "yueops",
+      "merged_prs": 1,
+      "before": 5,
+      "before_rerun": 5,
+      "after_cold": 5,
+      "after_rerun": 2,
+      "rerun_304": 2,
+      "rerun_charged": 0,
+      "verdicts_equal": true
+    },
+    {
+      "repo": "yueops",
+      "merged_prs": 100,
+      "before": 303,
+      "before_rerun": 303,
+      "after_cold": 303,
+      "after_rerun": 3,
+      "rerun_304": 3,
+      "rerun_charged": 0,
+      "verdicts_equal": true
+    },
+    {
+      "repo": "yueto-ci",
+      "merged_prs": 1,
+      "before": 6,
+      "before_rerun": 6,
+      "after_cold": 6,
+      "after_rerun": 2,
+      "rerun_304": 2,
+      "rerun_charged": 0,
+      "verdicts_equal": true
+    },
+    {
+      "repo": "yueto-ci",
+      "merged_prs": 100,
+      "before": 403,
+      "before_rerun": 403,
+      "after_cold": 403,
+      "after_rerun": 3,
+      "rerun_304": 3,
+      "rerun_charged": 0,
+      "verdicts_equal": true
+    }
+  ]
+}
