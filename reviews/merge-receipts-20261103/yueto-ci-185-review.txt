@@ -1,0 +1,12 @@
+# Codex exact-head review: yueto-ci #185 @bee330db4ad5de6d68b4c0e2311fd506f30bbfd3 (mac-5f08d00f, codex exec read-only)
+
+## Round 1 (12:09-12:2x SGT)
+历史 seal 检查通过：重建字节与 `e05012e` 完全一致，SHA-256 为 `190f2ad9…6332d`；只删掉指定两项，其余 1000 项未变，`reviews/**` 的 Git tree 也一致。现有最终定向测试记录为 38 通过、1 跳过，尚无 Linux 门禁通过证据。
+VERDICT: request-changes (validation gap: no passing Linux policy-gate evidence for bee330db4; recorded final targeted run has 1 skipped test. Hashes, unchanged reviews, 20 read-only tests, and 35 rejection checks passed.)
+
+## Round 2 (12:25-12:26 SGT), with box Linux full-suite log (663 passed, 0 skipped, yueops-src present)
+指定 HEAD 仍为 `bee330db4`，补充日志记录同一提交在 Linux 上完成 663 项测试、无跳过。差异中 `reviews/**` 没有改动。
+Legitimate historical-skip control passed; skip statuses remain unexecuted.
+35 independent mutation checks rejected as expected; no baseline mutation.
+test_ops_npm_security_transition: Ran 2 tests OK
+VERDICT: approve @bee330db4
