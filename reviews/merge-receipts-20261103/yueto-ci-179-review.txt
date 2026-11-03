@@ -1,0 +1,68 @@
+Fresh strict exact-head review: onesyue/yueto-ci PR #174
+Reviewer: /root/review_174b (independent read-only lane)
+Reviewed head: 7fb302a6627e413fb4bed5c968f9f8fe5bd526f3
+Target master: e05012e63c201f87966da6f2f5b78505e29a2220
+Merge base: 5a551afd3cd86dc0d783726253d6e2c81927e869
+Scope: the full 14-file PR diff from the merge base, with direct inspection of
+HTTP/cache handling, evidence collection, merged and premerge audit paths,
+receipt/baseline enforcement, regression tests and documentation. This is a new
+review of the frozen source, not an adoption of the earlier report's verdict.
+
+Findings: no unresolved P1 or P2 defects found.
+
+P1 resolution:
+- merged_findings always retrieves every reviews, check-runs and statuses page
+  and recomputes findings before reading the comparison cache. Neither unchanged
+  merge/head SHAs nor unchanged PR updated_at can bypass evidence revalidation.
+- HTTP bodies are reused only after the exact endpoint/page returns 304 to its
+  stored ETag. A 200 response replaces the body and validator; a response without
+  an ETag removes the prior entry. Authentication, server, transport and quota
+  failures do not fall back to persisted green evidence.
+- Version 2 and the compare namespace exclude legacy merged-verdict snapshots.
+  Only the file classification for fixed base/head commits is reused without an
+  HTTP request; its stored inputs must match and its value must be a boolean.
+  Current remote findings are never stored or accepted as immutable verdicts.
+- Local receipts, exception policy, activation and accepted-history checks are
+  evaluated again. Waivers do not remove failed, pending or unknown check
+  findings. The pinned accepted-history bytes, frozen_at boundary, head/findings
+  matching and open-PR reference movement checks remain intact.
+
+Other reviewed behavior:
+- Cache files are replaced atomically. Missing/malformed records cause misses;
+  read/write failures cannot yield a successful incomplete audit.
+- Remaining quota below the configured floor exits 2. The 403/429 retry count
+  and delay ceiling are finite, with Retry-After/reset handling preserved.
+- Updated-descending pagination uses the effective enforcement cutoff and
+  revalidates every visited page. No TTL or PR timestamp substitutes for check
+  evidence revalidation. README and revised measurements describe this behavior;
+  old zero-call figures are explicitly retained as historical v1 evidence.
+
+Validation evidence:
+- Reused the current exact-source full pytest run under the owner's no-repeat
+  rule: ../pytest-174-final.log, 678 passed, 1 skipped, 5833 subtests passed in
+  410.72 seconds, exit 0. The integrator verified source/log digests against
+  reviews/audit-api-cache-20261103/verification-final.json and the JUnit result.
+  The unavailable yueops-src source-object check is a skip, not a pass.
+- Existing red/green evidence: ../pytest-174-regression-red.log records all nine
+  original mutable-evidence/failure subcases failing against the old code;
+  ../pytest-174-targeted.log records 74 affected tests and 186 passing subtests
+  after repair. The new tests exercise changed checks, dismissed reviews,
+  changed statuses, ignored v1 green entries and warm API/quota failures.
+- Fresh independent adversarial control passed during this review: a warm audit
+  with 100 unchanged checks on page 1 and one check on page 2 first returned no
+  findings. Changing only page 2's conclusion to failure, while retaining PR
+  metadata and page 1's validator, produced exactly
+  check_nonpassing_at_merge:late-page-policy. Six discovery/evidence requests
+  were made; the cached comparison was reused. No source changes were made.
+- git diff --check origin/master...HEAD passed. HEAD was rechecked before writing
+  this report and remains the reviewed SHA.
+- The integrator confirmed a good commit signature and matching local, remote
+  branch and PR heads. ../log-174.txt records the signed normal-hook commit and
+  normal push without force or hook bypass.
+- Final-head Ubuntu Central policy CI completed successfully at
+  2026-11-03 03:40:02 UTC for this exact SHA, including policy tests and workflow
+  lint: https://github.com/onesyue/yueto-ci/actions/runs/41572890627
+  The integrator's readback is saved in ../ci-174b-readback.json. This supplies
+  final-head Linux acceptance independently of the macOS full pytest result.
+
+VERDICT approve @7fb302a6627e413fb4bed5c968f9f8fe5bd526f3

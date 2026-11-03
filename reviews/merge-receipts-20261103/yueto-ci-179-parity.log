@@ -1,0 +1,8 @@
+  evaluated again. Waivers do not remove failed, pending or unknown check
+  rule: ../pytest-174-final.log, 678 passed, 1 skipped, 5833 subtests passed in
+- Fresh independent adversarial control passed during this review: a warm audit
+- git diff --check origin/master...HEAD passed. HEAD was rechecked before writing
+- Full pytest: **678 passed, 1 skipped**, 5,833 passing subtests. Reused fresh, hash-matched evidence.
+- Exact-head Linux CI passed.
+- Full pytest: **678 passed, 1 skipped**, 5,833 passing subtests. Reused fresh, hash-matched evidence.
+- Exact-head Linux CI passed.
