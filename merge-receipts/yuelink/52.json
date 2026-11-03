@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yuelink",
+  "pr": 52,
+  "head": "8cee3cc94931ac48aae4a92a4a1c101147c2b583",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "8cee3cc94931ac48aae4a92a4a1c101147c2b583",
+    "artifact": "reviews/merge-receipts-20261103/yuelink-52-review-tos.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T01:08:00Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "8cee3cc94931ac48aae4a92a4a1c101147c2b583",
+    "command": "flutter test diagnostics_consent_ui_test + i18n_ternary_ratchet_test",
+    "log_sha256": "5e52ee1ec1da6ec047c7d68d787a38f1a18208f69ba472cfd66218a86428ac10",
+    "ran_at": "2026-11-03T01:09:30Z",
+    "runner": "box"
+  }
+}
