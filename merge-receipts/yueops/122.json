@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 122,
+  "head": "3273e50d44c5bac616170460578a0e688254c808",
+  "backfilled": false,
+  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "3273e50d44c5bac616170460578a0e688254c808", "artifact": "reviews/merge-receipts-20261103/yueops-122.md", "reviewer": "codex", "reviewed_at": "2026-11-03T00:12:49Z"},
+  "parity": {"result": "pass", "head": "3273e50d44c5bac616170460578a0e688254c808", "command": "qpar.sh targeted + admission-precheck ACCEPTED", "log_sha256": "9a68d2b3789e63fa20b192d9487e2074fa58c42dfc94cbcb6873cd39023d7ec7", "ran_at": "2026-11-03T00:11:59Z", "runner": "box"}
+}
