@@ -1,0 +1,1565 @@
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /Users/j/Projects
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a1a093-9767-7d20-9d91-f4166d4f7c19
+--------
+user
+Read-only review of onesyue/yueto-ci PR #203, head 3cf7902173bed80a272e6975cb696478a5def55e. Use 'gh pr diff 203 -R onesyue/yueto-ci' and 'gh api repos/onesyue/yueops/compare/d06b7da00c22461d75d9e411ec4b731b596f7dfc...80f7c8e6589c68eefa88aff25cad2e1f55e17350'. Confirm three things: the only change is source_revision d06b7da0 -> 80f7c8e6; 80f7c8e6 descends from d06b7da0; and no path pinned in ops-first-native-successors.json changed in that range. End with the line 'VERDICT: APPROVE' or 'VERDICT: REQUEST_CHANGES', then the line 'reviewed_head: <sha>'.
+2026-11-03T08:43:14.543676Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+2026-11-03T08:43:14.585832Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://mcp.context7.com/mcp)")))
+2026-11-03T08:43:14.587813Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+2026-11-03T08:43:19.848023Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://mcp.context7.com/mcp)")))
+2026-11-03T08:43:19.849130Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+2026-11-03T08:43:25.861635Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+2026-11-03T08:43:25.869434Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://mcp.context7.com/mcp)")))
+2026-11-03T08:43:30.875487Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+codex
+我会只读核对 PR 差异、提交祖先关系，以及锁定路径在该区间内是否变化；按指定格式给出结论。
+
+exec
+/bin/zsh -lc "pwd && rg --files -g 'AGENTS.md' -g '*status*' -g '*batch*' -g 'ops-first-native-successors.json' -g '*findings*' yueto-ci .claude 2>/dev/null" in /Users/j/Projects
+ exited 2 in 0ms:
+/Users/j/Projects
+
+codex
+本次按 `evidence-discipline` 和 `verification-before-completion` 技能核对证据，范围限定为这三项。
+
+exec
+/bin/zsh -lc 'ls -a /Users/j/Projects && cat /Users/j/.agents/skills/evidence-discipline/SKILL.md /Users/j/.agents/skills/verification-before-completion/SKILL.md' in /Users/j/Projects
+ succeeded in 0ms:
+.
+..
+.pytest_cache
+codex-appearance
+diag-tml
+lane-ci
+lane-cx1103
+lane-gfw
+lane-q1103
+strict-stash2.patch
+xprotect-ab.sh
+yl54-032e
+yt71
+yueboard-worktrees
+yuelink-ci-rel160
+yuelink-wt
+yueops-worktrees
+yueto
+yueto-ci-worktrees
+yueto-isolated
+yueto-miniapp-2026
+yueto-release-20260904
+yueto-validation-workspace
+yueto-worktrees
+yueto-worktrees-tml
+yueto-wt
+---
+name: evidence-discipline
+description: 'Use for Yue.to post-release readback, read-only production accounting reconciliation, routine inspection, or operational health claims. Prove collection reached the target, match scope and freshness, and distinguish healthy, failed and UNKNOWN.'
+---
+
+# Evidence discipline (Yue.to)
+
+For post-release readback, read-only accounting reconciliation or routine
+inspection, read [Read-only operational evidence](references/readonly-operations.md).
+It supplies collection criteria without authorizing production access or repairs.
+
+The most common failure here is a conclusion with **no supporting evidence**
+whose output looks identical to an evidenced conclusion. On 2026-08-29 this
+recurred independently in five unrelated places, including two newly written
+scripts.
+
+Every rule below comes from an observed incident. Use `guard-authoring` to write
+guards and `fleet-diagnose` to investigate nodes. This skill governs **the claim
+you are about to make**.
+
+## Select the evidence before collecting again
+
+Start with the selected item's latest receipt: object/input revision, environment
+(including timezone, shard order and concurrency when relevant), covered behavior,
+result, timestamp and evidence path. Reuse matching evidence within 24 hours;
+remeasure changed inputs, conflicting results or expired evidence. A changed
+runtime/environment changes the object even if the source SHA is unchanged.
+Collect only the missing obligation. A targeted test proves that tested behavior;
+it does not replace a required full release gate or current production readback.
+State the claim at the layer actually observed and close the item once its
+acceptance is satisfied. Historical incidents without a denominator establish
+failure mechanisms, not an error rate or a measured performance improvement.
+
+## Answer three questions before stating a conclusion
+
+1. **What does this output say when probing fails?** If it looks the same as
+   health or failure, it has no evidentiary value.
+2. **Did I observe not-X, or merely fail to observe X?** These are different
+   propositions.
+3. **Did I measure the layer I am making a claim about?** Inbound reachability
+   is not usability, ICMP is not the data plane, and cached receipts are not
+   liveness.
+
+If any answer is missing, report **UNKNOWN / UNMEASURABLE**, not either verdict.
+
+## 1. Unmeasurable state mistaken for a definite verdict
+
+This causes both **false green** (unreachable becomes healthy) and **false red**
+(unreachable becomes failed). Observed forms include:
+
+- SSH fails, collection returns an empty string, and output says HY2 is not
+  listening on UDP/443. That is a data-plane claim supported only by inability
+  to reach the host.
+- An observation point outside China judges whether the Chinese path is blocked.
+  That plane cannot observe the proposition, always returns UP and vetoed
+  recovery for 9 hours. **Write down what a veto gate can establish first.**
+- `dev-null-fleet-guard` reports SEEN from a cached `checked_at` receipt; it does
+  not establish liveness.
+- A listener assertion after `sleep 15` mistakes a host taking longer than
+  15 seconds to bind for a host unable to start. **Poll readiness until it appears**
+  within the operation's bound instead of assuming a fixed wait suffices.
+- All inbound 443 checks pass while outbound access reaches only the same
+  datacenter (`yue-us-premium`). Reachability does not establish usability.
+
+Fallback repair can hide this family completely: "fails every time and gets
+repaired" and "never failed" can produce identical observable state. A timer
+that repairs the state every N minutes is itself a reason to inspect the path.
+Where authorized and operationally appropriate, suspend the fallback for the
+measurement so it cannot mask the failure; preserve the recovery path.
+
+For every collect-then-assert path, first prove collection succeeded (nonempty,
+expected fields), then inspect contents. Missing measurements are
+UNKNOWN/UNREACHABLE. An inspection unable to measure should `exit 75`, not
+`exit 1`.
+
+## 2. A negative observation requires proof of handler arrival
+
+A rate-limit test sent 30 fake tokens to `checkin.yue.to/api/client/feedback`
+and counted 30 non-429 responses as passes. That hostname actually returned
+404: thirty 404s had been mistaken for thirty admitted requests.
+
+"No rate limit/error/alert" and "code was never reached" have identical counts.
+Anti-probing decoy 404s can further hide a missing route as bad data.
+
+First obtain a signal **generated by the target handler itself**, such as an
+empty-body 400 `content_required`, not a 404 from elsewhere. Then count results.
+Run a negative/control comparison too: a blocking result may have blocked
+legitimate traffic as well.
+
+## 3. The tool can manufacture evidence
+
+Every example below has contaminated actual conclusions:
+
+| Failure shape | Consequence | Check or remedy |
+|---|---|---|
+| Read `$?` after `cmd \| tail` | Captures tail's status; four mutation runs falsely passed | Capture `rc=$?` immediately on its own line, with no intervening command, including `echo`; preserve the producer status |
+| `echo "rc=$?"` also contains `$(date)` | Command-substitution expansion overwrote status; rc 78 was recorded as 0 | Capture status separately and immediately |
+| `ssh -n` with heredoc/`bash -s` | stdin becomes /dev/null; remote reads zero bytes and always exits 0 | Look for `-n` and `<<` together |
+| `${...}`/backticks in a remote SSH command | Premature remote-shell expansion produced two opposite fleet conclusions in one day | Include a known-good control host in the same batch |
+| zsh `$VAR:path` | Modifier parsing silently rewrites the command; errors name a nonexistent file | Quote the whole value |
+| `__pycache__` / Flutter kernel cache | Same-length edits loaded stale bytecode; all four mutations falsely passed | After editing, `sleep 2 && touch`, or clear the relevant cache |
+| Playwright `fullPage` stitching | Turned an entire home section white; visual baseline missed three major regions | Quantify pixels rather than trusting visual inspection alone |
+| Matching structural fingerprints | Reported green for syntactically invalid YAML | Require successful parsing; shape alone is insufficient |
+| Background jobs inherit `SIGINT=SIG_IGN` | Bash cannot install a trap for an already ignored signal | A failure only in the SIGINT parameter is the signature |
+
+## 4. The criterion itself can be wrong
+
+- **Too broad:** `dpkg -l | awk '$1 !~ /^ii/'` treated normal `rc` (removed,
+  configuration retained) as failure and reported every host failed after a
+  successful rollout. The intended predicate is `^i[^i]`.
+- **Too narrow/non-universal:** `ss | grep -c :443` is 2 on a dual-stack host,
+  not 1. Establish universality before asserting an exact count.
+- **Measuring the probe:** instantaneous single samples, counting the probe
+  itself, or self-matching `pgrep -f X`.
+- **Wrong method:** binary-search MTU on a lossy path mistakes loss for oversized
+  packets. Repeat fixed-size probes and inspect the pattern, not the converged
+  search value.
+- **Agreement is not correctness:** comparing two handwritten copies detects
+  one-sided changes but is blind when both are stale. All four checks passed
+  during actual Thailand2/Indonesia2 VLESS disconnections. Ask who detects A
+  and B being wrong together; add a runtime-derived observation when necessary.
+- **Contaminated sampling:** check for other heavy work in the sample window
+  before attributing load. Geodata distribution once caused 5 false positives.
+- **Inventory is not forwarding topology (2026-10-08):** do not combine
+  `servers/server_nodes` hosts, protocol nodes, relay membership and other
+  product pools. Distinguish entry SID, logical node ID and actual backend.
+  Read current nginx upstreams, HY2 MAP and loaded nft targets, then reconcile
+  native machine presence. One node ID bound to several hosts proves bindings
+  only, not multiple current v4 exits in a region or readiness for backend load
+  balancing. Measure primary/backup entry and exit redundancy separately.
+- **Batch success is not item success (2026-10-08):** a protocol sweep using
+  consecutive-failure alerting can `exit 0` with VLESS 49/50. Locate the exact
+  invocation output with
+  `systemctl show <unit> -p InvocationID -p Result -p ExecMainStatus -p StandardOutput`,
+  then verify each protocol's denominator and OK/FAIL/UNKNOWN counts. A later
+  96/96 cannot erase the prior failure. Handshake reachability is not bandwidth
+  recovery evidence.
+- **Queued alerts are not delivered alerts (2026-10-08):** P1 deferred ACK proves
+  durable acceptance only. Use the original event's dedupe key/source generation
+  to correlate `ops_alert_outbox`, the actual batch's `delivered_at` and native
+  send ACK; compare payload hash and timing. Before an hourly batch is due,
+  report queued. Missing delivery links mean UNKNOWN. Extra test messages cannot
+  substitute for evidence of the original alert chain.
+
+## 5. The source itself can be stale
+
+- IPs taken from old rollout logs make healthy hosts appear unreachable. Verify
+  the current address before a liveness verdict.
+- Cross-repository assertions in comments expire unnoticed; one guided
+  production for three months.
+- Backlogs age: when asked what remained in `endgame-plan`, 4 items were already
+  complete and 1 was hidden in a merged row. Reconcile before working.
+- Of 15 self-reported visual defects, 6 were observation errors. Measure before
+  changing code.
+- A benchmark site with fabricated data entered long-term memory and was cited
+  as measured evidence for 9 days.
+
+## Pre-conclusion checklist
+
+- [ ] Probe failure is distinguishable from the claimed verdict.
+- [ ] Negative results have independent arrival proof and controls.
+- [ ] Fleet-wide claims include a known-good host in the same batch.
+- [ ] Numbers come from current authoritative sources, not old logs/comments/lists.
+- [ ] Measurement and claim concern the same layer.
+- [ ] Repair timers cannot silently mask the behavior being measured.
+- [ ] Report inability to measure explicitly; it is a valid, necessary conclusion.
+---
+name: verification-before-completion
+description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+---
+
+# Verification Before Completion
+
+## Overview
+
+**Core principle:** Evidence before claims, always.
+
+**Violating the letter of this rule is violating the spirit of this rule.**
+
+## The Iron Law
+
+```
+NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+```
+
+If you haven't run the verification command in this message, you cannot claim it passes.
+
+## The Gate Function
+
+```
+BEFORE claiming any status or expressing satisfaction:
+
+1. IDENTIFY: What command proves this claim?
+2. RUN: Execute the FULL command (fresh, complete)
+3. READ: Full output, check exit code, count failures
+4. VERIFY: Does output confirm the claim?
+   - If NO: State actual status with evidence
+   - If YES: State claim WITH evidence
+5. ONLY THEN: Make the claim
+
+Skip any step = lying, not verifying
+```
+
+## Common Failures
+
+| Claim | Requires | Not Sufficient |
+|-------|----------|----------------|
+| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
+| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
+| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
+| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
+| Regression test works | Red-green cycle verified | Test passes once |
+| Agent completed | VCS diff shows changes | Agent reports "success" |
+| Requirements met | Line-by-line checklist | Tests passing |
+
+## Red Flags - STOP
+
+- Using "should", "probably", "seems to"
+- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
+- About to commit/push/PR without verification
+- Trusting agent success reports
+- Relying on partial verification
+- Thinking "just this once"
+- Tired and wanting work over
+- **ANY wording implying success without having run verification**
+
+## Rationalization Prevention
+
+| Excuse | Reality |
+|--------|---------|
+| "Should work now" | RUN the verification |
+| "I'm confident" | Confidence ≠ evidence |
+| "Just this once" | No exceptions |
+| "Linter passed" | Linter ≠ compiler |
+| "Agent said success" | Verify independently |
+| "I'm tired" | Exhaustion ≠ excuse |
+| "Partial check is enough" | Partial proves nothing |
+| "Different words so rule doesn't apply" | Spirit over letter |
+
+## Key Patterns
+
+**Tests:**
+```
+✅ [Run test command] [See: 34/34 pass] "All tests pass"
+❌ "Should pass now" / "Looks correct"
+```
+
+**Regression tests (TDD Red-Green):**
+```
+✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
+❌ "I've written a regression test" (without red-green verification)
+```
+
+**Build:**
+```
+✅ [Run build] [See: exit 0] "Build passes"
+❌ "Linter passed" (linter doesn't check compilation)
+```
+
+**Requirements:**
+```
+✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
+❌ "Tests pass, phase complete"
+```
+
+**Agent delegation:**
+```
+✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
+❌ Trust agent report
+```
+
+## When To Apply
+
+**ALWAYS before:**
+- ANY variation of success/completion claims
+- ANY expression of satisfaction
+- ANY positive statement about work state
+- Committing, PR creation, task completion
+- Moving to next task
+- Delegating to agents
+
+**Rule applies to:**
+- Exact phrases
+- Paraphrases and synonyms
+- Implications of success
+- ANY communication suggesting completion/correctness
+
+exec
+/bin/zsh -lc 'gh api repos/onesyue/yueops/compare/d06b7da00c22461d75d9e411ec4b731b596f7dfc...80f7c8e6589c68eefa88aff25cad2e1f55e17350' in /Users/j/Projects
+exec
+/bin/zsh -lc 'gh pr diff 203 -R onesyue/yueto-ci' in /Users/j/Projects
+exec
+/bin/zsh -lc 'gh pr view 203 -R onesyue/yueto-ci --json headRefOid,baseRefOid,files,body' in /Users/j/Projects
+ exited 1 in 0ms:
+error connecting to api.github.com
+check your internet connection or https://githubstatus.com
+
+ exited 1 in 0ms:
+error connecting to api.github.com
+check your internet connection or https://githubstatus.com
+
+ exited 1 in 0ms:
+error connecting to api.github.com
+check your internet connection or https://githubstatus.com
+
+codex
+指定的两条 `gh` 命令均无法连接 `api.github.com`。我会检查本地是否保存了指定提交和审阅证据；远端 PR head 的核对目前仍缺证据。
+
+exec
+/bin/zsh -lc 'cat /Users/j/.agents/skills/evidence-discipline/references/readonly-operations.md' in /Users/j/Projects
+ succeeded in 0ms:
+# Read-only operational evidence
+
+Use this reference for post-release readback, production accounting reconciliation
+or routine inspection. It grants no production access. When the task prohibits
+production access, inspect source and existing receipts only; leave collection
+to the authorized execution lane. Never turn a failed read into a repair action.
+Do not start services, change timers, sign releases, deploy, alter data or clear
+report-outbox. Preserve host-key verification and the exclusion of yue-tw; never
+hide subscription nodes 47/49. Do not run an unfiltered fleet sweep when its target
+selection cannot honor that exclusion. No backup or restore work belongs here.
+
+## 1. Post-release readback
+
+Start with the release receipt's candidate, signed desired generation, promoted
+digests and observation window. Use `scripts/status-all.sh` before interpreting
+cross-repository drift: its main-checkout inputs may differ from a PR worktree.
+Do not move another lane's checkouts to make a comparison green.
+
+Existing root readers (run only within the authorized collection scope):
+
+```bash
+python3 scripts/release-yaml.py verify-signature
+python3 scripts/release-yaml.py desired-revision yueops
+python3 scripts/release-yaml.py read --component yueops-web --field digest
+python3 scripts/release-yaml.py read --component yue-bot --field digest
+python3 scripts/release-yaml.py read --component checkin-api --field digest
+```
+
+`scripts/release-state.py` also contacts production. Reuse its authorized receipt
+to compare source, reviewed expectation, promoted artifact and running revision.
+Apply release-chain's input-equivalence rules; do not relabel an older image as
+HEAD. Promotion or a deployment completion marker alone is insufficient.
+
+For each released service, collect the following from its existing runbook or
+receipt, retaining the actual exit status and timestamp:
+
+| Surface | Required evidence and decision |
+|---|---|
+| Ops images | All three service revisions/digests reconcile with signed desired; inspect each row rather than a group success label. |
+| Ops migrations | Existing `scripts/yue-bot-migrate.sh` dry-run receipt and `python -m alembic current` output from the web container match the candidate's migration inventory. Historical migration numbers are not today's target. |
+| Chat widget | Existing `scripts/converge-panel-chat-widget-version.sh --check` receipt reports agreement. Never substitute its write mode. |
+| Board | Running revision/digest matches the approved candidate; readyz evidence and home/admin SPA status are present; the admin page contains script tags. Do not print the private admin path. |
+| Board logs | Inspect the bounded post-release window for application errors and `web dist override`; an empty output is meaningful only after successful log collection. |
+| Business change | Compare the exact candidate predicate and its unaffected control cohort after the documented worker interval. Do not reuse a historical correction marker as a universal check. |
+
+A missing receipt or failed collection leaves that obligation unverified; a
+mismatch fails that obligation. Record scope and evidence for the responsible
+release lane. This read-only workflow does not execute remediation or rollback.
+
+## 2. Production accounting reconciliation
+
+Use the authorized existing read-only connection without printing credentials.
+The recorded psql invocation uses `-X -v ON_ERROR_STOP=1 -f -` and
+`PGOPTIONS="-c default_transaction_read_only=on"`. The SQL itself uses
+`BEGIN TRANSACTION READ ONLY`, a local 30-second statement timeout and `ROLLBACK`.
+Do not copy secret-loading shell snippets into reports or PRs.
+
+Select queries against the actual before/after schema. The 2026-10-28 sequence
+records an actual pre-release failure: queries for newly introduced tables
+aborted the original money-readback file and lost its later totals. Its corrected
+before file omits only unavailable-table queries; the after file still requires
+them. Record those omissions explicitly, preserve ON_ERROR_STOP and never treat
+partial output as a completed reconciliation.
+
+Use fixed comparison bounds and the snapshot discipline in pg-safety's
+“Production query comparisons”. Existing money-readback SQL supplies these checks:
+
+- Order-to-ledger join: zero missing ledger entries and zero price/delta
+  mismatches. Check both; an inner join alone hides missing entries.
+- Account points total: the after-minus-before delta must be explained by normal
+  ledger movements in the same window. A raw diff or identical totals alone
+  does not establish correctness during live traffic.
+- Migration ledger and policy values: compare with the exact candidate migrations
+  and approved settings, not dated comments. The October runbook itself changed
+  its purchase-switch expectation when migration 270 entered the candidate.
+- New feature tables: retain their own post-release obligations even when they
+  could not be queried before release. An aggregate query does not prove a
+  per-account frequency limit that it never measured.
+
+Stop at query error, timeout, missing columns or unexplained differences. Save
+sanitized counts, window, schema/candidate identity and producer exit status;
+report the failed comparison without editing balances, policies or ledgers.
+
+## 3. Routine inspection
+
+Prefer already collected evidence within the freshness rules. On an authorized
+target, the existing inspection commands are:
+
+```bash
+systemctl --failed
+systemctl show audit-schema-drift.service -p Result
+systemctl show endpoint-salt-dns-sync.timer -p DropInPaths -p TimersMonotonic
+systemctl is-active leak-hunter.timer
+systemctl show <unit> -p InvocationID -p Result -p ExecMainStatus -p StandardOutput
+vmstat 1 5
+```
+
+The `<unit>` is the exact unit selected by the current inspection item. Correlate
+its invocation with its output, timestamp and terminal status. Enabled/inactive
+is not proof of success or a reason to start a timer. Compare drop-in identity
+with the candidate's signed manifest; do not freeze a historical file count into
+an invariant. Preserve deliberately inactive timers.
+
+For protocol sweeps, read per-protocol OK/FAIL/UNKNOWN counts and their denominator;
+a zero batch exit status can coexist with failed items. CPU steal requires idle
+and pressure context, not a historical percentage. Routine observation does not
+start another probe, restart a worker, change schedules or clean caches. The
+2026-10-28 sequence also records duplicate heavy-run launchers: inspect existing
+process/lock receipts before reporting progress, and do not stop a process merely
+because another lane owns it.
+
+## Source trail
+
+- Tracked readers: `scripts/release-yaml.py`, `scripts/release-state.py`;
+  procedure: `docs/release-chain-runbook.md`.
+- Existing skills: release-chain (four truths and input equivalence), pg-safety
+  (query snapshots), fleet-diagnose (measurement layers), evidence-discipline
+  (collection validity and per-item outcomes), yueto-orchestration (ownership).
+- Dated local evidence inspected for PLAN 9.5, not required installed resources:
+  `reports/SHIP-RUNBOOK-yueboard-2026-10-28.md` §§6–7;
+  `reports/SHIP-RUNBOOK-yueops-2026-10-28.md` §§6,8;
+  `reports/RELEASE-SEQUENCE-2026-10-28.md` (20:52 SQL correction and
+  22:45–22:47 duplicate-launch observation);
+  `reports/prep-20261028/money-readback{,-before}.sql`.
+  These files are local preparation/history, not proof of a completed release.
+
+exec
+/bin/zsh -lc "rg --files --hidden -g '"'!**/.git/**'"' -g '"'!**/node_modules/**'"' -g '"'!**/.venv/**'"' -g 'AGENTS.md' -g '*status*.md' -g '*batch*.md' -g '*findings*.md' -g 'ops-first-native-successors.json' yueto/yueto-ci yueto-ci-worktrees lane-ci; ls -a yueto" in /Users/j/Projects
+ succeeded in 0ms:
+yueto-ci-worktrees/pin183/ops-first-native-successors.json
+yueto/yueto-ci/ops-first-native-successors.json
+yueto-ci-worktrees/pr168/ops-first-native-successors.json
+yueto-ci-worktrees/receipt-179/ops-first-native-successors.json
+yueto-ci-worktrees/receipt-179/reviews/audit-api-cache-20261103/findings.md
+yueto-ci-worktrees/baseline/ops-first-native-successors.json
+yueto-ci-worktrees/pin200/ops-first-native-successors.json
+yueto-ci-worktrees/pin200/reviews/audit-api-cache-20261103/findings.md
+yueto-ci-worktrees/diag-ybmig/reviews/audit-api-cache-20261103/findings.md
+yueto-ci-worktrees/diag-ybmig/ops-first-native-successors.json
+yueto-ci-worktrees/rv168/ops-first-native-successors.json
+yueto-ci-worktrees/pin-4c7c/reviews/audit-api-cache-20261103/findings.md
+yueto-ci-worktrees/exc298/reviews/audit-api-cache-20261103/findings.md
+yueto-ci-worktrees/rcpt-yb102/reviews/audit-api-cache-20261103/findings.md
+yueto-ci-worktrees/pin-4c7c/ops-first-native-successors.json
+yueto-ci-worktrees/pin-yb-176/ops-first-native-successors.json
+yueto-ci-worktrees/rc69/reviews/audit-api-cache-20261103/findings.md
+yueto-ci-worktrees/r166/ops-first-native-successors.json
+yueto-ci-worktrees/exc298/ops-first-native-successors.json
+yueto-ci-worktrees/nezha-purge/ops-first-native-successors.json
+yueto-ci-worktrees/rcpt-yb102/ops-first-native-successors.json
+yueto-ci-worktrees/rc69/ops-first-native-successors.json
+yueto-ci-worktrees/rcpt-68-302/ops-first-native-successors.json
+yueto-ci-worktrees/rcpt-68-302/reviews/audit-api-cache-20261103/findings.md
+yueto-ci-worktrees/ybmig-fix/ops-first-native-successors.json
+yueto-ci-worktrees/rv177/ops-first-native-successors.json
+yueto-ci-worktrees/ybmig-fix/reviews/audit-api-cache-20261103/findings.md
+.
+..
+.agents
+.claude
+.codex
+.git
+.githooks
+.github
+.gitignore
+.gitleaksignore
+.grok
+.playwright-mcp
+.pnpm-store
+.pytest_cache
+.ruff_cache
+.wt-yci-ec
+.wt-yl
+.wt-ylci
+.xfer
+.ybtest
+AGENTS.md
+CLAUDE.md
+README.md
+Xray-core
+claude-inbox.md
+deploy
+design
+docs
+help
+hysteria
+i18n
+pyrightconfig.json
+quic-go
+release.yaml
+release.yaml.asc
+reminders
+reports
+schedule
+scripts
+yue-node
+yueboard
+yuelink
+yuelink-ci
+yueops
+yueto-ci
+yueto-worktrees
+yueto.code-workspace
+yuetube-video
+
+exec
+/bin/zsh -lc 'git -C yueto-ci show --format=fuller --stat 3cf7902173bed80a272e6975cb696478a5def55e && git -C yueto-ci show 3cf7902173bed80a272e6975cb696478a5def55e:ops-first-native-successors.json && git -C yueops cat-file -t d06b7da00c22461d75d9e411ec4b731b596f7dfc && git -C yueops cat-file -t 80f7c8e6589c68eefa88aff25cad2e1f55e17350' in /Users/j/Projects/yueto
+ exited 128 in 0ms:
+fatal: bad object 3cf7902173bed80a272e6975cb696478a5def55e
+
+exec
+/bin/zsh -lc "cat AGENTS.md; rg -n --glob '*.md' --glob '*.json' '3cf7902173bed80a272e6975cb696478a5def55e|80f7c8e6589c68eefa88aff25cad2e1f55e17350|yueto-ci#203|yueto-ci/pull/203' reports docs claude-inbox.md yueto-ci/reviews" in /Users/j/Projects/yueto
+ exited 1 in 0ms:
+# Yue.to workspace
+
+Read [CLAUDE.md](CLAUDE.md) before working here, then the target component's
+`CLAUDE.md`. This root contains independent repositories, not a monorepo.
+The same instructions and skills apply to Codex and Claude; current user
+authorization takes precedence over historical plans and permission reminders.
+
+Owner decision (2026-10-20): acceptance contracts for large items must still be
+recorded before implementation, but no Claude-specific or fixed-model approval
+is required. The currently authorized main session owns coordination and proceeds
+within the owner's scope without redundant coordinator sign-off. Claude's absence
+is not a blocker. Independent review, risk-proportional gates, release ownership,
+production readback and rollback remain required where applicable. Escalate only
+unresolved owner-level decisions or work outside existing authorization; never
+weaken acceptance silently. See R4.12's coordination-authority amendment in the
+sole execution plan. This decision supersedes conflicting inherited instructions.
+
+Owner decision (2026-10-20): choose and adjust parallel lanes for every task from
+its independent work, dependencies, available agents/resources and review/release
+capacity. Three lanes, a prior session layout or a template is never a fixed
+quota or ceiling. Use fewer lanes for coupled work and more for ready independent
+work when capacity permits. Prefer durable asynchronous waits; reuse or release
+idle workers without abandoning their recorded jobs, evidence or leases. Preserve
+one source writer per repository, independent review and actual resource limits.
+
+Owner decision (2026-10-23): execution plans must require no human participation
+or future cooperation. Retain only concrete AI-accessible work with available
+inputs, finite machine-verifiable acceptance, an automatic failure exit and
+applicable rollback. Withdraw human-dependent, unavailable and unbounded work
+from scheduling; preserve historical unmet evidence without claiming success.
+Independent review may be performed by another AI agent. This does not authorize
+bypassing permissions, financial/authentication invariants or release gates,
+abandoning in-flight recovery, or deleting installed schedules or stored data.
+The sole plan's R4.2h and current R4.12 control define the executable scope.
+
+Canonical skills live in `.claude/skills/`; `.agents/skills/` exposes the same
+files to Codex through relative links. Do not maintain a second copy.
+`scripts/sync-agent-skills.py --check` checks project discovery;
+`--apply --user` also installs the workspace and component skills for both
+agents in this user's local skill directories without overwriting other skills.
+
+Agent setup and verified commands: [docs/agent-tooling.md](docs/agent-tooling.md).
+Claude loads `.claude/rules/` by path. Codex must read the applicable rule file
+explicitly: `generated-blocks.md` for generated sources, `guard-scripts.md` for
+guards, `release-pins.md` for release inputs, and `fleet-baseline.md` for inventory.
+The root Codex SessionStart hook shares the read-only snapshot implementation;
+hook availability depends on the client's native trust and configuration.
+
+Use the newest dated closeout as a starting point, then independently read
+source, tests and production. Keep historical observations dated. A missing
+measurement is UNKNOWN; removing an unsupported task is not proof it passed.
+Run `scripts/status-all.sh` before interpreting cross-repository checks and
+`scripts/heavy-run.sh --exclusive bash scripts/gauntlet.sh` before release (direct `scripts/gauntlet.sh` exits 2). Follow the existing signed release chain.
+
+## Execution discipline (owner feedback, 2026-10-12: "slow, divergent, repeats work")
+
+Evidence rules above set the *standard*, not the *volume*. Scale verification to
+risk (docs/copy/tests: targeted tests; service code: module suite + the CI lens,
+i.e. the Linux container; money/auth/migrations/prod/fleet: full gate + prod
+read-back). Land a verified batch at least every 90 minutes. Every action maps to a
+checklist item; out-of-scope findings go to a one-line "Parked" list unless P0.
+Reuse evidence already recorded in the round doc for the same object and
+revision; do not re-measure or re-read unchanged material. One lane per question,
+and a darwin-skipped test is not a passed test.
+
+The following owner rules are tracked here so a fresh checkout does not depend
+on a workstation-only `~/.codex/AGENTS.md`:
+
+- Deliver a small, single-topic, verifiable batch within 90 minutes. If blocked,
+  record the blocker and expected resolution in the round log. Ready fixes do
+  not wait for wider audits.
+- Name the checklist item for each action. Only P0 incidents (production outage,
+  data loss or an actively exploited vulnerability) may interrupt the scope.
+- Reuse evidence for the same object and revision. Remeasure only when the
+  object changes, evidence exceeds 24 hours, or evidence conflicts. Do not reread
+  whole files already read in the session. After two identical command failures,
+  investigate the cause or change approach before retrying.
+- Report status changes: what changed, where the evidence is, and what is next.
+  Close an item once its acceptance criteria are met; do not keep polishing it.
+- Use exact-path staging in each independent repository. Do not overwrite
+  another session's work or change an executing script's bytes.
+- Preserve owner-opened interactive sessions. Coordination, takeover, an idle
+  screen or a release-lock conflict does not authorize signaling, closing or
+  injecting input into the owner's Grok, Codex, Claude or terminal session.
+  Stop only a worker this session created, or one explicitly transferred to
+  this session, with a verified receipt (session ID, PID and start time); an
+  owner instruction to stop the specific session also authorizes it. Reading
+  another lane's receipt does not transfer ownership. Otherwise record the
+  conflict in the existing inbox and keep independent work moving. See
+  `yueto-orchestration` for the process-ownership boundary.
+- Repository documentation, including historical audit and release narratives,
+  and explanatory comments use English. Preserve product translations, exact
+  test inputs, protocol values and original evidence identifiers. Reply to the
+  owner in Chinese unless requested otherwise.
+- The sole production execution entry is
+  `docs/2026-10-17-whole-estate-execution-plan.md`, starting at its current r4
+  control section and linked production backlog. Update that plan in place;
+  do not create a competing master plan. The 10-16 focused plan supplies inherited
+  acceptance contracts, not current scheduling. Agent maintenance is recorded in
+  `docs/2026-10-16-agent-maintenance-round.md`; the English backlog remains in
+  `docs/2026-10-16-english-cleanup-round.md` and its existing CSV.
+
+- Owner decision (2026-10-20): backup creation/verification, off-site backup
+  work, PITR/disaster-restore drills, and backup-retirement planning are canceled
+  from current and future work. Do not reintroduce them as tasks, observation
+  waits or admission prerequisites from inherited plans, skills or old findings
+  unless the owner explicitly reverses this decision. See R4.2b in the sole
+  execution plan. Preserve historical evidence. This planning exclusion does
+  not cancel release rollback, interrupted-transaction recovery, live replication
+  or client connection recovery; it does not authorize deleting stored data or
+  changing installed production schedules.
+
+exec
+/bin/zsh -lc 'cat CLAUDE.md yueto-ci/CLAUDE.md .claude/rules/release-pins.md' in /Users/j/Projects/yueto
+ exited 1 in 0ms:
+# CLAUDE.md
+
+@AGENTS.md
+
+Shared workspace guidance for Claude Code and Codex (`AGENTS.md` loads this file).
+
+**All owner-facing replies must be in Chinese**, including progress updates,
+tables and final reports. Keep code identifiers, commands and SHAs unchanged.
+Repository engineering documentation and explanatory comments use English.
+
+This is the **`yue.to` workspace root** — an umbrella over a family of independent git repos that together make up a privatized (from-Xboard) VPN/proxy service: panel, node fleet, client apps, and ops. It is NOT a monorepo. Each subdirectory is its own repository; the root repo tracks nine directories — `docs/`, `scripts/`, `design/`, `i18n/`, `schedule/`, `help/`, `.claude/` (skills/rules/agents/hooks/settings only; `worktrees/`/`projects/`/`state/` stay ignored), `.agents/` (Codex skill links), `.grok/` (Grok rules, LSP, and three skill overrides; estate skills stay in `.claude/skills/`) — plus `.codex/hooks.json` and a few top-level files: `yueto.code-workspace`, `.gitleaksignore`, and the signed release desired state `release.yaml` + `release.yaml.asc` (`.gitignore` is `/*/` + allowlist, so root *files* are not ignored). Root `reports/` is a local, untracked scratch area — never commit it or cite it as current state. Most real work happens **inside** a component repo, each of which has its own richer `CLAUDE.md` — read that one too when working in it.
+
+## Where the knowledge lives: this file, skills, rules
+
+This file is **always-loaded context** and is kept under the official ~200-line target. Everything
+else has a home that loads on demand — that is the whole design, not a filing convenience:
+
+- **`.claude/skills/` — workspace skills**, symlinked into `~/.claude/skills/` so they load
+  through `.agents/skills/` for Codex and installed for both agents by `scripts/sync-agent-skills.py --apply --user`. Procedural knowledge: worthless most of the time, and must be
+  word-for-word correct the rest of the time.
+- **`.claude/rules/` — path-scoped rules** (`paths:` frontmatter). A rule enters context only when
+  a file it names is read. Use it for "this *file class* has a trap", never for prose.
+- **`.claude/agents/` — project subagents**: `component-worker` (edits a component repo from its own
+  worktree under root `.claude/worktrees/` — never `isolation: worktree`) and `readonly-investigator`.
+
+| Skill (routes by **domain**) | Load it when |
+|---|---|
+| `guard-authoring` | changing/reviewing guard coverage, contract checks, CI assertions or probes; diagnosing test import/fixture leakage; ordinary fixes that only run existing checks do not trigger it |
+| `release-chain` | planning or running any release, image roll, promote or production deploy |
+| `node-lifecycle` | classifying maintenance/retirement or supplier-quota availability; provisioning, cloning, rebuilding or hard-deleting a fleet node |
+| `fleet-diagnose` | diagnosing node/fleet/network/latency/loss/resource problems, **before** changing production |
+| `pg-safety` | writing a Postgres migration, GRANT/role manifest, cross-ownership table access, erasure change, or a spend/eligibility query |
+| `generated-blocks` | changing design tokens, user-facing strings/translations, help articles, or any recurring job |
+| `round-closeout` | closing out an audit / optimization / incident round |
+| `yueto-orchestration` | running an authorized multi-session round under the current coordinator (Claude or Codex): one release exit, side-branch candidates, inbox, release train and shutdown; no fixed-model approval prerequisite |
+
+| Skill (routes by **action**) | Load it when |
+|---|---|
+| `yueto-agent-maintenance` | equipping, configuring or diagnosing coding-agent capabilities for this workspace |
+| `evidence-discipline` | interpreting operational measurements or asserting production/fleet health or runtime improvement; match the claim to its evidence |
+| `landed-not-written` | installing executable scripts/configuration/automation or claiming an installed change took effect; verify the actual consumer |
+| `change-blast-radius` | removing a boundary, renaming, moving a file, zeroing a parameter, dropping a wait, or touching a constant other code pins |
+| `concurrent-git-safety` | committing/pushing, spawning concurrent agents into one repo, or editing anything while a long-running script executes |
+| `patrol` | routine read-only patrol of failed units, DNS sentinel receipts, relay-pool evidence and local workload admission; never changes production |
+| `readonly-reconcile` | read-only balance/points reconciliation or release accounting comparisons; never repairs data |
+| `release-readback` | after a signed release: reconcile promoted, desired and running images, migration receipts and before/after accounting evidence |
+
+Select skills by the actual change and claim. Related-skill links are conditional,
+not a recursive reading list. Reuse loaded guidance and read only relevant reference sections.
+
+Component repos use the same mechanism: **yueops** nine (`yueops-agent-deploy`, `-host-hardening`, `-deploy-gotchas`,
+`-panel-db-gotchas`, `-business-gotchas`, `-emby`, `-ai-support`, `-telegram`, `-business-features`) and **yuelink**
+five (`yuelink-platform-gotchas`, `-core-ffi`, `-panel-api`, `-environment`, `-release-ci`), moved **verbatim** from each `CLAUDE.md`.
+
+**Measure before proposing another split** (`wc -l` + tokens over the real byte/CJK mix, same unit on
+both sides; dated readings live in `round-closeout`). **yueboard and yue-node are at target — do not split them.**
+🚨 Moving doc text into a skill silently shrinks the scan surface of **negative** doc-truth guards
+("must no longer say Y") while they stay green. 📎 `change-blast-radius`.
+
+`.claude/hooks/` (wired in `settings.json`, tests beside them): `yueto-notice.py` reminds, never
+blocks, on a `git push` touching yueboard or an edit to a generated token file, `schedule/registry.yaml`
+or an i18n catalog; `session-status.py` (SessionStart) injects any side branch / dirty tree / unpushed
+commit / pin mismatch / release lock — UNKNOWN, never "clean". `defaultMode: "bypassPermissions"` is
+the owner's 2026-08-31 decision: **zero permission prompts** (`ask-gate.py` is deliberately un-wired;
+don't re-wire it); 2026-10-13 extended to subagents (`permissionMode` + a `PermissionRequest` auto-allow). The one
+blocking hook is `secret-read-guard.py` (2026-10-17: denies unredacted secret-file/container-env reads); else reminders, rules, guards.
+
+**Owner decision — 2026-09-10:** never run local download-and-verify acceptance after YueLink
+releases; CI package/runtime checks, artifact verification, signed provenance and the promotion result suffice.
+
+## Workspace commands (root scope)
+
+```bash
+scripts/status-all.sh          # branch / dirty / unpushed for every component repo (+ yuelink/core/mihomo)
+scripts/pull-all.sh            # git pull --ff-only across all; repos with local changes fetch-only
+scripts/check-all-contracts.sh # run every cross-cutting guard, print one summary (--list to see them)
+scripts/gauntlet-launch.sh     # clean login environment, fail-fast admission, exclusive log
+                               # THE pre-release gate: every private repo's own CI stages + all contracts
+                               # (run it only under heavy-run; a direct scripts/gauntlet.sh exits 2)
+scripts/release-state.py       # read-only: source HEAD vs reviewed pin vs promoted image vs production
+scripts/ship.sh <yueops|yueboard|yue-node> [--auto|--no-deploy|--detach|--from-promoted]
+                               # the whole release chain unattended: build → promote → verify → deploy
+scripts/kick-builds.sh [--dry-run]     # trigger yueto-ci poll-sources now instead of waiting for its cron
+scripts/scan-workspace-secrets.sh      # yueops' secret scanner over ALL private repos + root (in gauntlet)
+scripts/run-yueboard-pg18-gauntlet.sh  # release-only yueboard integration gate on a disposable PG18
+scripts/linux-lens-gate.sh             # yueops full suite in the central-CI Linux lens; proves darwin-skipped tests ran
+scripts/disk-hygiene.sh --check|--apply  # the ONLY sanctioned worktree/docker/cache cleanup (keep-list + safety criteria)
+scripts/heavy-run.sh / new-session.sh  # orchestration entry points (semaphore, Codex sessions) 📎 `yueto-orchestration`
+```
+
+The root's own tests are the guard self-tests (`scripts/test-*.py`, `.claude/hooks/test_*.py`), run
+from the workspace venv `~/.venvs/yueto` (3.13 + pytest + pyyaml; system `python3` is 3.9 with neither).
+Hyphenated `test-*.py` names escape pytest discovery — `pytest scripts` silently collects nothing:
+
+```bash
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-root-doc-truth.py                        # one guard's tests
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-schedule-registry.py -k baseline_is_green # one case
+~/.venvs/yueto/bin/python -m pytest -q scripts/test-*.py .claude/hooks                        # all root self-tests
+```
+
+- `ship.sh` only chains the audited per-step scripts, scraping digests from the *promote* step's log
+  (never the build's). 📎 constraints: **`release-chain`**; commands: `docs/release-chain-runbook.md`.
+- `release-state.py` names the next action per row; `--fleet`/`--packages` sweep the fleet, where an
+  unreachable row is **UNKNOWN, never OK**. 📎 `release-chain`.
+- `gauntlet.sh` is the only fail-closed "did everything actually run" gate; `--fast` drops the
+  network stages and **does not qualify for a release**. 📎 `guard-authoring`.
+- `status-all.sh`/`pull-all.sh` also cover `yuelink/core/mihomo`, a *separate* repo inside `yuelink`.
+
+🚨 **Before believing a red guard or a four-truths mismatch, run `scripts/status-all.sh`.** Cross-repo
+guards read each repo's **main checkout**, so whatever branch it is on is a hidden input (2026-09-06:
+one repo left on a side branch → 8 red contracts, 6 pure artifacts). 📎 `concurrent-git-safety`.
+
+`check-all-contracts.sh` is the one place that knows the **full** guard set (`--list`; never copy the
+count). Every comparator that reads two repos at once runs **here and nowhere else** — single-repo CI
+lacks the sibling checkout. 📎 `guard-authoring` (incl. the `guard-ci-claims` meta-guard).
+
+## The cross-repo sources of truth the root repo itself owns
+
+Four small root directories are the **single upstream** for values duplicated across five surfaces
+and four runtimes — so an edit inside a component repo to any generated block is a regression, not a fix.
+
+- **`design/tokens/yue.tokens.json`** — the design scale. `node design/build-tokens.mjs` regenerates
+  one fenced block per surface plus the scale tables in `docs/yue-visual-language-2026.md` §2.
+- **`i18n/catalog/*.json`** — the zh-CN → en catalog; `scripts/i18n/CONTRACT.md` is the one binding spec.
+- **`schedule/registry.yaml`** — the generated inventory of every recurring job across six layers,
+  from `scripts/schedule/extract.py --write`.
+- **`help/articles/*.md`** — the unified help center (`help/CONTRACT.md`); UIs reference `help:<slug>`.
+
+📎 **Before touching any of these, read the `generated-blocks` skill** (generated vs. hand-written,
+fence rules, never-translate set, ratchets).
+
+## The system: four planes
+
+Data flows **panel → subscription → client**, and **panel ⇄ node** for control.
+
+| Repo | Plane | Stack | Role |
+|---|---|---|---|
+| **yueboard** | Control (panel) | Go (chi + sqlc + goose + pgx/PG, ConnectRPC) | Native panel backend for user/admin APIs, login, **subscription generation**, and the only node control-plane server. The former REST/WS node protocol and fallback proxy are gone. Native admin/user SPAs (React 19) are embedded with `go:embed`; `my.yue.to` runs this. |
+| **yue-node** | Data (nodes) | Go (`cmd/` + `internal/…`, kernels as adapters) | Native node agent on the anti-GFW fleet, with direct hosts and shared relays. **Never restate the fleet size from memory or from this file**: the three counts (direct hosts / serving assignments / unique enabled nodes) come only from the live inventory (`servers` where `deploy_mode='direct'`; 📎 `.claude/rules/fleet-baseline.md`); `docs/yue-product-surface-inventory-2026.md` carries only a **dated snapshot** (dated, self-consistent, pointing at the live source — a second hand-copy caused the 2026-08-18 guard that *refused* to let a stale fact be corrected). Runs Reality/VLESS and Hysteria2 and talks to yueboard only through machine-scoped ConnectRPC. `/home/yue-node` on each machine. |
+| **yuelink** | Client | Flutter UI + mihomo (Clash.Meta) Go core via FFI | The Yue.to cross-platform app (Android/iOS/macOS/Windows/Linux, id `com.yueto.yuelink`). The server template is authoritative; the client adds only bounded compatibility defaults and seeds bundled `.mrs` rule sets for offline startup. |
+| **yueops** | Ops / services | Python (FastAPI, python-telegram-bot, RAG) monorepo | Supporting services: `checkin-api` (check-in), `yue-bot`/yubot (Telegram) + TG mini-app, AI support (Xiaoyue; RAG uses API embeddings and in-process NumPy cosine similarity, not pgvector), DNS/Cloudflare automation, telemetry ingest. Deployed as containers on the bastion. |
+
+Supporting repos: **yuelink-ci** / **yueto-ci** are public build-only CI repos (they began as a workaround for the private-repo Actions billing freeze, which comes and goes — see the CI section — but `yueto-ci` has since become load-bearing for a supply-chain reason that holds regardless); **hysteria**, **Xray-core** and **quic-go** are the maintained data-plane kernel forks (yue-node's HY2 and Reality/VLESS engines plus HY2's QUIC dependency — each carries real yue-specific fixes, so "just track upstream" is wrong there); **clash-verge-rev / ClashMetaForAndroid / clashmi** are historical Yue product forks, frozen migration-only and no longer checked out in this workspace (status: `docs/yue-product-surface-inventory-2026.md`). **yuetube-video** is the private Remotion project that renders the Yue.to QA promo video (Node 24 / Remotion pinned, `src/data/video-script.json` is the single source for copy, subtitles, shot lengths and audio SHA-256; `npm run verify` gates supply chain + assets + `tsc`). It ships no runtime and is coupled to nothing else here. The old PHP panel and its local repository are retired and must not be reintroduced as a runtime, build, template, or fallback dependency.
+
+## Cross-repo coupling that isn't visible in any single repo
+
+- **Subscription generation is a contract between yueboard and every client family.** `yueboard/internal/modules/subscribe/` renders Clash Meta, Surge, Loon, Quantumult X, Surfboard, sing-box, and general links from native templates. There is no `?yl=1` or device-specific server branch. When one client fails, render its exact User-Agent and compare fields against a working renderer before changing the fleet.
+- **The server template is the YueLink source of truth.** YueLink no longer inlines `GeoIP.dat`/`GeoSite.dat`; it seeds the exact bundled `.mrs` set and preserves server routing. Keep client transforms bounded to compatibility defaults, and use the reference clients to justify any divergence.
+- **The schema is native; remaining cross-service reads are explicit migration debt.** Tables use native names, `numeric` amounts, `jsonb`, and `timestamptz`. YueBoard owns panel-domain writes. Any temporary YueOps read must be catalogued and moved behind a scoped native internal API before its DB credential is removed.
+- **Panel↔node control is ConnectRPC only.** The protobuf contract is shared by yueboard and yue-node. Every physical host must use a machine-scoped credential and exact assignment; a fleet-wide token, REST polling, or WS push is a migration regression.
+- **🚨 Never rebuild a node by copying another node's `/home/yue-node` wholesale.** The runtime tree
+  contains `node-*/data/report-outbox`, which is the machine's **billing identity**. Cloning it either
+  double-bills or wedges the node forever on `report sequence gap`, which has no recovery path. This
+  has now happened twice (2026-08-01, 2026-08-11). **Wipe `node-*/data/report-outbox` before first
+  start** — the in-code owner guard only protects hosts already running yue-node `4bf9ada` or newer.
+  📎 Full provisioning / cloning / retiring / hard-delete procedure: the **`node-lifecycle`** skill.
+
+## Authoritative planning docs (read before large work)
+
+Start with `docs/README.md` for task-oriented navigation.
+
+- **`docs/2026-10-17-whole-estate-execution-plan.md`** is the sole production plan.
+  Use current r4 control and its backlog; update it in place. The 10-16 plan retains acceptance contracts only.
+- **The newest relevant closeout/handoff** supplies dated evidence and supersession
+  links. Verify its revision against current source and production; it cannot override the current plan.
+  Removing a report never closes an obligation;
+  preserve Git recovery records per `docs/2026-10-16-repository-cleanup.md`.
+- **`docs/release-chain-runbook.md`** supplies procedures; `release-chain` supplies
+  planning constraints. Dated examples do not authorize old targets or new owners.
+- **`docs/2026-endgame-plan.md`** is a historical obligation map and guard input.
+  Its predecessor `docs/2026-master-plan.md` was deleted; recover it with
+  `git show 2ac56121:docs/2026-master-plan.md`. Neither is a current plan.
+- **`docs/tech-stack-2026.md`** records choices and rejected alternatives.
+  Database contracts: `docs/v2-shared-db-decoupling-map.md`, `docs/v2-timestamp-decoupling-roadmap.md`.
+Raw build logs, `.exit`/`.stderr` files and per-run samples do not belong in `docs/`.
+Use private/temporary evidence or component performance storage; see `docs/performance/README.md`.
+
+## Release / CI: what is true in every session
+
+Four things must name the same commit: the reviewed **pin**, the source repo **HEAD**, the
+**promoted** image, and what **production** actually runs. `release-state.py` prints all four.
+- **2026-10-12: SSH authority is ACTIVE.** Every new yueops revision needs auto-pull + `make-release-root.sh
+  --strict` + `scripts/ship-sshd-authority.py --apply` before Ops/panel deploys or A/B publishing (ship.sh chains them).
+- **2026-10-11: bastion is CPU-steal-bound** (60–78%): no heavy tests there; check `vmstat` st first. 📎 `release-chain`.
+
+**Before pushing `yueboard/master`, establish its effect on the active release.**
+Promotion requires default-branch ancestry, inputs identical to HEAD and a candidate
+not older than `:latest`. A changed input can invalidate a running release.
+When inputs change, the integration owner must complete these steps:
+
+1. Read the revision labels off the **running production** panel image and node fleet, then run
+   `scripts/converge-yueboard-release-pin.py --from-head --deployed-board-revision <prod-board>
+   --deployed-node-revision <prod-node>`. Both are explicit because reviewed candidates may never
+   have been deployed. It updates yueto-ci's two copies atomically and **derives** the schema
+   floor from `git show <rev>:schema-floor.txt`; since P2 §4 A3 it no longer writes yueops.
+2. Coordinate the required rebuild and panel deployment with the release owner.
+   The desired state yueops deploys from is the **signed** root `release.yaml`
+   (ship.sh writes + seals it; no pin is committed back into yueops). 📎 `release-chain`.
+
+Promote, `release-state.py` and the schema-migrator contract accept a descendant
+with unchanged native image inputs and the same schema floor while retaining the
+reviewed pin. Use the actual input comparator: a Markdown or test filename alone
+does not establish equivalence. Changed or unknown inputs retain the normal pin
+convergence and release requirements. Preserve each active writer's source custody.
+
+🚨 **The private repos' Actions billing freeze comes and goes** — measure it (wall-clock + step count,
+job annotation decisive) before reading any red run; the local `gauntlet.sh` is the real gate either way.
+Builds are **pulled** by `yueto-ci/poll-sources.yml` (**build only, never promote**; GitHub throttles
+its cron, hence `kick-builds.sh`), and `yueto-ci` is **load-bearing**: every production digest is
+cosign-signed under its workflow identity. 📎 criterion, cadence and trust anchor: `release-chain`.
+cat: yueto-ci/CLAUDE.md: No such file or directory
+---
+paths:
+  - "yueto-ci/native-node-contract.json"
+  - "yueboard/schema-floor.txt"
+  - "scripts/converge-yueboard-release-pin.py"
+  - "release.yaml"
+---
+
+# Release identity must remain consistent
+
+At release completion, the **reviewed pin, signed desired state, promoted image
+and running production artifact** must identify the same release. Source HEAD
+may be a successor with proven identical build inputs. Keep the image's actual
+build revision; never relabel an older artifact as a new HEAD.
+
+- Do not hand-edit pins. The authorized writer is
+  `scripts/converge-yueboard-release-pin.py --from-head --deployed-board-revision <production-board> --deployed-node-revision <production-fleet>`.
+  It updates the copies atomically and derives the schema floor from
+  `git show <rev>:schema-floor.txt`; the floor is not an input.
+- The two `--deployed-*` revisions validate ancestry only: deployed Board must
+  precede the candidate, and deployed Node must precede the sidecar candidate.
+  They are no longer recorded in files. The Release-A predecessor/target contract
+  was removed on 2026-09-14. Incorrect inputs are rejected; omitting them performs
+  pin convergence only.
+- Since 2026-09-24 (P2 section 4 A3), convergence writes only the two yueto-ci
+  files: the contract and central policy test. It does not write YueOps; those
+  three former projections caused a Board-to-Ops release cycle. Commit yueto-ci
+  after convergence; promotion reads that reviewed state.
+- Do not hand-edit `release.yaml`. `ship.sh` writes it and `release-yaml.py seal`
+  signs it. YueOps deployers, rollouts and migrators consume only verified signed
+  state. Deliberate rollback uses `release-yaml.py write --rollback` then `seal`;
+  late older candidates cannot overwrite newer desired state.
+- The 2026-09-24 build-input rule replaced the old rule allowing only
+  `.gitleaksignore` to lead the pin. Use the existing fingerprints in
+  `scripts/release-state.py --fleet --inputs` to establish equality for every
+  input. Unreadable or unproven inputs are UNKNOWN; calling a change documentation
+  or tests is not an exemption.
+- `schema-compat.txt` records the production floor only after successful actual
+  deployment. Tests still read it, but it has been excluded from Board image
+  inputs since 2026-09-30. Advancing it alone does not move the reviewed pin,
+  rebuild an image or relabel production. `schema-floor.txt` and migration SQL
+  remain build inputs and require a reviewed release when changed.
+- For a new candidate, converge the reviewed pin first, then run
+  `release-yaml.py source-check` for ancestry and floor. Do not declare release
+  consistency before promotion and production readback.
+
+Use `release-chain` for constraints, `docs/release-chain-runbook.md` for commands,
+and `scripts/release-state.py` to read the release identities.
+
+exec
+/bin/zsh -lc "python3 -c 'import pathlib, subprocess
+root=pathlib.Path(\"/Users/j/Projects\")
+target=\"3cf7902173bed80a272e6975cb696478a5def55e\"
+repos=[root/\"yueto/yueto-ci\",root/\"lane-ci\",*sorted((root/\"yueto-ci-worktrees\").iterdir())]
+for repo in repos:
+ if not (repo/\".git\").exists(): continue
+ r=subprocess.run([\"git\",\"-C\",str(repo),\"cat-file\",\"-t\",target],capture_output=True,text=True)
+ if r.returncode==0: print(\"FOUND\",repo,target,r.stdout.strip())
+print(\"yueops source objects:\")
+for sha in [\"d06b7da00c22461d75d9e411ec4b731b596f7dfc\",\"80f7c8e6589c68eefa88aff25cad2e1f55e17350\"]:
+ r=subprocess.run([\"git\",\"-C\",str(root/\"yueto/yueops\"),\"cat-file\",\"-t\",sha],capture_output=True,text=True)
+ print(sha,\"exit=\"+str(r.returncode),r.stdout.strip() or r.stderr.strip())'" in /Users/j/Projects
+ succeeded in 13ms:
+yueops source objects:
+d06b7da00c22461d75d9e411ec4b731b596f7dfc exit=0 commit
+80f7c8e6589c68eefa88aff25cad2e1f55e17350 exit=0 commit
+
+web search: 
+exec
+/bin/zsh -lc 'git -C yueops merge-base --is-ancestor d06b7da00c22461d75d9e411ec4b731b596f7dfc 80f7c8e6589c68eefa88aff25cad2e1f55e17350 && git -C yueops rev-list --count d06b7da00c22461d75d9e411ec4b731b596f7dfc..80f7c8e6589c68eefa88aff25cad2e1f55e17350 && git -C yueops diff --name-status d06b7da00c22461d75d9e411ec4b731b596f7dfc 80f7c8e6589c68eefa88aff25cad2e1f55e17350 && cat yueto-ci/ops-first-native-successors.json' in /Users/j/Projects/yueto
+ succeeded in 0ms:
+2
+A	docs/cf-origin-shield-findings-20261103.md
+M	docs/ops/00_inventory.md
+M	scripts/automation-2026/install.sh
+A	scripts/cf-origin-shield-sentinel.py
+A	scripts/lib/cloudflare_ranges.py
+M	scripts/lib/relay_topology.py
+M	scripts/relay-sni-drift-audit.sh
+A	scripts/units/cf-origin-shield-sentinel.service
+A	scripts/units/cf-origin-shield-sentinel.timer
+M	scripts/v4-relay-topology.json
+M	scripts/verify-fleet-protocol-liveness.py
+M	scripts/yueops-shield/cloudflare-ips.txt
+A	scripts/yueops-shield/refresh-cloudflare-ips.py
+M	scripts/yueops-shield/yueops-shield-apply.sh
+M	scripts/yueops-shield/yueops-shield-status.sh
+M	tests/test_active_topology_ledger_20260805.py
+A	tests/test_cf_origin_shield_sentinel.py
+A	tests/test_refresh_cloudflare_ips.py
+M	tests/test_relay_topology.py
+M	tests/test_relay_topology_history_20261009.py
+M	tests/test_yueops_shield_20260828.py
+{
+  "cases": {
+    "tests/test_frozen_manifest_reader_20261015.py::test_native_frozen_boundary_still_enforces_file_set_mode_and_content": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: native export boundary requires isolated Linux root",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_actual_native_sticky_lock_directory_is_supported": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_actual_signed_root_accepts_only_pinned_signer_and_exact_tree": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        },
+        {
+          "reason": "Skipped: canonical verifier requires an actual disposable container",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_approved_plan_drift_zero_publication": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_changed_container_or_authority_refuses_commit_and_rollback": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_commit_readback_crossing_deadline_cannot_write_marker": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_crash_intent_journal_covers_missing_publications": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_exclusive_publication_never_replaces_foreign_empty_directory": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_existing_executor_reference_refuses_partial_source_admission": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_existing_source_collision_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_expired_automatic_guard_does_not_refresh_its_budget_but_explicit_recovery_is_bounded": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_expired_before_git_publication_never_admits": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_expired_commit_keeps_guard": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_foreign_drift_refuses_all_rollback_writes": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_guard_failure_leaves_original_tree": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_guard_process_waits_for_real_writer_lock_then_rolls_back": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_hardlinked_runtime_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_lock_inode_change_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_lock_missing_is_not_recreated": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_contention": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_directory_refuses_nonsticky_symlink_or_foreign_owner[16895-0]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_directory_refuses_nonsticky_symlink_or_foreign_owner[17407-1]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_native_lock_directory_refuses_nonsticky_symlink_or_foreign_owner[41471-0]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_partial_publication_failure_removes_only_owned_additions": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_peer_adoption_requires_exact_signed_bytes": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_preserves_all_existing_inodes_commit_and_guard_noop": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_readback_failure_withdraws_git_before_removing_source": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_rollback_restores_exact_original_tree": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_source_bytes_changed_after_plan_cannot_be_adopted": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_install_operator_host_source.py::test_symlink_lock_refused": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root filesystem required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_panel_subscribe_delivery_alert_20261012.py::test_every_board_fail_delivery_event_is_watched": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: yueboard checkout absent",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_actual_nginx_routes_are_exact_private_and_read_only": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: explicit cached nginx Docker lab required",
+          "when": "call"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_automatic_guard_uses_original_deadline_and_explicit_recovery_does_not_mask_it": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_consumer_install_only_stages_units_and_cohort": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_expired_commit_has_no_success_marker": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[guard]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[reload]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[second_file]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_failure_restores_only_owned_configuration[syntax]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_foreign_drift_refused_before_any_rollback_write": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_install_preserves_all_original_nginx_bytes_except_exact_include": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_missing_lock_never_recreated_by_rollback": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_refuses_existing_producer_unit_before_mutation": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[enabled-runtime]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[enabled]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[linked]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_rejects_preexisting_timer_enablement_before_mutation[masked]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_origin_stages_exact_native_units_and_rollback_removes_them": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_install.py::test_plan_cas_refuses_changed_config": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: actual isolated Linux root installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_protocol_liveness_results_pull.py::test_actual_killed_service_process_then_configured_failure_command_projects_unknown": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: isolated root process failure lab required",
+          "when": "call"
+        }
+      ]
+    },
+    "tests/test_status_tls_installer_20261027.py::test_native_install_and_reverse_rollback_preserve_transport[False]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: native Linux root NGINX installer required",
+          "when": "setup"
+        }
+      ]
+    },
+    "tests/test_status_tls_installer_20261027.py::test_native_install_and_reverse_rollback_preserve_transport[True]": {
+      "outcome": "skipped",
+      "variants": [
+        {
+          "reason": "Skipped: native Linux root NGINX installer required",
+          "when": "setup"
+        }
+      ]
+    }
+  },
+  "module_blobs": {
+    "tests/test_frozen_manifest_reader_20261015.py": "086246934ab623ad6df49be9225bc7ee04f4fee5",
+    "tests/test_install_operator_host_source.py": "64550a55f127f2db77cde4e7e4a6576158a02b56",
+    "tests/test_panel_subscribe_delivery_alert_20261012.py": "0d382f25ff22113ff54968d233555739da6da0d9",
+    "tests/test_protocol_liveness_results_install.py": "a4383cf33b167cb55578116b44a3f7c26d6e41b7",
+    "tests/test_protocol_liveness_results_pull.py": "7a2bfcfe44bc048da73aa7e6376994647377b487",
+    "tests/test_status_tls_installer_20261027.py": "5ea58a69495105019c7d10f39d4e5e82f5f194bd"
+  },
+  "schema": 1,
+  "shared_input": {
+    "blob": "614ba6cbdce76989b9028e3bed2fdf0799eba3eb",
+    "mode": "100644",
+    "path": "tests/_native_root_lab.py"
+  },
+  "source_revision": "449ddfa01c49a7e9d4ef065845a1ef70ed602eb1"
+}
+
+web search: https://github.com/onesyue/yueto-ci/pull/203/files
+codex
+已通过 GitHub 网页确认 PR 只有一行 `source_revision` 变更。本地 Git 也已证明 `80f7c8e6` 是 `d06b7da0` 之后的第 2 个提交；正在核对清单中的 7 个锁定路径。
+
+web search: 
+web search: 
+exec
+/bin/zsh -lc "python3 -c 'import json, subprocess
+repo=\"/Users/j/Projects/yueto/yueops\"
+base=\"d06b7da00c22461d75d9e411ec4b731b596f7dfc\"
+head=\"80f7c8e6589c68eefa88aff25cad2e1f55e17350\"
+pinned=json.loads(\"[{\\\"path\\\":\\\"tests/test_frozen_manifest_reader_20261015.py\\\",\\\"blob\\\":\\\"086246934ab623ad6df49be9225bc7ee04f4fee5\\\"},{\\\"path\\\":\\\"tests/test_install_operator_host_source.py\\\",\\\"blob\\\":\\\"64550a55f127f2db77cde4e7e4a6576158a02b56\\\"},{\\\"path\\\":\\\"tests/test_panel_subscribe_delivery_alert_20261012.py\\\",\\\"blob\\\":\\\"0d382f25ff22113ff54968d233555739da6da0d9\\\"},{\\\"path\\\":\\\"tests/test_protocol_liveness_results_install.py\\\",\\\"blob\\\":\\\"a4383cf33b167cb55578116b44a3f7c26d6e41b7\\\"},{\\\"path\\\":\\\"tests/test_protocol_liveness_results_pull.py\\\",\\\"blob\\\":\\\"882a60ee11cc6e6206219d115d947586be18c452\\\"},{\\\"path\\\":\\\"tests/test_status_tls_installer_20261027.py\\\",\\\"blob\\\":\\\"39c99459df135a7b5463930ce626c9f9d6b848ca\\\"},{\\\"path\\\":\\\"tests/_native_root_lab.py\\\",\\\"blob\\\":\\\"614ba6cbdce76989b9028e3bed2fdf0799eba3eb\\\",\\\"mode\\\":\\\"100644\\\"}]\")
+def git(*args):
+ return subprocess.check_output([\"git\",\"-C\",repo,*args],text=True).strip()
+changed=set(git(\"diff\",\"--name-only\",\"--no-renames\",base,head).splitlines())
+touched=set(git(\"log\",\"--format=\",\"--name-only\",\"--no-renames\",base+\"..\"+head).splitlines())
+paths={row[\"path\"] for row in pinned}
+print(\"pinned_paths=\"+str(len(paths)))
+print(\"range_changed_paths=\"+str(len(changed)))
+print(\"endpoint_intersection=\"+json.dumps(sorted(paths & changed)))
+print(\"commit_history_intersection=\"+json.dumps(sorted(paths & touched)))
+assert not paths & changed
+assert not paths & touched
+for row in pinned:
+ a=git(\"ls-tree\",base,\"--\",row[\"path\"])
+ b=git(\"ls-tree\",head,\"--\",row[\"path\"])
+ assert a and a==b, (row[\"path\"],a,b)
+ fields=b.split()
+ assert fields[1]==\"blob\" and fields[2]==row[\"blob\"], (row[\"path\"],b,row[\"blob\"])
+ if \"mode\" in row: assert fields[0]==row[\"mode\"]
+ print(\"UNCHANGED \"+b)
+'" in /Users/j/Projects
+ succeeded in 9ms:
+pinned_paths=7
+range_changed_paths=21
+endpoint_intersection=[]
+commit_history_intersection=[]
+UNCHANGED 100644 blob 086246934ab623ad6df49be9225bc7ee04f4fee5	tests/test_frozen_manifest_reader_20261015.py
+UNCHANGED 100644 blob 64550a55f127f2db77cde4e7e4a6576158a02b56	tests/test_install_operator_host_source.py
+UNCHANGED 100644 blob 0d382f25ff22113ff54968d233555739da6da0d9	tests/test_panel_subscribe_delivery_alert_20261012.py
+UNCHANGED 100644 blob a4383cf33b167cb55578116b44a3f7c26d6e41b7	tests/test_protocol_liveness_results_install.py
+UNCHANGED 100644 blob 882a60ee11cc6e6206219d115d947586be18c452	tests/test_protocol_liveness_results_pull.py
+UNCHANGED 100644 blob 39c99459df135a7b5463930ce626c9f9d6b848ca	tests/test_status_tls_installer_20261027.py
+UNCHANGED 100644 blob 614ba6cbdce76989b9028e3bed2fdf0799eba3eb	tests/_native_root_lab.py
+
+codex
+DONE 三项均已确认：
+
+- [PR 差异](https://github.com/onesyue/yueto-ci/pull/203/files)仅修改 `source_revision`：`d06b7da0` → `80f7c8e6`。
+- 本地 `git merge-base --is-ancestor` 返回 0；新提交领先旧提交 2 个提交。
+- 清单锁定的 7 个路径均未在该区间变化，blob 和文件模式一致。
+
+指定的两条 `gh` 命令连接失败；上述结论通过 GitHub 页面和本地精确 Git 对象完成核验。
+
+VERDICT: APPROVE
+reviewed_head: 3cf7902173bed80a272e6975cb696478a5def55e
+tokens used
+53,924
+DONE 三项均已确认：
+
+- [PR 差异](https://github.com/onesyue/yueto-ci/pull/203/files)仅修改 `source_revision`：`d06b7da0` → `80f7c8e6`。
+- 本地 `git merge-base --is-ancestor` 返回 0；新提交领先旧提交 2 个提交。
+- 清单锁定的 7 个路径均未在该区间变化，blob 和文件模式一致。
+
+指定的两条 `gh` 命令连接失败；上述结论通过 GitHub 页面和本地精确 Git 对象完成核验。
+
+VERDICT: APPROVE
+reviewed_head: 3cf7902173bed80a272e6975cb696478a5def55e
