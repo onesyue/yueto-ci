@@ -5,5 +5,5 @@
   "head": "f499c78894abdf16bd11eaad3081e1573a82b806",
   "backfilled": false,
   "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "f499c78894abdf16bd11eaad3081e1573a82b806", "artifact": "reviews/merge-receipts-20261103/yuelink-57.md", "reviewer": "codex", "reviewed_at": "2026-11-03T11:31:00Z"},
-  "parity": {"result": "pass", "head": "f499c78894abdf16bd11eaad3081e1573a82b806", "command": "flutter test test (Flutter 3.47.5, Mac)", "log_sha256": "8417e3dff164e321b2b1be4f3dfe3f9d1108058ebb643fb028b5539fe1961a3d", "ran_at": "2026-11-03T12:18:17Z", "runner": "mac"}
+  "parity": {"result": "pass", "head": "f499c78894abdf16bd11eaad3081e1573a82b806", "command": "flutter test test (Flutter 3.47.5, Mac)", "log_sha256": "8417e3dff164e321b2b1be4f3dfe3f9d1108058ebb643fb028b5539fe1961a3d", "ran_at": "2026-11-03T12:18:17Z", "runner": "mac-5f08d00f"}
 }
