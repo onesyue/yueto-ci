@@ -11,8 +11,18 @@ AUDIT = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(AUDIT)
 
 
+def fresh_remote_evidence(test):
+    # These verdict controls mutate evidence under the same fixture SHA.
+    # Disk cache/restart behavior has its own suite in test_merge_hygiene_cache.
+    for name in ("read_cache", "write_cache"):
+        mock = patch.object(AUDIT, name, return_value=None)
+        mock.start()
+        test.addCleanup(mock.stop)
+
+
 class MergeHygieneAudit(unittest.TestCase):
     def setUp(self):
+        fresh_remote_evidence(self)
         activation = patch.object(AUDIT, "enforcement_cutoff", return_value=None)
         activation.start()
         self.addCleanup(activation.stop)
@@ -161,6 +171,7 @@ class MergeHygieneAudit(unittest.TestCase):
 
 class MergeReceipts(unittest.TestCase):
     def setUp(self):
+        fresh_remote_evidence(self)
         activation = patch.object(AUDIT, "enforcement_cutoff", return_value=None)
         activation.start()
         self.addCleanup(activation.stop)
@@ -300,6 +311,7 @@ class MergeReceipts(unittest.TestCase):
 
 class EvidenceOnly(unittest.TestCase):
     def setUp(self):
+        fresh_remote_evidence(self)
         self.fixture = json.loads((ROOT / "tests/fixtures/merge-hygiene/approved.json").read_text())
         self.pr = self.fixture["pr"]
         self.pr["base"] = {"sha": "b" * 40}
