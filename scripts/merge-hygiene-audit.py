@@ -101,7 +101,15 @@ def api(endpoint):
     for attempt in range(3):
         # Never echo headers, bodies or gh stderr: they may contain secrets.
         result = subprocess.run(command, capture_output=True, text=True)
-        status, headers, body = response_parts(result.stdout)
+        try:
+            status, headers, body = response_parts(result.stdout)
+        except ValueError:
+            # A truncated/absent gh response is not evidence. Retry the read
+            # within the same three-attempt budget, then remain incomplete.
+            if attempt == 2:
+                raise
+            time.sleep(attempt + 1)
+            continue
         remaining = headers.get("x-ratelimit-remaining")
         if remaining is not None and int(remaining) < floor:
             raise RateFloorError("incomplete: rate-floor")

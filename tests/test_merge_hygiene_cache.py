@@ -285,9 +285,44 @@ class MergeCache(unittest.TestCase):
     def test_304_without_body_and_transport_failures_are_incomplete(self):
         for result in (response(status=304), response(status=401), response(status=404),
                        subprocess.CompletedProcess([], 1, "", "secret")):
-            with self.subTest(result=result), patch.object(self.audit.subprocess, "run", return_value=result):
+            with self.subTest(result=result), patch.object(self.audit.subprocess, "run", return_value=result), patch.object(
+                    self.audit.time, "sleep"):
                 with self.assertRaises(ValueError):
                     self.audit.api("not-cached")
+
+    def test_truncated_transport_retries_only_until_a_valid_response(self):
+        malformed = subprocess.CompletedProcess([], 1, "HTTP/2.0 200 OK\nETag: partial", "secret")
+        absent = subprocess.CompletedProcess([], 1, "", "secret")
+        with patch.object(self.audit.subprocess, "run", side_effect=[malformed, absent, response([1])]) as run, patch.object(
+                self.audit.time, "sleep") as sleep:
+            self.assertEqual(self.audit.api("endpoint"), [1])
+        self.assertEqual(run.call_count, 3)
+        self.assertEqual(sleep.call_args_list, [call(1), call(2)])
+
+    def test_exhausted_transport_never_uses_cached_success_or_leaks_diagnostics(self):
+        endpoint = "endpoint"
+        with patch.object(self.audit.subprocess, "run", return_value=response([1], headers={"ETag": '"old"'})):
+            self.audit.api(endpoint)
+        old = self.audit.cache_path("http", endpoint).read_bytes()
+        absent = subprocess.CompletedProcess([], 1, "", "secret")
+        with patch.object(self.audit.subprocess, "run", return_value=absent) as run, patch.object(
+                self.audit.time, "sleep") as sleep, contextlib.redirect_stdout(io.StringIO()) as output:
+            with self.assertRaisesRegex(ValueError, "invalid GitHub HTTP response"):
+                self.audit.api(endpoint)
+        self.assertEqual(run.call_count, 3)
+        self.assertEqual(sleep.call_args_list, [call(1), call(2)])
+        self.assertEqual(self.audit.cache_path("http", endpoint).read_bytes(), old)
+        self.assertEqual(output.getvalue(), "")
+
+    def test_recovered_transport_still_stops_at_rate_floor(self):
+        absent = subprocess.CompletedProcess([], 1, "", "secret")
+        low = response([], headers={"X-RateLimit-Remaining": "299"})
+        with patch.object(self.audit.subprocess, "run", side_effect=[absent, low]) as run, patch.object(
+                self.audit.time, "sleep") as sleep:
+            with self.assertRaises(self.audit.RateFloorError):
+                self.audit.api("endpoint")
+        self.assertEqual(run.call_count, 2)
+        sleep.assert_called_once_with(1)
 
     def test_etags_are_per_page_and_never_served_on_error(self):
         self.audit.api("repos/onesyue/yueops/pulls?state=closed&per_page=100&page=1")
