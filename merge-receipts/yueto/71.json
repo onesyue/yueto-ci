@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "repo": "yueto",
+  "pr": 71,
+  "head": "d1d7aa97e6278fd673a562c69592e789be3f5eda",
+  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "d1d7aa97e6278fd673a562c69592e789be3f5eda", "artifact": "reviews/merge-receipts-20261103/yueto-71-review.txt", "reviewer": "codex", "reviewed_at": "2026-11-03T08:30:00Z"},
+  "parity": {"result": "pass", "head": "d1d7aa97e6278fd673a562c69592e789be3f5eda", "command": "gpg --verify release.yaml.asc release.yaml (Good); python -m pytest -q -p no:xdist scripts/test-release-drift.py scripts/test-mihomo-ledger-agreement.py scripts/test-release-chain-drivers.py (15 passed; 3 failures identical on base cb0c221e)", "log_sha256": "061a470d744df284a6a48226a4d2d747f8aee0c8104e61bac59b76088d78fce6", "ran_at": "2026-11-03T08:59:58Z", "runner": "box"},
+  "backfilled": false
+}

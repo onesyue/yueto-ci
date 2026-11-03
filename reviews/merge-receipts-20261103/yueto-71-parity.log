@@ -1,0 +1,11 @@
+gpg: Good signature from "onesyue <47652916+onesyue@users.noreply.github.com>" [ultimate]
+FAILED scripts/test-mihomo-ledger-agreement.py::CandidateAgreement::test_independent_drift_is_rejected
+FAILED scripts/test-release-chain-drivers.py::script_guard - 脚本式守卫退出码 1
+3 failed, 15 passed, 6 subtests passed in 1.03s
+yueboard master=? pin=? live=NOT_READ age_hours=? state=UNKNOWN reason=ledger-unverified
+yue-node master=? pin=? live=NOT_READ age_hours=? state=UNKNOWN reason=ledger-unverified
+yuelink master=? pin=? live=NOT_READ age_hours=? state=UNKNOWN reason=ledger-unverified
+base cb0c221e fails identical:
+FAILED scripts/test-mihomo-ledger-agreement.py::CandidateAgreement::test_current_candidates_agree_without_rewriting_deployed_history
+FAILED scripts/test-mihomo-ledger-agreement.py::CandidateAgreement::test_independent_drift_is_rejected
+FAILED scripts/test-release-chain-drivers.py::script_guard - 脚本式守卫退出码 1

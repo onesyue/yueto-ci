@@ -1,0 +1,81 @@
+Fresh strict independent exact-head review: yueto PR #67
+Date: 2026-11-03 (Asia/Singapore)
+Branch: cx/drift-out-of-pool-1103b
+Reviewed HEAD: 4c426fe31c9b99ec58deaf9159bc66668de5655b
+Remote master: eab2d0979e122ba8d277c54ec1c04aa737107245
+PR merge base: 84f5a73d3fc763ed83862f3490a01b6c862ab037
+
+Scope: the complete PR diff, including the original out-of-pool change and the
+follow-up fixing ../review-67.txt. Source review was read-only. The reviewer
+independently confirmed the remote branch tip, reviewed HEAD, merge base and
+clean index/worktree, and checked them again before writing this report.
+
+Findings requiring changes: none.
+
+Acceptance findings
+
+- Telemetry-pending remains UNKNOWN. The inventory query reads each host's
+  latest server_metrics.created_at using UTC and the existing indexed
+  server_sid/created_at access pattern. No report or a NULL report timestamp
+  produces pending; age 301 is pending and age 300 is fresh. Direct hosts remain
+  in expected hosts and slots regardless of telemetry freshness.
+- Each serving __SID__ row must include fresh/pending. Missing or malformed
+  classification is rejected. Successful SSH reads of the desired revision
+  cannot clear pending telemetry: with no independent drift, the patrol reports
+  UNKNOWN, names the pending host and exits 75. The other release-state consumer
+  also prevents a previously OK fleet row from remaining OK when pending exists.
+- The pre-existing P2 is fixed within the same fleet classifier. Measured
+  revision or layout drift is evaluated before incomplete evidence is raised.
+  Another host's pending telemetry, missing response or unreachable response
+  remains visible in UNKNOWN(...) details while the measured mismatch remains
+  DRIFT and the patrol exits 1.
+- Exclusion remains authoritative: only maintenance and retired inventory modes
+  are excluded, without a SID allowlist or telemetry-based exclusion. Excluded
+  hosts are not probed or counted in serving hosts, slots or revision totals.
+  Empty serving inventory and conflicting/duplicate exclusions fail closed.
+- SSH addressing, host-key validation, bounded probe timeouts and the signed
+  desired-state boundary remain intact. No production action was performed.
+
+Verification
+
+All four scripts/test-*.py files touched by this PR were run in full:
+  scripts/test-release-drift.py
+  scripts/test-release-state-hy2-only.py
+  scripts/test-release-state-package-sweep.py
+  scripts/test-release-state-runtime-and-addressing.py
+
+Command:
+  python -B -m pytest -q -p no:cacheprovider <the four files above> --tb=short
+
+Final macOS result: 125 passed, 16 subtests passed in 33.09s, exit 0.
+Final Linux result: 125 passed, 16 subtests passed in 41.87s, exit 0.
+Linux used python:3.13-slim (Python 3.13.18), pytest 9.1.1 and TZ=UTC.
+There were no skipped tests. Earlier fixture/dependency failures are not counted
+as passes. These fresh results were reused under the project's evidence rule;
+the reviewer independently byte-compared all nine tested source/dependency files
+against Git blobs at the reviewed HEAD and checked both final result logs.
+The required sibling inputs were fixed at YueOps commit
+79a20284eb1947f84dd663ac743ff5d2a7cd1c64 in the isolated test workspace.
+
+Additional independent review: 584 parser/classifier combinations passed for
+one through three hosts, covering fresh/pending telemetry crossed with desired,
+old, unreachable and missing revision responses. Every incomplete host remained
+named; every measured old revision survived and produced DRIFT.
+
+The recorded actual-query checks against disposable PostgreSQL 18.6 passed in
+UTC and Asia/Singapore: absent/NULL timestamps remained unreadable, the latest
+report was selected, and 300/301-second boundaries were preserved.
+The author also recorded a valid signed commit, normal hook execution, normal
+non-forced push, compilation, no new Ruff/Pyright diagnostics, and a clean
+redacted differential secret scan. The reviewer independently passed
+  git diff --check origin/master...HEAD
+
+Evidence directory:
+  /var/folders/1f/s8z5yqg1497g25n2rm68tj6h0000gn/T/yueto-review67b-j96u5xkz/
+Evidence files: verified-source-sha256.json, tests-final-macos.log,
+tests-final-linux.log, postgres-query.log and independent-review.log.
+
+This is an exact-source PR review with offline and disposable-container
+verification. It does not claim a production rollout or production readback.
+
+VERDICT approve @4c426fe31c9b99ec58deaf9159bc66668de5655b

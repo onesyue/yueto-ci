@@ -63,6 +63,7 @@ if x.get('new_status') and '/statuses?' in e:
  from datetime import datetime,timezone
  result.append(x['statuses'][0] | {{'id': 2, 'created_at': datetime.now(timezone.utc).isoformat(),
                                   'state': 'failure'}})
+print('HTTP/2.0 200 OK\\nX-RateLimit-Remaining: 4999\\n')
 print(json.dumps(result))
 ''')
         gh.chmod(0o755)
@@ -77,10 +78,13 @@ print(json.dumps(result))
     def run_cli(self, expected, *args):
         (self.root / 'api.json').write_text(json.dumps(self.fixture | {'anchor': self.anchor}))
         (self.root / 'merge-hygiene-exceptions.json').write_text(json.dumps(self.exceptions))
-        env = os.environ | {'PATH': str(self.bin) + os.pathsep + os.environ['PATH']}
-        result = subprocess.run([sys.executable, str(self.root / 'scripts/audit.py'),
-                                 '--repos', 'yueops', '--hours', '1', '--format', 'json', *args],
-                                env=env, capture_output=True, text=True)
+        # Each call deliberately changes remote evidence for the same fixture PR.
+        with tempfile.TemporaryDirectory() as cache:
+            env = os.environ | {'PATH': str(self.bin) + os.pathsep + os.environ['PATH'],
+                                'MERGE_HYGIENE_CACHE_DIR': cache, 'MERGE_HYGIENE_RATE_FLOOR': '300'}
+            result = subprocess.run([sys.executable, str(self.root / 'scripts/audit.py'),
+                                     '--repos', 'yueops', '--hours', '1', '--format', 'json', *args],
+                                    env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
         return json.loads(result.stdout)
 

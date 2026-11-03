@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yuelink",
+  "pr": 56,
+  "head": "57a4ac5b55f1618303324daf46af7d95906b266d",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "57a4ac5b55f1618303324daf46af7d95906b266d",
+    "artifact": "reviews/merge-receipts-20261103/yuelink-56-exact-head.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T10:28:19Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "57a4ac5b55f1618303324daf46af7d95906b266d",
+    "command": "flutter test test/core/client_config/client_config_validation_test.dart (Flutter 3.47.5, Mac)",
+    "log_sha256": "62bd22b5e33cfd72983eab355d15b980f388b7eb95927a96400f00b08668c6b6",
+    "ran_at": "2026-11-03T10:33:02Z",
+    "runner": "box"
+  }
+}

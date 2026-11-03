@@ -886,7 +886,7 @@
     {
       "repo": "yueops",
       "pr": 204,
-      "reason": "Backfilled independent review of exact head 5c2eba9b497d2c396291088a2623116eef304c11 (2026-11-02T18:13:26Z). Codex review returned CHANGES: - [P2] `scripts/audit-agent-runtime-config.sh:63` — The parser treats a conditional rollout assignment as an active hold. The rollout defaults to no holds and requires explicit acknowledgement, yet the audit always exempts `yue-in` and `yue-id`, even after an ordinary rollout. Synthetic verification shows unacknowledged drift changes from exit 1 to exit 0. Derive exemptions from active hold state tied to the applicable release, rather than supported CLI options. - [P2] `scripts/audit-agent-runtime-config.sh:63` — The parser treats a conditional rollout assignment as an active hold. The rollout defaults to no holds and requires explicit acknowledgement, yet the audit always exempts `yue-in` and `yue-id`, even after an ordinary rollout. Synthetic verification shows unacknowledged drift changes from exit 1 to exit 0. Derive exemptions from active hold state tied to the applicable release, rather than supported CLI options.; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-204-parity.log) (reviews/merge-receipts-20261103/yueops-204-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
+      "reason": "Backfilled independent review of exact head 5c2eba9b497d2c396291088a2623116eef304c11 (2026-11-02T18:13:26Z). Codex review returned CHANGES: - [P2] `scripts/audit-agent-runtime-config.sh:63` — The parser treats a conditional rollout assignment as an active hold. The rollout defaults to no holds and requires explicit acknowledgement, yet the audit always exempts `<redacted-host>` and `<redacted-host>`, even after an ordinary rollout. Synthetic verification shows unacknowledged drift changes from exit 1 to exit 0. Derive exemptions from active hold state tied to the applicable release, rather than supported CLI options. - [P2] `scripts/audit-agent-runtime-config.sh:63` — The parser treats a conditional rollout assignment as an active hold. The rollout defaults to no holds and requires explicit acknowledgement, yet the audit always exempts `<redacted-host>` and `<redacted-host>`, even after an ordinary rollout. Synthetic verification shows unacknowledged drift changes from exit 1 to exit 0. Derive exemptions from active hold state tied to the applicable release, rather than supported CLI options.; exact-head box parity: pass (reviews/merge-receipts-20261103/yueops-204-parity.log) (reviews/merge-receipts-20261103/yueops-204-review.txt). No receipt is claimed; this records the finding, not a claim it is fixed.",
       "approver": "owner 2026-11-02 explicit instruction: truthful exception if evidence cannot be produced"
     },
     {
@@ -1008,6 +1008,24 @@
       "pr": 164,
       "approver": "coordinator 2026-11-03 09:20 SGT decision (receipt exceptions delegated by owner)",
       "reason": "PR #164 itself merged correctly: signed merge 6a3b2cf5019086bb92c107f2024d4d2db26670bd at head 77ccf163402216c0caca5c3e3b0de166e6e6dbb3, required check \"policy tests + workflow lint\" completed success 2026-11-03T00:58:50Z before merge at 00:59:32Z. Its receipt commit 922610ba72d586c86d9c3c743599b047812b37f2 (merge-receipts/yueto-ci/164.json, signed FE2659E6) was pushed directly to master via owner bypass of branch rules instead of a receipt PR. Content is correct; not reverted because reverting the receipt would remove admission evidence. Accepted history; rule \"receipts only via PR with required CI green, never direct push to master\" adopted 11-03. Missing evidence: a PR and required check for the receipt commit."
+    },
+    {
+      "repo": "yueops",
+      "pr": 298,
+      "reason": "Exact-head independent Codex review approved 837675c2e2cb89676a386a6034c302e46476a80b (yueto-ci #182 artifact). Full suite at head ended EXIT 1. Re-run of the failure set on head and base 79a20284eb1947f84dd663ac743ff5d2a7cd1c64 with the same environment: 14 failures on head, all also failing on base (base 15, extra one a known flaky); 0 head-only failures. Recorded as no regression vs base; parity is NOT pass. Evidence: reviews/merge-receipts-20261103/yueops-298-exception.md (head log SHA256 05775be5f8b830a890684089be11aaae54a26b13755febfa25f534610bf616c3). Missing evidence: a passing exact-head parity log.",
+      "approver": "coordinator 2026-11-03 decision under owner standing mandate (decide autonomously): exception, no-regression-vs-base"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 179,
+      "reason": "INCIDENT: merged without a committed prior receipt during the P1 window (owner classification). Head bd051adae75a3f924b2cb9faae5b933c1aa66283; merge 9b318b9f51200c0f1d384218ae8d2fc13d6cf2fb; merged_at 2026-11-03T04:18:34Z (owner-supplied event time). GitHub PR/check pages show the policy tests + workflow lint check succeeded, run 41574191513. gh pr view was unavailable; exact check timestamps and complete API history remain unverified. The attempted pass receipt in PR #180 was withdrawn at 690bb67023513071de1189936c7d63a13031bae6: its review names another head and its parity log is prose. Missing evidence: independent approval naming the merged head and a passing exact-head local parity command log from an accepted runner. PARITY: NOT pass. Incident registration does not waive post-activation findings or restore the withdrawn pass receipt. Evidence: reviews/merge-receipts-20261103/yueto-ci-179-exception.md.",
+      "approver": "owner instruction 2026-11-03: record PR #179 as an INCIDENT receipt; authorization covers incident registration, not approval of missing review/parity or a gate waiver"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 108,
+      "reason": "EXCEPTION: merged 2026-11-03T10:07:36Z by cursor[bot] (merge ed6166eabf13ae7a66137385db745a24a18d72f7) without a prior receipt. Exact-head independent Codex review of head ae53f2f31f6dcce2d338c365edee1a92ffe0d8bd returned CHANGES (P2 web/src/routes/_app/devices.tsx:176: over_limit copy must keep disconnect guidance). Fix landed in yueboard #112 (c7d21273). Re-review of the #108 findings against master 305452a3f75f4854a49c175b5d54c16e8aaa6d3c: APPROVE. Box parity at head: go test -count=1 -p 1 ./... rc=0 (log sha256 c37d81069649f13229c28cf12c12dfc6cc71925fec3aa412fae071e8dd89025c). Review at exact head is NOT approve. Evidence: reviews/merge-receipts-20261103/yueboard-108-exception.md.",
+      "approver": "owner decision 2026-11-03 20:03 SGT: record #108 as an exception receipt (exact-head CHANGES, fixed by #112, master re-review APPROVE); logged under low-level-error-guard"
     }
   ]
 }

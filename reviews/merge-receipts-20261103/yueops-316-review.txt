@@ -1,0 +1,89 @@
+        echo "FATAL: CDN timer is not enabled after verified seed: $u" >&2
+        """Retirement is irreversible; old ports cannot point at another product."""
+        if self.document["generation"] <= previous.document["generation"]:
+            raise TopologyError("topology generation did not advance")
+        if not set(previous.document["retired_sids"]) <= set(self.document["retired_sids"]):
+            raise TopologyError("rollback would remove retirement tombstones")
+        for old in previous.document["endpoints"]:
+            a, b = port_range(old["hy2_ports"])
+            for new in self.document["endpoints"]:
+                lo, hi = port_range(new["hy2_ports"])
+                identity = ("endpoint_id", "region", "hy2_node_id", "vless_node_id", "ingress_policy")
+                if lo <= b and hi >= a and any(new.get(k) != old.get(k) for k in identity):
+                    raise TopologyError("old lease reassigned to another endpoint")
+
+exec
+/bin/zsh -lc "python3 -B -c 'from pathlib import Path
+import json, re, runpy, subprocess
+root=Path.cwd()
+source=(root/\"scripts/yueops-shield/yueops-shield-status.sh\").read_text()
+patterns=re.findall(r\"require_ingress_count '\\''(["'^'"'\\'']*udp dport 443["'^'"'\\'']*add @banned["'^'"'\\'']*)'\\'' 2\", source)
+assert len(patterns)==2
+origin_pattern,direct_pattern=patterns
+origin=[
+\"udp dport 443 ip saddr "'!= @cf4 update @m443_4 { ip saddr limit rate over 50/second burst 100 packets } add @banned4 { ip saddr }",
+"udp dport 443 ip6 saddr != @cf6 update @m443_6 { ip6 saddr limit rate over 50/second burst 100 packets } add @banned6 { ip6 saddr }"]
+direct=[s.replace("ip saddr != @cf4 ","").replace("ip6 saddr != @cf6 ","") for s in origin]
+def count(pattern, lines):
+    p=subprocess.run(["grep","-Ec",pattern],input="'"\\n\".join(lines)+\"\\n\",text=True,capture_output=True)
+    assert p.returncode in (0,1)
+    return int(p.stdout.strip())
+cases=[(origin_pattern,origin,2),(origin_pattern,direct,0),(direct_pattern,origin,0),(direct_pattern,direct,2),
+(origin_pattern,[origin[0],direct[1]],1),(origin_pattern,[direct[0],origin[1]],1),
+(origin_pattern,[s+\" # handle 42\" for s in origin],2)]
+for p,lines,want in cases:
+    assert count(p,lines)==want
+sentinel=runpy.run_path(str(root/\"scripts/cf-origin-shield-sentinel.py\"))
+ranges=sentinel[\"load_ranges\"]()
+chain='\\''table netdev yueops_shield {\\n chain ingress { # handle 7\\n type filter hook ingress device \"eth0\" priority -500; policy accept;\\n tcp dport 22 accept # handle 8\\n tcp dport 8443 ip saddr @cf4 counter name \"origin_pass\" accept # handle 9\\n tcp dport 8443 ip6 saddr @cf6 counter name \"origin_pass\" accept # handle 10\\n ip saddr @banned4 counter name \"banned_drop\" jump suspect_drop # handle 11\\n }\\n}\\n'\\''
+assert not sentinel[\"check_ingress\"](chain)
+for hazard in (\"ip saddr @banned4 drop\", \"jump suspect_drop\",\"ip saddr vmap @blocked_sources\",\"add @banned6 { ip6 saddr }\"):
+    assert sentinel[\"check_ingress\"](chain.replace(\"tcp dport 22 accept\",hazard))
+entries=[{\"set\":{\"family\":\"netdev\",\"table\":\"yueops_shield\",\"name\":f\"{stem}{v}\",\"type\":f\"ipv{v}_addr\",\"elem\":[str(n) for n in ranges if n.version==v] if stem==\"cf\" else []}} for v in (4,6) for stem in (\"cf\",\"banned\",\"suspect\")]
+assert not sentinel[\"check_sets\"](json.dumps({\"nftables\":entries}),ranges)
+for entry in entries:
+    e=entry[\"set\"]
+    if e[\"name\"].startswith((\"banned\",\"suspect\")):
+        v=int(e[\"name\"][-1]); n=next(n for n in ranges if n.version==v)
+        e[\"elem\"]=[{\"elem\":{\"val\":str(n.network_address+1),\"expires\":1000}}]
+        assert e[\"name\"]+\"_contains_cf\" in sentinel[\"check_sets\"](json.dumps({\"nftables\":entries}),ranges)
+        e[\"elem\"]=[]
+print(\"PASS: 7 strict ban-meter regex cases; sentinel live-chain positive/4 hazards and four dynamic CF-overlap cases (in-memory only)\")
+'" in /Users/j/Projects/yueops-worktrees/p304r
+ succeeded in 145ms:
+PASS: 7 strict ban-meter regex cases; sentinel live-chain positive/4 hazards and four dynamic CF-overlap cases (in-memory only)
+
+codex
+只读验证通过：Python 内存编译、Bash 语法，以及 strict ban-meter 和 sentinel 解析的正反例均通过，未发现阻塞性代码问题。回滚有一项明确限制：直接恢复 `d06b7da0` 会重新引入旧顺序，必须保留或恢复 CF 热修复。原生 nft、systemd 和现场热修复规则未在本次验证中执行或取得。
+
+exec
+/bin/zsh -lc 'git -c core.fsmonitor=false status --short && git rev-parse HEAD && git diff --check d06b7da0..HEAD' in /Users/j/Projects/yueops-worktrees/p304r
+ succeeded in 3203ms:
+80f7c8e6589c68eefa88aff25cad2e1f55e17350
+
+2026-11-03T08:19:29.842491Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+codex
+DONE_WITH_CONCERNS 未发现阻塞性代码问题。
+
+- CF IPv4/IPv6 的 TCP/8443 放行紧随 SSH，早于所有 ingress drop、jump 和封禁路径；所有 ban/suspect 写入均排除 CF。
+- strict ban-meter 读回强制要求 CF 排除条件；direct/relay 保持原有匹配。
+- sentinel 仅远程读取 nft，使用固定 SSH 信任、超时和脱敏输出；timer 已登记。SG 新增 Broadcom 别名并保留 Qorvo。
+- nft 整表更新保持原子性，SSH 仍为首条豁免。但**直接回退到 `d06b7da0` 会恢复缺陷**，回滚须保留或恢复 CF 热修复。
+
+本次内存编译、Bash 语法、读回正反例和 diff 检查通过。未取得现场 `hotfix-cf-before-ban` 原文，无法逐字比较；原生 nft/systemd 与生产读回未验证。工作树干净。
+
+VERDICT: APPROVE
+reviewed_head: 80f7c8e6589c68eefa88aff25cad2e1f55e17350
+tokens used
+125,562
+DONE_WITH_CONCERNS 未发现阻塞性代码问题。
+
+- CF IPv4/IPv6 的 TCP/8443 放行紧随 SSH，早于所有 ingress drop、jump 和封禁路径；所有 ban/suspect 写入均排除 CF。
+- strict ban-meter 读回强制要求 CF 排除条件；direct/relay 保持原有匹配。
+- sentinel 仅远程读取 nft，使用固定 SSH 信任、超时和脱敏输出；timer 已登记。SG 新增 Broadcom 别名并保留 Qorvo。
+- nft 整表更新保持原子性，SSH 仍为首条豁免。但**直接回退到 `d06b7da0` 会恢复缺陷**，回滚须保留或恢复 CF 热修复。
+
+本次内存编译、Bash 语法、读回正反例和 diff 检查通过。未取得现场 `hotfix-cf-before-ban` 原文，无法逐字比较；原生 nft/systemd 与生产读回未验证。工作树干净。
+
+VERDICT: APPROVE
+reviewed_head: 80f7c8e6589c68eefa88aff25cad2e1f55e17350

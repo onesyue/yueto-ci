@@ -1,0 +1,60 @@
+yueto-ci PR #200 — exact-head review
+Reviewed at: 2026-11-03T06:47:04.124521+00:00
+Repository: /Users/j/Projects/yueto-ci-worktrees/pin200
+Reviewed head: 71152d1128da344583ccaf50a9199b6f955151be
+Comparison base (head's sole parent): 02754528286eff0aa6ab7da809bffbe6f6625053
+Source repository: /Users/j/Projects/yueops-worktrees/sff306 (origin: https://github.com/onesyue/yueops.git)
+
+Findings: No blocking findings. The requested source pin update preserves every tracked source file, and the repository's frozen source contract check passes at the reviewed head.
+
+1. Exact diff and unchanged policy
+The worktree HEAD equals the requested full SHA and the worktree is clean. git diff-tree reports exactly one modified path, ops-first-native-successors.json; git diff --numstat reports 1 insertion and 1 deletion. A byte-level assertion against the committed files proves that replacing the old SHA once produces the entire new file exactly. Therefore module_blobs, shared_input, all 52 native case obligations, formatting, and every other policy byte remain unchanged. git diff --check exits 0.
+
+The complete content change is at ops-first-native-successors.json:490:
+-  "source_revision": "4c7c22c13015d56225741dcaf7314285895ecfa7"
++  "source_revision": "d06b7da00c22461d75d9e411ec4b731b596f7dfc"
+
+2. Source commit topology and content
+The source objects are available in the user-specified local yueops worktree, so no fetch is necessary. The new source commit has exactly one parent:
+4c7c22c13015d56225741dcaf7314285895ecfa7
+
+Both old and new source revisions resolve to tree:
+1dbe9ba099ad4cb2647131cc73322175cf7e6087
+
+git diff-tree between the source revisions emits no changed paths. The new revision is thus a direct-child empty commit, with identical paths, blobs, modes and subtrees. These checks read committed Git objects, independently of the yueops working files.
+
+3. Signature evidence
+The existing review at /Users/j/Projects/yueto-ci-worktrees/pin200/reviews/merge-receipts-20261103/yueops-306-review.txt covers this exact source commit and records successful cryptographic verification by signing subkey CEF96E9A4ECB741C78329CA3FE2659E6AC769954 (key ID FE2659E6AC769954). It records git verify-commit exit 0, GOODSIG FE2659E6AC769954, and VALIDSIG CEF96E9A4ECB741C78329CA3FE2659E6AC769954. The primary key is D9D3C6E59E7465BD07C2177142239A996FDA9F55.
+
+That review was produced at 2026-11-03T06:31:20.443212+00:00, about 16 minutes before this review. Its bytes match the file committed in the exact yueto-ci head; SHA-256: 48ae15cc92992a2a268c50708206de495027ae0e6de0824a2541705ce493162b. Per the instruction to reuse same-object evidence younger than 24 hours, this is reused signature evidence, not a claim of a new successful signature run. Its temporary public-key keyring reported unknown owner trust while validating the signature cryptographically.
+
+The initial default-keyring git verify-commit --raw attempt in this review exited 1 and stopped before GOODSIG/VALIDSIG. It is not counted as successful verification. The existing review documents the same sandbox/default trust-database limitation and its successful verification using an isolated writable public-key keyring.
+
+4. All pinned blobs and modes
+For every entry in module_blobs and the shared_input entry, git ls-tree at d06b7da00c22461d75d9e411ec4b731b596f7dfc returned exactly the declared blob and expected regular-file mode. All 7 entries match:
+- tests/test_frozen_manifest_reader_20261015.py: 086246934ab623ad6df49be9225bc7ee04f4fee5 (mode 100644, MATCH)
+- tests/test_install_operator_host_source.py: 64550a55f127f2db77cde4e7e4a6576158a02b56 (mode 100644, MATCH)
+- tests/test_panel_subscribe_delivery_alert_20261012.py: 0d382f25ff22113ff54968d233555739da6da0d9 (mode 100644, MATCH)
+- tests/test_protocol_liveness_results_install.py: a4383cf33b167cb55578116b44a3f7c26d6e41b7 (mode 100644, MATCH)
+- tests/test_protocol_liveness_results_pull.py: 882a60ee11cc6e6206219d115d947586be18c452 (mode 100644, MATCH)
+- tests/test_status_tls_installer_20261027.py: 39c99459df135a7b5463930ce626c9f9d6b848ca (mode 100644, MATCH)
+- tests/_native_root_lab.py: 614ba6cbdce76989b9028e3bed2fdf0799eba3eb (mode 100644, MATCH)
+
+5. Repository check
+Executed from the exact yueto-ci worktree:
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-first-native-source.py --source /Users/j/Projects/yueops-worktrees/sff306
+
+Exit status: 0
+Output:
+{"execution_evaluated": false, "modules": 6, "native_case_obligations": 52, "release_acceptance": false, "source_revision": "d06b7da00c22461d75d9e411ec4b731b596f7dfc", "status": "FROZEN_SOURCE_CONTRACT_VALID"}
+
+This check validates the pinned module modes/blobs and the repository's existing shared-input admission contract, including source ancestry and reviewed successor policy. The consumer requires the first-native helper's exact source revision and blob, so advancing this pin admits the specified signed commit without altering its content obligations. The result attests source-contract validity; it does not attest execution of the 52 native tests or release acceptance. No application test rerun is claimed for this identical-tree source update.
+
+6. Scope and environment
+A read-only gh pr view 200 --repo onesyue/yueto-ci request failed to connect to api.github.com. Live PR base/head metadata, CI status and mergeability were therefore not refreshed. Approval is limited to the supplied immutable head and its parent comparison above. The locally available origin/cx/pin-yueops-d06b7da0 also points to that exact head.
+
+One source Git invocation emitted an fsmonitor IPC warning, but exited 0 and all content assertions passed. This did not affect committed-object lookup; the repository source check also completed successfully. No source files, branches, commits, remote PR state or production resources were changed.
+
+Machine-readable supporting evidence: /private/tmp/review-yci200-evidence.json
+
+VERDICT: APPROVE

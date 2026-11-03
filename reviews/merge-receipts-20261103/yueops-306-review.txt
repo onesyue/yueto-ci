@@ -1,0 +1,130 @@
+YueOps PR #306 — exact-head review
+Reviewed at: 2026-11-03T06:31:20.443212+00:00
+Repository: /Users/j/Projects/yueops-worktrees/sff306
+Head: d06b7da00c22461d75d9e411ec4b731b596f7dfc
+Required base: 4c7c22c13015d56225741dcaf7314285895ecfa7
+
+Findings
+No blocking findings. The candidate meets all requested commit-level acceptance criteria.
+
+Acceptance results
+- Exact revision: checked-out HEAD is d06b7da00c22461d75d9e411ec4b731b596f7dfc.
+- Exactly one commit: base..HEAD contains one commit. The raw commit object has exactly one parent, 4c7c22c13015d56225741dcaf7314285895ecfa7; it is not a merge commit.
+- Empty commit: both revisions have tree 1dbe9ba099ad4cb2647131cc73322175cf7e6087. git diff 4c7c22c1 HEAD is empty; the separate --exit-code --no-ext-diff --no-textconv check also returned 0. Every tracked path, blob, mode and gitlink is unchanged, including docs/RUNBOOK.md. The worktree is clean.
+- Valid signature: git verify-commit returned 0 for the exact candidate. GnuPG returned GOODSIG FE2659E6AC769954 and VALIDSIG CEF96E9A4ECB741C78329CA3FE2659E6AC769954. git log --format='%G? %GK' -1 returned U FE2659E6AC769954, and %GF returned the full required fingerprint.
+- Signature interpretation: U means a cryptographically good signature with unknown owner trust in the temporary keyring. Verification used only an exported public key in /private/tmp/review-yo306-gnupg-4jdpt6gw; no private key or owner-trust override was used. The signing subkey is CEF96E9A4ECB741C78329CA3FE2659E6AC769954; its primary key is D9D3C6E59E7465BD07C2177142239A996FDA9F55. The signing subkey, rather than the primary key, is the fingerprint pinned by the runbook.
+- MATERIALIZE alignment: docs/RUNBOOK.md:1197 pins that exact signing fingerprint. Lines 1312–1313 require verify-commit and an exact %GF match at the selected revision. Both predicates pass for this commit. Lines 1281–1283 additionally require the normal release revision to equal origin/master, so retaining and fast-forwarding to this exact signed object is consistent with the stated purpose.
+- Fast-forward safety: the candidate is the direct child of the required base; merge-base --is-ancestor base HEAD returned 0. The available origin/master ref equals the required base (reflog: 2026-11-03 13:34:34 +0800). The local master at 0cc09997ecda27d0182bd05f8fcc41430f2ddaa4 is also an ancestor; both local-ref ancestry checks returned 0. Advancing master from the specified base to this candidate preserves all history and changes no tracked content. Preserve the reviewed commit object with a fast-forward; recreating it by squash/rebase or adding a merge commit would select a different shipped revision and require its own signature check.
+
+Environment and scope limitations
+The first default-keyring signature attempt failed because the sandbox could not open /Users/j/.gnupg/trustdb.gpg (Operation not permitted); its initial N status was not treated as signature evidence. Exporting the existing public certificate with --no-auto-check-trustdb --lock-never and importing it into a writable temporary GNUPGHOME resolved verification without changing the source repository or personal keyring.
+
+A read-only git ls-remote origin refs/heads/master refs/pull/306/head failed with 'Could not resolve host: github.com'. Therefore live GitHub PR metadata and the current remote branch tip were not independently refreshed. Approval covers the exact supplied head and the specified base. The fast-forward operation must still enforce its ancestry condition against the remote state at execution time; it must not force-push over an intervening divergent update.
+
+This review performed no merge, push, deployment, or production materialization. No application tests or build were needed for an identical-tree commit; validation directly covered commit topology, content identity, cryptographic signature and the two MATERIALIZE signature predicates. It does not claim that every production materialization or release gate has run.
+
+Command evidence
+Environment for the exact requested commands: GNUPGHOME=/private/tmp/review-yo306-gnupg-4jdpt6gw; GIT_CONFIG_GLOBAL=/dev/null; GIT_CONFIG_SYSTEM=/dev/null; GIT_OPTIONAL_LOCKS=0. Git 2.55.0 and GnuPG 2.5.21 were used. The earlier raw GnuPG verification also explicitly set --no-replace-objects, gpg.format=openpgp and gpg.program=/opt/homebrew/bin/gpg. No replace refs were present.
+
+$ git rev-parse HEAD
+exit: 0
+stdout:
+d06b7da00c22461d75d9e411ec4b731b596f7dfc
+stderr:
+(empty)
+
+$ git cat-file -p HEAD
+exit: 0
+stdout:
+tree 1dbe9ba099ad4cb2647131cc73322175cf7e6087
+parent 4c7c22c13015d56225741dcaf7314285895ecfa7
+author onesyue <47652916+onesyue@users.noreply.github.com> 1793687256 +0800
+committer onesyue <47652916+onesyue@users.noreply.github.com> 1793687256 +0800
+gpgsig -----BEGIN PGP SIGNATURE-----
+ 
+ iQIzBAABCgAdFiEEzvlumk7LdBx4Mpyj/iZZ5qx2mVQFAmrpftgACgkQ/iZZ5qx2
+ mVT2Mg/+MZ3FI/tVgol+CTuyotNA0wZR9pVJ07kTWAsJK1b+Dvwj+FX1tCNWDPAs
+ WXoKskqv+wTXXfneCW+EvWpg/zUhp/YxsdhSMXqc2vHkeMtNTolgh+O3G7TDdamC
+ guhDr8Y4Xf9ojhCQH/t6IB/WnQ+ao+KfY28PFUAzWdwwvd5vgPowTFyOaOnEQOxr
+ hXZ4amxNYa3N7w2bLUMEhDxSZK1mxZCHcLBczaw0iivLuuZL8cMaB/VSNjZSX0TU
+ pVqU7RRoATzNovzwq/YB3zdKd7kJYO2cKSSGV/OLJuRuaModvshwFqS8J1MpLMqk
+ GvcDB8SIGMfSNM3tx4cQZ0iPR59orGE0QeUyk7A+mj19eaCWyN/5qXKhJujM6qF8
+ ZvRPCPNA4cqiyrSYemuIoOfhIxDTqTD5A7LFo2nkVaEC0t8DWjRvIPRGnNTilldJ
+ qt8lLGbJi2lJHy+ApECFXDjmoWtqouGVoikSqOUGLhRZhRpz29zOzuCCaHXJvR/D
+ 1odBhKXnsPdVFHwixCRuHTEf8PoA7i23XRp+Vib9ZlXNBq7FTBBHAsWo2qGpXDSr
+ pf10Gw8wcNJHf2kX12IOiE7LS3A8O0n/oyBnNVdiNuWjtDJLs9AgCgiINyoaHtxm
+ 10thb5pN9mhttrXzagSgX4WBVEe8zJsQnsK35CdiujMXJnfbAUA=
+ =Z9Y2
+ -----END PGP SIGNATURE-----
+
+Signed fast-forward of master 4c7c22c1 (#303/#298) for release-root MATERIALIZE signer check
+stderr:
+(empty)
+
+$ git diff 4c7c22c1 HEAD
+exit: 0
+stdout:
+(empty)
+stderr:
+(empty)
+
+$ git log '--format=%G? %GK' -1
+exit: 0
+stdout:
+U FE2659E6AC769954
+stderr:
+(empty)
+
+$ git log --format=%GF -1
+exit: 0
+stdout:
+CEF96E9A4ECB741C78329CA3FE2659E6AC769954
+stderr:
+(empty)
+
+$ git rev-list --count 4c7c22c13015d56225741dcaf7314285895ecfa7..HEAD
+exit: 0
+stdout:
+1
+stderr:
+(empty)
+
+$ git rev-parse 'HEAD^' 'HEAD^{tree}' '4c7c22c13015d56225741dcaf7314285895ecfa7^{tree}'
+exit: 0
+stdout:
+4c7c22c13015d56225741dcaf7314285895ecfa7
+1dbe9ba099ad4cb2647131cc73322175cf7e6087
+1dbe9ba099ad4cb2647131cc73322175cf7e6087
+stderr:
+(empty)
+
+$ git merge-base --is-ancestor 4c7c22c13015d56225741dcaf7314285895ecfa7 d06b7da00c22461d75d9e411ec4b731b596f7dfc
+exit: 0
+stdout:
+(empty)
+stderr:
+(empty)
+
+$ git verify-commit d06b7da00c22461d75d9e411ec4b731b596f7dfc
+exit: 0
+stdout:
+(empty)
+stderr:
+gpg: Signature made Tue Nov  3 14:27:36 2026 +08
+gpg:                using RSA key CEF96E9A4ECB741C78329CA3FE2659E6AC769954
+gpg: Good signature from "onesyue <47652916+onesyue@users.noreply.github.com>" [unknown]
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+      D9D3C6E59E7465BD07C2177142239A996FDA9F55
+      CEF96E9A4ECB741C78329CA3FE2659E6AC769954
+
+Raw verification status:
+[GNUPG:] NEWSIG
+[GNUPG:] KEY_CONSIDERED D9D3C6E59E7465BD07C2177142239A996FDA9F55 0
+[GNUPG:] SIG_ID bfd1+1il1ipP4nKEXaeGlvGD8jg 2026-11-03 1793687256
+[GNUPG:] GOODSIG FE2659E6AC769954 onesyue <47652916+onesyue@users.noreply.github.com>
+[GNUPG:] VALIDSIG CEF96E9A4ECB741C78329CA3FE2659E6AC769954 2026-11-03 1793687256 0 4 0 1 10 00 D9D3C6E59E7465BD07C2177142239A996FDA9F55
+[GNUPG:] KEY_CONSIDERED D9D3C6E59E7465BD07C2177142239A996FDA9F55 0
+[GNUPG:] TRUST_UNDEFINED 0 pgp
+
+VERDICT: APPROVE

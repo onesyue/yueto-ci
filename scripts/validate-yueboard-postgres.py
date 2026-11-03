@@ -109,7 +109,7 @@ def run_group(paths: list[str], entries: list[dict]) -> dict:
     command = ['go', 'test', '-count=1', '-p', '1', '-tags', 'integration',
                '-run', pattern, '-json', '-v', *selected]
     print('+ ' + ' '.join(command), flush=True)
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, text=True)
     runs: dict[str, set[str]] = {package: set() for package in expected}
     passed: dict[str, set[str]] = {package: set() for package in expected}
     completed: set[str] = set()

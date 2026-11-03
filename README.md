@@ -383,6 +383,31 @@ JSON goes to stdout with `complete`, `findings`, and an `unregistered` count;
 text is the default. Unregistered findings exit **1**, clean or explicitly
 registered findings exit **0**.
 
+Remote evidence is cached under `~/.cache/yueto/merge-hygiene/`
+(override with `MERGE_HYGIENE_CACHE_DIR`), keyed by owner/repo, PR number and
+`merge_commit_sha` for immutable file comparisons. Reviews, checks and statuses
+remain mutable after merge, so every audit revalidates each evidence page and
+recomputes findings. Only the file comparison between the same base/head commit
+SHAs can skip its API request. Receipts, exception registrations, accepted-history
+baseline and activation policy are evaluated each run. Version 2 ignores the old
+version 1 verdict snapshots; unavailable evidence exits incomplete even with a
+warm cache. The cache contains private repository metadata and should remain
+local to the auditing user.
+
+GET responses (including each list page and the activation anchor) store ETags
+and bodies. Reruns send `If-None-Match`; authenticated 304 responses reuse the
+body without consuming the primary REST quota. Discovery and mutable evidence
+still make conditional requests, so a warm audit is not offline. Closed PRs are sorted by
+`updated` descending and pagination stops once a page is older than the effective
+cutoff, including the receipt-enforcement activation date.
+
+When `X-RateLimit-Remaining` falls below `MERGE_HYGIENE_RATE_FLOOR` (default
+`300`), the audit exits **2** with `incomplete: rate-floor`. HTTP 403/429 responses
+above that floor get at most two retries, honoring `Retry-After` and exhausted
+quota reset times, with 60/120-second fallback backoff. A wait exceeding five
+minutes exits incomplete instead of retrying early. HTTP and authentication
+diagnostics are never printed.
+
 Historical `merge-hygiene-exceptions.json` entries require
 `repo`, integer `pr`, nonempty `reason`, and `approver`; no wildcards. Exceptions
 remain visible in both output formats and must be reviewed as policy changes.
