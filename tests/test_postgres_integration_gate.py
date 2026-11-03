@@ -16,6 +16,7 @@ import tempfile
 import textwrap
 import unittest
 from unittest import mock
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'scripts' / 'validate-yueboard-postgres.py'
@@ -79,6 +80,92 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         script = self.root / GATE.COMMAND_GATE
         script.parent.mkdir(parents=True, exist_ok=True)
         script.write_text('#!/usr/bin/env bash\nset -euo pipefail\n' + body + '\n')
+
+    def offline_dependency(self):
+        """Serve a real module from disk with a fresh module cache, without network access."""
+        proxy = self.root / 'proxy'
+        version = proxy / 'gate.example/dependency/@v'
+        version.mkdir(parents=True)
+        module = 'module gate.example/dependency\n\ngo 1.23\n'
+        (version / 'v1.0.0.mod').write_text(module)
+        (version / 'v1.0.0.info').write_text('{"Version":"v1.0.0","Time":"2020-01-01T00:00:00Z"}')
+        with zipfile.ZipFile(version / 'v1.0.0.zip', 'w') as archive:
+            archive.writestr('gate.example/dependency@v1.0.0/go.mod', module)
+            archive.writestr('gate.example/dependency@v1.0.0/value.go', 'package dependency\nconst Value = 1\n')
+        with (self.root / 'go.mod').open('a') as module_file:
+            module_file.write('\nrequire gate.example/dependency v1.0.0\n')
+        self.environment.update(
+            GOPROXY=proxy.as_uri(), GOSUMDB='off', GOPRIVATE='', GONOPROXY='', GONOSUMDB='',
+            GOVCS='*:off', GOTOOLCHAIN='local', GOTELEMETRY='off', GOFLAGS='-mod=mod',
+            GOMODCACHE=str(self.root / 'module-cache'), GOPATH=str(self.root / 'gopath'))
+        row = self.package(GATE.DOMAIN[0])
+        directory = self.root / row['path']
+        (directory / 'dependency.go').write_text(
+            'package fixture\nimport "gate.example/dependency"\nvar value = dependency.Value\n')
+        return row
+
+    def group_process(self, row):
+        # Capture the Python parent's stderr too: Go's inherited diagnostics must remain visible.
+        driver = ('import json, runpy, sys; gate = runpy.run_path(sys.argv[1]); '
+                  'row = json.loads(sys.argv[2]); gate["run_group"]([row["path"]], [row])')
+        return subprocess.run([sys.executable, '-c', driver, str(SCRIPT), json.dumps(row)],
+                              cwd=self.root, env=self.environment, capture_output=True, text=True, timeout=90,
+                              check=False)
+
+    def test_cold_and_warm_module_cache_keep_download_diagnostics_out_of_json(self):
+        row = self.offline_dependency()
+        notice = 'go: downloading gate.example/dependency v1.0.0'
+        for cache in ('cold', 'warm'):
+            with self.subTest(cache=cache):
+                result = self.group_process(row)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertNotIn(notice, result.stdout)
+                if cache == 'cold':
+                    self.assertIn(notice, result.stderr)
+                else:
+                    self.assertNotIn(notice, result.stderr)
+                receipt = json.loads(result.stdout.split('Integration execution: ', 1)[1])
+                self.assertEqual(receipt, {'packages': [row['path']], 'top_level_passed': 1,
+                                           'subtests_passed': 0, 'skipped': 0})
+
+    def test_cold_cache_still_rejects_failure_skip_missing_test_and_build_failure(self):
+        row = self.offline_dependency()
+        cases = [
+            ('failure', 't.Fatal("intentional failure")', ['TestConsumer'],
+             ['failed: ' + row['import_path'] + '/TestConsumer', 'go test exited 1']),
+            ('skip', 't.Skip("intentional skip")', ['TestConsumer'], ['skipped:']),
+            ('missing', 't.Log("consumer")', ['TestAbsent'], ['integration tests not run and passed']),
+            ('build', 'undefinedFixture()', ['TestConsumer'],
+             ['go test exited 1', 'no successful package completion']),
+        ]
+        for label, body, tests, diagnostics in cases:
+            with self.subTest(control=label):
+                self.environment['GOMODCACHE'] = str(self.root / ('module-cache-' + label))
+                selected = self.package(row['path'], body)
+                selected['tests'] = tests
+                result = self.group_process(selected)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('go: downloading gate.example/dependency v1.0.0', result.stderr)
+                self.assertNotIn('Integration execution:', result.stdout)
+                for diagnostic in diagnostics:
+                    self.assertIn(diagnostic, result.stderr)
+                if label == 'build':
+                    self.assertIn('undefinedFixture', result.stdout + result.stderr)
+
+    def test_non_json_stdout_rejected_despite_complete_success_events(self):
+        row = self.package(GATE.DOMAIN[0])
+        events = [{'Package': row['import_path'], 'Action': action, **fields}
+                  for action, fields in [('run', {'Test': 'TestConsumer'}),
+                                         ('pass', {'Test': 'TestConsumer'}), ('pass', {})]]
+        stream = 'unexpected stdout\n' + ''.join(json.dumps(event) + '\n' for event in events)
+        process = mock.Mock(stdout=io.StringIO(stream))
+        process.wait.return_value = 0
+        with mock.patch.object(GATE.subprocess, 'Popen', return_value=process):
+            result, output, error = self.run_group(row)
+        self.assertIsNone(result)
+        self.assertEqual(error, 'non-JSON Go test output')
+        self.assertIn('unexpected stdout', output)
+        process.wait.assert_called_once_with()
 
     def run_workflow_role(self, workflow, role):
         """Execute the real phase scripts in an isolated runner receipt directory."""
