@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "repo": "yueto-ci",
+  "pr": 155,
+  "head": "fb0b231f791716508bd758ed98675261a8e94b54",
+  "backfilled": false,
+  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "fb0b231f791716508bd758ed98675261a8e94b54", "artifact": "reviews/merge-receipts-20261103/yueto-ci-155.md", "reviewer": "codex", "reviewed_at": "2026-11-03T00:04:59Z"},
+  "parity": {"result": "pass", "head": "fb0b231f791716508bd758ed98675261a8e94b54", "command": "GOCACHE=/tmp/gocache python -m pytest -q -p no:cacheprovider tests (fixture commit.gpgsign=false)", "log_sha256": "791138a7adea4e02d944406def9834f1f3b9971d47e79d8e6292205ae11e4860", "ran_at": "2026-11-03T00:09:56Z", "runner": "box"}
+}

@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 234,
+  "head": "32a71094c4c6f082eb8b21cdd005731250dbd113",
+  "backfilled": false,
+  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "32a71094c4c6f082eb8b21cdd005731250dbd113", "artifact": "reviews/merge-receipts-20261103/yueops-234.md", "reviewer": "codex", "reviewed_at": "2026-11-03T00:05:25Z"},
+  "parity": {"result": "pass", "head": "32a71094c4c6f082eb8b21cdd005731250dbd113", "command": "cd site && pnpm install --frozen-lockfile && pnpm test && pnpm run build", "log_sha256": "852a3488310a096205b0fb6545e93b3979d44b1b123b054615b55218cc985c09", "ran_at": "2026-11-03T00:04:26Z", "runner": "box"}
+}
