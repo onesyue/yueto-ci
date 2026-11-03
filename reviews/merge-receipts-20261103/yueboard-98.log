@@ -1,0 +1,2030 @@
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /workspace/wt/yb-ext
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a19ece-482b-70b0-836e-a0c3908681c8
+--------
+user
+Independent reviewer for onesyue/yueboard at exact head 549525317f0d990b479b99263df0a8dfd9bd7a53. Review ONLY 'git diff origin/master...549525317f0d990b479b99263df0a8dfd9bd7a53'. Find correctness bugs, false pass/fail, secret/token/URL leakage, weakened tests, regressions to unrelated behaviour, user-visible text changes. Do not modify anything. End with:
+VERDICT: APPROVE|CHANGES
+FINDINGS: <list or none>
+codex
+I’ll read the repository guidance and review only the specified diff, without modifying anything.
+exec
+/bin/bash -lc 'pwd && cat CLAUDE.md && for f in ../AGENTS.md ../CLAUDE.md; do if test -f "$f"; then echo "$f"; cat "$f"; fi; done' in /workspace/wt/yb-ext
+ succeeded in 0ms:
+/workspace/wt/yb-ext
+# CLAUDE.md
+
+Guidance for engineering agents working in `onesyue/yueboard`, an independent
+repository in the Yue.to workspace. Read `../CLAUDE.md` for workspace rules.
+Commit and push this repository separately.
+
+## Purpose and compatibility
+
+**Native Go control plane for Yue.to.** The strangler rewrite originated from
+Xboard, but production Xboard was retired on 2026-07-23. There is no PHP process,
+container or fallback. PostgreSQL uses native names such as `users`, `orders`,
+`plugins` and `settings`. Released clients retain the compatible HTTP wire
+contract in `docs/api-contract.md`.
+
+1. **Preserve client contracts.** The v1 envelope remains
+   `{status,message,data,error}` through `internal/platform/apiresp` where that
+   contract applies. Authentication rejection must be HTTP 403 with non-HTML
+   JSON: clients use non-HTML 401/403 responses to detect logout. Check the
+   contract's endpoint-specific exceptions before changing responses.
+2. **Never restore the retired panel fallback.** `internal/platform/fallback`
+   was deleted and legacy fallback environment variables are unsupported.
+   Unmatched routes use the anti-GFW decoy/404 behavior. Implement missing
+   business endpoints natively with contract coverage.
+
+## Commands
+
+```sh
+go run ./cmd/yueboard          # :8080; health-only mode without DATABASE_URL
+go build ./... && go vet ./...
+go test ./...
+go test ./internal/modules/emby/...
+go test ./internal/modules/emby/ -run TestToUsername -v
+gofmt -w <file>
+```
+
+## PostgreSQL integration tests
+
+Integration tests use in-process `httptest` servers and a real PostgreSQL schema
+fixture derived from production `pg_dump`. They catch execution-only errors such
+as ambiguous columns, unused INSERT parameters and pgx fatal-close on mismatched
+types. Fixtures include PG17/18 `transaction_timeout`, requiring PostgreSQL 17+.
+The actual CI environment uses PostgreSQL 18.
+
+```sh
+YUEBOARD_TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5432/yueboard_test \
+  go test -tags integration -v ./test/integration/...
+```
+
+**That command does not cover the module integration suites.** `nodesync`,
+`emby`, `handoff`, `deviceidentity`, `user`, `referencelock`, `order`, `db` and
+`nativeproto` require their own coverage. Missing DSNs can call `t.Skip` while
+`go test` still prints `ok`; inspect actual verbose run/pass/skip events.
+`TestClonedReportOutboxCannotDoubleBill` and the billing-report cases are among
+the critical tests outside `./test/integration/`.
+
+The public central runner owns the current sequencing. Run domain fixtures on
+a fresh PostgreSQL service, the clean-PG gate in an independent fresh database
+of the same cluster, module suites serially, then full db/nativeproto migrations
+and production-scale cases. Earlier migrations can create roles that hide a
+fixture-initialization defect. `deviceidentity` and `nodesync` rebuild `public`
+and must follow consumers of the full fixture.
+
+For a targeted module run against an explicitly disposable database:
+
+```sh
+YUEBOARD_TRAFFIC_TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5432/yueboard_test \
+YUEBOARD_TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5432/yueboard_test \
+YUEBOARD_EMAILVERIFY_TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5432/yueboard_test \
+YUEBOARD_TEST_FIXTURES=$PWD/test/fixtures \
+YUEBOARD_MIGRATION_TEST_ALLOW_RESET=YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE \
+  go test -count=1 -p 1 -tags integration -v \
+    ./internal/modules/user ./internal/platform/referencelock \
+    ./internal/modules/order ./internal/modules/emby ./internal/modules/handoff \
+    ./internal/platform/deviceidentity ./internal/modules/nodesync
+```
+
+`user` and `referencelock` were missing from all commands before 2026-09-21.
+`nativeproto` uses the migration DSN. `internal/platform/toolchain`'s
+`TestEveryIntegrationPackageRunsInCI` detects integration packages omitted from
+CI orchestration. A successful package line alone is insufficient.
+
+Migration tests need separate explicit inputs:
+
+```sh
+YUEBOARD_MIGRATION_TEST_DATABASE_URL=postgres://postgres:pw@127.0.0.1:5432/yueboard_test \
+YUEBOARD_MIGRATION_TEST_ALLOW_RESET=YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE \
+YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE=1 \
+  go test -count=1 -tags integration -v ./internal/platform/db ./internal/platform/nativeproto
+```
+
+These tests are destructive (`DROP SCHEMA public CASCADE`). Use the native
+runner's ordering or a separate disposable database, never production.
+`TestNativeMigrationsProductionScaleOnPostgres` executes the complete goose
+chain from zero, including the approximately 1.1-million-row scale fixture.
+`TestNativeMigrationsOnPostgres` checks a selected chain's ACL, trigger and
+catalog semantics. An ACL migration requires updated semantic assertions, not
+just adding its filename. The 2026-08-12 `emby_launch_audit` permission failure
+exposed the cost of skipped real PostgreSQL migration tests.
+
+The shared integration account/server also shares the checkout rate limiter.
+Production defaults to ten checkouts per user per minute. `TestMain` defaults
+`YUEBOARD_CHECKOUT_RATE_LIMIT_PER_MINUTE` to `10000` before `bootHandler`, unless
+the caller sets it, to prevent unrelated later cases receiving 429. Keep the
+production default protected by `checkout_rate_limit_default_test.go`.
+`t.Setenv` inside a test cannot reconfigure a limiter already read by `order.New`.
+
+Use workspace `../scripts/run-yueboard-pg18-gauntlet.sh` when no suitable local
+PostgreSQL is running. It uses disposable `postgres:18.6-alpine`, a pool size of
+four and automatic container cleanup. Do not run heavy tests on the bastion:
+it has been CPU-steal constrained since the dated 2026-10-11 observation.
+Clean up disposable containers, binaries and accounts. Production database
+inspection remains read-only; never use it for destructive tests.
+
+## Architecture
+
+The backend is a modular monolith using chi and pgx/pgxpool, with no ORM.
+
+- `internal/modules/<mod>/`: business domains with `New(pool, st, ...)` and
+  `Routes(chi.Router)`. Do not import another business module.
+- `internal/platform/<pkg>/`: shared `db`, `auth`, `settings`, `apiresp`, `mail`,
+  `verify`, `metrics`, `antigfw`, `resource` and `apptime` infrastructure.
+- `internal/server/server.go`: composition only. Middleware order matters:
+  `antigfw.Harden` first (`Server: nginx`), then `RealIP`,
+  `antigfw.TarpitMiddleware`, RequestID, Recoverer and metrics.
+- `cmd/yueboard/main.go`: constructs `server.Deps`. Wire new modules here and
+  mirror the wiring in `test/integration/harness_test.go::bootHandler`.
+  `deps.Extra` is for `/api`; `deps.Root` is for root endpoints.
+
+User modules mount only under `/api/v1/*`, using relative paths such as
+`/user/emby` in `Routes`. `/api/v2/*` contains the admin group and subscription
+aliases, not user APIs. `TestAdminRoutesGuarded` protects that boundary after
+stale dual-prefix guidance was corrected on 2026-09-05.
+
+Admin traffic uses `/api/v2/{secure_path}/*` inside the `/api` group, never the
+root group. The production secure path exists only in settings; do not record
+it in source. Subscription delivery and node synchronization use `deps.Root`.
+For explicitly parallel development, each worker owns its package; the main
+integrator alone wires `main.go` and `harness_test.go`.
+
+## Schema and generated data access
+
+- Goose migrations live in `internal/platform/db/migrations/*.sql` and are
+  embedded. Run `yueboard migrate up|down|status`; service startup does not
+  auto-migrate. `adoptBaseline` recognizes existing `users` and stamps version
+  1 without rerunning 00001. Actual column conversion begins at 00002.
+- Named SQL in `internal/modules/<mod>/queries/` generates that module's `store/`
+  via sqlc. Never hand-edit generated code or import another module's store.
+  Shared `plugins`, `settings` and `personal_access_tokens` stores belong in
+  the corresponding platform package.
+- Unmarked migrations must expand: add tables, nullable/defaulted columns,
+  indexes, functions or grants. `DROP TABLE|COLUMN|FUNCTION`, `RENAME`,
+  `ALTER … TYPE` and `SET NOT NULL` without a default require
+  `-- +yue contract-of: NNNNN` at the Up header, with NNNNN no greater than the
+  deployed `schema-compat.txt` floor. Advance that floor only after actual
+  successful deployment. `make check-migrations`, PG18 integration and runtime
+  `migrate up` enforce the same rule. The exemption set is capped at 83.
+- `test/fixtures/schema.sql` is the shared real-DDL source for sqlc and
+  integration. Update it with column migrations. `make generate` pins sqlc;
+  `make check-generated` rejects regeneration drift. Query native nullable
+  timestamps, preserve NULL through pgtype and convert epochs at response time.
+- Keep `resource.PlanResource`, `apptime` (Asia/Shanghai), the v1 envelope and
+  403-JSON logout semantics, and anti-GFW nginx-404 behavior. These are client
+  and domain contracts, not disposable PHP migration leftovers. A future owned
+  `/api/v3` requires coordinated client/token migration, separate from schema work.
+
+## Required workspace skills
+
+Do not split this file merely to reduce its apparent size; shared procedures
+already live in the workspace `.claude/skills/` and are linked for both agents.
+
+- `pg-safety`: migrations, grants, role manifests, cross-owner reads and monetary
+  eligibility. Required privileges exceed the statement verb: DELETE predicates
+  need SELECT, and `ON CONFLICT (a,b) DO UPDATE` needs table-level SELECT.
+- `release-chain`: default-branch pushes participate in the release process.
+- `guard-authoring`: guards, assertions and contract checks must detect faults.
+- Also use `node-lifecycle`, `fleet-diagnose`, `generated-blocks` and
+  `round-closeout` when their scope applies.
+
+## Incident lessons
+
+- pgx v5 `rows.Scan` type mismatches call `rows.fatal()` and silently truncate
+  the rowset. Match real column types, including nullable values and floating
+  monetary columns. Real-schema integration is essential.
+- Plugin configuration is JSON text in `plugins.config`, not `settings`.
+  `invitealias`/`emby` use `SELECT is_enabled, config FROM plugins WHERE code=$1`
+  with a 60-second process cache. Preserve permissive legacy bool/integer forms
+  such as `true`, `1`, `"1"` and `"3"` where the existing contract requires them.
+- PHP `preg_replace` without `/u` operates on bytes; Go regexp operates on runes.
+  `emby.toUsername` uses a byte loop for compatibility. Derived keys/hashes must
+  preserve the original `config('app.key')` string, including `base64:`. Compare
+  PHP `hash_hmac` output and verify the real external-service consumer.
+- Prefix package-level identifiers within modules (`ce`, `ia`, `emby`, etc.) to
+  avoid cross-file and future package-merging collisions.
+
+## Anti-GFW behavior
+
+Read `docs/anti-gfw.md` before changing `internal/platform/antigfw`. Active
+probing motivates `Server: nginx`, nginx-404 responses for invalid unauthenticated
+subscription/node tokens, probe-IP tarpits and optional `YUEBOARD_DECOY_HTML`.
+Do not expose endpoint fingerprints such as `token is error`.
+**API requests carrying Authorization still require JSON 403 for client logout.**
+Decoy 404 applies to unauthenticated subscription/node/unmatched routes.
+
+## Canonical node contract
+
+`proto/yuenode/v1/yuenode.proto` is canonical. The Node copy is an exact mirror,
+protected by `proto/CANONICAL.sha256`, `scripts/sync-proto.sh` and Go tests.
+Change Board first, synchronize Node, run `buf generate` on both sides and
+commit proto plus generated code in each repository. Ordinary builds consume
+tracked generated code and do not require buf.
+
+`scripts/ci/proto-gate.sh` runs lint and breaking checks against
+`proto/breaking-baseline.binpb`. Additive fields/RPCs are permitted. A wire break
+requires upgrading the complete affected fleet before accepting a new baseline
+with `--accept-baseline` and recording the rationale. Do not copy an old fleet
+count from this document. Divergent `machine_id` comments once gave the two
+proto files and generated code three meanings despite identical field numbers;
+green compilation does not prove semantic agreement.
+
+## References
+
+- `docs/architecture.md`: architecture decisions and deployment shape.
+- `docs/api-contract.md`: production v1 wire contract.
+- `docs/anti-gfw.md`, `docs/observability.md`, `deploy/README.md`.
+- `docs/pgo.md`: profile refresh/merge and freshness gates.
+- Workspace `../docs/privatization-roadmap.md`: roadmap and migration history.
+
+exec
+/bin/bash -lc 'git status --short && git rev-parse HEAD origin/master && git diff --stat origin/master...549525317f0d990b479b99263df0a8dfd9bd7a53' in /workspace/wt/yb-ext
+ succeeded in 0ms:
+549525317f0d990b479b99263df0a8dfd9bd7a53
+f7102350a149d4dbcb72ea212596a86f12ddca21
+ go.mod                                             |  1 +
+ go.sum                                             |  2 +
+ internal/modules/admin/plugin_nodeext.go           | 61 +++++++++++++++
+ internal/modules/admin/plugin_nodeext_test.go      | 30 ++++++++
+ internal/modules/admin/plugin_speedlimit.go        |  3 +
+ internal/modules/nodeext/clash.go                  |  7 ++
+ internal/modules/nodeext/clash_test.go             |  2 +-
+ internal/modules/nodeext/fetch_test.go             |  6 +-
+ internal/modules/nodeext/nodeext.go                | 21 ++---
+ internal/modules/nodeext/nodeext_test.go           | 14 ++--
+ internal/modules/nodeext/validation_test.go        | 90 ++++++++++++++++++++++
+ internal/modules/subscribe/subscribe_clash.go      |  1 +
+ .../subscribe/yaml_string_roundtrip_test.go        | 77 ++++++++++++++++++
+ internal/modules/subscribe/yaml_value_node.go      | 26 +++++++
+ internal/platform/nodecredential/uuid.go           | 23 ++++++
+ 15 files changed, 344 insertions(+), 20 deletions(-)
+
+exec
+/bin/bash -lc 'git diff origin/master...549525317f0d990b479b99263df0a8dfd9bd7a53' in /workspace/wt/yb-ext
+ succeeded in 0ms:
+diff --git a/go.mod b/go.mod
+index 5ddf3386..06b3ddc1 100644
+--- a/go.mod
++++ b/go.mod
+@@ -35,6 +35,7 @@ require (
+ 	golang.org/x/text v0.43.0
+ 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261005182115-fad411399dd8
+ 	google.golang.org/protobuf v1.36.12
++	gopkg.in/yaml.v3 v3.0.1
+ )
+ 
+ require (
+diff --git a/go.sum b/go.sum
+index 69caa113..ca10bc51 100644
+--- a/go.sum
++++ b/go.sum
+@@ -174,6 +174,8 @@ google.golang.org/protobuf v1.36.12 h1:pJOKDDOyeXErUroCihFAd5LQuwXBSpVnKGrj5o/fw
+ google.golang.org/protobuf v1.36.12/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
+ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
++gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
++gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+ modernc.org/libc v1.75.6 h1:yKk8qo+Di4gkmvRboK8ocCqH22FiUCR6jRy2OwtCRus=
+ modernc.org/libc v1.75.6/go.mod h1:bO5o2ztHxBb2rjz0PgdHN0sSMw57CgxGFLZ3Qd/QpVQ=
+ modernc.org/mathutil v1.7.1 h1:GCZVGXdaN8gTqB1Mf/usp1Y/hSqgI2vAGGP4jZMCxOU=
+diff --git a/internal/modules/admin/plugin_nodeext.go b/internal/modules/admin/plugin_nodeext.go
+new file mode 100644
+index 00000000..de4eef75
+--- /dev/null
++++ b/internal/modules/admin/plugin_nodeext.go
+@@ -0,0 +1,61 @@
++package admin
++
++import (
++	"encoding/json"
++	"fmt"
++
++	"github.com/onesyue/yueboard/internal/platform/nodecredential"
++)
++
++// Validate only submitted local nodes; remote imports are checked on load.
++func plValidateExternalNodes(patch map[string]any) error {
++	raw, exists := patch["local_nodes"]
++	if !exists || raw == nil || raw == "" || raw == "0" {
++		return nil
++	}
++	text, ok := raw.(string)
++	if !ok {
++		return fmt.Errorf("local_nodes must contain a JSON array or object")
++	}
++	var decoded any
++	if err := json.Unmarshal([]byte(text), &decoded); err != nil {
++		return fmt.Errorf("local_nodes must contain valid JSON")
++	}
++	var items []any
++	switch v := decoded.(type) {
++	case []any:
++		items = v
++	case map[string]any:
++		for _, item := range v {
++			items = append(items, item)
++		}
++	default:
++		return fmt.Errorf("local_nodes must contain a JSON array or object")
++	}
++	changed := false
++	for i, item := range items {
++		node, ok := item.(map[string]any)
++		if !ok {
++			return fmt.Errorf("local_nodes entry %d must be an object", i+1)
++		}
++		typ, _ := node["type"].(string)
++		password, _ := node["password"].(string)
++		normalized, err := nodecredential.Normalize(typ, password)
++		if err != nil {
++			return fmt.Errorf("local_nodes entry %d: %w", i+1, err)
++		}
++		if normalized != password {
++			node["password"] = normalized
++			changed = true
++		}
++	}
++	if !changed {
++		return nil
++	}
++	encoded, err := json.Marshal(decoded)
++	if err != nil {
++		return err
++	}
++	patch["local_nodes"] = string(encoded)
++	return nil
++}
+diff --git a/internal/modules/admin/plugin_nodeext_test.go b/internal/modules/admin/plugin_nodeext_test.go
+new file mode 100644
+index 00000000..e2a1be67
+--- /dev/null
++++ b/internal/modules/admin/plugin_nodeext_test.go
+@@ -0,0 +1,30 @@
++package admin
++
++import (
++	"context"
++	"encoding/json"
++	"strings"
++	"testing"
++)
++
++func TestExternalNodeSaveValidation(t *testing.T) {
++	for _, typ := range []string{"vless", "vmess", "tuic", "hysteria"} {
++		for _, credential := range []string{"", "invalid", "AABBCCDD1234456789AB123456789ABC"} {
++			t.Run(typ+"/"+credential, func(t *testing.T) {
++				raw, _ := json.Marshal([]any{map[string]any{"type": typ, "password": credential}})
++				patch := map[string]any{"local_nodes": string(raw)}
++				err := (&Module{}).plValidateConfigPatch(context.Background(), "node_ext", patch)
++				valid := typ == "hysteria" || len(credential) == 32
++				if (err == nil) != valid {
++					t.Fatalf("error = %v", err)
++				}
++				if !valid && !strings.Contains(err.Error(), "UUID") {
++					t.Fatalf("unclear error: %v", err)
++				}
++				if valid && typ != "hysteria" && !strings.Contains(patch["local_nodes"].(string), "aabbccdd-1234-4567-89ab-123456789abc") {
++					t.Fatal("save did not normalize UUID")
++				}
++			})
++		}
++	}
++}
+diff --git a/internal/modules/admin/plugin_speedlimit.go b/internal/modules/admin/plugin_speedlimit.go
+index 5fc5bb76..f7fd92ce 100644
+--- a/internal/modules/admin/plugin_speedlimit.go
++++ b/internal/modules/admin/plugin_speedlimit.go
+@@ -37,6 +37,9 @@ import (
+ // 返回的 error 会作为 422 的用户可见文案，所以每个校验器的报错都必须写给
+ // 管理员看（包含能直接修复配置的提示，绝不回显 secret）。
+ func (m *Module) plValidateConfigPatch(ctx context.Context, code string, patch map[string]any) error {
++	if code == "node_ext" {
++		return plValidateExternalNodes(patch)
++	}
+ 	if code != speedpolicy.PluginCode && code != "invite_alias" {
+ 		return nil
+ 	}
+diff --git a/internal/modules/nodeext/clash.go b/internal/modules/nodeext/clash.go
+index 2f59df99..49ad9746 100644
+--- a/internal/modules/nodeext/clash.go
++++ b/internal/modules/nodeext/clash.go
+@@ -8,6 +8,8 @@ import (
+ 	"strings"
+ 
+ 	"go.yaml.in/yaml/v3"
++
++	"github.com/onesyue/yueboard/internal/platform/nodecredential"
+ )
+ 
+ var neClashSupportedTypes = map[string]bool{
+@@ -54,6 +56,11 @@ func neConvertClashProxies(proxies []any) []Node {
+ 			Rate:     "1.00",
+ 			Tags:     []string{"clash"},
+ 		}
++		credential, err := nodecredential.Normalize(n.Type, n.Password)
++		if err != nil {
++			continue
++		}
++		n.Password = credential
+ 		switch typ {
+ 		case "vless":
+ 			// Clash 类型名是 vless 仍不够：生产节点形态固定为 TCP + Reality + Vision。
+diff --git a/internal/modules/nodeext/clash_test.go b/internal/modules/nodeext/clash_test.go
+index ca82c69b..4966f9e7 100644
+--- a/internal/modules/nodeext/clash_test.go
++++ b/internal/modules/nodeext/clash_test.go
+@@ -132,7 +132,7 @@ func TestClashDataGetNullDoesNotFallBackToUUID(t *testing.T) {
+ 		"password": nil, "uuid": "fallback-must-not-be-used", "network": "tcp", "tls": true,
+ 		"flow": "xtls-rprx-vision", "reality-opts": map[string]any{"public-key": "PBK"},
+ 	}})
+-	if len(got) != 1 || got[0].Password != "" {
++	if len(got) != 0 {
+ 		t.Fatalf("present null password must not fall back to uuid: %#v", got)
+ 	}
+ }
+diff --git a/internal/modules/nodeext/fetch_test.go b/internal/modules/nodeext/fetch_test.go
+index 4155eb5c..eccd3327 100644
+--- a/internal/modules/nodeext/fetch_test.go
++++ b/internal/modules/nodeext/fetch_test.go
+@@ -30,7 +30,7 @@ func TestAPINodesOK(t *testing.T) {
+ 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+ 		gotUA = r.Header.Get("User-Agent")
+ 		gotQuery = r.URL.RawQuery
+-		w.Write([]byte(`[{"name":"api1","type":"vless","host":"h.example.com","port":443,"password":"u"}]`))
++		w.Write([]byte(`[{"name":"api1","type":"vless","host":"h.example.com","port":443,"password":"aabbccdd-1234-4567-89ab-123456789abc"}]`))
+ 	}))
+ 	defer srv.Close()
+ 
+@@ -258,14 +258,14 @@ func TestExtraServersMergeOrder(t *testing.T) {
+ 	}))
+ 	defer clashSrv.Close()
+ 	apiSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+-		w.Write([]byte(`[{"name":"a1","type":"vless","host":"a.example.com","port":443}]`))
++		w.Write([]byte(`[{"name":"a1","type":"vless","host":"a.example.com","port":443,"password":"aabbccdd-1234-4567-89ab-123456789abc"}]`))
+ 	}))
+ 	defer apiSrv.Close()
+ 
+ 	m := New(nil, nil)
+ 	got := m.extraServers(context.Background(), neConfig{
+ 		Enable:        true,
+-		LocalNodes:    `[{"name":"l1","type":"vless","host":"l.example.com","port":443}]`,
++		LocalNodes:    `[{"name":"l1","type":"vless","host":"l.example.com","port":443,"password":"aabbccdd-1234-4567-89ab-123456789abc"}]`,
+ 		ClashSubURL:   clashSrv.URL,
+ 		APIURL:        apiSrv.URL,
+ 		ClashCacheTTL: 600,
+diff --git a/internal/modules/nodeext/nodeext.go b/internal/modules/nodeext/nodeext.go
+index 86e17c78..2d393e51 100644
+--- a/internal/modules/nodeext/nodeext.go
++++ b/internal/modules/nodeext/nodeext.go
+@@ -27,16 +27,18 @@ package nodeext
+ import (
+ 	"context"
+ 	"encoding/json"
+-	"github.com/onesyue/yueboard/internal/platform/upstream"
+ 	"log/slog"
++	"strings"
+ 	"sync"
+ 	"time"
+ 
+ 	"github.com/jackc/pgx/v5/pgxpool"
+ 
+ 	"github.com/onesyue/yueboard/internal/platform/metrics"
++	"github.com/onesyue/yueboard/internal/platform/nodecredential"
+ 	"github.com/onesyue/yueboard/internal/platform/pluginconfig"
+ 	"github.com/onesyue/yueboard/internal/platform/safego"
++	"github.com/onesyue/yueboard/internal/platform/upstream"
+ )
+ 
+ // Node 是 Xboard「系统节点数组」形状的强类型版。subscribe 模块接线时转换为内部 serverRow;
+@@ -174,7 +176,7 @@ func neDecodeJSONList(data []byte) ([]any, bool) {
+ 
+ // neNormalizeNodes 对齐 normalizeNodes:逐条校验并转为强类型 Node,上限 neMaxNodes 条。
+ //   - name/type 任一 empty()(缺失/null/false/0/"0"/"")→ 跳过;
+-//   - port 键存在且非 null(isset)→ (int) 后须在 1..65535,否则跳过;缺失则 Port=0;
++//   - A non-empty host, port in 1..65535 and valid UUID credentials are required.
+ //   - tags 非数组 → []。
+ func neNormalizeNodes(items []any) []Node {
+ 	nodes := make([]Node, 0, min(len(items), neMaxNodes))
+@@ -186,12 +188,13 @@ func neNormalizeNodes(items []any) []Node {
+ 		if !nePHPTruthy(node["name"]) || !nePHPTruthy(node["type"]) { // empty() 检查
+ 			continue
+ 		}
+-		port := 0
+-		if pv, exists := node["port"]; exists && pv != nil { // isset():null 视同未设
+-			port = neToInt(pv)
+-			if port < 1 || port > 65535 {
+-				continue
+-			}
++		port := neToInt(node["port"])
++		if port < 1 || port > 65535 || strings.TrimSpace(neToString(node["host"])) == "" {
++			continue
++		}
++		password, err := nodecredential.Normalize(neToString(node["type"]), neToString(node["password"]))
++		if err != nil {
++			continue
+ 		}
+ 		var tags []string
+ 		switch tv := node["tags"].(type) {
+@@ -213,7 +216,7 @@ func neNormalizeNodes(items []any) []Node {
+ 			Name:     neToString(node["name"]),
+ 			Host:     neToString(node["host"]),
+ 			Port:     port,
+-			Password: neToString(node["password"]),
++			Password: password,
+ 			Rate:     "1.00",
+ 			Tags:     tags,
+ 		}
+diff --git a/internal/modules/nodeext/nodeext_test.go b/internal/modules/nodeext/nodeext_test.go
+index 7182f415..ba9cfa38 100644
+--- a/internal/modules/nodeext/nodeext_test.go
++++ b/internal/modules/nodeext/nodeext_test.go
+@@ -27,13 +27,13 @@ func TestLocalNodesParse(t *testing.T) {
+ 	m := New(nil, nil)
+ 	got := m.localNodes(neConfig{LocalNodes: `[
+ 		{"name":"n1","type":"vless","host":"h1.example.com","port":443,
+-		 "password":"pw","rate":"2.50","tags":["ext",1],
++		 "password":"aabbccdd-1234-4567-89ab-123456789abc","rate":"2.50","tags":["ext",1],
+ 		 "protocol_settings":{"network":"tcp","tls":2,"flow":"xtls-rprx-vision"}},
+ 		{"name":"n2","type":"hysteria","host":"h2.example.com","port":"8443",
+ 		 "protocol_settings":{"version":2}}
+ 	]`})
+ 	want := []Node{
+-		{Type: "vless", Name: "n1", Host: "h1.example.com", Port: 443, Password: "pw",
++		{Type: "vless", Name: "n1", Host: "h1.example.com", Port: 443, Password: "aabbccdd-1234-4567-89ab-123456789abc",
+ 			Rate: "2.50", Tags: []string{"ext", "1"},
+ 			ProtocolSettings: map[string]any{"network": "tcp", "tls": float64(2), "flow": "xtls-rprx-vision"}},
+ 		{Type: "hysteria", Name: "n2", Host: "h2.example.com", Port: 8443, Rate: "1.00", Tags: []string{},
+@@ -46,7 +46,7 @@ func TestLocalNodesParse(t *testing.T) {
+ 
+ func TestNormalizeNodesBounds(t *testing.T) {
+ 	mk := func(kv ...any) map[string]any {
+-		m := map[string]any{}
++		m := map[string]any{"host": "example.com"}
+ 		for i := 0; i < len(kv); i += 2 {
+ 			m[kv[i].(string)] = kv[i+1]
+ 		}
+@@ -62,8 +62,8 @@ func TestNormalizeNodesBounds(t *testing.T) {
+ 		{"端口越界", mk("name", "a", "type", "t", "port", float64(65536)), false},
+ 		{"负端口", mk("name", "a", "type", "t", "port", float64(-1)), false},
+ 		{"字符串端口", mk("name", "a", "type", "t", "port", "8080"), true},
+-		{"端口 null(isset 为假,不校验)", mk("name", "a", "type", "t", "port", nil), true},
+-		{"无端口", mk("name", "a", "type", "t"), true},
++		{"null port", mk("name", "a", "type", "t", "port", nil), false},
++		{"missing port", mk("name", "a", "type", "t"), false},
+ 		{"缺 name", mk("type", "t", "port", float64(80)), false},
+ 		{"缺 type", mk("name", "a", "port", float64(80)), false},
+ 		{"name 为 \"0\"(PHP empty)", mk("name", "0", "type", "t"), false},
+@@ -81,7 +81,7 @@ func TestNormalizeNodesBounds(t *testing.T) {
+ func TestNormalizeNodesCap500(t *testing.T) {
+ 	items := make([]any, 0, 600)
+ 	for i := range 600 {
+-		items = append(items, map[string]any{"name": fmt.Sprintf("n%d", i), "type": "vless"})
++		items = append(items, map[string]any{"name": fmt.Sprintf("n%d", i), "type": "vless", "host": "example.com", "port": 443, "password": "aabbccdd-1234-4567-89ab-123456789abc"})
+ 	}
+ 	got := neNormalizeNodes(items)
+ 	if len(got) != 500 {
+@@ -193,7 +193,7 @@ func TestExtraServersLocalOnly(t *testing.T) {
+ 	m := New(nil, nil)
+ 	got := m.extraServers(context.Background(), neConfig{
+ 		Enable:        true,
+-		LocalNodes:    `[{"name":"n1","type":"vless","host":"h","port":443}]`,
++		LocalNodes:    `[{"name":"n1","type":"vless","host":"h","port":443,"password":"aabbccdd-1234-4567-89ab-123456789abc"}]`,
+ 		ClashCacheTTL: 600,
+ 	}, 42)
+ 	if len(got) != 1 || got[0].Name != "n1" || got[0].Type != "vless" {
+diff --git a/internal/modules/nodeext/validation_test.go b/internal/modules/nodeext/validation_test.go
+new file mode 100644
+index 00000000..dc9e7e98
+--- /dev/null
++++ b/internal/modules/nodeext/validation_test.go
+@@ -0,0 +1,90 @@
++package nodeext
++
++import "testing"
++
++func TestExternalUUIDCredentials(t *testing.T) {
++	const canonical = "aabbccdd-1234-4567-89ab-123456789abc"
++	cases := []struct {
++		name, credential string
++		valid            bool
++	}{
++		{"canonical", canonical, true},
++		{"uppercase", "AABBCCDD-1234-4567-89AB-123456789ABC", true},
++		{"compact", "AABBCCDD1234456789AB123456789ABC", true},
++		{"empty", "", false}, {"arbitrary", "password", false},
++		{"bad hex", "zzbbccdd-1234-4567-89ab-123456789abc", false},
++		{"bad separator", "aabbccdd_1234-4567-89ab-123456789abc", false},
++		{"braces", "{" + canonical + "}", false}, {"urn", "urn:uuid:" + canonical, false},
++	}
++	for _, typ := range []string{"vless", "vmess", "tuic"} {
++		for _, tc := range cases {
++			t.Run(typ+"/"+tc.name, func(t *testing.T) {
++				node := map[string]any{"type": typ, "name": "test", "host": "example.com", "port": 443, "password": tc.credential}
++				got := neNormalizeNodes([]any{node})
++				if (len(got) == 1) != tc.valid {
++					t.Fatalf("nodes = %#v", got)
++				}
++				if tc.valid && got[0].Password != canonical {
++					t.Fatalf("credential = %q", got[0].Password)
++				}
++				if typ == "vless" {
++					proxy := map[string]any{"type": typ, "name": "test", "server": "example.com", "port": 443, "uuid": tc.credential, "network": "tcp", "tls": true, "flow": "xtls-rprx-vision", "reality-opts": map[string]any{"public-key": "PBK"}}
++					got = neConvertClashProxies([]any{proxy})
++					if (len(got) == 1) != tc.valid {
++						t.Fatalf("Clash nodes = %#v", got)
++					}
++					if tc.valid && got[0].Password != canonical {
++						t.Fatalf("Clash credential = %q", got[0].Password)
++					}
++				}
++			})
++		}
++	}
++}
++
++func TestExternalJSONEndpointsAndMixedList(t *testing.T) {
++	for _, tc := range []struct {
++		name  string
++		host  any
++		port  any
++		valid bool
++	}{
++		{"minimum", "example.com", 1, true}, {"maximum", "example.com", 65535, true},
++		{"string port", "example.com", "443", true}, {"missing host", nil, 443, false},
++		{"empty host", "", 443, false}, {"blank host", " \t", 443, false},
++		{"missing port", "example.com", nil, false}, {"zero", "example.com", 0, false},
++		{"negative", "example.com", -1, false}, {"overflow", "example.com", 65536, false},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			node := map[string]any{"name": "candidate", "type": "hysteria", "host": tc.host, "port": tc.port, "password": "not-a-uuid"}
++			good := map[string]any{"name": "good", "type": "trojan", "host": "example.com", "port": 443, "password": "arbitrary"}
++			got := neNormalizeNodes([]any{node, good})
++			want := 1
++			if tc.valid {
++				want++
++			}
++			if len(got) != want || got[len(got)-1].Name != "good" {
++				t.Fatalf("nodes = %#v", got)
++			}
++		})
++	}
++}
++
++func TestMalformedUUIDDoesNotDiscardValidNeighbors(t *testing.T) {
++	const credential = "aabbccdd-1234-4567-89ab-123456789abc"
++	var local, clash []any
++	for _, password := range []string{credential, "malformed", credential} {
++		local = append(local, map[string]any{"type": "vless", "name": "node", "host": "example.com", "port": 443, "password": password})
++		clash = append(clash, map[string]any{"type": "vless", "name": "node", "server": "example.com", "port": 443, "uuid": password, "tls": true, "flow": "xtls-rprx-vision", "reality-opts": map[string]any{"public-key": "PBK"}})
++	}
++	for source, nodes := range map[string][]Node{"JSON": neNormalizeNodes(local), "Clash": neConvertClashProxies(clash)} {
++		if len(nodes) != 2 {
++			t.Fatalf("%s kept %d nodes, want 2", source, len(nodes))
++		}
++		for _, node := range nodes {
++			if node.Password != credential {
++				t.Fatalf("%s retained bad credential", source)
++			}
++		}
++	}
++}
+diff --git a/internal/modules/subscribe/subscribe_clash.go b/internal/modules/subscribe/subscribe_clash.go
+index d73fe11a..74021086 100644
+--- a/internal/modules/subscribe/subscribe_clash.go
++++ b/internal/modules/subscribe/subscribe_clash.go
+@@ -165,6 +165,7 @@ func (m *Module) renderClashMeta(
+ 	// emitter). Substituting before Marshal lets the emitter quote as needed,
+ 	// and confines the replacement to scalars so anchors/aliases are untouched.
+ 	substituteYAMLScalars(doc, "$app_name", m.settings.Get(ctx, "app_name", "YueBoard"))
++	quoteSubscriptionStrings(doc)
+ 	out, err := yaml.Marshal(doc)
+ 	if err != nil {
+ 		return nil, err
+diff --git a/internal/modules/subscribe/yaml_string_roundtrip_test.go b/internal/modules/subscribe/yaml_string_roundtrip_test.go
+new file mode 100644
+index 00000000..8d393d44
+--- /dev/null
++++ b/internal/modules/subscribe/yaml_string_roundtrip_test.go
+@@ -0,0 +1,77 @@
++package subscribe
++
++import (
++	"context"
++	"strings"
++	"testing"
++
++	yaml "go.yaml.in/yaml/v3"
++	legacyyaml "gopkg.in/yaml.v3"
++)
++
++func TestSubscriptionStringQuoting(t *testing.T) {
++	for _, value := range []string{"6e43", "00000000", "1234", "0x1f", "true", "null", "1e5", "1e999", "0xffffffffffffffffffffffff", ".inf", "012", "yes", "NO", "on", "Off", "y", "N", "1:20", "2001-12-15", "ordinary"} {
++		t.Run(value, func(t *testing.T) {
++			for _, flow := range []bool{false, true} {
++				n, err := subscriptionValueNode(map[string]any{"value": value, "list": []string{value}, value: value})
++				if err != nil {
++					t.Fatal(err)
++				}
++				quoteSubscriptionStrings(n)
++				if flow {
++					n.Style = yaml.FlowStyle
++				}
++				out, err := yaml.Marshal(n)
++				if err != nil {
++					t.Fatal(err)
++				}
++				var got map[string]any
++				if err := legacyyaml.Unmarshal(out, &got); err != nil {
++					t.Fatal(err)
++				}
++				if got["value"] != value || got[value] != value || got["list"].([]any)[0] != value {
++					t.Fatalf("strings changed: %s", out)
++				}
++				if value != "ordinary" && !strings.Contains(string(out), `"`+value+`"`) {
++					t.Fatalf("ambiguous value unquoted: %s", out)
++				}
++			}
++		})
++	}
++}
++
++func TestRealityShortIDYAMLRoundTrip(t *testing.T) {
++	for _, family := range []string{"clash", "clashmeta", "stash"} {
++		for _, shortID := range []string{"6e43", "00000000"} {
++			t.Run(family+"/"+shortID, func(t *testing.T) {
++				m := entryTestModule(t, family, quicRejectTemplate)
++				row := vlessRealityRow()
++				row.Settings["reality_settings"].(map[string]any)["short_id"] = shortID
++				out, err := m.renderClashMeta(context.Background(), "sub.example", entrySubUser(), []*serverRow{row}, 0, family, false, false, connTagScope{})
++				if err != nil {
++					t.Fatal(err)
++				}
++				var doc struct {
++					Proxies []map[string]any `yaml:"proxies"`
++				}
++				if err := legacyyaml.Unmarshal(out, &doc); err != nil {
++					t.Fatal(err)
++				}
++				found := false
++				for _, proxy := range doc.Proxies {
++					if proxy["name"] != row.Name {
++						continue
++					}
++					found = true
++					reality, ok := proxy["reality-opts"].(map[string]any)
++					if !ok || reality["short-id"] != shortID {
++						t.Fatalf("short-id changed: %#v\n%s", proxy, out)
++					}
++				}
++				if !found {
++					t.Fatalf("proxy missing: %s", out)
++				}
++			})
++		}
++	}
++}
+diff --git a/internal/modules/subscribe/yaml_value_node.go b/internal/modules/subscribe/yaml_value_node.go
+index d49f36c9..1d12f8f7 100644
+--- a/internal/modules/subscribe/yaml_value_node.go
++++ b/internal/modules/subscribe/yaml_value_node.go
+@@ -1,8 +1,10 @@
+ package subscribe
+ 
+ import (
++	"regexp"
+ 	"slices"
+ 	"strconv"
++	"strings"
+ 
+ 	"go.yaml.in/yaml/v3"
+ )
+@@ -79,3 +81,27 @@ func subscriptionValueNode(value any) (*yaml.Node, error) {
+ 	}
+ 	return n, nil
+ }
++
++// YAML 1.1 also resolves legacy booleans and sexagesimal numbers, which the
++// YAML 1.2-oriented resolver does not recognize. Quote both dialects safely.
++// Include numeric overflow: some parsers resolve values beyond Go numeric limits.
++var subscriptionNumber = regexp.MustCompile(`^[+-]?(?:0[xX][0-9a-fA-F_]+|0[oO][0-7_]+|0[bB][01_]+|(?:[0-9][0-9_]*(?:\.[0-9_]*)?|\.[0-9_]+)(?:[eE][+-]?[0-9]+)?)$`)
++
++var subscriptionSexagesimal = regexp.MustCompile(`^[+-]?[0-9][0-9_]*(?::[0-5]?[0-9])+(?:\.[0-9_]*)?$`)
++
++func quoteSubscriptionStrings(n *yaml.Node) {
++	if n.Kind == yaml.ScalarNode && n.Tag == "!!str" {
++		implicit := yaml.Node{Kind: yaml.ScalarNode, Value: n.Value}
++		legacy := false
++		switch strings.ToLower(n.Value) {
++		case "y", "n", "yes", "no", "on", "off":
++			legacy = true
++		}
++		if implicit.ShortTag() != "!!str" || legacy || subscriptionNumber.MatchString(n.Value) || subscriptionSexagesimal.MatchString(n.Value) {
++			n.Style = yaml.DoubleQuotedStyle
++		}
++	}
++	for _, child := range n.Content {
++		quoteSubscriptionStrings(child)
++	}
++}
+diff --git a/internal/platform/nodecredential/uuid.go b/internal/platform/nodecredential/uuid.go
+new file mode 100644
+index 00000000..daaef9cc
+--- /dev/null
++++ b/internal/platform/nodecredential/uuid.go
+@@ -0,0 +1,23 @@
++// Package nodecredential validates credentials shared by external node imports and admin saves.
++package nodecredential
++
++import (
++	"fmt"
++	"strings"
++
++	"github.com/google/uuid"
++)
++
++// Normalize preserves password credentials and canonicalizes UUID credentials.
++func Normalize(typ, credential string) (string, error) {
++	switch strings.ToLower(typ) {
++	case "vless", "vmess", "tuic":
++		id, err := uuid.Parse(credential)
++		if err != nil || (len(credential) != 36 && len(credential) != 32) {
++			return "", fmt.Errorf("%s password must be a valid UUID (36-character canonical or 32 hexadecimal digits)", typ)
++		}
++		return id.String(), nil
++	default:
++		return credential, nil
++	}
++}
+
+exec
+/bin/bash -lc "ls -la ..; rg --files -g '*SKILL.md' -g AGENTS.md /workspace 2>/dev/null | head -60" in /workspace/wt/yb-ext
+ succeeded in 0ms:
+total 104
+drwxr-xr-x  21 box    box  4096 Nov  3 08:17 .
+drwxr-xr-x. 49 box    box 12288 Nov  3 08:13 ..
+drwxr-xr-x   4 box    box  4096 Nov  3 00:57 adm-0fde77c1
+drwxr-xr-x   8 box    box  4096 Nov  2 20:40 ci-pin
+drwxr-xr-x   6 nobody box  4096 Nov  2 15:43 nat-0e61718e
+-rw-r--r--   1 box    box   261 Nov  2 12:42 par-0cc.out
+drwxr-xr-x   4 box    box  4096 Nov  3 00:57 par-449ddfa0
+drwxr-xr-x   3 box    box  4096 Nov  3 00:57 val-
+-rw-r--r--   1 box    box   261 Nov  2 12:01 val-0cc.out
+drwxr-xr-x   4 box    box  4096 Nov  3 00:57 val-f3ced
+-rw-r--r--   1 box    box   309 Nov  2 11:49 val-f3ced.out
+drwxr-xr-x   4 box    box  4096 Nov  3 00:57 val-rv203
+drwxr-xr-x  14 box    box  4096 Nov  3 08:22 yb-ext
+drwxr-xr-x  14 box    box  4096 Nov  3 07:41 yb-p0
+drwxr-xr-x  10 box    box  4096 Nov  2 16:20 ylci-floor-159
+drwxr-xr-x  30 box    box  4096 Nov  2 22:20 yo-gate-anchor
+drwxr-xr-x  32 box    box  4096 Nov  3 08:27 yo-strict
+drwxr-xr-x  14 box    box  4096 Nov  2 17:48 yueboard-87x76
+drwxr-xr-x  15 box    box  4096 Nov  2 17:20 yueboard-p2ret
+drwxr-xr-x  14 box    box  4096 Nov  2 17:43 yueboard-p87
+drwxr-xr-x   3 box    box  4096 Nov  3 08:13 yueops-ai-exit-ipv4only
+drwxr-xr-x   5 box    box  4096 Nov  3 08:13 yueops-ai-exit-routing
+drwxr-xr-x  17 box    box  4096 Nov  2 22:20 yueto-box-lock-registry
+drwxr-xr-x  17 box    box  4096 Nov  2 22:20 yueto-gates-yt
+/workspace/rootg/.claude/skills/release-chain/SKILL.md
+/workspace/rootg/.claude/skills/change-blast-radius/SKILL.md
+/workspace/rootg/.claude/skills/round-closeout/SKILL.md
+/workspace/rootg/.claude/skills/guard-authoring/SKILL.md
+/workspace/rootg/.claude/skills/readonly-reconcile/SKILL.md
+/workspace/rootg/.claude/skills/yueto-orchestration/SKILL.md
+/workspace/rootg/.claude/skills/yueto-agent-maintenance/SKILL.md
+/workspace/rootg/.claude/skills/generated-blocks/SKILL.md
+/workspace/rootg/.claude/skills/node-lifecycle/SKILL.md
+/workspace/rootg/.claude/skills/release-readback/SKILL.md
+/workspace/rootg/.claude/skills/concurrent-git-safety/SKILL.md
+/workspace/rootg/.claude/skills/patrol/SKILL.md
+/workspace/rootg/.claude/skills/landed-not-written/SKILL.md
+/workspace/rootg/.claude/skills/pg-safety/SKILL.md
+/workspace/rootg/.claude/skills/fleet-diagnose/SKILL.md
+/workspace/rootg/.claude/skills/evidence-discipline/SKILL.md
+/workspace/rootg/AGENTS.md
+/workspace/wt-hk4hold/AGENTS.md
+/workspace/rootg/.grok/skills/dart-collect-coverage/SKILL.md
+/workspace/rootg/.grok/skills/dart-run-static-analysis/SKILL.md
+/workspace/rootg/.grok/skills/remotion-upgrade/SKILL.md
+/workspace/rootg/.grok/skills/remotion-studio/SKILL.md
+/workspace/rootg/.grok/skills/webapp-testing/SKILL.md
+/workspace/rootg/.grok/skills/dart-use-ffigen/SKILL.md
+/workspace/rootg/.grok/skills/flutter-build-responsive-layout/SKILL.md
+/workspace/rootg/.grok/skills/accessibility-scan/SKILL.md
+/workspace/rootg/.grok/skills/flutter-setup-localization/SKILL.md
+/workspace/rootg/.grok/skills/dart-setup-ffi-assets/SKILL.md
+/workspace/rootg/.grok/skills/web-design-guidelines/SKILL.md
+/workspace/rootg/.grok/skills/accessibility-inspect/SKILL.md
+/workspace/rootg/.grok/skills/golang-database/SKILL.md
+/workspace/rootg/.grok/skills/remotion-captions/SKILL.md
+/workspace/rootg/.grok/skills/dart-use-pattern-matching/SKILL.md
+/workspace/rootg/.grok/skills/flutter-apply-architecture-best-practices/SKILL.md
+/workspace/rootg/.grok/skills/dart-resolve-package-conflicts/SKILL.md
+/workspace/rootg/.grok/skills/supabase-postgres-best-practices/SKILL.md
+/workspace/rootg/.grok/skills/remotion-render/SKILL.md
+/workspace/rootg/.grok/skills/flutter-add-widget-test/SKILL.md
+/workspace/rootg/.grok/skills/golang-dependency-management/SKILL.md
+/workspace/rootg/.grok/skills/golang-gopls/SKILL.md
+/workspace/rootg/.grok/skills/accessibility-diff/SKILL.md
+/workspace/rootg/.grok/skills/dart-add-unit-test/SKILL.md
+/workspace/rootg/.grok/skills/dart-generate-test-mocks/SKILL.md
+/workspace/rootg/.grok/skills/dart-write-documentation/SKILL.md
+/workspace/rootg/.grok/skills/frontend-design/SKILL.md
+/workspace/wt/yueboard-p87/AGENTS.md
+/workspace/rootg/.grok/skills/accessibility-fix/SKILL.md
+/workspace/wt/yb-ext/AGENTS.md
+/workspace/rootg/.grok/skills/vercel-composition-patterns/SKILL.md
+/workspace/rootg/.grok/skills/remotion-markup/SKILL.md
+/workspace/rootg/.grok/skills/build-with-ai/SKILL.md
+/workspace/rootg/.grok/skills/component-entry/SKILL.md
+/workspace/rootg/.grok/skills/accessibility-audit/SKILL.md
+/workspace/rootg/.grok/skills/remotion-multimedia/SKILL.md
+/workspace/rootg/.grok/skills/vercel-react-best-practices/SKILL.md
+/workspace/rootg/.grok/skills/yueto-lsp/SKILL.md
+/workspace/rootg/.grok/skills/golang-grpc/SKILL.md
+/workspace/rootg/.grok/skills/golang-pkg-go-dev/SKILL.md
+/workspace/wt/yueboard-87x76/AGENTS.md
+/workspace/wt/yo-gate-anchor/AGENTS.md
+
+exec
+/bin/bash -lc "sed -n '1,260p' internal/modules/nodeext/clash.go; sed -n '120,270p' internal/modules/nodeext/nodeext.go; rg -n 'plValidateConfigPatch|local_nodes|case \"tuic\"|UUID' internal/modules/admin/plugin* internal/modules/subscribe/subscribe* | head -100; cat internal/modules/subscribe/yaml_value_node.go" in /workspace/wt/yb-ext
+ succeeded in 0ms:
+package nodeext
+
+// Clash proxies → 系统节点转换。生产导入面只接受原始 vless 与 hysteria2；
+// hysteria2 在系统内部归一化为 type=hysteria + protocol_settings.version=2。
+
+import (
+	"log/slog"
+	"strings"
+
+	"go.yaml.in/yaml/v3"
+
+	"github.com/onesyue/yueboard/internal/platform/nodecredential"
+)
+
+var neClashSupportedTypes = map[string]bool{
+	"hysteria2": true,
+	"vless":     true,
+}
+
+// neParseClashYAML 解析顶层 proxies；解析失败或字段形态错误均返回空。
+func neParseClashYAML(yamlText string) []any {
+	var doc map[string]any
+	if err := yaml.Unmarshal([]byte(yamlText), &doc); err != nil {
+		slog.Warn("nodeext: Clash YAML 解析失败", "err", err)
+		return nil
+	}
+	proxies, _ := doc["proxies"].([]any)
+	return proxies
+}
+
+// neConvertClashProxies 只转换生产协议；其余类型即使 YAML 合法也直接跳过。
+func neConvertClashProxies(proxies []any) []Node {
+	var result []Node
+	for _, raw := range proxies {
+		p, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		typ := strings.ToLower(neToString(neDataGet(p, "type", "")))
+		if !neClashSupportedTypes[typ] {
+			continue
+		}
+		name := neTrim(neToString(neDataGet(p, "name", "")))
+		host := neTrim(neToString(neDataGet(p, "server", "")))
+		port := neToInt(neDataGet(p, "port", 0))
+		if name == "" || host == "" || port < 1 || port > 65535 {
+			continue
+		}
+
+		n := Node{
+			Type:     typ,
+			Name:     name,
+			Host:     host,
+			Port:     port,
+			Password: neToString(neDataGet(p, "password", neDataGet(p, "uuid", ""))),
+			Rate:     "1.00",
+			Tags:     []string{"clash"},
+		}
+		credential, err := nodecredential.Normalize(n.Type, n.Password)
+		if err != nil {
+			continue
+		}
+		n.Password = credential
+		switch typ {
+		case "vless":
+			// Clash 类型名是 vless 仍不够：生产节点形态固定为 TCP + Reality + Vision。
+			if neClashCaseString(neDataGet(p, "network", "tcp")) != "tcp" ||
+				!nePHPTruthy(neDataGet(p, "tls", nil)) ||
+				!nePHPTruthy(neDataGet(p, "reality-opts", nil)) ||
+				neToString(neDataGet(p, "flow", "")) != "xtls-rprx-vision" {
+				continue
+			}
+			n.ProtocolSettings = neClashVless(p)
+		case "hysteria2":
+			n.Type = "hysteria"
+			n.ProtocolSettings = map[string]any{
+				"version": 2,
+				"bandwidth": map[string]any{
+					"up":   neDataGet(p, "up", nil),
+					"down": neDataGet(p, "down", nil),
+				},
+				"obfs": map[string]any{
+					"open":     nePHPTruthy(neDataGet(p, "obfs", nil)),
+					"type":     neDataGet(p, "obfs", "salamander"),
+					"password": neDataGet(p, "obfs-password", nil),
+				},
+				"tls": neClashTLSBlock(p),
+			}
+		}
+		result = append(result, n)
+	}
+	return result
+}
+
+// neClashVless 保留 Clash VLESS 字段映射；生产 DB 的最终形态由上层约束为
+// TCP + Reality + xtls-rprx-vision。
+func neClashVless(p map[string]any) map[string]any {
+	tls := 0
+	var tlsSettings, realitySettings any
+	if nePHPTruthy(neDataGet(p, "tls", nil)) {
+		if nePHPTruthy(neDataGet(p, "reality-opts", nil)) {
+			tls = 2
+			realitySettings = map[string]any{
+				"allow_insecure": neDataGet(p, "skip-cert-verify", false),
+				"server_name":    neDataGet(p, "servername", nil),
+				"public_key":     neDataGet(p, "reality-opts.public-key", nil),
+				"short_id":       neDataGet(p, "reality-opts.short-id", nil),
+			}
+		} else {
+			tls = 1
+			tlsSettings = map[string]any{
+				"allow_insecure": neDataGet(p, "skip-cert-verify", false),
+				"server_name":    neDataGet(p, "servername", nil),
+			}
+		}
+	}
+	return map[string]any{
+		"flow":             neDataGet(p, "flow", nil),
+		"network":          neDataGet(p, "network", "tcp"),
+		"tls":              tls,
+		"tls_settings":     tlsSettings,
+		"reality_settings": realitySettings,
+		"network_settings": neClashWsGrpcSettings(p),
+	}
+}
+
+func neClashWsGrpcSettings(p map[string]any) any {
+	switch neClashCaseString(neDataGet(p, "network", nil)) {
+	case "ws":
+		return map[string]any{
+			"path":    neDataGet(p, "ws-opts.path", nil),
+			"headers": neDataGet(p, "ws-opts.headers", []any{}),
+		}
+	case "grpc":
+		return map[string]any{
+			"serviceName": neDataGet(p, "grpc-opts.grpc-service-name", nil),
+		}
+	}
+	return nil
+}
+
+func neClashTLSBlock(p map[string]any) map[string]any {
+	return map[string]any{
+		"server_name":    neDataGet(p, "sni", nil),
+		"allow_insecure": neDataGet(p, "skip-cert-verify", false),
+	}
+}
+
+func neClashCaseString(v any) string {
+	s, _ := v.(string)
+	return s
+}
+				slog.Error("nodeext: apiNodes panic,fail-open 返回空", "err", r)
+			}
+		}()
+		apiRes = m.apiNodes(ctx, cfg, userID)
+	})
+	local := m.localNodes(cfg)
+	wg.Wait()
+
+	// 合并顺序对齐 PHP:local → clash → api。
+	var nodes []Node
+	nodes = append(nodes, local...)
+	nodes = append(nodes, clashRes...)
+	nodes = append(nodes, apiRes...)
+	if nodes == nil {
+		nodes = []Node{}
+	}
+	return nodes
+}
+
+// ───────────────────────────── local_nodes ─────────────────────────────
+
+// localNodes 对齐 getLocalNodes:配置 JSON 数组 → normalize。
+func (m *Module) localNodes(cfg neConfig) []Node {
+	s := cfg.LocalNodes
+	if s == "" || s == "0" { // PHP:(string)getConfig('local_nodes','[]') ?: '[]'
+		s = "[]"
+	}
+	items, ok := neDecodeJSONList([]byte(s))
+	if !ok {
+		slog.Warn("nodeext: local_nodes is not valid JSON array")
+		return nil
+	}
+	return neNormalizeNodes(items)
+}
+
+// neDecodeJSONList 对齐 json_decode($json, true) + is_array 检查:
+// JSON 数组 → 原序;JSON 对象在 PHP 里也是数组(assoc),取其值(按键排序,见分歧清单);
+// 标量/null/非法 JSON → 无效。
+func neDecodeJSONList(data []byte) ([]any, bool) {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
+		return nil, false
+	}
+	switch t := v.(type) {
+	case []any:
+		return t, true
+	case map[string]any:
+		vals := make([]any, 0, len(t))
+		for _, k := range neSortedKeys(t) {
+			vals = append(vals, t[k])
+		}
+		return vals, true
+	default:
+		return nil, false
+	}
+}
+
+// neNormalizeNodes 对齐 normalizeNodes:逐条校验并转为强类型 Node,上限 neMaxNodes 条。
+//   - name/type 任一 empty()(缺失/null/false/0/"0"/"")→ 跳过;
+//   - A non-empty host, port in 1..65535 and valid UUID credentials are required.
+//   - tags 非数组 → []。
+func neNormalizeNodes(items []any) []Node {
+	nodes := make([]Node, 0, min(len(items), neMaxNodes))
+	for _, it := range items {
+		node, ok := it.(map[string]any)
+		if !ok {
+			continue
+		}
+		if !nePHPTruthy(node["name"]) || !nePHPTruthy(node["type"]) { // empty() 检查
+			continue
+		}
+		port := neToInt(node["port"])
+		if port < 1 || port > 65535 || strings.TrimSpace(neToString(node["host"])) == "" {
+			continue
+		}
+		password, err := nodecredential.Normalize(neToString(node["type"]), neToString(node["password"]))
+		if err != nil {
+			continue
+		}
+		var tags []string
+		switch tv := node["tags"].(type) {
+		case []any:
+			tags = make([]string, 0, len(tv))
+			for _, t := range tv {
+				tags = append(tags, neToString(t))
+			}
+		case map[string]any: // JSON 对象在 PHP json_decode(assoc) 后 is_array 也为真
+			tags = make([]string, 0, len(tv))
+			for _, k := range neSortedKeys(tv) {
+				tags = append(tags, neToString(tv[k]))
+			}
+		default:
+			tags = []string{}
+		}
+		n := Node{
+			Type:     neToString(node["type"]),
+			Name:     neToString(node["name"]),
+			Host:     neToString(node["host"]),
+			Port:     port,
+			Password: password,
+			Rate:     "1.00",
+			Tags:     tags,
+		}
+		if rv, exists := node["rate"]; exists {
+			if s := neToString(rv); s != "" {
+				n.Rate = s
+			}
+		}
+		if psv, ok := node["protocol_settings"].(map[string]any); ok {
+			n.ProtocolSettings = psv
+		}
+		nodes = append(nodes, n)
+		if len(nodes) >= neMaxNodes {
+			break
+		}
+	}
+	return nodes
+}
+internal/modules/admin/plugin_speedlimit_test.go:206:	if err := m.plValidateConfigPatch(context.Background(), "commission_tier", map[string]any{"anything": "goes"}); err != nil {
+internal/modules/admin/plugin_speedlimit.go:34:// plValidateConfigPatch 在写库**之前**校验「现有配置 + 本次补丁」的合并结果。
+internal/modules/admin/plugin_speedlimit.go:39:func (m *Module) plValidateConfigPatch(ctx context.Context, code string, patch map[string]any) error {
+internal/modules/admin/plugin_speedlimit.go:93:	return m.plValidateConfigPatch(ctx, code, nil)
+internal/modules/subscribe/subscribe.go:165:	m.serveSubscription(w, r, u, token, u.UUID)
+internal/modules/subscribe/subscribe.go:173:	credentialUUID string,
+internal/modules/subscribe/subscribe.go:218:			m.deliver(ctx, w, r, u, rows, 0, credentialUUID, riskKey)
+internal/modules/subscribe/subscribe.go:226:		m.deliver(ctx, w, r, u, deliveryNoticeRows(ctx, kind, 0, 0, 0), 0, credentialUUID, riskKey)
+internal/modules/subscribe/subscribe.go:239:		m.deliver(ctx, w, r, u, deliveryNoticeRows(ctx, hwid.kind, hwid.online, hwid.limit, 0), 0, credentialUUID, riskKey)
+internal/modules/subscribe/subscribe.go:244:		m.deliver(ctx, w, r, u, deliveryNoticeRows(ctx, clientnotice.KindDeviceBlocked, 0, 0, 0), 0, credentialUUID, riskKey)
+internal/modules/subscribe/subscribe.go:253:	servers, err := m.availableServers(ctx, u, credentialUUID)
+internal/modules/subscribe/subscribe.go:288:	m.deliver(ctx, w, r, u, servers, rejected, credentialUUID, riskKey)
+internal/modules/subscribe/subscribe.go:327:	UUID           string
+internal/modules/subscribe/subscribe.go:436:		Scan(&u.ID, &u.UUID, &u.Email, &u.GroupID, &u.U, &u.D, &u.TransferEnable, &u.ExpiredAt, &u.NextResetAt, &u.Banned, &u.PlanID, &u.Locale,
+internal/modules/subscribe/subscribe.go:453:func (m *Module) availableServers(ctx context.Context, u *subUser, credUUID string) ([]*serverRow, error) {
+internal/modules/subscribe/subscribe.go:462:	return snapshot.rowsFor(credUUID), nil
+internal/modules/admin/plugin_nodeext.go:12:	raw, exists := patch["local_nodes"]
+internal/modules/admin/plugin_nodeext.go:18:		return fmt.Errorf("local_nodes must contain a JSON array or object")
+internal/modules/admin/plugin_nodeext.go:22:		return fmt.Errorf("local_nodes must contain valid JSON")
+internal/modules/admin/plugin_nodeext.go:33:		return fmt.Errorf("local_nodes must contain a JSON array or object")
+internal/modules/admin/plugin_nodeext.go:39:			return fmt.Errorf("local_nodes entry %d must be an object", i+1)
+internal/modules/admin/plugin_nodeext.go:45:			return fmt.Errorf("local_nodes entry %d: %w", i+1, err)
+internal/modules/admin/plugin_nodeext.go:59:	patch["local_nodes"] = string(encoded)
+internal/modules/admin/plugin.go:413:	if err := m.plValidateConfigPatch(ctx, code, cfg); err != nil {
+internal/modules/admin/plugin_nodeext_test.go:15:				patch := map[string]any{"local_nodes": string(raw)}
+internal/modules/admin/plugin_nodeext_test.go:16:				err := (&Module{}).plValidateConfigPatch(context.Background(), "node_ext", patch)
+internal/modules/admin/plugin_nodeext_test.go:21:				if !valid && !strings.Contains(err.Error(), "UUID") {
+internal/modules/admin/plugin_nodeext_test.go:24:				if valid && typ != "hysteria" && !strings.Contains(patch["local_nodes"].(string), "aabbccdd-1234-4567-89ab-123456789abc") {
+internal/modules/admin/plugin_nodeext_test.go:25:					t.Fatal("save did not normalize UUID")
+internal/modules/admin/pluginschema/NodeExt.json:13:    "local_nodes": {
+package subscribe
+
+import (
+	"regexp"
+	"slices"
+	"strconv"
+	"strings"
+
+	"go.yaml.in/yaml/v3"
+)
+
+// Node.Encode marshals to bytes and parses those bytes again. The generated
+// subscription sections already contain normalized Go values; construct their
+// nodes directly and let the final YAML emitter handle quoting and flow style.
+// Keep the library path for uncommon types and custom YAML marshalers.
+func subscriptionValueNode(value any) (*yaml.Node, error) {
+	n := &yaml.Node{}
+	scalar := func(tag, text string) { n.Kind, n.Tag, n.Value = yaml.ScalarNode, tag, text }
+	switch v := value.(type) {
+	case nil:
+		scalar("!!null", "null")
+	case string:
+		// SetString also preserves the library's binary/non-UTF8 and multiline
+		// handling; setting Value alone would change those template values.
+		n.SetString(v)
+	case bool:
+		scalar("!!bool", strconv.FormatBool(v))
+	case int:
+		scalar("!!int", strconv.Itoa(v))
+	case int64:
+		scalar("!!int", strconv.FormatInt(v, 10))
+	case uint64:
+		scalar("!!int", strconv.FormatUint(v, 10))
+	case []string:
+		n.Kind, n.Tag = yaml.SequenceNode, "!!seq"
+		n.Content = make([]*yaml.Node, len(v))
+		for i, text := range v {
+			child := &yaml.Node{}
+			child.SetString(text)
+			n.Content[i] = child
+		}
+	case []any:
+		n.Kind, n.Tag = yaml.SequenceNode, "!!seq"
+		n.Content = make([]*yaml.Node, len(v))
+		for i, item := range v {
+			child, err := subscriptionValueNode(item)
+			if err != nil {
+				return nil, err
+			}
+			n.Content[i] = child
+		}
+	case map[string]any:
+		// Preserve the library's special merge-key interpretation for operator
+		// template maps, including its validation of malformed merge values.
+		if _, merge := v["<<"]; merge {
+			if err := n.Encode(value); err != nil {
+				return nil, err
+			}
+			return n, nil
+		}
+		n.Kind, n.Tag = yaml.MappingNode, "!!map"
+		keys := make([]string, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		slices.Sort(keys)
+		n.Content = make([]*yaml.Node, 0, 2*len(keys))
+		for _, key := range keys {
+			child, err := subscriptionValueNode(v[key])
+			if err != nil {
+				return nil, err
+			}
+			k := &yaml.Node{}
+			k.SetString(key)
+			n.Content = append(n.Content, k, child)
+		}
+	default:
+		if err := n.Encode(value); err != nil {
+			return nil, err
+		}
+	}
+	return n, nil
+}
+
+// YAML 1.1 also resolves legacy booleans and sexagesimal numbers, which the
+// YAML 1.2-oriented resolver does not recognize. Quote both dialects safely.
+// Include numeric overflow: some parsers resolve values beyond Go numeric limits.
+var subscriptionNumber = regexp.MustCompile(`^[+-]?(?:0[xX][0-9a-fA-F_]+|0[oO][0-7_]+|0[bB][01_]+|(?:[0-9][0-9_]*(?:\.[0-9_]*)?|\.[0-9_]+)(?:[eE][+-]?[0-9]+)?)$`)
+
+var subscriptionSexagesimal = regexp.MustCompile(`^[+-]?[0-9][0-9_]*(?::[0-5]?[0-9])+(?:\.[0-9_]*)?$`)
+
+func quoteSubscriptionStrings(n *yaml.Node) {
+	if n.Kind == yaml.ScalarNode && n.Tag == "!!str" {
+		implicit := yaml.Node{Kind: yaml.ScalarNode, Value: n.Value}
+		legacy := false
+		switch strings.ToLower(n.Value) {
+		case "y", "n", "yes", "no", "on", "off":
+			legacy = true
+		}
+		if implicit.ShortTag() != "!!str" || legacy || subscriptionNumber.MatchString(n.Value) || subscriptionSexagesimal.MatchString(n.Value) {
+			n.Style = yaml.DoubleQuotedStyle
+		}
+	}
+	for _, child := range n.Content {
+		quoteSubscriptionStrings(child)
+	}
+}
+
+codex
+The diff adds external-node UUID validation, endpoint checks, and YAML string quoting. I’m checking the save and rendering paths for mismatches, and whether the changed tests still protect the intended behavior.
+exec
+/bin/bash -lc "sed -n '345,450p' internal/modules/admin/plugin.go; cat internal/modules/admin/pluginschema/NodeExt.json; rg -n 'tuic|External|Password' internal/modules/subscribe/servers* internal/modules/subscribe/*tuic* internal/modules/nodeext/config.go; sed -n '1,190p' internal/modules/subscribe/subscribe_clash.go; git diff --check origin/master...549525317f0d990b479b99263df0a8dfd9bd7a53" in /workspace/wt/yb-ext
+ succeeded in 0ms:
+				v = plSecretMask
+			}
+		}
+		out[key] = map[string]any{
+			"type": t, "label": key, "description": "", "value": v,
+			"options": []any{}, "configured": configured,
+		}
+		if configured && fingerprint != "" {
+			out[key].(map[string]any)["fingerprint"] = fingerprint
+		}
+	}
+	return out
+}
+
+func plFieldType(t string) string {
+	switch t {
+	case "boolean", "number", "select", "text", "string", "password":
+		return t
+	default:
+		return "string"
+	}
+}
+
+func (m *Module) plGetConfig(w http.ResponseWriter, r *http.Request) {
+	code := strings.TrimSpace(r.URL.Query().Get("code"))
+	if code == "" {
+		apiresp.Fail(w, http.StatusBadRequest, "缺少插件 code")
+		return
+	}
+	ctx := r.Context()
+	values := map[string]any{}
+	var cfgRaw []byte
+	if err := m.pool.QueryRow(ctx, `SELECT COALESCE(config,'{}') FROM plugins WHERE code=$1`, code).Scan(&cfgRaw); err == nil {
+		values, err = plDecodeConfig(cfgRaw)
+		if err != nil {
+			apiresp.ServerError(w, r, err, "查询失败")
+			return
+		}
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		apiresp.ServerError(w, r, err, "查询失败")
+		return
+	}
+	apiresp.Success(w, plBuildFields(plRegistry[code], plRevealSecretsForMask(code, values)))
+}
+
+func (m *Module) plUpdateConfig(w http.ResponseWriter, r *http.Request) {
+	body, err := decodeBody(r)
+	if err != nil {
+		apiresp.ValidationFail(w, "请求参数格式错误", nil)
+		return
+	}
+	code := strings.TrimSpace(giftStr(body["code"]))
+	if code == "" {
+		apiresp.Fail(w, http.StatusBadRequest, "缺少插件 code")
+		return
+	}
+	cfg, ok := body["config"].(map[string]any)
+	if !ok {
+		apiresp.ValidationFail(w, "config 需为对象", nil)
+		return
+	}
+	// Secret values are write-only. The mask (or an empty form field) means
+	// "keep the current value"; a real non-empty replacement is accepted.
+	plDropUnchangedSecrets(cfg)
+	ctx := r.Context()
+	// 部分插件的配置有跨字段不变式（动态限速的收敛梯子）。坏配置必须在**写库之前**
+	// 被拒绝并把可执行提示回给管理员——存下去再让后台任务静默跳过，等于让
+	// 「没在治理」和「治理中且无人命中」长成一个样。
+	if err := m.plValidateConfigPatch(ctx, code, cfg); err != nil {
+		apiresp.ValidationFail(w, err.Error(), nil)
+		return
+	}
+	now := apptime.Now()
+	// *_bot_token 静态加密（plugin_secret_vault.go）：补丁里的明文先加密；同一事务内
+	// 行锁读出该行，把补丁没覆盖的旧明文同类键一并加密写回（过渡期惰性迁移）。
+	// vault 未配置 → 拒绝保存，绝不把明文落库。
+	vault := tokenvault.Default()
+	auditKeys := auditConfigKeys(cfg) // 审计记管理员**提交**了哪些键，不含惰性迁移补进来的
+	if err := plSealPatchSecrets(vault, cfg); err != nil {
+		apiresp.ServerError(w, r, err, "保存失败")
+		return
+	}
+	tx, err := m.pool.Begin(ctx)
+	if err != nil {
+		apiresp.ServerError(w, r, err, "保存失败")
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := plSealLegacyInRow(ctx, tx, vault, code, cfg); err != nil {
+		apiresp.ServerError(w, r, err, "保存失败")
+		return
+	}
+	patch := giftJSON(cfg)
+	// 合并入现有 config（jsonb 拼接：新值覆盖同键）。行不存在则创建（补 registry 元信息）。
+	// 生产存在遗留的非 object 形态行（`[]` / 字符串，见迁移 00040 的 jsonb_typeof 守卫）：
+	// 对这些行直接 `jsonb || $1` 会产出**数组**，后续 plDecodeConfig 反序列化进 map 失败 →
+	// 配置被清空且 plGetConfig 永久 500。故非 object 一律先重置为 `{}` 再合并。
+	tag, err := tx.Exec(ctx,
+		`UPDATE plugins SET config = (CASE WHEN jsonb_typeof(config)='object' THEN config ELSE '{}'::jsonb END || $1::jsonb), updated_at=$2 WHERE code=$3`,
+		patch, now, code)
+	if err != nil {
+		apiresp.ServerError(w, r, err, "保存失败")
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		apiresp.ServerError(w, r, err, "保存失败")
+{
+  "name": "节点扩展",
+  "code": "node_ext",
+  "version": "1.0.2",
+  "description": "为用户动态注入第三方自定义节点，支持本地、API等多种来源。",
+  "author": "YueBoard Team",
+  "config": {
+    "enable": {
+      "type": "boolean",
+      "default": true,
+      "description": "是否启用节点扩展"
+    },
+    "local_nodes": {
+      "type": "text",
+      "default": "",
+      "description": "本地节点配置（JSON数组，每行为一个节点）"
+    },
+    "api_url": {
+      "type": "string",
+      "default": "",
+      "description": "远程API地址（返回节点数组）"
+    },
+    "clash_sub_url": {
+      "type": "string",
+      "default": "",
+      "description": "Clash 订阅链接（YAML 格式）"
+    },
+    "clash_cache_enable": {
+      "type": "boolean",
+      "default": false,
+      "description": "是否启用 Clash 订阅缓存"
+    },
+    "clash_cache_ttl": {
+      "type": "number",
+      "default": 600,
+      "description": "Clash 订阅缓存时间（秒）"
+    }
+  }
+}rg: internal/modules/subscribe/servers*: No such file or directory (os error 2)
+rg: internal/modules/subscribe/*tuic*: No such file or directory (os error 2)
+package subscribe
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"regexp"
+	"slices"
+	"strconv"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+	"go.yaml.in/yaml/v3"
+
+	"github.com/onesyue/yueboard/internal/platform/i18n"
+)
+
+// renderClashMeta 加载模板 → 注入 proxies → proxy-group 合并 → rules → dump。
+//
+// tmplName 决定用哪张 Clash 系模板渲染，三张模板同构（proxies/proxy-groups/rules
+// 三段结构一致），差别只在 rule-providers 的 behavior 与 geodata 依赖：
+//   - clashmeta：.mrs 二进制 rule-provider，**仅 mihomo ≥1.18.7 能解析**
+//   - clash    ：behavior: classical 文本 + geodata-mode，老 Clash 内核可解析；
+//     节点只留老内核认识的类型，全被剔除时换成升级提示占位（clash_legacy_core.go）
+//   - stash    ：同 classical，按 Stash 自身语法裁剪
+//
+// 老客户端拿到 clashmeta 会整份解析失败（"cannot unmarshal !!seq into string"
+// / "could not switch to this profile"），故按 UA 分流到对应模板。
+func (m *Module) renderClashMeta(
+	ctx context.Context,
+	trustedSubscriptionDomain string,
+	u *subUser,
+	servers []*serverRow,
+	rejected int,
+	tmplName string,
+	// geckoOK：这个客户端是否**可证明**认识 hysteria2 的 gecko 混淆。
+	// 认不出就是 false —— 与 surgeObfsParameter 同一形状，宁可回落 salamander。
+	geckoOK bool,
+	// realityMLKEM：这个客户端是否是可证明支持 support-x25519mlkem768 的 YueLink
+	// （yuelinkSupportsRealityMLKEM）。只在 clashmeta 模板上生效。
+	realityMLKEM bool,
+	// connTag：本次交付里哪些代理类型打 yue-conn-tag（见 conn_tag.go）。
+	connTag connTagScope,
+) ([]byte, error) {
+	if tmplName == "" {
+		tmplName = "clashmeta"
+	}
+	tmpl, err := m.template(ctx, tmplName)
+	if err != nil && (tmplName == "clashmeta" || !errors.Is(err, pgx.ErrNoRows)) {
+		return nil, err
+	}
+	// 模板行缺失/为空（运维误删）时回落 clashmeta，绝不给用户发空配置。
+	// 「行缺失」是 ErrNoRows：此前只有「内容为空」会回落，行被删时直接 500
+	// （2026-09-21 审计）——与这句注释的承诺相反。
+	if strings.TrimSpace(tmpl) == "" && tmplName != "clashmeta" {
+		if tmpl, err = m.template(ctx, "clashmeta"); err != nil {
+			return nil, err
+		}
+	}
+	// 【保真关键】用 yaml.Node 解析而非 map[string]any 全量往返：后者会**解析 YAML anchor 别名并在
+	// 序列化时展开**（rule-providers 等共享块被复制 → 输出膨胀数倍）且**丢失注释**，与 Xboard 输出
+	// 结构不一致。yaml.Node 保留 anchor/注释/键序，只把 proxies/proxy-groups/rules 三段的值节点替换成
+	// 我们计算好的内容（复用既有 buildProxy/mergeProxyGroups/buildRules），其余节点（含 rule-providers/
+	// dns 的 anchor 与注释）**原样透传**。
+	doc, err := m.clashTemplateDocument(tmplName+"\x00"+i18n.FromContext(ctx), tmpl)
+	if err != nil {
+		return nil, err
+	}
+	root := yamlDocRoot(doc)
+	if root == nil || root.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("%s 模板顶层不是映射", tmplName)
+	}
+
+	// 老 Clash 内核（Clash Premium / 开源 Clash）认不出 hysteria2 / vless：只留它能解析的
+	// 节点，一个不剩时换成升级提示占位（clash_legacy_core.go）。必须在信息节点之前——
+	// 信息节点从列表首行克隆，这样它们也跟着成为老内核能解析的占位。
+	if tmplName == "clash" && legacyClashCoreFrom(ctx) {
+		servers = legacyClashCoreServers(ctx, servers, geckoOK)
+	}
+	// 信息节点前缀（可选，show_info_to_server_enable）
+	servers = m.prependInfoServers(ctx, u, servers, rejected)
+
+	// proxy-groups 先取出来：Clash 系比其它渲染器多两类重名雷区——与 mihomo 内建出站
+	// 同名、与模板里的策略组同名，两者都走同一句 "the duplicate name" 让整份配置报废。
+	pg := map[string]any{"proxy-groups": normalizeYAML(yamlMapGet(root, "proxy-groups"))}
+	base, _ := normalizeYAML(yamlMapGet(root, "proxies")).([]any)
+	reserved := make([]string, 0, len(clashReservedProxyNames)+len(base))
+	reserved = append(reserved, clashReservedProxyNames...)
+	reserved = append(reserved, clashGroupNames(pg["proxy-groups"])...)
+	reserved = append(reserved, clashTemplateProxyNames(base)...)
+	servers = dedupeServerNames(servers, reserved)
+
+	var proxyObjs []any
+	var names []string
+	transportOf := map[string]string{}
+	for _, s := range servers {
+		if p, ok := buildProxy(s, geckoOK); ok {
+			transportOf[s.Name] = transportOfRow(s, p)
+			if tmplName == "stash" {
+				adaptStashProxy(p)
+			}
+			if realityMLKEM && tmplName == "clashmeta" {
+				enableRealityMLKEM(p)
+			}
+			connTag.markConnTag(p)
+			proxyObjs = append(proxyObjs, p)
+			names = append(names, s.Name)
+		}
+	}
+
+	// Resolve strict groups before serialization: unavailable defaults add a
+	// native discard-port notice while regional/manual groups remain intact.
+	notices := mergeProxyGroupsByTransport(pg, names, clashTemplateProxyNames(base), transportOf,
+		i18n.T(i18n.FromContext(ctx), defaultGroupUnavailableNotice))
+	for _, notice := range notices {
+		proxyObjs = append(proxyObjs, notice)
+		names = append(names, notice["name"].(string))
+	}
+	// proxies：模板自带占位（从节点解出）+ 生成节点，回写。
+	if err := yamlMapSet(root, "proxies", append(base, proxyObjs...)); err != nil {
+		return nil, err
+	}
+	// proxies 条目钉行内 flow（单行 `- {…}`）：历史 Xboard/PHP 渲染器即此形式，
+	// YueLink 的 HysteriaTransformer（iOS 接收窗口钳制/带宽 strip）与其全部
+	// golden 都按单行条目假设——块形式会让 iOS 的 8/16MiB 窗口钳制静默失效，
+	// 40/80MiB 原样进 NE 触达 jetsam 界限（yuelink docs/debt.md 2026-08-12）。
+	// yaml.v3 的 flow 输出不折行（>900 字符实测单行），嵌套 map/seq 在 flow
+	// 上下文自动跟随，只需设置顶层条目 Style。
+	if pn := yamlMapValueNode(root, "proxies"); pn != nil && pn.Kind == yaml.SequenceNode {
+		for _, item := range pn.Content {
+			item.Style = yaml.FlowStyle
+		}
+	}
+
+	// proxy-groups / rules：复用既有逻辑（小 map 承载 → 计算 → 回写节点）。
+	if err := yamlMapSet(root, "proxy-groups", pg["proxy-groups"]); err != nil {
+		return nil, err
+	}
+	rl := map[string]any{"rules": normalizeYAML(yamlMapGet(root, "rules")), "sub-rules": normalizeYAML(yamlMapGet(root, "sub-rules"))}
+	buildRules(rl, trustedSubscriptionDomain, clashOwnServiceTarget(pg["proxy-groups"]))
+	// Prune/repoint rules whose target group mergeProxyGroups just removed.
+	// A ?filter=/?types= that empties a region group leaves rules like
+	// `GEOIP,HK,🇭🇰 香港` pointing at a group no longer in proxy-groups, which
+	// makes mihomo/Clash reject the whole profile — the same class the sing-box
+	// renderer already handles, but Clash had no equivalent (audit Y-7).
+	// 模板自带的静态代理（proxies 段原样保留的占位节点）同样是合法目标——此前不在有效集里，
+	// 直接指向它们的规则被改指到第一个策略组（2026-09-21 审计）。
+	pruneClashRules(rl, pg, slices.Concat(names, clashTemplateProxyNames(base)))
+	if err := yamlMapSet(root, "rules", rl["rules"]); err != nil {
+		return nil, err
+	}
+	if rl["sub-rules"] != nil {
+		if err := yamlMapSet(root, "sub-rules", rl["sub-rules"]); err != nil {
+			return nil, err
+		}
+	}
+
+	// $app_name is substituted **into the node tree**, not into the marshalled
+	// bytes. Everything above exists to let yaml.Marshal guarantee structure;
+	// rewriting its output afterwards gives that guarantee back. app_name is
+	// admin-settable, so a value containing `: `, `#`, a quote or a newline used
+	// to produce structurally invalid YAML after every structural check had
+	// already passed — the same class of defect as the 2026-08-12 inline-flow
+	// incident (a format assumption living in a pattern instead of in the
+	// emitter). Substituting before Marshal lets the emitter quote as needed,
+	// and confines the replacement to scalars so anchors/aliases are untouched.
+	substituteYAMLScalars(doc, "$app_name", m.settings.Get(ctx, "app_name", "YueBoard"))
+	quoteSubscriptionStrings(doc)
+	out, err := yaml.Marshal(doc)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// substituteYAMLScalars replaces old with replacement inside every scalar value
+// of the tree. Alias nodes carry an anchor name in Value and are skipped: they
+// are references, not content.
+func substituteYAMLScalars(node *yaml.Node, old, replacement string) {
+	if node == nil {
+		return
+	}
+	if node.Kind == yaml.ScalarNode && strings.Contains(node.Value, old) {
+		node.Value = strings.ReplaceAll(node.Value, old, replacement)
+		// Drop any style the template pinned for the *original* text. A tag-less
+		// scalar lets the emitter re-analyse the new value and quote it when the
+		// substitution introduced characters the old style cannot carry.
+		node.Style = 0
+	}
+	for _, child := range node.Content {
+
+exec
+/bin/bash -lc "rg -n 'func \\(.*ShortTag|func Parse\\(' /go/pkg/mod/go.yaml.in/yaml/v3* /go/pkg/mod/github.com/google/uuid* /home/box/go/pkg/mod/go.yaml.in/yaml/v3* /home/box/go/pkg/mod/github.com/google/uuid* 2>/dev/null; rg -n 'tuic|nodeext|\\.Password' internal/modules/subscribe/nodeext* internal/modules/subscribe/proxy*; sed -n '1,180p' internal/modules/nodeext/config.go; rg -n 'func neToString|func neToInt' internal/modules/nodeext" in /workspace/wt/yb-ext
+ succeeded in 0ms:
+/home/box/go/pkg/mod/github.com/google/uuid@v1.6.0/uuid.go:68:func Parse(s string) (UUID, error) {
+/home/box/go/pkg/mod/go.yaml.in/yaml/v3@v3.0.6/yaml.go:440:func (n *Node) ShortTag() string {
+/home/box/go/pkg/mod/go.yaml.in/yaml/v3@v3.0.5/yaml.go:440:func (n *Node) ShortTag() string {
+rg: internal/modules/subscribe/nodeext*: No such file or directory (os error 2)
+rg: internal/modules/subscribe/proxy*: No such file or directory (os error 2)
+package nodeext
+
+// 配置读取:SELECT is_enabled, config FROM plugins WHERE code='node_ext'(config 为 JSON 文本),
+// 60s 进程内缓存(照 emby 模式)。宽松解析逐点对齐 PHP:
+//   - getConfig(key, default) 用 ?? 实现 → JSON null 一律视同「键缺失,取默认值」;
+//   - enable            —— getConfig('enable', true) 后直接真值判断(注意 PHP 怪癖:字符串
+//     "false" 为真值 → 启用;"0"/0/false 才是关闭);
+//   - clash_cache_enable —— boolConfig(...,true):bool 原样;其余走 filter_var(...BOOLEAN,
+//     NULL_ON_FAILURE),识别 "1/true/on/yes"、"0/false/off/no/"",无法识别时取默认 true;
+//   - clash_cache_ttl    —— (int) 弱转换后 clamp 到 [60,3600](PHP: max(60, min(3600, …)));
+//   - 三个来源字段是字符串;数字/布尔按 PHP (string) 弱转换,数组/对象等价于 PHP 的
+//     "Array"(必然解析失败)→ 按缺失处理。
+// 双重开关与 PHP 一致:plugins.is_enabled=false(插件停用,boot 不会执行)或 enable 配置
+// 为假,均视为关闭。行不存在/查询失败 → 视为未安装 → 关闭(fail-open 到空节点)。
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+)
+
+const (
+	nePluginCode = "node_ext"
+	neMaxNodes   = 500
+)
+
+// neConfig 是归一化后的插件配置(对齐 config.json 的键)。
+type neConfig struct {
+	Enable           bool
+	LocalNodes       string
+	APIURL           string
+	ClashSubURL      string
+	ClashCacheEnable bool
+	ClashCacheTTL    int // 秒,已 clamp 到 [60,3600]
+}
+
+// neDefaultConfig 是各键缺失时的代码级默认值(与 PHP 各 getConfig 调用点的默认一致;
+// config.json 里 clash_cache_enable 默认 false 只影响安装时写库的初始值,代码默认是 true)。
+func neDefaultConfig() neConfig {
+	return neConfig{Enable: true, ClashCacheEnable: true, ClashCacheTTL: 600}
+}
+
+// config 组装插件配置:经共享 pluginconfig 读 plugins.config(code='node_ext',60s 缓存),
+// 再以 PHP 忠实语义套到默认配置上。注意:字段解析用的是 nodeext 自己的 PHP 兼容器
+// (enable 用原始真值 nePHPTruthy——"false" 为真;clash_cache_enable 用 filter_var;
+// 各来源字段用弱字符串;ttl 弱转换后 clamp),而非 pluginconfig 的宽松 Bool/Int/Str——
+// 二者语义不同,故此处仅借 pluginconfig 做「读库 + is_enabled + 缓存」,取值仍走 .Raw。
+func (m *Module) config(ctx context.Context) neConfig {
+	cfg := neDefaultConfig()
+	if m.pc == nil {
+		// 无配置读取器(未接线/单测):PHP 里插件不加载 → filter 不存在 → 无外挂节点。
+		cfg.Enable = false
+	} else {
+		pcfg := m.pc.Load(ctx, nePluginCode)
+		neApplyRawConfig(&cfg, pcfg.Raw)
+		// 双重开关:plugins.is_enabled=false(插件停用)强制关闭,与 PHP 一致。
+		// 查询失败时 pluginconfig 返回 Enabled=false + 空配置 → 亦落此分支关闭。
+		if !pcfg.Enabled {
+			cfg.Enable = false
+		}
+	}
+	cfg.ClashCacheTTL = neClampTTL(cfg.ClashCacheTTL)
+	return cfg
+}
+
+// neApplyRawConfig 把 plugins.config 的各键宽松地套到默认配置上。get 是按键取原始 JSON 值的
+// 访问器(生产传 pluginconfig.Config.Raw;单测传基于 map 的闭包),缺键/null → 保留默认。
+func neApplyRawConfig(cfg *neConfig, get func(string) (json.RawMessage, bool)) {
+	val := func(key string) (any, bool) {
+		raw, _ := get(key)
+		return neJSONValue(raw) // 缺键/null/解析失败 → ok=false(getConfig 的 ?? 语义)
+	}
+	if v, ok := val("enable"); ok {
+		cfg.Enable = nePHPTruthy(v) // 原始真值判断,非 filter_var
+	}
+	if v, ok := val("local_nodes"); ok {
+		cfg.LocalNodes = neWeakString(v)
+	}
+	if v, ok := val("api_url"); ok {
+		cfg.APIURL = neWeakString(v)
+	}
+	if v, ok := val("clash_sub_url"); ok {
+		cfg.ClashSubURL = neWeakString(v)
+	}
+	if v, ok := val("clash_cache_enable"); ok {
+		if b, bok := neFilterBool(v); bok {
+			cfg.ClashCacheEnable = b
+		}
+	}
+	if v, ok := val("clash_cache_ttl"); ok {
+		switch v.(type) {
+		case float64, string, bool:
+			cfg.ClashCacheTTL = neToInt(v)
+		}
+	}
+}
+
+// neJSONValue 解出某键的 JSON 值;键缺失、解析失败或值为 null(getConfig 的 ?? 语义)→ ok=false。
+func neJSONValue(raw json.RawMessage) (any, bool) {
+	if len(raw) == 0 {
+		return nil, false
+	}
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return nil, false
+	}
+	if v == nil {
+		return nil, false
+	}
+	return v, true
+}
+
+// neWeakString 是配置字符串字段的 PHP (string) 弱转换;数组/对象按缺失处理(PHP 会得到
+// "Array" 字符串,后续解析必然失败,结果等价)。
+func neWeakString(v any) string {
+	switch v.(type) {
+	case string, float64, bool:
+		return neToString(v)
+	default:
+		return ""
+	}
+}
+
+// neFilterBool 复刻 filter_var($v, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+// (bool 原样;字符串识别 on/off 等;数字仅 1/0;其余无法识别 → ok=false,调用方保留默认)。
+func neFilterBool(v any) (val, ok bool) {
+	switch t := v.(type) {
+	case bool:
+		return t, true
+	case string:
+		switch strings.ToLower(strings.TrimSpace(t)) {
+		case "1", "true", "on", "yes":
+			return true, true
+		case "0", "false", "off", "no", "":
+			return false, true
+		}
+		return false, false
+	case float64:
+		if t == 1 {
+			return true, true
+		}
+		if t == 0 {
+			return false, true
+		}
+		return false, false
+	default:
+		return false, false
+	}
+}
+
+// neClampTTL 对齐 max(60, min(3600, ttl))。
+func neClampTTL(ttl int) int {
+	if ttl < 60 {
+		return 60
+	}
+	if ttl > 3600 {
+		return 3600
+	}
+	return ttl
+}
+internal/modules/nodeext/phpcompat.go:64:func neToString(v any) string {
+internal/modules/nodeext/phpcompat.go:93:func neToInt(v any) int {
+
+exec
+/bin/bash -lc "rg -n 'case \"tuic\"|\\.Password|nodeext.Node' internal/modules/subscribe | head -65; sed -n '435,473p' /home/box/go/pkg/mod/go.yaml.in/yaml/v3@v3.0.6/yaml.go; sed -n '68,128p' /home/box/go/pkg/mod/github.com/google/uuid@v1.6.0/uuid.go; rg -n 'func .*Tuic|func .*TUIC' internal/modules/subscribe; git status --short" in /workspace/wt/yb-ext
+ succeeded in 0ms:
+internal/modules/subscribe/deliver_bench_test.go:51:		s.Password = "7f0e2c7c-8f4a-4a51-9a8e-1b3a4b5c6d7e"
+internal/modules/subscribe/deliver_bench_test.go:124:			s.Password = "cred"
+internal/modules/subscribe/quantumultx.go:37:		"password=" + iniSafeValue(s.Password),
+internal/modules/subscribe/loon.go:49:		iniSafeValue(s.Password),
+internal/modules/subscribe/loon.go:83:		iniSafeValue(s.Password),
+internal/modules/subscribe/general.go:144:	user := uriSafeAuthority(s.Password) + "@" + wrapIPv6(uriSafeAuthority(s.Host)) + ":" + strconv.Itoa(s.Port)
+internal/modules/subscribe/general.go:168:	return "hysteria2://" + uriSafeAuthority(s.Password) + "@" + addr + ":" + strconv.Itoa(s.Port) +
+internal/modules/subscribe/ini_name_injection_test.go:91:	r.Password = "pw" + injectedField
+internal/modules/subscribe/ini_name_injection_test.go:100:	r.Password = "pw" + injectedField
+internal/modules/subscribe/singbox.go:714:		"uuid": s.Password, "packet_encoding": "xudp",
+internal/modules/subscribe/singbox.go:759:	o["password"] = s.Password
+internal/modules/subscribe/subscription_cache_test.go:184:		s.Password = credential
+internal/modules/subscribe/subscription_cache_test.go:198:	if got[0].Password != "cred-1" || rows[0].Password != "" {
+internal/modules/subscribe/all_entry_pairs_test.go:41:		if a.ID != source.ID || b.ID != source.ID || a.Password != source.Password || b.Password != source.Password || a.Port != source.Port || b.Ports != source.Ports || a.Host == b.Host || a.Name != source.Name+" · A" || b.Name != source.Name+" · B" {
+internal/modules/subscribe/hooks.go:50:// ExtServer 镜像 nodeext.Node：外挂节点（Xboard「系统节点数组」形状）。
+internal/modules/subscribe/hooks.go:66:		Password: e.Password,
+internal/modules/subscribe/hooks.go:80:	vlessUUID, err := uuid.Parse(t.Password)
+internal/modules/subscribe/hooks.go:82:		vlessUUID = uuid.NewSHA1(uuid.NameSpaceURL, []byte("yue.to/tip-node/"+t.Password))
+internal/modules/subscribe/hooks.go:87:			Password: t.Password, Tags: []string{},
+internal/modules/subscribe/name_collision_test.go:227:	hy.Password = "pw@evil.example"
+internal/modules/subscribe/name_collision_test.go:231:	vl.Password = "uuid#frag"
+internal/modules/subscribe/surge.go:263:		"password=" + iniSafeValue(s.Password),
+internal/modules/subscribe/proxies.go:204:	a["password"] = s.Password
+internal/modules/subscribe/proxies.go:260:		"uuid":             s.Password,
+internal/modules/subscribe/proxies.go:343:		"uuid":       s.Password,
+internal/modules/subscribe/proxies.go:424:		"uuid":             s.Password,
+internal/modules/subscribe/tip_credentials_test.go:27:			if rows[0].Password != password {
+internal/modules/subscribe/tip_credentials_test.go:34:			if rows[1].Password != want.String() {
+internal/modules/subscribe/tip_credentials_test.go:35:				t.Fatalf("UUID = %q, want %q", rows[1].Password, want)
+internal/modules/subscribe/server_snapshot.go:48:		copies[i].Password = credential
+}
+
+// ShortTag returns the short form of the YAML tag that indicates data type for
+// the node. If the Tag field isn't explicitly defined, one will be computed
+// based on the node properties.
+func (n *Node) ShortTag() string {
+	if n.indicatedString() {
+		return strTag
+	}
+	if n.Tag == "" || n.Tag == "!" {
+		switch n.Kind {
+		case MappingNode:
+			return mapTag
+		case SequenceNode:
+			return seqTag
+		case AliasNode:
+			if n.Alias != nil {
+				return n.Alias.ShortTag()
+			}
+		case ScalarNode:
+			tag, _ := resolve("", n.Value)
+			return tag
+		case 0:
+			// Special case to make the zero value convenient.
+			if n.IsZero() {
+				return nullTag
+			}
+		}
+		return ""
+	}
+	return shortTag(n.Tag)
+}
+
+func (n *Node) indicatedString() bool {
+	return n.Kind == ScalarNode &&
+		(shortTag(n.Tag) == strTag ||
+			(n.Tag == "" || n.Tag == "!") && n.Style&(SingleQuotedStyle|DoubleQuotedStyle|LiteralStyle|FoldedStyle) != 0)
+}
+
+func Parse(s string) (UUID, error) {
+	var uuid UUID
+	switch len(s) {
+	// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+	case 36:
+
+	// urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+	case 36 + 9:
+		if !strings.EqualFold(s[:9], "urn:uuid:") {
+			return uuid, fmt.Errorf("invalid urn prefix: %q", s[:9])
+		}
+		s = s[9:]
+
+	// {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
+	case 36 + 2:
+		s = s[1:]
+
+	// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	case 32:
+		var ok bool
+		for i := range uuid {
+			uuid[i], ok = xtob(s[i*2], s[i*2+1])
+			if !ok {
+				return uuid, errors.New("invalid UUID format")
+			}
+		}
+		return uuid, nil
+	default:
+		return uuid, invalidLengthError{len(s)}
+	}
+	// s is now at least 36 bytes long
+	// it must be of the form  xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+	if s[8] != '-' || s[13] != '-' || s[18] != '-' || s[23] != '-' {
+		return uuid, errors.New("invalid UUID format")
+	}
+	for i, x := range [16]int{
+		0, 2, 4, 6,
+		9, 11,
+		14, 16,
+		19, 21,
+		24, 26, 28, 30, 32, 34,
+	} {
+		v, ok := xtob(s[x], s[x+1])
+		if !ok {
+			return uuid, errors.New("invalid UUID format")
+		}
+		uuid[i] = v
+	}
+	return uuid, nil
+}
+
+// ParseBytes is like Parse, except it parses a byte slice instead of a string.
+func ParseBytes(b []byte) (UUID, error) {
+	var uuid UUID
+	switch len(b) {
+	case 36: // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+	case 36 + 9: // urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+		if !bytes.EqualFold(b[:9], []byte("urn:uuid:")) {
+			return uuid, fmt.Errorf("invalid urn prefix: %q", b[:9])
+		}
+		b = b[9:]
+
+codex
+Reviewed only `origin/master...549525317f0d990b479b99263df0a8dfd9bd7a53`. No actionable bugs or leakage found. New admin validation errors are user-visible English text.
+
+`git diff --check` passed. Tests could not run because the read-only filesystem blocked Go’s temporary build directory. Nothing was modified.
+
+VERDICT: APPROVE
+FINDINGS: none
+tokens used
+33,714
+Reviewed only `origin/master...549525317f0d990b479b99263df0a8dfd9bd7a53`. No actionable bugs or leakage found. New admin validation errors are user-visible English text.
+
+`git diff --check` passed. Tests could not run because the read-only filesystem blocked Go’s temporary build directory. Nothing was modified.
+
+VERDICT: APPROVE
+FINDINGS: none
