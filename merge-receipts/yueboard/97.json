@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 97,
+  "head": "bbf588361d752b6ae018dad25c86223827c1920b",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "bbf588361d752b6ae018dad25c86223827c1920b",
+    "artifact": "reviews/merge-receipts-20261103/yueboard-97-review-hyg.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T00:18:58Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "bbf588361d752b6ae018dad25c86223827c1920b",
+    "command": "go test ./internal/modules/subscribe/... (clean worktree)",
+    "log_sha256": "546acddb9f89577f9bbd190305486274923db36266f68180e121aead8799b600",
+    "ran_at": "2026-11-03T00:13:19Z",
+    "runner": "box"
+  }
+}
