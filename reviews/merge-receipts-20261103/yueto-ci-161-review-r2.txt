@@ -1,0 +1,835 @@
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /workspace/wt/p161
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a19ede-691d-72e3-9a3f-4ef3fb151f66
+--------
+user
+Review onesyue/yueto-ci PR #161 at its merged head 137e0502bc89505da7ab9b787a2c93e8f5985b99 (git diff origin/master~3 is not relevant; review: git diff e5e7219^1 137e0502 -- i.e. the PR diff 9c83dd8..137e0502 if that base fits, otherwise git show 46431f4 137e0502). It pins yueboard_contract_pin to 92377c1 and adds review artifacts. Check correctness, that both pin literals match, no secrets/internal IPs in added files. End with exactly 'VERDICT: APPROVE' or 'VERDICT: CHANGES' and FINDINGS.
+codex
+I’ll check the PR diff, verify both pin literals, and scan the added artifacts for secrets and internal IPs.
+exec
+/bin/bash -lc "pwd && rg --files -g AGENTS.md -g '*161*' -g '*review*' | head -60" in /workspace/wt/p161
+ succeeded in 0ms:
+/workspace/wt/p161
+reviews/ops-collection-shuffle-20261031/independent-review.md
+reviews/ops-hang-guard-20261029/release-review-document.json
+reviews/ops-pr122-20261103/independent-review.md
+reviews/ops-pr256-20261103/independent-review.md
+reviews/ops-deploy-ai-exit-20261103/independent-review.md
+reviews/ops-miniapp-membership-20261102/independent-review.md
+reviews/ops-miniapp-membership-20261102/codex-review.stderr.txt
+reviews/ops-miniapp-membership-20261102/review-bundle.md
+reviews/ops-site-devdeps-20261103/independent-review.md
+reviews/merge-receipts-20261102/yueops-195.review.txt
+reviews/merge-receipts-20261102/yueto-51-review.txt
+reviews/merge-receipts-20261102/yueboard-52-box-review.txt
+reviews/merge-receipts-20261102/yueops-196.review.txt
+reviews/merge-receipts-20261102/enforcement-review.md
+reviews/merge-receipts-20261102/implementation-review.md
+reviews/merge-receipts-20261102/yueops-267-review-changes.txt
+reviews/merge-receipts-20261102/yueops-273-review-changes.txt
+reviews/merge-receipts-20261102/yueops-165.review.txt
+reviews/merge-receipts-20261102/yueops-257.review.txt
+reviews/merge-receipts-20261102/yueops-267-resolution-review-changes.txt
+reviews/postmerge-codex-20261102/pr58-codex-review.md
+reviews/postmerge-codex-20261102/pr56-codex-review.md
+tests/test_ops_reviewed_pr_input_transitions.py
+tests/test_ops_hang_guard_review_receipts.py
+reviews/ops-npm-security-20261031/independent-review.md
+reviews/merge-receipts-20261103/yueops-187-review.txt
+reviews/merge-receipts-20261103/yueboard-50-review.txt
+reviews/merge-receipts-20261103/yueops-170-review.txt
+reviews/merge-receipts-20261103/yueops-131-review.txt
+reviews/merge-receipts-20261103/yueops-152-review.txt
+reviews/merge-receipts-20261103/yueops-178-review.txt
+reviews/merge-receipts-20261103/yueboard-19-review.txt
+reviews/merge-receipts-20261103/yueops-216-review.txt
+reviews/merge-receipts-20261103/yueops-157-review.txt
+reviews/merge-receipts-20261103/yuelink-40-review.txt
+reviews/merge-receipts-20261103/yueto-ci-153-review-hyg.md
+reviews/merge-receipts-20261103/yueops-174-review.txt
+reviews/merge-receipts-20261103/yueops-129-review.txt
+reviews/merge-receipts-20261103/yueops-188-review.txt
+reviews/merge-receipts-20261103/yueops-225-review.txt
+reviews/merge-receipts-20261103/yueto-ci-112-review.md
+reviews/merge-receipts-20261103/yueops-253-review.txt
+reviews/merge-receipts-20261103/yueops-161-review.txt
+reviews/merge-receipts-20261103/yueto-ci-104-review.txt
+reviews/merge-receipts-20261103/yueops-137-review.txt
+reviews/merge-receipts-20261103/yueops-75-review-r2.md
+reviews/merge-receipts-20261103/yueto-ci-107-review.txt
+reviews/merge-receipts-20261103/yueops-126-review.txt
+reviews/merge-receipts-20261103/yueboard-5-review.txt
+reviews/merge-receipts-20261103/yueops-143-review.txt
+reviews/merge-receipts-20261103/yueops-213-review.txt
+reviews/merge-receipts-20261103/yueops-164-review.txt
+reviews/merge-receipts-20261103/yueops-139-review.txt
+reviews/merge-receipts-20261103/yueops-181-review.txt
+reviews/merge-receipts-20261103/yueops-201-review.txt
+reviews/merge-receipts-20261103/yueto-ci-86-review.md
+reviews/merge-receipts-20261103/yuelink-ci-21-review.txt
+reviews/merge-receipts-20261103/yueboard-65-review.txt
+reviews/merge-receipts-20261103/yueboard-37-review.txt
+reviews/merge-receipts-20261103/yueboard-67-review.txt
+
+exec
+/bin/bash -lc "git status --short && git rev-parse HEAD && git show -s --format='%H %P %s' e5e7219 137e0502 46431f4 && git diff --stat e5e7219"'^1 137e0502 && git diff --name-status e5e7219''^1 137e0502' in /workspace/wt/p161
+ succeeded in 0ms:
+137e0502bc89505da7ab9b787a2c93e8f5985b99
+e5e7219b1532518e5a4888698fc92bb81ca8882d 9fe40bc32d6c8468af3ffb8fe089dca8e7834ad4 9c83dd89d92c1b8c65d189cdd4b425e27111e46f 137e0502bc89505da7ab9b787a2c93e8f5985b99 Merge pull request #160 from onesyue/rcpt/yueboard-98
+137e0502bc89505da7ab9b787a2c93e8f5985b99 46431f4a7d881ae227c6663eb1a3111631e3811e receipt: yueto-ci#161
+46431f4a7d881ae227c6663eb1a3111631e3811e 9fe40bc32d6c8468af3ffb8fe089dca8e7834ad4 pin: yueboard_contract_pin f7102350 -> 92377c1 (yueboard#98)
+ native-node-contract.json                        |   2 +-
+ reviews/merge-receipts-20261103/yueto-ci-161.log | 573 +++++++++++++++++++++++
+ reviews/merge-receipts-20261103/yueto-ci-161.md  |   5 +
+ tests/test_build_policy.py                       |   2 +-
+ 4 files changed, 580 insertions(+), 2 deletions(-)
+M	native-node-contract.json
+A	reviews/merge-receipts-20261103/yueto-ci-161.log
+A	reviews/merge-receipts-20261103/yueto-ci-161.md
+M	tests/test_build_policy.py
+
+exec
+/bin/bash -lc 'rg --files -g AGENTS.md /workspace 2>/dev/null | head -50; git diff e5e7219''^1 137e0502 -- native-node-contract.json tests/test_build_policy.py reviews/merge-receipts-20261103/yueto-ci-161.md; git diff --stat 9c83dd8 137e0502; cat reviews/merge-receipts-20261103/yueto-ci-161.log' in /workspace/wt/p161
+ succeeded in 0ms:
+/workspace/wt-hk4hold/AGENTS.md
+/workspace/rootg/AGENTS.md
+/workspace/wt-5xx/AGENTS.md
+/workspace/gates/yueboard/AGENTS.md
+/workspace/yn-skip/yueops/AGENTS.md
+/workspace/ml-1102/rv-yueops-skip/AGENTS.md
+/workspace/fan1102/wt-yueops-100/AGENTS.md
+/workspace/root53/AGENTS.md
+/workspace/yn-rel/AGENTS.md
+/workspace/yuelink/AGENTS.md
+/workspace/ml-1102/rv-yueops-268/AGENTS.md
+/workspace/gfw/yue-node/AGENTS.md
+/workspace/gfw/yueops/AGENTS.md
+/workspace/gates/yueops/AGENTS.md
+/workspace/ml-1102/rv-yueto-60/AGENTS.md
+/workspace/ml-1102/rv-yueboard-88/AGENTS.md
+/workspace/gates/yueto/AGENTS.md
+/workspace/gates/yue-node/AGENTS.md
+/workspace/ml-1102/rv-yueto-53/AGENTS.md
+/workspace/lane/gfw-wording/yueboard-notice/AGENTS.md
+/workspace/lane/fix-yueops-277/AGENTS.md
+/workspace/wt/yb-ext/AGENTS.md
+/workspace/lane/gfw-wording/yuelink-tos/AGENTS.md
+/workspace/lane/gbf/wt-yueops-253/AGENTS.md
+/workspace/wt/yueto-gates-yt/AGENTS.md
+/workspace/wt/yueboard-87x76/AGENTS.md
+/workspace/wt/nat-0e61718e/ws/AGENTS.md
+/workspace/wt/yb-p0/AGENTS.md
+/workspace/lane/gbf/wt-yueops-203/AGENTS.md
+/workspace/ml-1102/rv-yueops-266/AGENTS.md
+/workspace/ml-1102/rv-yue-node-24/AGENTS.md
+/workspace/wt/yo-strict/AGENTS.md
+/workspace/lane/yb94p/w264/AGENTS.md
+/workspace/wt/yueboard-p87/AGENTS.md
+/workspace/lane/yb94p/wship/AGENTS.md
+/workspace/lane/yb94p/wt/AGENTS.md
+/workspace/wt/yueboard-p2ret/AGENTS.md
+/workspace/lane/yt59/AGENTS.md
+/workspace/wt/yo-gate-anchor/AGENTS.md
+/workspace/wt/par-449ddfa0/ops/AGENTS.md
+/workspace/lane/yb94p/w277/AGENTS.md
+/workspace/lane/yueto/AGENTS.md
+/workspace/wt/yueto-box-lock-registry/AGENTS.md
+/workspace/lane/wt/fix-yueto-59-review/AGENTS.md
+/workspace/lane/wt/rb53/AGENTS.md
+/workspace/lane/wt/po-167/AGENTS.md
+/workspace/lane/wt/qp-100/AGENTS.md
+/workspace/lane/wt/fix-pr59-owner-proof/AGENTS.md
+/workspace/lane/wt/hy2pr/AGENTS.md
+/workspace/lane/wt/fix-yueops-256/AGENTS.md
+diff --git a/native-node-contract.json b/native-node-contract.json
+index 45aa2e4..a923392 100644
+--- a/native-node-contract.json
++++ b/native-node-contract.json
+@@ -1,7 +1,7 @@
+ {
+   "version": 6,
+   "schema_floor": 151,
+-  "yueboard_contract_pin": "f7102350a149d4dbcb72ea212596a86f12ddca21",
++  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+   "layout": {
+     "node-1": {
+       "inventory_type": "hy2",
+diff --git a/reviews/merge-receipts-20261103/yueto-ci-161.md b/reviews/merge-receipts-20261103/yueto-ci-161.md
+new file mode 100644
+index 0000000..fe2364b
+--- /dev/null
++++ b/reviews/merge-receipts-20261103/yueto-ci-161.md
+@@ -0,0 +1,5 @@
++# Merge receipt: onesyue/yueto-ci#161
++- Head: 46431f4a7d881ae227c6663eb1a3111631e3811e
++- Reviewer: Codex read-only, log yueto-ci-161.log
++- Verdict: APPROVE, findings: none
++- Scope: yueboard_contract_pin -> 92377c1 (yueboard#98)
+diff --git a/tests/test_build_policy.py b/tests/test_build_policy.py
+index 4f8417d..2d9c754 100644
+--- a/tests/test_build_policy.py
++++ b/tests/test_build_policy.py
+@@ -2193,7 +2193,7 @@ class BuildPolicyTest(unittest.TestCase):
+         self.assertEqual(self.native_contract["schema_floor"], 151)
+         self.assertEqual(
+             self.native_contract["yueboard_contract_pin"],
+-            "f7102350a149d4dbcb72ea212596a86f12ddca21",
++            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+         )
+         self.assertEqual(
+             self.native_contract["presence"],
+ native-node-contract.json                        |    2 +-
+ reviews/merge-receipts-20261103/yueboard-98.log  | 2030 ----------------------
+ reviews/merge-receipts-20261103/yueboard-98.md   |    6 -
+ reviews/merge-receipts-20261103/yueto-ci-161.log |  573 ++++++
+ reviews/merge-receipts-20261103/yueto-ci-161.md  |    5 +
+ tests/test_build_policy.py                       |    2 +-
+ 6 files changed, 580 insertions(+), 2038 deletions(-)
+Reading additional input from stdin...
+OpenAI Codex v0.166.0
+--------
+workdir: /workspace/rcpt-yueto-ci
+model: gpt-6-astra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a19ed6-1d76-7773-81cb-367857d2f4a9
+--------
+user
+Independent reviewer for onesyue/yueto-ci at head 46431f4a7d881ae227c6663eb1a3111631e3811e. Review only 'git diff origin/master...46431f4a7d881ae227c6663eb1a3111631e3811e' (contract pin bump to yueboard 92377c1f87d99d83705e00d92f8d9742142f7e17, which is current yueboard master). Check consistency of all pin locations. End with VERDICT: APPROVE|CHANGES and FINDINGS.
+codex
+I’ll review the specified diff and check that all yueboard pin locations use the requested commit.
+exec
+/bin/bash -lc 'git diff origin/master...46431f4a7d881ae227c6663eb1a3111631e3811e' in /workspace/rcpt-yueto-ci
+ succeeded in 0ms:
+diff --git a/native-node-contract.json b/native-node-contract.json
+index 45aa2e4..a923392 100644
+--- a/native-node-contract.json
++++ b/native-node-contract.json
+@@ -1,7 +1,7 @@
+ {
+   "version": 6,
+   "schema_floor": 151,
+-  "yueboard_contract_pin": "f7102350a149d4dbcb72ea212596a86f12ddca21",
++  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+   "layout": {
+     "node-1": {
+       "inventory_type": "hy2",
+diff --git a/tests/test_build_policy.py b/tests/test_build_policy.py
+index 4f8417d..2d9c754 100644
+--- a/tests/test_build_policy.py
++++ b/tests/test_build_policy.py
+@@ -2193,7 +2193,7 @@ class BuildPolicyTest(unittest.TestCase):
+         self.assertEqual(self.native_contract["schema_floor"], 151)
+         self.assertEqual(
+             self.native_contract["yueboard_contract_pin"],
+-            "f7102350a149d4dbcb72ea212596a86f12ddca21",
++            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+         )
+         self.assertEqual(
+             self.native_contract["presence"],
+
+exec
+/bin/bash -lc "rg --files -g AGENTS.md -g '*contract*' -g '*yueboard*' -g '*pin*'" in /workspace/rcpt-yueto-ci
+ succeeded in 0ms:
+tests/test_postgres_image_pin.py
+scripts/validate-native-node-contract.py
+tests/test_policy_discovery_contract.py
+tests/test_notices_contract_gate_20261028.py
+scripts/authorize-yueboard-promotion.sh
+scripts/validate-yueboard-postgres.py
+scripts/authorize-yueboard-build-plan.sh
+deadman/canonical/config/alert-chain-deadman-observer-contract.json
+native-node-contract.json
+reviews/merge-receipts-20261102/yueboard-78.md
+reviews/merge-receipts-20261102/yueboard-83.md
+reviews/merge-receipts-20261102/yueboard-90.md
+reviews/merge-receipts-20261102/yueboard-89.log
+reviews/merge-receipts-20261102/yueto-43-baseline-contracts.log
+reviews/merge-receipts-20261102/yueto-43-contracts.log
+reviews/merge-receipts-20261102/yueboard-95.md
+reviews/merge-receipts-20261102/yueboard-52.md
+reviews/merge-receipts-20261102/yueboard-94.md
+reviews/merge-receipts-20261102/yueto-56-contracts.log
+reviews/merge-receipts-20261102/yueboard-30.log
+reviews/merge-receipts-20261102/yueboard-52.log
+reviews/merge-receipts-20261102/yueboard-78.log
+reviews/merge-receipts-20261102/yueboard-93.log
+reviews/merge-receipts-20261102/yueto-57-contracts.log
+reviews/merge-receipts-20261102/yueboard-93.md
+reviews/merge-receipts-20261102/yueboard-30.md
+reviews/merge-receipts-20261102/yueboard-79.log
+reviews/merge-receipts-20261102/yueboard-96.md
+reviews/merge-receipts-20261102/yueboard-89.md
+reviews/merge-receipts-20261102/yueboard-42.log
+reviews/merge-receipts-20261102/yueboard-88.md
+reviews/merge-receipts-20261102/yueboard-92.log
+reviews/merge-receipts-20261102/yueto-52-contracts.log
+reviews/merge-receipts-20261102/yueboard-91.md
+reviews/merge-receipts-20261102/yueboard-94.log
+reviews/merge-receipts-20261102/yueboard-44.log
+reviews/merge-receipts-20261102/yueboard-88.log
+reviews/merge-receipts-20261102/yueboard-44.md
+reviews/merge-receipts-20261102/yueboard-96.log
+reviews/merge-receipts-20261102/yueboard-52-box-review.txt
+reviews/merge-receipts-20261102/yueboard-90.log
+reviews/merge-receipts-20261102/yueboard-91.log
+reviews/merge-receipts-20261102/yueboard-92.md
+reviews/merge-receipts-20261102/yueboard-95.log
+reviews/merge-receipts-20261102/yueboard-79.md
+reviews/merge-receipts-20261102/yueboard-42.md
+reviews/merge-receipts-20261103/yueboard-85.log
+reviews/merge-receipts-20261103/yueboard-82.log
+reviews/merge-receipts-20261103/yueboard-39.log
+reviews/merge-receipts-20261103/yueboard-70-review.txt
+reviews/merge-receipts-20261103/yueboard-90.md
+reviews/merge-receipts-20261103/yueboard-80.md
+reviews/merge-receipts-20261103/yueboard-70-parity.log
+reviews/merge-receipts-20261103/yueboard-85.md
+reviews/merge-receipts-20261103/yueboard-31-parity.log
+reviews/merge-receipts-20261103/yueboard-47-parity.log
+reviews/merge-receipts-20261103/yueboard-97-parity-hyg.log
+reviews/merge-receipts-20261103/yueboard-69.md
+reviews/merge-receipts-20261103/yueboard-73.md
+reviews/merge-receipts-20261103/yueboard-97.md
+reviews/merge-receipts-20261103/yueboard-20-parity.log
+reviews/merge-receipts-20261103/yueboard-60.log
+reviews/merge-receipts-20261103/yueboard-12-review.txt
+reviews/merge-receipts-20261103/yueboard-45.md
+reviews/merge-receipts-20261103/yueboard-82.md
+reviews/merge-receipts-20261103/yueboard-54.md
+reviews/merge-receipts-20261103/yueboard-47-review.txt
+reviews/merge-receipts-20261103/yueboard-39.md
+reviews/merge-receipts-20261103/yueboard-37-parity.log
+reviews/merge-receipts-20261103/yueboard-17.log
+reviews/merge-receipts-20261103/yueboard-58-parity.log
+reviews/merge-receipts-20261103/yueboard-46.md
+reviews/merge-receipts-20261103/yueboard-69.log
+reviews/merge-receipts-20261103/yueboard-46.log
+reviews/merge-receipts-20261103/yueboard-64-review.txt
+reviews/merge-receipts-20261103/yueboard-38.log
+reviews/merge-receipts-20261103/yueboard-71.log
+reviews/merge-receipts-20261103/yueboard-6-review.txt
+reviews/merge-receipts-20261103/yueboard-63.log
+reviews/merge-receipts-20261103/yueboard-19-parity.log
+reviews/merge-receipts-20261103/yueboard-17.md
+reviews/merge-receipts-20261103/yueboard-84.log
+reviews/merge-receipts-20261103/yueboard-71.md
+reviews/merge-receipts-20261103/yueboard-60.md
+reviews/merge-receipts-20261103/yueboard-31-review.txt
+reviews/merge-receipts-20261103/yueboard-68.log
+reviews/merge-receipts-20261103/yueboard-38.md
+reviews/merge-receipts-20261103/yueboard-66.md
+reviews/merge-receipts-20261103/yueboard-84.md
+reviews/merge-receipts-20261103/yueboard-65-review.txt
+reviews/merge-receipts-20261103/yueboard-37-review.txt
+reviews/merge-receipts-20261103/yueboard-67-review.txt
+reviews/merge-receipts-20261103/yueboard-68.md
+reviews/merge-receipts-20261103/yueboard-73.log
+reviews/merge-receipts-20261103/yueboard-58-review.txt
+reviews/merge-receipts-20261103/yueboard-12-parity.log
+reviews/merge-receipts-20261103/yueboard-81.md
+reviews/merge-receipts-20261103/yueboard-66.log
+reviews/merge-receipts-20261103/yueboard-45.log
+reviews/merge-receipts-20261103/yueboard-54.log
+reviews/merge-receipts-20261103/yueboard-97.log
+reviews/merge-receipts-20261103/yueboard-23.md
+reviews/merge-receipts-20261103/yueboard-81.log
+reviews/merge-receipts-20261103/yueboard-67-parity.log
+reviews/merge-receipts-20261103/yueboard-97-review-hyg.md
+reviews/merge-receipts-20261103/yueboard-20-review.txt
+reviews/merge-receipts-20261103/yueboard-65-parity.log
+reviews/merge-receipts-20261103/yueboard-80.log
+reviews/merge-receipts-20261103/yueboard-50-review.txt
+reviews/merge-receipts-20261103/yueboard-19-review.txt
+reviews/merge-receipts-20261103/yueboard-6-parity.log
+reviews/merge-receipts-20261103/yueboard-63.md
+reviews/merge-receipts-20261103/yueboard-64-parity.log
+reviews/merge-receipts-20261103/yueboard-90.log
+reviews/merge-receipts-20261103/yueboard-23.log
+reviews/merge-receipts-20261103/yueboard-50-parity.log
+reviews/merge-receipts-20261103/yueboard-5-review.txt
+reviews/merge-receipts-20261103/yueboard-5-parity.log
+
+exec
+/bin/bash -lc "git status --short; git rev-parse HEAD; sed -n '2140,2210p' tests/test_build_policy.py; sed -n '1,100p' scripts/validate-native-node-contract.py; rg -n -i 'yueboard.{0,60}(pin|sha|commit)|(pin|sha|commit).{0,60}yueboard' --glob '"'!reviews/**'"' --hidden --glob '"'!.git/**'"'" in /workspace/rcpt-yueto-ci
+ succeeded in 0ms:
+46431f4a7d881ae227c6663eb1a3111631e3811e
+        self.assertIn(
+            'echo "yueboard_contract_ref=$yueboard_contract_ref"',
+            self.workflow,
+        )
+        self.assertIn(
+            "YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard",
+            self.workflow,
+        )
+        self.assertIn(
+            "--yueboard-contract-source .ci-yueboard",
+            self.workflow,
+        )
+        validation_start = self.workflow.index(
+            "- name: Validate native-node cross-repository contract"
+        )
+        self.assertLess(checkout_start, validation_start)
+        validation_step = self.workflow[
+            validation_start : self.workflow.index(
+                "- name: Validate yue-node", validation_start
+            )
+        ]
+        self.assertIn("matrix.validation == 'yue-node'", validation_step)
+        self.assertIn("matrix.validation == 'yueops'", validation_step)
+        self.assertIn("validate_canonical_proto_mirror", self.native_validator)
+        self.assertIn(
+            "yue-node validation requires the separately checked-out",
+            self.native_validator,
+        )
+        self.assertIn(
+            "pinned YueBoard contract schema floor does not match central policy",
+            self.native_validator,
+        )
+        self.assertIn(
+            'for source_dir in (root / "cmd", root / "internal")',
+            self.native_validator,
+        )
+        self.assertNotIn(
+            'for path in root.rglob("*.go")',
+            self.native_validator,
+        )
+
+    def test_native_node_contract_is_central_and_blocks_all_product_repositories(
+        self,
+    ) -> None:
+        self.assertEqual(self.native_contract["version"], 6)
+        # 58 is the binary-required floor: the pinned YueBoard tree's irreversible
+        # hot-path-index and runtime-role migration. The floor-57 authority
+        # retirement ceremony has also landed, so neither the old decoupled-at-55
+        # value nor the superseded floor 57 is deployable. Keep the
+        # central policy and pinned YueBoard tree on this exact reviewed value (the
+        # YueOps three-stage deployer is retired/frozen since P2 §4 A3; the
+        # validator requires its RETIRED marker instead of a live floor).
+        self.assertIsInstance(self.native_contract["schema_floor"], int)
+        self.assertEqual(self.native_contract["schema_floor"], 151)
+        self.assertEqual(
+            self.native_contract["yueboard_contract_pin"],
+            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+        )
+        self.assertEqual(
+            self.native_contract["presence"],
+            {
+                "required_capabilities": [
+                    "presence_v2",
+                ],
+                "release_a_rollout_capabilities": [
+                    "credential_limit_v1",
+                    "presence_v2",
+                ],
+                "report_rpc": "/yuenode.v1.NodeControlPlane/ReportDevices",
+                "rollout_proof_endpoint": "/api/v1/internal/yueops/nodes/rollout",
+                "process_lease_seconds": 240,
+#!/usr/bin/env python3
+"""Validate each source repository against the central native-node ABI."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+
+POLICY_ROOT = Path(__file__).resolve().parents[1]
+PROTO_RELATIVE_PATH = Path("proto/yuenode/v1/yuenode.proto")
+PROTO_DIGEST_PATH = Path("proto/CANONICAL.sha256")
+
+
+def read(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise RuntimeError(f"required contract file is unavailable: {path}") from exc
+
+
+def read_bytes(path: Path) -> bytes:
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise RuntimeError(f"required contract file is unavailable: {path}") from exc
+
+
+def canonical_digest(node_root: Path) -> str:
+    """Read the yue-node mirror pin in its committed sha256sum format."""
+    digest_path = node_root / PROTO_DIGEST_PATH
+    lines = [line for line in read(digest_path).splitlines() if line.strip()]
+    if len(lines) != 1:
+        raise RuntimeError(
+            f"{PROTO_DIGEST_PATH} must contain exactly one non-empty sha256sum line"
+        )
+    fields = lines[0].split()
+    expected_name = str(PROTO_RELATIVE_PATH.relative_to("proto"))
+    if len(fields) != 2 or fields[1] != expected_name:
+        raise RuntimeError(
+            f"{PROTO_DIGEST_PATH} must pin {expected_name!r} in sha256sum format"
+        )
+    if re.fullmatch(r"[0-9a-f]{64}", fields[0]) is None:
+        raise RuntimeError(f"{PROTO_DIGEST_PATH} does not contain a lowercase SHA-256")
+    return fields[0]
+
+
+def validate_canonical_proto_mirror(node_root: Path, yueboard_root: Path) -> None:
+    """Prove the checked-out node mirror equals the real YueBoard authority.
+
+    The yue-node repository already checks its mirror against a digest stored
+    in that same repository.  That catches incomplete local updates, but a
+    mirror and digest can drift together while remaining internally green.
+    Central CI checks out the reviewed YueBoard commit separately and calls
+    this gate before any yue-node build, so all three artifacts must agree:
+    canonical bytes, mirror bytes, and the committed mirror digest.
+    """
+    mirror_path = node_root / PROTO_RELATIVE_PATH
+    canonical_path = yueboard_root / PROTO_RELATIVE_PATH
+    mirror = read_bytes(mirror_path)
+    canonical = read_bytes(canonical_path)
+    mirror_hash = hashlib.sha256(mirror).hexdigest()
+    canonical_hash = hashlib.sha256(canonical).hexdigest()
+    pinned_hash = canonical_digest(node_root)
+
+    if mirror != canonical:
+        raise RuntimeError(
+            "yue-node proto mirror differs byte-for-byte from the checked-out "
+            "YueBoard canonical source "
+            f"(mirror sha256={mirror_hash}, canonical sha256={canonical_hash}, "
+            f"pinned sha256={pinned_hash})"
+        )
+    if pinned_hash != canonical_hash:
+        raise RuntimeError(
+            f"{PROTO_DIGEST_PATH} does not pin the checked-out canonical bytes "
+            f"(pinned sha256={pinned_hash}, canonical sha256={canonical_hash})"
+        )
+
+
+def read_package(
+    directory: Path,
+    pattern: str,
+    *,
+    min_files: int,
+    exclude_suffixes: tuple[str, ...] = (),
+) -> str:
+    """Concatenate every source file of a package.
+
+    Contract fragments are asserted against a PACKAGE, not a file: Go lets a
+    package be laid out across as many files as it likes, and a purely
+    mechanical split must not read as a contract violation. (It did once —
+    splitting yue-node's 2853-line internal/service/service.go moved
+    `applyDeviceGeneration` into state.go and this guard reported the
+    credential-generation boundary as missing.)
+
+native-node-contract.json:4:  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+tests/test_ops_shard_workflow.py:44:            json.dumps({"yueboard_contract_pin": self.board_sha}))
+scripts/pytest-shards.py:3135:    require(contract["yueboard_contract_pin"] == value["board_revision"],
+tests/test_yueops_node_tests_20261017.py:263:        'test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"',
+tests/test_yueops_node_tests_20261017.py:264:        'git -C .ci-yueboard diff --exit-code "$board_pin" -- test/fixtures/schema.sql',
+tests/test_yueops_node_tests_20261017.py:295:            'test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"',
+scripts/authorize-yueboard-build-plan.sh:14:  echo "::error::YueBoard native contract pin must be an exact lowercase 40-hex commit" >&2
+scripts/authorize-yueboard-build-plan.sh:18:  echo "::error::resolved YueBoard source must be an exact lowercase 40-hex commit" >&2
+scripts/authorize-yueboard-build-plan.sh:58:  echo "::error::refusing YueBoard promotion: resolved source ${source_sha} is not the exact reviewed native contract pin ${contract_pin}" >&2
+scripts/authorize-yueboard-build-plan.sh:67:      if .validation == "yueboard" then .ref = $source_sha else . end
+scripts/authorize-yueboard-build-plan.sh:70:        if .validation == "yueboard" then .ref = $source_sha else . end
+scripts/authorize-yueboard-build-plan.sh:79:  echo "::notice::YueBoard build plan is pinned and registry-eligible: source=${source_sha}" >&2
+scripts/authorize-yueboard-build-plan.sh:81:  echo "::notice::YueBoard validation-only plan is non-promotable: source=${source_sha} reviewed_pin=${contract_pin}; no image build, candidate tag, built marker, sha-* tag, or latest mutation is scheduled" >&2
+tests/test_build_policy.py:1251:        self.assertIn("['yueboard_contract_pin']", capture_code)
+tests/test_build_policy.py:1510:    def test_yueboard_promotion_is_bound_to_exact_reviewed_contract_pin(self) -> None:
+tests/test_build_policy.py:1512:            "- name: Classify YueBoard reviewed-pin authorization"
+tests/test_build_policy.py:1560:        self.assertIn("yueboard_contract_pin", self.readme)
+tests/test_build_policy.py:1562:    def test_yueboard_pin_authorizer_positive_and_negative_cases(self) -> None:
+tests/test_build_policy.py:1611:    def test_unpinned_yueboard_plan_is_validation_only_and_never_writes_registry(
+tests/test_build_policy.py:1844:        self.assertIn("::warning::YueBoard has no committed -linux visual baselines", e2e)
+tests/test_build_policy.py:2104:    def test_yue_node_and_yueops_use_a_pinned_yueboard_contract(self) -> None:
+tests/test_build_policy.py:2106:            "Checkout pinned YueBoard canonical contract",
+tests/test_build_policy.py:2110:            "- name: Checkout pinned YueBoard canonical contract"
+tests/test_build_policy.py:2120:        pin = self.native_contract["yueboard_contract_pin"]
+tests/test_build_policy.py:2122:        self.assertIn(".yueboard_contract_pin", self.workflow)
+tests/test_build_policy.py:2133:            "repository_dispatch may not override the pinned YueBoard contract",
+tests/test_build_policy.py:2137:            'yueboard_contract_ref" != "$yueboard_contract_pin',
+tests/test_build_policy.py:2169:            "pinned YueBoard contract schema floor does not match central policy",
+tests/test_build_policy.py:2185:        # 58 is the binary-required floor: the pinned YueBoard tree's irreversible
+tests/test_build_policy.py:2189:        # central policy and pinned YueBoard tree on this exact reviewed value (the
+tests/test_build_policy.py:2195:            self.native_contract["yueboard_contract_pin"],
+tests/test_build_policy.py:2624:    def test_native_validator_rejects_stale_pinned_yueboard_floor(self) -> None:
+tests/test_build_policy.py:2649:            "pinned YueBoard contract schema floor does not match central policy",
+tests/test_notices_contract_gate_20261028.py:29:        self.assertLess(self.text.index("Checkout pinned YueBoard canonical contract"), at)
+README.md:37:  -f service=yueboard -f ref=<40-hex-reviewed-contract-pin>
+README.md:52:  -f service=yueboard -f ref=<40-hex-reviewed-contract-pin> -f promote=true
+README.md:62:`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
+merge-hygiene-exceptions.json:103:      "reason": "Merged 2026-11-02 17:54 SGT at head 0bbe8593547746391c728ac1129ae0e244b7c5cc. Independent read-only Codex review found no defects against origin/master 59443949 (box /workspace/fan1102/yueboard-86.review.txt). Box yt-premerge parity: go-vet, go-test, migrations pass; only failure TestOpenPullRequestMigrationNumbers (open PRs #76/#87 both at 00152) is identical on origin/master; parity log sha256 f216743db471c9846b975c556e49cb98e05448ac9148156d6a6e2a3fd419f276. Missing evidence: no committed merge-receipts/yueboard/86.json (artifacts live on box only), pre-push hook not installed, full PostgreSQL schemagate not run, no GitHub check runs.",
+merge-hygiene-exceptions.json:133:      "reason": "Two independent Codex reviews of exact head 4cef3672de11336d76d739728ad482aecf99558a disagree: the Mac review approved (reviews/merge-receipts-20261102/yueboard-52.md) but the box review returned CHANGES: [P2] ShadowReplay at internal/modules/usagepolicy/abuse.go:501 does not apply the single-signal filter (reviews/merge-receipts-20261102/yueboard-52-box-review.txt). Exact-head box parity passed (yueboard-52.log). Because #52's head as merged contained that defect, no receipt is claimed for it. Resolution recorded separately: the fix merged as yueboard #92 (96d6241d) with its own approving review and parity (merge-receipts/yueboard/92.json).",
+merge-hygiene-exceptions.json:223:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 8e8d491420143a0a4fb5980d4141a5f8c5239af8 on 2026-11-02T17:05:25Z; artifact reviews/merge-receipts-20261103/yueboard-17.md, log_sha256 73eaa014753021af92c88a5ba82c070bc066d2ac11c9a4f780f7a63012bca7bd",
+merge-hygiene-exceptions.json:229:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 03b13c1e57a6e56adb8318734e7fe7be25692246 on 2026-11-02T17:06:01Z; artifact reviews/merge-receipts-20261103/yueboard-38.md, log_sha256 d7c0ff133e2365c67dbe1d0cebd99e311c0a999d484a80a2eb0d58c5a692a42e",
+merge-hygiene-exceptions.json:235:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 462068c3a4f9f628e16a94b6a36c39dba7de80d8 on 2026-11-02T17:04:26Z; artifact reviews/merge-receipts-20261103/yueboard-39.md, log_sha256 08d8e4c81eaa2639dffcffb89574acf901988ebb9de707ec7c64d592443ff8bc",
+merge-hygiene-exceptions.json:241:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head b6d811d8a5890c27f3288caae48949ffe7adaddf on 2026-11-02T17:04:56Z; artifact reviews/merge-receipts-20261103/yueboard-45.md, log_sha256 dcc9c7946209e29dbaf383fc2ce9e69e1219c44d0e37a884a194a15d900b64fa",
+merge-hygiene-exceptions.json:247:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 8c1b920be9b645d3f6cb69f186a40f1721f03de4 on 2026-11-02T17:06:22Z; artifact reviews/merge-receipts-20261103/yueboard-46.md, log_sha256 5a22b5c20f49a6ee85af830a59d88467388ca768283980214a468ab0ecc5c6d8",
+merge-hygiene-exceptions.json:253:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 5340ac9c137068f4f199a8853c0996543d4624fe on 2026-11-02T17:06:26Z; artifact reviews/merge-receipts-20261103/yueboard-54.md, log_sha256 f231eac588514ef584e12f220ae459b768483be317ddffe85a17bf6fdca67a8a",
+merge-hygiene-exceptions.json:259:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 3ad259f2f2eda2972e845a157ad368e25072bfa0 on 2026-11-02T17:02:39Z; artifact reviews/merge-receipts-20261103/yueboard-63.md, log_sha256 827c23d7c78e70739756491e60052d2dd3b927ef8985fa7ab57170a2a3fa14b3",
+merge-hygiene-exceptions.json:265:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head d5764cbc5b8a4cbcd45b6e7023f0cd27e3ae168b on 2026-11-02T17:02:55Z; artifact reviews/merge-receipts-20261103/yueboard-66.md, log_sha256 260f264dc369441b340d29738d47f099a15b18bf6eecf10692a5fbf88956393d",
+merge-hygiene-exceptions.json:271:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head e2521d692ec082fed4e8e7ce664f6a1f1cfd4d9e on 2026-11-02T17:00:33Z; artifact reviews/merge-receipts-20261103/yueboard-68.md, log_sha256 ca205030bce67de442f2cd37d1e842e735c22f7febc0aa508ffbc62601cf28f9",
+merge-hygiene-exceptions.json:277:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head 49d1fe552c5ee15fb58493259451af87e6a74f04 on 2026-11-02T17:01:18Z; artifact reviews/merge-receipts-20261103/yueboard-69.md, log_sha256 5d30b1a922da8a56a205a1d4ac442f786be6fad11e87bcf459fedb6f42ef0211",
+merge-hygiene-exceptions.json:283:      "reason": "backfill evidence produced >24h after merge (outside receipt window): Codex approve + parity pass at exact head f20952b2c50b884f3fca8e3270c0d11a80417e50 on 2026-11-02T17:01:59Z; artifact reviews/merge-receipts-20261103/yueboard-73.md, log_sha256 10f846154aaf01461b6d4765f2755e09aecd571b7fcbca0cb9d96eac45cc077a",
+scripts/validate-native-node-contract.py:59:    Central CI checks out the reviewed YueBoard commit separately and calls
+scripts/validate-native-node-contract.py:538:            "YueOps validation requires the pinned YueBoard contract checkout"
+scripts/validate-native-node-contract.py:540:    pinned_floor = read(yueboard_contract_root / "schema-floor.txt").strip()
+scripts/validate-native-node-contract.py:543:            "pinned YueBoard contract schema floor does not match central policy"
+scripts/validate-native-node-contract.py:955:    require(handshake, ["s.authNode(ctx, auth)"], "YueBoard static Handshake")
+scripts/validate-native-node-contract.py:956:    forbid(handshake, ["authMachine"], "YueBoard static Handshake")
+scripts/validate-native-node-contract.py:1175:    forbid_casefold(web_runtime, ["shadowrocket://"], "YueBoard unsupported one-click import")
+scripts/authorize-yueboard-promotion.sh:14:  echo "::error::YueBoard source SHA must be an exact lowercase 40-hex commit" >&2
+scripts/authorize-yueboard-promotion.sh:18:  echo "::error::YueBoard native contract pin must be an exact lowercase 40-hex commit" >&2
+scripts/authorize-yueboard-promotion.sh:30:  echo "::notice::YueBoard source is the exact reviewed native contract pin; promotable=true requested=${promote} source=${source_sha}"
+scripts/authorize-yueboard-promotion.sh:35:  echo "::error::refusing YueBoard promotion: source ${source_sha} is not the exact reviewed native contract pin ${contract_pin}" >&2
+scripts/authorize-yueboard-promotion.sh:40:echo "::notice::YueBoard validation-only source is non-promotable: source=${source_sha} reviewed_pin=${contract_pin}; validation may continue, but no registry write is authorized"
+ops-pytest-skip-baseline.json:3065:      "reason": "Skipped: yueboard sibling checkout absent; idle-reaping cannot be verified here",
+.github/workflows/board-visual-capture.yml:55:          revision = json.load(open('policy/native-node-contract.json'))['yueboard_contract_pin']
+.github/workflows/build.yml:35:        description: 'optional exact YueBoard SHA for manual YueOps ACL validation'
+.github/workflows/build.yml:129:          yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
+.github/workflows/build.yml:130:          yueboard_contract_ref="$yueboard_contract_pin"
+.github/workflows/build.yml:147:                echo "repository_dispatch may not override the pinned YueBoard contract" >&2
+.github/workflows/build.yml:179:            echo "YueBoard contract ref must be an exact 40-hex commit SHA" >&2
+.github/workflows/build.yml:207:             [ "$yueboard_contract_ref" != "$yueboard_contract_pin" ]; then
+.github/workflows/build.yml:208:            echo "promotion must use the reviewed pinned YueBoard contract" >&2
+.github/workflows/build.yml:266:                  "$yueboard_contract_pin" "$board_source_sha" "$promote" \
+.github/workflows/build.yml:509:      - name: Checkout pinned YueBoard canonical contract
+.github/workflows/build.yml:629:        # Every YueBoard role runs the shared preflight, which requires buf.
+.github/workflows/build.yml:864:      # A new YueBoard HEAD may be reviewed before the cross-repository pin is
+.github/workflows/build.yml:869:      - name: Classify YueBoard reviewed-pin authorization
+.github/workflows/build.yml:876:          contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+.github/workflows/build.yml:1237:            echo "::warning::YueBoard has no committed -linux visual baselines: generating them (visual NOT compared this run); commit the yueboard-e2e-linux-baselines artifact"
+.github/workflows/build.yml:1241:              echo "Download the \`yueboard-e2e-linux-baselines\` artifact and commit it under \`$shots/\`."
+.github/workflows/build.yml:1342:      # YueBoard's Go producer share contracts/yueboard-internal/notices.v1.json.
+.github/workflows/build.yml:1343:      # Run the producer side against the pinned YueBoard checkout that is
+.github/workflows/build.yml:1361:            echo "::error::pinned YueBoard checkout is missing for the notices contract" >&2
+.github/workflows/build.yml:1480:          board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
+.github/workflows/build.yml:1481:          test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"
+.github/workflows/build.yml:1484:          git -C .ci-yueboard diff --exit-code "$board_pin" -- test/fixtures/schema.sql
+.github/workflows/build.yml:2490:            contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+
+exec
+/bin/bash -lc "git grep -n -E 'yueboard_contract_pin|f7102350a149d4dbcb72ea212596a86f12ddca21|92377c1f87d99d83705e00d92f8d9742142f7e17' 46431f4a7d881ae227c6663eb1a3111631e3811e" in /workspace/rcpt-yueto-ci
+ succeeded in 0ms:
+46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/board-visual-capture.yml:55:          revision = json.load(open('policy/native-node-contract.json'))['yueboard_contract_pin']
+46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:129:          yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
+46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:130:          yueboard_contract_ref="$yueboard_contract_pin"
+46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:207:             [ "$yueboard_contract_ref" != "$yueboard_contract_pin" ]; then
+46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:266:                  "$yueboard_contract_pin" "$board_source_sha" "$promote" \
+46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:876:          contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:1480:          board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
+46431f4a7d881ae227c6663eb1a3111631e3811e:.github/workflows/build.yml:2490:            contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+46431f4a7d881ae227c6663eb1a3111631e3811e:README.md:62:`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
+46431f4a7d881ae227c6663eb1a3111631e3811e:native-node-contract.json:4:  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+46431f4a7d881ae227c6663eb1a3111631e3811e:reviews/merge-receipts-20261103/yueto-ci-153.md:3:Box `codex exec -s read-only`, prompt scoped to `git diff origin/master 8731458f0ed0640ff30b0f27207287398cc10bc5`. Reviewed 2026-11-02T23:54:12Z. Pin-only change (yueboard_contract_pin -> f7102350, test expectation).
+46431f4a7d881ae227c6663eb1a3111631e3811e:reviews/merge-receipts-20261103/yueto-ci-153.md:8:Verified the specified diff: the pin is the full 40-hex SHA `f7102350a149d4dbcb72ea212596a86f12ddca21`, and the test expectation matches exactly. Only those two lines changed; no migrations or other changes. Nothing modified.
+46431f4a7d881ae227c6663eb1a3111631e3811e:scripts/pytest-shards.py:3135:    require(contract["yueboard_contract_pin"] == value["board_revision"],
+46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:1251:        self.assertIn("['yueboard_contract_pin']", capture_code)
+46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:1560:        self.assertIn("yueboard_contract_pin", self.readme)
+46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2120:        pin = self.native_contract["yueboard_contract_pin"]
+46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2122:        self.assertIn(".yueboard_contract_pin", self.workflow)
+46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2137:            'yueboard_contract_ref" != "$yueboard_contract_pin',
+46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2195:            self.native_contract["yueboard_contract_pin"],
+46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_build_policy.py:2196:            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+46431f4a7d881ae227c6663eb1a3111631e3811e:tests/test_ops_shard_workflow.py:44:            json.dumps({"yueboard_contract_pin": self.board_sha}))
+
+exec
+/bin/bash -lc "sed -n '1,85p' tests/test_build_policy.py; git diff --check origin/master...46431f4a7d881ae227c6663eb1a3111631e3811e; for p in /AGENTS.md /workspace/AGENTS.md /workspace/rcpt-yueto-ci/AGENTS.md; do if [ -f \""'$p" ]; then cat "$p"; fi; done' in /workspace/rcpt-yueto-ci
+ succeeded in 0ms:
+from __future__ import annotations
+
+import fnmatch
+import glob
+import hashlib
+import importlib.util
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import textwrap
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW_DIR = ROOT / ".github" / "workflows"
+WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
+POLICY_WORKFLOW = ROOT / ".github" / "workflows" / "policy-ci.yml"
+IMAGE_RESCAN_WORKFLOW = ROOT / ".github" / "workflows" / "image-rescan.yml"
+SERVICES = ROOT / "services.json"
+VALIDATION_TARGETS = ROOT / "validation-targets.json"
+README = ROOT / "README.md"
+NATIVE_CONTRACT = ROOT / "native-node-contract.json"
+NATIVE_VALIDATOR = ROOT / "scripts" / "validate-native-node-contract.py"
+TARGET_PLANNER = ROOT / "scripts" / "plan-build-targets.sh"
+YUEBOARD_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-promotion.sh"
+YUEBOARD_PLAN_AUTHORIZER = ROOT / "scripts" / "authorize-yueboard-build-plan.sh"
+BUILDX_INSTALLER = ROOT / "scripts" / "install-verified-buildx.sh"
+BUILDX_SHA256 = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"
+
+
+class NativeNodeMakeChainTest(unittest.TestCase):
+    """Drive the actual CLI; unrelated ABI inputs are a bounded static fixture."""
+
+    PREFIX = (
+        "VALID_BUILD_PROFILES := auto hy2 vless\n"
+        ".PHONY: test test-vendored verify-fork-tags check-profile-deps\n"
+        "verify-fork-tags:\n\tbash scripts/verify-fork-tags.sh\n"
+        "check-profile-deps:\n\tsh scripts/check-profile-deps.sh\n"
+    )
+    BODY = (
+        "\tbash scripts/test-check-vulnerabilities.sh\n"
+        '\tgo test -race -count=1 -timeout $(TEST_TIMEOUT) -tags "$(TEST_COMMON_TAGS) yue_profile_hy2" ./...\n'
+        '\tgo test -race -count=1 -timeout $(TEST_TIMEOUT) -tags "$(TEST_COMMON_TAGS) yue_profile_vless" ./...\n'
+        "ifeq ($(shell uname -s),Linux)\n\tgo test ./native-fixture\n"
+        "else\n\t$(MAKE) native-fixture\nendif\n"
+    )
+    CURRENT = "test: verify-fork-tags\n\t$(MAKE) test-vendored\ntest-vendored: check-profile-deps\n"
+    LEGACY = "test: verify-fork-tags check-profile-deps\n"
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.node = self.root / "node"
+        self.board = self.root / "board"
+        contract = json.loads(NATIVE_CONTRACT.read_text())
+
+        def write(path, value):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(value, encoding="utf-8")
+
+        files = {
+            "Dockerfile": (
+                "ARG BUILD_PROFILE=auto\n-o yue-node-hy2 ./cmd/yue-node\n"
+                "-o yue-node-vless ./cmd/yue-node\n-o yue-node ./cmd/yue-node-launcher\n"
+                "COPY --from=builder /build/yue-node* /usr/local/bin/"
+            ),
+            "cmd/yue-node-launcher/main.go": (
+                "case capability.KernelHysteria:\ncase capability.KernelXray:\n"
+                'target := filepath.Join(filepath.Dir(executable), "yue-node-"+profile)\n'
+                "syscall.Exec(target"
+            ),
+            "scripts/check-profile-deps.sh": "yue_profile_hy2 yue_profile_vless profile dependency violation",
+            "internal/capability/manifest.go": 'InboundProtocols:    []string{"vless"}\nStructuredOutbounds: []string{"vless", "socks", "http", "wireguard"}',
+        }
+        for path, value in files.items():
+            write(self.node / path, value)
+        packages = [
+            ("config", 5, 0, "package config", ""),
+            ("controlplane", 5, 0, '\n'.join(['"' + c + '"' for c in contract["presence"]["release_a_rollout_capabilities"]] + [
+
+exec
+/bin/bash -lc 'PYTHONDONTWRITEBYTECODE=1 python tests/test_build_policy.py BuildPolicyTest.test_native_node_contract_is_central_and_blocks_all_product_repositories BuildPolicyTest.test_yue_node_and_yueops_use_a_pinned_yueboard_contract' in /workspace/rcpt-yueto-ci
+ exited 127 in 0ms:
+/bin/bash: line 1: python: command not found
+
+exec
+/bin/bash -lc 'PYTHONDONTWRITEBYTECODE=1 python3 tests/test_build_policy.py BuildPolicyTest.test_native_node_contract_is_central_and_blocks_all_product_repositories BuildPolicyTest.test_yue_node_and_yueops_use_a_pinned_yueboard_contract' in /workspace/rcpt-yueto-ci
+ succeeded in 0ms:
+..
+----------------------------------------------------------------------
+Ran 2 tests in 0.002s
+
+OK
+
+codex
+Reviewed only the specified diff. Both pin literals—`native-node-contract.json:4` and `tests/test_build_policy.py:2196`—match `92377c1f87d99d83705e00d92f8d9742142f7e17`. Workflow consumers read the central pin; the previous SHA remains only in a historical review receipt.
+
+Both targeted contract tests and `git diff --check` passed.
+
+VERDICT: APPROVE
+FINDINGS: None.
+tokens used
+13,953
+Reviewed only the specified diff. Both pin literals—`native-node-contract.json:4` and `tests/test_build_policy.py:2196`—match `92377c1f87d99d83705e00d92f8d9742142f7e17`. Workflow consumers read the central pin; the previous SHA remains only in a historical review receipt.
+
+Both targeted contract tests and `git diff --check` passed.
+
+VERDICT: APPROVE
+FINDINGS: None.
+
+exec
+/bin/bash -lc 'for p in /AGENTS.md /workspace/AGENTS.md /workspace/wt/AGENTS.md /workspace/wt/p161/AGENTS.md; do if [ -f "$p" ]; then cat "$p"; fi; done
+rg --files -g AGENTS.md tests reviews
+ git diff --check e5e7219''^1 137e0502
+PYTHONDONTWRITEBYTECODE=1 python3 tests/test_build_policy.py BuildPolicyTest.test_native_node_contract_is_central_and_blocks_all_product_repositories BuildPolicyTest.test_yue_node_and_yueops_use_a_pinned_yueboard_contract' in /workspace/wt/p161
+ succeeded in 0ms:
+..
+----------------------------------------------------------------------
+Ran 2 tests in 0.002s
+
+OK
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+import re, subprocess, ipaddress
+from pathlib import Path
+files=subprocess.check_output(['git','diff','--name-only','--diff-filter=A','e5e7219"'^1'"','137e0502'],text=True).splitlines()
+patterns={
+'credential':r'(?i)(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:password|secret|api[_-]?key|access[_-]?token)\\s*[:=]\\s*[\\\"\\x27]?["'^'"\\s\\\"\\x27,;]{8,})',
+'ipv4':r'(?<"'!['"\\w.])(?:\\d{1,3}\\.){3}\\d{1,3}(?"'!['"\\w.])',
+'ipv6':r'(?i)(?<"'!'"\\w)(?:[0-9a-f]{0,4}:){2,}[0-9a-f:]{0,39}(?"'!'"\\w)',
+'auth_url':r'https?://["'^'"\\s/]+:["'^'"\\s/]+@',
+}
+for f in files:
+ s=Path(f).read_text()
+ print(f, 'lines:',len(s.splitlines()))
+ for name,p in patterns.items():
+  matches=[(s.count('\\n',0,m.start())+1,m.group()) for m in re.finditer(p,s)]
+  print(name, matches)
+PY
+rg -n 'f7102350a149d4dbcb72ea212596a86f12ddca21|92377c1f87d99d83705e00d92f8d9742142f7e17' --glob '"'!reviews/**'"' --hidden --glob '"'!.git/**'"'
+git -C /workspace/gates/yueboard show -s --format='%H %s' 92377c1" in /workspace/wt/p161
+ exited 128 in 0ms:
+reviews/merge-receipts-20261103/yueto-ci-161.log lines: 573
+credential []
+ipv4 []
+ipv6 []
+auth_url []
+reviews/merge-receipts-20261103/yueto-ci-161.md lines: 5
+credential []
+ipv4 []
+ipv6 []
+auth_url []
+native-node-contract.json:4:  "yueboard_contract_pin": "92377c1f87d99d83705e00d92f8d9742142f7e17",
+tests/test_build_policy.py:2196:            "92377c1f87d99d83705e00d92f8d9742142f7e17",
+fatal: ambiguous argument '92377c1': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+
+codex
+Reviewed `e5e7219^1..137e0502`; `9c83dd8` includes unrelated receipt deletions.
+
+Both pin literals match `92377c1f87d99d83705e00d92f8d9742142f7e17`. Two targeted contract tests and `git diff --check` passed. No secrets or internal IPs found in either added artifact.
+
+FINDINGS: None.
+
+VERDICT: APPROVE
+tokens used
+19,479
+Reviewed `e5e7219^1..137e0502`; `9c83dd8` includes unrelated receipt deletions.
+
+Both pin literals match `92377c1f87d99d83705e00d92f8d9742142f7e17`. Two targeted contract tests and `git diff --check` passed. No secrets or internal IPs found in either added artifact.
+
+FINDINGS: None.
+
+VERDICT: APPROVE
