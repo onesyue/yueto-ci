@@ -160,7 +160,7 @@ FAIL: 订阅模板在仓库与生产之间漂移了：
     MIGRATION_DB_USER=root MIGRATION_DB_PASSWORD="$PANEL_PGPASSWORD" \
       python3 /opt/yueops/scripts/sync-subscribe-templates.py --apply
     # en 六行（本机）
-    python3 scripts/i18n/apply-db-content.py --host 66.55.76.208 --only subscribe_templates --apply
+    python3 scripts/i18n/apply-db-content.py --host <redacted-host> --only subscribe_templates --apply
 
 ══ root-doc-truth 失败日志（尾 60 行）══
 FAIL: 事实卡记的 mihomo fork master=1a083cada1a41fce91e29a13e10da23efb4a15de ≠ 真 checkout 的 6d60af5d01c4a21aadba9bd4fb2d431242324b8d
