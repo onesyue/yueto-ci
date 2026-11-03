@@ -1,0 +1,14 @@
+# Codex exact-head review: yueops #301 @1f0c2adb56876e18dee7d3aea0bd97c04cda8390 (mac-5f08d00f, codex exec read-only)
+
+仓内未发现删除文件的残留引用；IP 基线检查和运行时脚本清单检查均通过。跨仓检查发现 `yueto-ci/ops-pytest-skip-baseline.json` 仍列着两个已删除的测试，我正在确认是否影响 CI。常规 pytest 被只读沙箱禁止创建临时目录，已改跑不依赖临时目录的定向用例。
+
+28 个定向用例通过，涵盖 Nezha 禁止规则、Web OpenAPI 实际生成比对和兼容性检查。跨仓的两个 skip 条目属于封存的历史证据，读取逻辑只核对本次实际出现的跳过结果，不要求已删除测试继续存在；未发现它们会阻断本次变更。
+
+ succeeded in 51848ms:
+security_scan exit: 0
+error: fsmonitor_ipc__send_query: unspecified error on '/Users/j/Projects/yueto/yueops/.git/worktrees/nezha-purge/fsmonitor--daemon.ipc'
+
+{"ok": true, "fail": 0, "note": 140, "allowed": 50}
+[]
+
+VERDICT: approve @1f0c2adb5
