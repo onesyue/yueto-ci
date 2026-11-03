@@ -66,7 +66,7 @@ scripts/test-doc-path-truth.py:29: AssertionError
       操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
   · docs/release-chain-runbook.md: 提到 `yueops/scripts/v4-relay-topology.json`，而全工作区找不到它。
       操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
-  · docs/release-chain-runbook.md: 提到 `yueops/secrets/yueboard-panel.env.tmpl`，而全工作区找不到它。
+  · docs/release-chain-runbook.md: 提到 `<redacted-secrets-path>`，而全工作区找不到它。
       操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。
   · docs/release-chain-runbook.md: 提到 `yueto-ci/native-node-contract.json`，而全工作区找不到它。
       操作文档里一个不存在的路径就是一个会让人照着做的陷阱。要么改文档，要么把它登记进 DELETED_ON_PURPOSE 并写清为什么还留着这个名字。

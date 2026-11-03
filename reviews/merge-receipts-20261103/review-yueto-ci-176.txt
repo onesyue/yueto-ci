@@ -1839,7 +1839,7 @@ or routine inspection. It grants no production access. When the task prohibits
 production access, inspect source and existing receipts only; leave collection
 to the authorized execution lane. Never turn a failed read into a repair action.
 Do not start services, change timers, sign releases, deploy, alter data or clear
-report-outbox. Preserve host-key verification and the exclusion of <redacted-host>; never
+report-outbox. Preserve host-key verification and the exclusion of yue-tw; never
 hide subscription nodes 47/49. Do not run an unfiltered fleet sweep when its target
 selection cannot honor that exclusion. No backup or restore work belongs here.
 

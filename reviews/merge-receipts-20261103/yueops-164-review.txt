@@ -1,6 +1,6 @@
 VERDICT: approve
-- `secrets/yueops-escrow.env.enc:1`：未发现可确认的问题或明文秘密暴露；加密结构有效，收件人和加密配置未变。未解密，因此未验证载荷内容及 MAC 完整性。
+- `<redacted-secrets-path>:1`：未发现可确认的问题或明文秘密暴露；加密结构有效，收件人和加密配置未变。未解密，因此未验证载荷内容及 MAC 完整性。
 tokens used
 21,061
 VERDICT: approve
-- `secrets/yueops-escrow.env.enc:1`：未发现可确认的问题或明文秘密暴露；加密结构有效，收件人和加密配置未变。未解密，因此未验证载荷内容及 MAC 完整性。
+- `<redacted-secrets-path>:1`：未发现可确认的问题或明文秘密暴露；加密结构有效，收件人和加密配置未变。未解密，因此未验证载荷内容及 MAC 完整性。
