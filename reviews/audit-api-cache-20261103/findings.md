@@ -1,5 +1,9 @@
 # Merge hygiene API budget batch
 
+The original batch below records v1 behavior. The PR #174 continuation at the
+end supersedes its zero-call verdict-cache contract with mandatory ETag
+revalidation of mutable remote evidence. Historical measurements remain intact.
+
 Acceptance contract: cache completed remote merge findings by owner/repository,
 pull request number and merge commit SHA. A warm merged-PR lookup must make zero
 API calls. Revalidate local receipts, exceptions and enforcement on every audit.
@@ -131,3 +135,54 @@ DONE_WITH_CONCERNS Linux container validation did not reach tests: the existing
 requirements-policy.txt pins an amd64 PyYAML wheel hash, incompatible with the
 ARM64 Docker wheel. Log: ../linux-174-merge.log. No dependency policy was changed;
 await the native amd64 Central policy CI on the pushed merge commit.
+
+P1 repair acceptance: the independent reviewer reproduced stale green at
+f861271e1d36533a6baeb4a3aa7b29bad375c83b (../review-174-repro.txt). A check-run
+conclusion changed under unchanged merge/PR metadata; the warm audit omitted it.
+Reviews/checks/statuses are mutable, so final verdicts must be recomputed after
+every page is revalidated by HTTP/ETag. Cache only immutable compare results,
+ignore all v1 entries, preserve fail-closed quota/API paths and local baseline/
+receipt checks. This supersedes the original zero-call merged-verdict contract
+to satisfy the owner's explicit no-stale-false-green requirement.
+
+Blast radius: CACHE_VERSION/merged_findings consumers are the audit script,
+cache tests, measurement fixture and README/PR description; no consumers were
+found in workspace scripts/docs/skills. Preserve historical review evidence.
+Independent review lane: /root/exact_head_review, read-only repository access;
+report ownership ../review-174.txt, reproduction ../review-174-repro.txt.
+
+DONE Red regression at old implementation: all 9 mutable-evidence/failure
+subcases failed as expected (../pytest-174-regression-red.log). After repair,
+74 related tests and 186 subtests passed (../pytest-174-targeted.log). Controls
+cover changed checks, dismissed reviews, changed statuses, legacy v1 green
+entries, and warm 401/500/rate-floor failures in JSON/text. ETags in fixtures now
+reflect response content instead of a constant validator.
+
+DONE Revised request measurements against master 5a551af are saved in
+call-counts-revalidated.json, produced by measure-calls.py. Warm one/100-merge
+audits make 5/303 conditional requests for both repos and zero charged fixture
+requests. Immutable comparisons save one request per yueto-ci merged PR.
+
+DONE Saved-file Pyright diagnostics are empty for the changed audit script and
+cache tests. Compileall, explicit Ruff E4/E7/E9/F and diff whitespace checks pass.
+The original merged candidate is MERGEABLE; its Central policy CI run is
+https://github.com/onesyue/yueto-ci/actions/runs/41571629123. A new full pytest run
+is in progress for the P1 repair; final review will use its signed pushed HEAD.
+
+DONE Linux acceptance for merge candidate f861271: Central policy CI completed
+successfully at https://github.com/onesyue/yueto-ci/actions/runs/41571629123.
+The redundant local amd64 setup container ci174-amd64 was stopped and removed;
+its pending prerequisite is now owned by final-head hosted Linux CI after the
+P1 repair push. Setup log: ../linux-174-amd64-setup.log. No container result is
+reported as a passed test. Full final-head local pytest remains running.
+
+DONE Final repair full pytest: 678 passed, 1 skipped, 5833 subtests passed in
+410.72 seconds, exit 0. Log ../pytest-174-final.log; exact invocation and source
+hashes are in verification-final.json. The skipped external-source check remains
+unverified. No source/test/measurement bytes changed during the full run.
+
+Master advanced during validation to e05012e with receipts/review artifacts only;
+the original requested master merge at 5a551af is retained. Final PR review uses
+the current master ref and records the actual merge base, with no repeated
+source testing for unchanged audit code. Signed repair publication and final
+exact-head review/hosted CI follow this receipt.

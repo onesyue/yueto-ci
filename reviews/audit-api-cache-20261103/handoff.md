@@ -1,5 +1,8 @@
 # Publish the merge-hygiene API cache change
 
+Historical handoff, superseded by the PR #174 continuation in findings.md.
+The branch is now published; v2 revalidates mutable evidence on every audit.
+
 The user authorized implementation, tests, a signed commit, a branch push and a
 pull request to master. Merging is explicitly forbidden. The local branch is
 `cx/audit-api-cache-1103b` in `/Users/j/Projects/yueto-wt/ci-cache-1103b`.

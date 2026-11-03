@@ -21,7 +21,7 @@ import time
 REPOS = ("yueops", "yueboard", "yueto", "yueto-ci", "yuelink", "yuelink-ci", "yue-node")
 ROOT = Path(__file__).resolve().parents[1]
 # Bump when the interpretation of cached remote evidence changes.
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 # Exact approved snapshot bytes; every path uses this pin. Tests may patch it,
 # but CLI arguments cannot authorize a replacement snapshot.
 ACCEPTED_HISTORY_SHA256 = "fca512aa5e0519ac878e9f5df01111bf995c8d7286a3f0e5360a2ce4bce25324"
@@ -378,25 +378,27 @@ def merged_findings(owner, repo, pr):
     if not isinstance(merge_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", merge_sha):
         raise ValueError("invalid PR merge commit SHA")
     key = [owner, repo, pr["number"], merge_sha]
-    path = cache_path("merged", key)
+    path = cache_path("compare", key)
     inputs = {"key": key, "head": pr["head"]["sha"], "base": pr["base"]["sha"],
               "merged_at": pr["merged_at"], "author": pr["user"]["login"]}
-    cached = read_cache(path)
-    if (isinstance(cached, dict) and cached.get("inputs") == inputs
-            and isinstance(cached.get("findings"), list)
-            and all(isinstance(reason, str) for reason in cached["findings"])
-            and type(cached.get("evidence_only")) is bool):
-        return cached["findings"], cached["evidence_only"]
     prefix = f"repos/{owner}/{repo}"
     sha = pr["head"]["sha"]
+    # Reviews and check runs can change after merge without changing the PR's
+    # refs or updated_at. Revalidate every evidence page via HTTP/ETag before
+    # deriving a verdict; an unavailable endpoint must never reuse old green.
     reasons = findings(
         pr, all_rows(f'{prefix}/pulls/{pr["number"]}/reviews'),
         all_rows(f"{prefix}/commits/{sha}/check-runs?filter=all", "check_runs"),
         all_rows(f"{prefix}/commits/{sha}/statuses"))
-    only_evidence = evidence_only(owner, repo, pr["base"]["sha"], sha)
-    # Persist only a complete remote snapshot. Receipts, exceptions and policy
-    # activation are local/current decisions and must be evaluated on every run.
-    write_cache(path, {"inputs": inputs, "findings": reasons, "evidence_only": only_evidence})
+    cached = read_cache(path)
+    if (isinstance(cached, dict) and cached.get("inputs") == inputs
+            and type(cached.get("evidence_only")) is bool):
+        only_evidence = cached["evidence_only"]
+    else:
+        # Only the file comparison between immutable commit SHAs is reusable
+        # without HTTP validation. Version 2 ignores all old verdict snapshots.
+        only_evidence = evidence_only(owner, repo, pr["base"]["sha"], sha)
+        write_cache(path, {"inputs": inputs, "evidence_only": only_evidence})
     return reasons, only_evidence
 
 

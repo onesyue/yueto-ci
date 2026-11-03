@@ -1,44 +1,40 @@
-Repeated merge-hygiene audits refetched reviews, check runs, statuses and (for
-yueto-ci) comparisons for every historical merged pull request, exhausting the
-onesyue REST quota. Cache complete remote findings by owner/repo, PR number and
-merge commit SHA so a previously audited merge makes zero evidence requests.
-Receipts, exception registrations and activation enforcement remain live checks.
+Repeated merge-hygiene audits consumed the REST quota by downloading the same
+historical evidence. The audit now uses ETag conditional GETs for every mutable
+reviews/check-runs/statuses page and recomputes findings on each run. Only file
+comparisons between fixed base/head commit SHAs are reused without HTTP requests.
+This retains quota savings while detecting changed same-SHA evidence and failing
+incomplete when revalidation fails. Version 2 ignores the original verdict cache.
 
-GETs now persist ETags and response bodies and send If-None-Match on reruns.
-Closed-PR pagination retains the existing updated-descending effective cutoff,
-with regression tests for recently updated older merges and activation bounds.
-Remaining quota below 300 exits 2 with `incomplete: rate-floor`; the floor and
-cache directory are configurable through `MERGE_HYGIENE_RATE_FLOOR` and
-`MERGE_HYGIENE_CACHE_DIR`. HTTP 403/429 retries honor Retry-After/reset, use bounded
-backoff and never expose HTTP/credential diagnostics. Existing verdicts and
-0/1/2 exit semantics are preserved.
+Merged master 5a551afd3cd86dc0d783726253d6e2c81927e869 into this branch without
+rebasing. PR #172's accepted-history SHA256, frozen_at boundary and receipt
+requirements are preserved. Local receipts, exceptions, baseline and activation
+remain current inputs; an open PR still revalidates evidence and ref identity.
 
-Measured offline against baseline `2c150a3` using identical fixtures:
+Closed-PR pagination retains the updated-descending effective cutoff. Remaining
+quota below 300 exits 2 with `incomplete: rate-floor`; the floor and cache path
+are configurable. HTTP 403/429 retries honor Retry-After/reset with bounded
+backoff. No cached response is served on authentication or transport failure.
+
+Offline measurements against master using identical fixtures:
 
 | Fixture | Before rerun | After cold | After rerun | Charged on rerun |
 | --- | ---: | ---: | ---: | ---: |
-| One yueops merged PR | 5 | 5 | 2 × 304 | 0 |
-| 100 yueops merged PRs | 303 | 303 | 3 × 304 | 0 |
-| One yueto-ci merged PR | 6 | 6 | 2 × 304 | 0 |
-| 100 yueto-ci merged PRs | 403 | 403 | 3 × 304 | 0 |
+| One yueops merged PR | 5 | 5 | 5 × 304 | 0 |
+| 100 yueops merged PRs | 303 | 303 | 303 × 304 | 0 |
+| One yueto-ci merged PR | 6 | 6 | 5 × 304 | 0 |
+| 100 yueto-ci merged PRs | 403 | 403 | 303 × 304 | 0 |
 
-Counts include policy-anchor lookup and PR discovery. All fixture verdicts match
-baseline; these are measured fixture request counts, not live quota claims.
-Evidence and reproduction: `reviews/audit-api-cache-20261103/call-counts.json`
-and `measure-calls.py`. A separate test reloads the module from disk and asserts
-that a cached merged PR makes zero API/subprocess calls.
+Counts include activation and discovery. These are fixture results, not measured
+live quota savings. See `reviews/audit-api-cache-20261103/call-counts-revalidated.json`
+and reproduce with `python3 reviews/audit-api-cache-20261103/measure-calls.py`.
+The earlier call-counts.json and verification.json record the superseded v1 batch.
 
-Validation: 51 merge-hygiene unit tests and 8 real-CLI receipt tests passed;
-compileall, shell syntax, ShellCheck, actionlint and explicit Ruff E4/E7/E9/F
-checks passed. Independent read-only review found no blocking issues.
-Full repository suite: 664 tests, 663 passed and 1 skipped (the yueops sibling
-source checkout is unavailable), with no failures/errors. Test fixtures use an
-isolated writable Go cache, installed GNU coreutils and child-only Git signing
-override; candidate commits still require signing. Evidence and publishing
-limitations are recorded in `reviews/audit-api-cache-20261103/findings.md` and
-`verification.json`. Linux CI remains required because this session cannot
-access Docker. Do not merge as part of this task.
+Independent exact-head review found one P1: indefinite verdict reuse concealed a
+changed check conclusion. The fix revalidates mutable pages and adds warm-cache
+controls for changed checks/reviews/statuses, failed requests, rate-floor exit and
+legacy v1 cache entries. All nine negative subcases failed before repair; the
+74 affected tests passed after repair. The full pytest suite passed with 678
+passed, 1 skipped (unavailable external yueops-src), and 5833 passing subtests.
+Exact commands, hashes and final review evidence are recorded in `reviews/audit-api-cache-20261103/findings.md`.
 
-The immutable cache preserves the first complete remote snapshot for each merge.
-Removing the cache forces a refresh; a cache version bump invalidates entries
-when interpretation changes. No live repositories or production were modified.
+No production deployment, master merge, rebase, force push or hook bypass.
