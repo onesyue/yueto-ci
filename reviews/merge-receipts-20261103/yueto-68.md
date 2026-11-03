@@ -13,7 +13,7 @@ That comment is the independent Grok exact-head APPROVE for `bc2b4f7b925884a82c8
 
 The earlier pass receipt for `0827f9c0` stays withdrawn. See `reviews/merge-receipts-20261103/receipts-179-68-withdrawn.md`. This note does not restore `merge-receipts/yueto/68.json`.
 
-Subject pull request: open. The APPROVE comment was posted with an empty `statusCheckRollup`. This note records no CI pass.
+Subject pull request: reported open, with an empty `statusCheckRollup` alongside that APPROVE comment. This note records no CI pass.
 
 Parity: NOT pass. PENDING. No parity command log, runner, timestamp, or digest is claimed.
 
