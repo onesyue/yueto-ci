@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 99,
+  "head": "bd3e04110f71527a82b91c672893156196fd7876",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "bd3e04110f71527a82b91c672893156196fd7876",
+    "artifact": "reviews/merge-receipts-20261103/yueboard-99-review-tos.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T01:08:00Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "bd3e04110f71527a82b91c672893156196fd7876",
+    "command": "go test+vet subscribe; real-core parse flag-on: stash/mihomo, sing-box 1.12.12/1.14.4",
+    "log_sha256": "9900d1a24c3a70bf7ea157e8fbb7da6a25d3ccc789278a0aad2e6408a4a4a1ab",
+    "ran_at": "2026-11-03T01:09:40Z",
+    "runner": "box"
+  }
+}

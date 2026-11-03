@@ -1,0 +1,4 @@
+8cee3cc94931ac48aae4a92a4a1c101147c2b583
+00:00 +4: /workspace/lane/gfw-wording/yuelink-tos/test/modules/settings/diagnostics_consent_ui_test.dart: bundled legal documents both locales ship tos + privacy and pubspec declares them
+00:00 +5: /workspace/lane/gfw-wording/yuelink-tos/test/modules/settings/diagnostics_consent_ui_test.dart: bundled legal documents ToS carries the dated diagnostics section with every commitment
+00:00 +6: All tests passed!

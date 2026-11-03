@@ -1,0 +1,8 @@
+bd3e04110f71527a82b91c672893156196fd7876
+./internal/modules/subscribe
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	1.044s
+vet-ok
+configuration file /workspace/lane/gfw-wording/rc99/fx-stash.b test is successful
+configuration file /workspace/lane/gfw-wording/rc99/fx-mihomo.b test is successful
+sb1.12-ok
+sb1.14-ok
