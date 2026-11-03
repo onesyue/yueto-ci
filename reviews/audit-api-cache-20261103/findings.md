@@ -91,3 +91,43 @@ sandbox. GitHub access failed with `error connecting to api.github.com`. Git
 staging failed creating the linked worktree index.lock outside writable roots
 with `Operation not permitted`. No commit, push or PR was made. The PR body and
 exact publication commands are saved in `pr-body.md` and `handoff.md`.
+
+## PR #174 merge and exact-head review — 2026-11-03
+
+Acceptance contract: merge origin/master (5a551af) into cx/audit-api-cache-1103b,
+without rebasing or force pushing; preserve PR #172 accepted-history SHA256,
+frozen_at and receipt enforcement plus cache/ETag/rate-floor behavior. Run the
+full pytest suite, compile/lint checks and Linux policy CI. Sign commits using
+normal hooks and push normally. Review the entire final PR diff against master;
+resolve fixable P1 findings and repeat tests/review on the changed candidate.
+Write ../review-174.txt ending in a verdict bound to the full pushed HEAD SHA.
+No production deployment is part of this task. Rollback is a signed follow-up
+revert; existing published history is preserved.
+
+Checklist:
+- Merge integration: sole conflict is the import/constants/helper section of
+  scripts/merge-hygiene-audit.py; retain both sides.
+- Verification and publication: pending full pytest and CI at merged candidate.
+- Exact-head review: pending published candidate, including stale-cache risks.
+- Parked: retain the existing out-of-scope findings above.
+
+Lane ledger for this continuation:
+- Integration /root: sole writer of source, tests and this findings record.
+- Exact-head review: reserve one independent read-only lane after publication;
+  owns only ../review-174.txt. No duplicate source investigation.
+
+DONE Merge integration: preserved both conflict sides. AST comparison confirms
+baseline, receipt, enforcement_cutoff and premerge are identical to master.
+Accepted-history JSON and exception registry are also identical to master.
+
+DONE Full pytest at merged working tree: 675 passed, 1 skipped, 5824 subtests
+passed in 582.88 seconds. Invocation: PATH with GNU coreutils first, TZ=UTC,
+test-child-only commit.gpgsign=false, heavy-run.sh python3 -m pytest -q -ra
+--junitxml=../pytest-174-merge.xml. Log: ../pytest-174-merge.log. The skip requires
+the absent yueops-src checkout; it is not a pass. Compileall, bash syntax,
+ShellCheck, actionlint and git diff --check passed. Saved script diagnostics: {}.
+
+DONE_WITH_CONCERNS Linux container validation did not reach tests: the existing
+requirements-policy.txt pins an amd64 PyYAML wheel hash, incompatible with the
+ARM64 Docker wheel. Log: ../linux-174-merge.log. No dependency policy was changed;
+await the native amd64 Central policy CI on the pushed merge commit.

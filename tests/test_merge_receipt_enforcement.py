@@ -19,6 +19,7 @@ class ReceiptEnforcement(unittest.TestCase):
         self.root = Path(self.tmp.name)
         (self.root / 'scripts').mkdir()
         shutil.copyfile(ROOT / 'scripts/merge-hygiene-audit.py', self.root / 'scripts/audit.py')
+        shutil.copyfile(ROOT / 'accepted-history-20261103.json', self.root / 'accepted-history-20261103.json')
         self.now = datetime.now(timezone.utc) - timedelta(minutes=5)
         self.merged = self.now - timedelta(days=3)
         self.fixture = json.loads((ROOT / 'tests/fixtures/merge-hygiene/approved.json').read_text())

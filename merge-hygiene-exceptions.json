@@ -1002,6 +1002,12 @@
       "pr": 161,
       "approver": "coordinator 2026-11-03 09:06 SGT decision (receipt exceptions delegated by owner)",
       "reason": "Merged at head 137e0502bc89505da7ab9b787a2c93e8f5985b99 at 2026-11-03T00:37:14Z before CI started (required check \"policy tests + workflow lint\" started 2026-11-03T00:38:14Z, completed 2026-11-03T00:44:40Z). That same check later passed (success) at this exact head, so the merged code is green; the audit cannot see a completed check at merge time. Accepted history; rule \"no merge before required CI passes at exact head\" adopted 11-03 (guard-proposal.md). Missing evidence: a completed required check at merge time."
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 164,
+      "approver": "coordinator 2026-11-03 09:20 SGT decision (receipt exceptions delegated by owner)",
+      "reason": "PR #164 itself merged correctly: signed merge 6a3b2cf5019086bb92c107f2024d4d2db26670bd at head 77ccf163402216c0caca5c3e3b0de166e6e6dbb3, required check \"policy tests + workflow lint\" completed success 2026-11-03T00:58:50Z before merge at 00:59:32Z. Its receipt commit 922610ba72d586c86d9c3c743599b047812b37f2 (merge-receipts/yueto-ci/164.json, signed FE2659E6) was pushed directly to master via owner bypass of branch rules instead of a receipt PR. Content is correct; not reverted because reverting the receipt would remove admission evidence. Accepted history; rule \"receipts only via PR with required CI green, never direct push to master\" adopted 11-03. Missing evidence: a PR and required check for the receipt commit."
     }
   ]
 }
