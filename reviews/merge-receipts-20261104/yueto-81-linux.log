@@ -1,0 +1,35 @@
+lens: python=Python 3.13.16 uv=uv 0.10.9 node=v24.21.0 pg=postgres (PostgreSQL) 18.6 (Ubuntu 18.6-1.pgdg24.04+2) uid=1001 TZ=UTC arch=aarch64
+lens: 叠加了主检出相对 HEAD 的已跟踪改动（336 行 diff）
+.........s.............................................................. [ 37%]
+........................................................................ [ 75%]
+...............................................                          [100%]
+============================= slowest 25 durations =============================
+3.06s call     scripts/test-box-lock-registry.py::test_owner_filename_does_not_bypass_release_ancestry[True]
+3.05s call     scripts/test-box-lock-registry.py::test_live_without_lock_blocks_consumers_and_status[ship.sh yue-node-yue-node]
+3.03s call     scripts/test-box-lock-registry.py::test_owner_filename_does_not_bypass_release_ancestry[False]
+3.03s call     scripts/test-box-lock-registry.py::test_live_without_lock_blocks_consumers_and_status[rollout-yueops-agent.sh-yueops]
+3.00s call     scripts/test-box-lock-registry.py::test_legacy_ui_fallback_sibling_is_blocked
+2.15s call     scripts/test-release-lock.py::test_busy_inventory_has_a_bounded_unknown_exit[args1]
+2.15s call     scripts/test-release-lock.py::test_busy_inventory_has_a_bounded_unknown_exit[args0]
+2.14s call     scripts/test-release-lock.py::test_busy_inventory_has_a_bounded_unknown_exit[args3]
+2.14s call     scripts/test-release-lock.py::test_busy_inventory_has_a_bounded_unknown_exit[args2]
+2.05s call     scripts/test-release-lock.py::test_hook_reports_busy_inventory_as_unknown
+2.04s call     scripts/test-box-lock-registry.py::test_legacy_live_ship_matching_owner_is_not_enough
+2.01s call     scripts/test-box-lock-registry.py::test_status_hides_codex_prompt_and_reports_running_yt_run
+1.03s call     scripts/test-box-lock-registry.py::test_same_owner_string_cannot_impersonate_sibling_process
+1.00s call     scripts/test-box-lock-registry.py::test_acquire_rejects_unrelated_operation_pid
+0.41s call     scripts/test-box-lock-registry.py::test_incremental_panel_scope_persists_across_ticks[fleet-yueboard]
+0.41s call     scripts/test-release-lock.py::test_inventory_mutations_serialize_read_modify_write[heartbeat]
+0.41s call     scripts/test-box-lock-registry.py::test_incremental_panel_scope_persists_across_ticks[yueboard-fleet]
+0.37s call     scripts/test-release-lock.py::test_ui_lock_conflicts_only_with_the_same_unit_and_panel_deploy
+0.37s call     scripts/test-release-lock.py::test_inventory_mutations_serialize_read_modify_write[acquire]
+0.32s call     scripts/test-box-lock-registry.py::test_reused_ancestor_pid_is_not_owned
+0.30s call     scripts/test-box-lock-registry.py::test_pending_phase_invalidates_prior_proof_and_recovery_is_exact
+0.27s call     scripts/test-box-lock-registry.py::test_session_lock_survives_separate_tool_shells[None]
+0.27s call     scripts/test-box-lock-registry.py::test_session_lock_survives_separate_tool_shells[]
+0.26s call     scripts/test-release-lock.py::test_actually_invoking_a_release_script_still_fires
+0.25s call     scripts/test-box-lock-registry.py::test_legacy_directories_block_all_consumers_read_only[current]
+=========================== short test summary info ============================
+SKIPPED [1] scripts/test-release-lock.py:101: native macOS process inspection
+190 passed, 1 skipped in 46.19s
+lens: pytest rc=0

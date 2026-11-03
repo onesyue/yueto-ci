@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto",
+  "pr": 82,
+  "head": "4310a9bc3c29aaad3a228ff2ba6c8e9e72481993",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "4310a9bc3c29aaad3a228ff2ba6c8e9e72481993",
+    "artifact": "reviews/merge-receipts-20261104/yueto-82.md",
+    "reviewer": "codex-board-independent",
+    "reviewed_at": "2026-11-03T23:01:12.387681+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "4310a9bc3c29aaad3a228ff2ba6c8e9e72481993",
+    "command": "Targeted TestPairedOpsTemplatesEnforceDefaultMembership English Surge/Surfboard direct+held cases: 4 passed, zero skipped. Generated-header proof confirms remaining bytes unchanged. Historical full-template drift is not resolved by this batch.",
+    "log_sha256": "202576bbf5a730d89c7ad4a5f6eaa4d1e5239f33440e51f3267b3ef6fbeae5d0",
+    "ran_at": "2026-11-03T22:59:39.422529+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}

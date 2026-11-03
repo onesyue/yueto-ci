@@ -1,0 +1,16 @@
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/surge/direct
+    group_transport_companion_test.go:220: paired surge template rendered 33631 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/surge/held
+    group_transport_companion_test.go:220: paired surge template rendered 33707 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/surfboard/direct
+    group_transport_companion_test.go:220: paired surfboard template rendered 33591 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/surfboard/held
+    group_transport_companion_test.go:220: paired surfboard template rendered 33667 bytes
+--- PASS: TestPairedOpsTemplatesEnforceDefaultMembership (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/surge/direct (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/surge/held (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/surfboard/direct (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/surfboard/held (0.00s)
+PASS
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	0.018s
