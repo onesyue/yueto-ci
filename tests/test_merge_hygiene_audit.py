@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -158,7 +159,10 @@ class MergeHygieneAudit(unittest.TestCase):
     def test_exit_codes_and_machine_output(self):
         import contextlib
         import io
-        for rows, expected in (([], 0), ([{"exception": None}], 1), ([{"exception": {"reason": "registered"}}], 0)):
+        row = {"repo": "yueops", "pr": 203, "head": self.fixture["pr"]["head"]["sha"],
+               "merged_at": self.fixture["pr"]["merged_at"],
+               "findings": ["no_approving_review_at_merge"], "exception": None}
+        for rows, expected in (([], 0), ([row], 1), ([row | {"exception": {"reason": "registered"}}], 0)):
             with patch("sys.argv", ["audit", "--format", "json"]), patch.object(AUDIT, "audit", return_value=rows):
                 with contextlib.redirect_stdout(io.StringIO()) as output:
                     self.assertEqual(AUDIT.main(), expected)
@@ -167,6 +171,196 @@ class MergeHygieneAudit(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()) as output:
                 self.assertEqual(AUDIT.main(), 2)
             self.assertNotIn("secret", output.getvalue())
+
+
+class AcceptedHistory(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name) / "accepted-history-20261103.json"
+        self.entry = {"repo": "yueops", "pr": 203, "head": "a" * 40,
+                      "findings": ["no_approving_review_at_merge", "required_merge_receipt_missing"],
+                      "reason": "Frozen historical evidence accepted by coordinator"}
+        self.value = {"schema": 1, "frozen_at": "2026-11-03T02:00:00Z",
+                      "approver": "coordinator (owner mandate t454u) 2026-11-03",
+                      "entries": [self.entry]}
+        self.write_baseline()
+        self.row = {"repo": "yueops", "pr": 203, "head": "a" * 40,
+                    "url": "https://github.com/onesyue/yueops/pull/203",
+                    "merged_at": "2026-11-02T10:00:00Z", "findings": self.entry["findings"][:],
+                    "exception": None, "receipt": None, "satisfied_by_receipt": []}
+        self.candidate = self.row | {"pr": 204, "merged_at": None, "findings": [],
+                                     "url": "https://github.com/onesyue/yueops/pull/204"}
+
+    def write_baseline(self, contents=None):
+        self.path.write_text(json.dumps(self.value) if contents is None else contents)
+        self.enterContext(patch.object(AUDIT, "ACCEPTED_HISTORY_SHA256",
+                                       hashlib.sha256(self.path.read_bytes()).hexdigest()))
+
+    def run_cli(self, mode="full", output_format="text", default_path=False):
+        import contextlib
+        import io
+        args = ["audit", "--format", output_format]
+        if not default_path:
+            args += ["--baseline", str(self.path)]
+        if mode == "premerge":
+            args += ["--premerge", self.candidate["repo"], str(self.candidate["pr"])]
+        with patch("sys.argv", args), patch.object(AUDIT, "audit", return_value=[self.row.copy()]), patch.object(
+                AUDIT, "premerge", return_value=self.candidate.copy()), patch.object(
+                AUDIT, "exceptions", return_value={}), contextlib.redirect_stdout(io.StringIO()) as output:
+            rc = AUDIT.main()
+        return rc, output.getvalue()
+
+    def test_matched_entry_is_info_and_passes_in_both_modes(self):
+        for remaining in (self.entry["findings"], self.entry["findings"][:1]):
+            self.row["findings"] = remaining
+            for mode in ("full", "premerge"):
+                with self.subTest(mode=mode, remaining=remaining):
+                    rc, output = self.run_cli(mode)
+                    self.assertEqual(rc, 0)
+                    self.assertIn(f'INFO accepted-history {self.row["url"]}: {", ".join(remaining)}', output)
+                    self.assertIn(self.entry["reason"], output)
+                    self.assertNotIn("UNREGISTERED", output)
+                    rc, output = self.run_cli(mode, "json")
+                    result = json.loads(output)
+                    self.assertEqual(rc, 0)
+                    self.assertEqual(result["accepted_history"], 1)
+                    self.assertEqual(result["unregistered"], 0)
+
+    def test_head_repo_pr_mismatch_or_extra_finding_is_unregistered(self):
+        original = self.row.copy()
+        for change in ({"head": "b" * 40}, {"repo": "yueboard"}, {"pr": 205},
+                       {"findings": self.entry["findings"] + ["check_nonpassing_at_merge:policy"]}):
+            self.row = original | change
+            for mode in ("full", "premerge"):
+                with self.subTest(mode=mode, change=change):
+                    rc, output = self.run_cli(mode)
+                    self.assertEqual(rc, 1)
+                    self.assertIn(f'UNREGISTERED {self.row["url"]}', output)
+                    self.assertNotIn("INFO accepted-history", output)
+                    rc, output = self.run_cli(mode, "json")
+                    result = json.loads(output)
+                    self.assertEqual(rc, 1)
+                    self.assertEqual(result["accepted_history"], 0)
+                    self.assertEqual(result["unregistered"], 1)
+
+    def test_premerge_findings_cannot_be_covered_by_baseline(self):
+        self.candidate["findings"] = self.entry["findings"][:]
+        self.value["entries"].append(self.entry | {"pr": self.candidate["pr"]})
+        self.write_baseline()
+        rc, output = self.run_cli("premerge")
+        self.assertEqual(rc, 1)
+        self.assertIn("UNREGISTERED " + self.candidate["url"], output)
+        self.assertNotIn("INFO accepted-history " + self.candidate["url"], output)
+        rc, output = self.run_cli("premerge", "json")
+        result = json.loads(output)
+        self.assertEqual(rc, 1)
+        self.assertEqual(result["accepted_history"], 1)
+        self.assertEqual(result["unregistered"], 1)
+
+    def test_default_baseline_path(self):
+        with patch.object(AUDIT, "ROOT", self.path.parent):
+            self.assertEqual(self.run_cli(default_path=True)[0], 0)
+
+    def test_merge_after_frozen_at_is_unregistered(self):
+        for merged_at in ("2026-11-03T02:00:00.000001Z", "2026-11-03T03:00:00Z",
+                          "2026-11-03T01:00:01-01:00"):
+            self.row["merged_at"] = merged_at
+            for mode in ("full", "premerge"):
+                with self.subTest(mode=mode, merged_at=merged_at):
+                    rc, output = self.run_cli(mode)
+                    self.assertEqual(rc, 1)
+                    self.assertIn(f'UNREGISTERED {self.row["url"]}', output)
+                    self.assertNotIn("INFO accepted-history", output)
+                    rc, output = self.run_cli(mode, "json")
+                    self.assertEqual(rc, 1)
+                    self.assertEqual(json.loads(output)["accepted_history"], 0)
+
+    def test_merge_at_frozen_at_is_accepted(self):
+        for merged_at in (self.value["frozen_at"], "2026-11-03T10:00:00+08:00"):
+            self.row["merged_at"] = merged_at
+            for mode in ("full", "premerge"):
+                with self.subTest(mode=mode, merged_at=merged_at):
+                    rc, output = self.run_cli(mode, "json")
+                    self.assertEqual(rc, 0)
+                    self.assertEqual(json.loads(output)["accepted_history"], 1)
+
+    def test_tampered_baseline_bytes_are_incomplete(self):
+        original = self.path.read_bytes()
+        for contents in (original + b"\n", original.replace(b"2026-11-03T02", b"2026-11-04T02")):
+            self.path.write_bytes(contents)
+            with self.subTest(contents=contents):
+                with self.assertRaises(ValueError):
+                    AUDIT.baseline(self.path)
+                for default_path in (True, False):
+                    for mode in ("full", "premerge"):
+                        with patch.object(AUDIT, "ROOT", self.path.parent):
+                            rc, output = self.run_cli(mode, "json", default_path=default_path)
+                        self.assertEqual(rc, 2)
+                        self.assertFalse(json.loads(output)["complete"])
+
+    def test_cli_cannot_override_snapshot_with_another_path(self):
+        import subprocess
+        import sys
+        result = subprocess.run([sys.executable, str(ROOT / "scripts/merge-hygiene-audit.py"),
+                                 "--baseline", str(self.path), "--format", "json"],
+                                capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertFalse(json.loads(result.stdout)["complete"])
+
+    def test_empty_baseline_does_not_accept_history(self):
+        self.value["entries"] = []
+        self.write_baseline()
+        self.assertEqual(AUDIT.baseline(self.path), (AUDIT.timestamp(self.value["frozen_at"]), {}))
+        self.assertEqual(self.run_cli()[0], 1)
+
+    def test_invalid_baseline_is_value_error_and_incomplete(self):
+        invalid_values = [None, [], {}, self.value | {"extra": True},
+                          {k: v for k, v in self.value.items() if k != "approver"}]
+        for field, values in (("schema", (True, "1", 2)),
+                              ("frozen_at", (None, "", "invalid", "2026-11-03T02:00:00",
+                                             "2026-11-03", "20261103T020000Z", "2026-W45-2T02:00:00Z",
+                                             "2026-11-03X02:00:00Z", "2026-11-03T02:00:00+00:60",
+                                             "2026-11-03T02:00:00+00:00:01", "2026-11-31T02:00:00Z",
+                                             "2026-11-03T02:00:00Z\n")),
+                              ("approver", (None, " ")), ("entries", (None, {}))):
+            invalid_values.extend(self.value | {field: value} for value in values)
+        invalid_entries = [None, [], {}, self.entry | {"extra": True},
+                           {k: v for k, v in self.entry.items() if k != "reason"}]
+        for field, values in (("repo", (None, "unknown")), ("pr", (True, "203", 0, -1)),
+                              ("head", (None, "a" * 39, "g" * 40, "a" * 41, "a" * 40 + "\n")),
+                              ("findings", (None, "*", [None], [" "], ["duplicate", "duplicate"])),
+                              ("reason", (None, " "))):
+            invalid_entries.extend(self.entry | {field: value} for value in values)
+        invalid_values.extend(self.value | {"entries": [entry]} for entry in invalid_entries)
+        invalid_values.append(self.value | {"entries": [self.entry, self.entry.copy()]})
+        for value in invalid_values:
+            with self.subTest(value=value):
+                self.write_baseline(json.dumps(value))
+                with self.assertRaises(ValueError):
+                    AUDIT.baseline(self.path)
+                for mode in ("full", "premerge"):
+                    rc, output = self.run_cli(mode, "json")
+                    self.assertEqual(rc, 2)
+                    self.assertFalse(json.loads(output)["complete"])
+
+    def test_malformed_json_and_duplicate_keys_fail_closed(self):
+        contents = json.dumps(self.value)
+        for bad in ('{"schema":', contents.replace('"schema": 1', '"schema": 1, "schema": 1'),
+                    contents.replace('"pr": 203', '"pr": 203, "pr": 203')):
+            with self.subTest(bad=bad):
+                self.write_baseline(bad)
+                with self.assertRaises(ValueError):
+                    AUDIT.baseline(self.path)
+                self.assertEqual(self.run_cli()[0], 2)
+
+    def test_missing_baseline_is_incomplete(self):
+        self.path.unlink()
+        for mode in ("full", "premerge"):
+            with self.subTest(mode=mode):
+                rc, output = self.run_cli(mode, "json")
+                self.assertEqual(rc, 2)
+                self.assertFalse(json.loads(output)["complete"])
 
 
 class MergeReceipts(unittest.TestCase):
@@ -274,7 +468,8 @@ class MergeReceipts(unittest.TestCase):
                 AUDIT.subprocess, "run", return_value=subprocess.CompletedProcess(
                     [], 0, self.path.read_text(), "")), patch.object(AUDIT, "exceptions", return_value={
                         ("yueops", 203): {"reason": "exception"}}), patch(
-                            "sys.argv", ["audit", "--format", "json"]), patch.object(AUDIT, "datetime") as dt:
+                            "sys.argv", ["audit", "--format", "json", "--baseline",
+                                         str(ROOT / "accepted-history-20261103.json")]), patch.object(AUDIT, "datetime") as dt:
             from datetime import datetime
             dt.fromisoformat.side_effect = datetime.fromisoformat
             dt.now.return_value = AUDIT.timestamp("2026-11-02T12:00:00Z")
