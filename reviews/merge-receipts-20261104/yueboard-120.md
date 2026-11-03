@@ -7,3 +7,5 @@ Independent reviewer: Codex lane `/root/link`, distinct from implementation lane
 Real disposable PostgreSQL 18: the integration harness reset public schema, then all renewal-credit subcases passed without skips. The two temporary NOLOGIN roles receive only schema USAGE; existing wallet write denial (42501) and no-mint assertions remain. No production grants change. The original command log redacted synthetic client IPs during collection; copied bytes are unchanged.
 
 Evidence source: `/Users/j/Projects/yueto/coord/takeover/renewal-role-pg.log`. The committed log is a byte-for-byte copy. The tests ran on the final candidate bytes before signing; Git metadata changed afterward, not tested content.
+
+Execution host: the local Mac (`js-MacBook-Air`, receipt runner `mac-5f08d00f`); PostgreSQL for #120 ran in its disposable local Docker container. Review timestamp was recorded using the current UTC clock when binding the unchanged signed candidate.

@@ -18,6 +18,6 @@
     "command": "go test -count=1 -p 1 -tags integration -v -run '^TestPolicyHealthNativeRoute$' ./test/integration && go test -count=1 -p 1 -tags integration -v -run '^TestPointsRenewalPostgres$' ./internal/modules/order",
     "log_sha256": "34e8d8983c178c6eff4c924a78a251cfdb02e324a70f6b08ec48f66ac68a61db",
     "ran_at": "2026-11-03T18:54:12+00:00",
-    "runner": "box"
+    "runner": "mac-5f08d00f"
   }
 }
