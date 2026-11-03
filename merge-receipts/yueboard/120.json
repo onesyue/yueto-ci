@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 120,
+  "head": "3fa1304f63d40d99ae14be74f1736ca46f9063e7",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "3fa1304f63d40d99ae14be74f1736ca46f9063e7",
+    "artifact": "reviews/merge-receipts-20261104/yueboard-120.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T22:51:22+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "3fa1304f63d40d99ae14be74f1736ca46f9063e7",
+    "command": "go test -count=1 -p 1 -tags integration -v -run '^TestPolicyHealthNativeRoute$' ./test/integration && go test -count=1 -p 1 -tags integration -v -run '^TestPointsRenewalPostgres$' ./internal/modules/order",
+    "log_sha256": "34e8d8983c178c6eff4c924a78a251cfdb02e324a70f6b08ec48f66ac68a61db",
+    "ran_at": "2026-11-03T18:54:12+00:00",
+    "runner": "box"
+  }
+}
