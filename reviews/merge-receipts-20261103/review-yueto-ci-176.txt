@@ -239,7 +239,7 @@ This causes both **false green** (unreachable becomes healthy) and **false red**
   15 seconds to bind for a host unable to start. **Poll readiness until it appears**
   within the operation's bound instead of assuming a fixed wait suffices.
 - All inbound 443 checks pass while outbound access reaches only the same
-  datacenter (`yue-us-premium`). Reachability does not establish usability.
+  datacenter (`<redacted-host>`). Reachability does not establish usability.
 
 Fallback repair can hide this family completely: "fails every time and gets
 repaired" and "never failed" can produce identical observable state. A timer
@@ -748,7 +748,7 @@ This causes both **false green** (unreachable becomes healthy) and **false red**
   15 seconds to bind for a host unable to start. **Poll readiness until it appears**
   within the operation's bound instead of assuming a fixed wait suffices.
 - All inbound 443 checks pass while outbound access reaches only the same
-  datacenter (`yue-us-premium`). Reachability does not establish usability.
+  datacenter (`<redacted-host>`). Reachability does not establish usability.
 
 Fallback repair can hide this family completely: "fails every time and gets
 repaired" and "never failed" can produce identical observable state. A timer

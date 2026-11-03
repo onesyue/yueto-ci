@@ -1,8 +1,8 @@
 VERDICT: changes
 
-- [P2] `scripts/audit-agent-runtime-config.sh:63` — The parser treats a conditional rollout assignment as an active hold. The rollout defaults to no holds and requires explicit acknowledgement, yet the audit always exempts `yue-in` and `yue-id`, even after an ordinary rollout. Synthetic verification shows unacknowledged drift changes from exit 1 to exit 0. Derive exemptions from active hold state tied to the applicable release, rather than supported CLI options.
+- [P2] `scripts/audit-agent-runtime-config.sh:63` — The parser treats a conditional rollout assignment as an active hold. The rollout defaults to no holds and requires explicit acknowledgement, yet the audit always exempts `<redacted-host>` and `<redacted-host>`, even after an ordinary rollout. Synthetic verification shows unacknowledged drift changes from exit 1 to exit 0. Derive exemptions from active hold state tied to the applicable release, rather than supported CLI options.
 tokens used
 47,363
 VERDICT: changes
 
-- [P2] `scripts/audit-agent-runtime-config.sh:63` — The parser treats a conditional rollout assignment as an active hold. The rollout defaults to no holds and requires explicit acknowledgement, yet the audit always exempts `yue-in` and `yue-id`, even after an ordinary rollout. Synthetic verification shows unacknowledged drift changes from exit 1 to exit 0. Derive exemptions from active hold state tied to the applicable release, rather than supported CLI options.
+- [P2] `scripts/audit-agent-runtime-config.sh:63` — The parser treats a conditional rollout assignment as an active hold. The rollout defaults to no holds and requires explicit acknowledgement, yet the audit always exempts `<redacted-host>` and `<redacted-host>`, even after an ordinary rollout. Synthetic verification shows unacknowledged drift changes from exit 1 to exit 0. Derive exemptions from active hold state tied to the applicable release, rather than supported CLI options.
