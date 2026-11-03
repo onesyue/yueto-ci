@@ -1020,6 +1020,12 @@
       "pr": 179,
       "reason": "INCIDENT: merged without a committed prior receipt during the P1 window (owner classification). Head bd051adae75a3f924b2cb9faae5b933c1aa66283; merge 9b318b9f51200c0f1d384218ae8d2fc13d6cf2fb; merged_at 2026-11-03T04:18:34Z (owner-supplied event time). GitHub PR/check pages show the policy tests + workflow lint check succeeded, run 41574191513. gh pr view was unavailable; exact check timestamps and complete API history remain unverified. The attempted pass receipt in PR #180 was withdrawn at 690bb67023513071de1189936c7d63a13031bae6: its review names another head and its parity log is prose. Missing evidence: independent approval naming the merged head and a passing exact-head local parity command log from an accepted runner. PARITY: NOT pass. Incident registration does not waive post-activation findings or restore the withdrawn pass receipt. Evidence: reviews/merge-receipts-20261103/yueto-ci-179-exception.md.",
       "approver": "owner instruction 2026-11-03: record PR #179 as an INCIDENT receipt; authorization covers incident registration, not approval of missing review/parity or a gate waiver"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 108,
+      "reason": "EXCEPTION: merged 2026-11-03T10:07:36Z by cursor[bot] (merge ed6166eabf13ae7a66137385db745a24a18d72f7) without a prior receipt. Exact-head independent Codex review of head ae53f2f31f6dcce2d338c365edee1a92ffe0d8bd returned CHANGES (P2 web/src/routes/_app/devices.tsx:176: over_limit copy must keep disconnect guidance). Fix landed in yueboard #112 (c7d21273). Re-review of the #108 findings against master 305452a3f75f4854a49c175b5d54c16e8aaa6d3c: APPROVE. Box parity at head: go test -count=1 -p 1 ./... rc=0 (log sha256 c37d81069649f13229c28cf12c12dfc6cc71925fec3aa412fae071e8dd89025c). Review at exact head is NOT approve. Evidence: reviews/merge-receipts-20261103/yueboard-108-exception.md.",
+      "approver": "owner decision 2026-11-03 20:03 SGT: record #108 as an exception receipt (exact-head CHANGES, fixed by #112, master re-review APPROVE); logged under low-level-error-guard"
     }
   ]
 }
