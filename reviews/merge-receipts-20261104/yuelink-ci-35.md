@@ -10,3 +10,5 @@ The independent reviewer checked the remote PR identity, valid G signature and c
 The replay regression proves that the archived signature is valid before testing monotonic rejection. The reviewer read the existing 48-test successful receipt, without repeating the suite. It also independently checked public run 41691717765 attempt 2: all five platforms and Assemble R2 candidate succeeded, including Sign root manifest and promote. No findings.
 
 Validation log: /Users/j/Projects/lane-nym/yl162-floor-tests.log, bound by receipt SHA256. Review was completed by the available ops review lane after the coordinating and board agents encountered capacity errors; no gate was waived.
+
+The parity ran_at timestamp records the existing validation log completion time (filesystem mtime in UTC), not the later review or receipt authoring time.
