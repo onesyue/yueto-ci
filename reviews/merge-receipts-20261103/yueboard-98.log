@@ -461,7 +461,7 @@ index 4155eb5c..eccd3327 100644
  		gotUA = r.Header.Get("User-Agent")
  		gotQuery = r.URL.RawQuery
 -		w.Write([]byte(`[{"name":"api1","type":"vless","host":"h.example.com","port":443,"password":"u"}]`))
-+		w.Write([]byte(`[{"name":"api1","type":"vless","host":"h.example.com","port":443,"password":"aabbccdd-1234-4567-89ab-123456789abc"}]`))
++		w.Write([]byte(`[{"name":"api1","type":"vless","host":"h.example.com","port":443,"password":"<redacted>"}]`))
  	}))
  	defer srv.Close()
  
@@ -470,7 +470,7 @@ index 4155eb5c..eccd3327 100644
  	defer clashSrv.Close()
  	apiSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 -		w.Write([]byte(`[{"name":"a1","type":"vless","host":"a.example.com","port":443}]`))
-+		w.Write([]byte(`[{"name":"a1","type":"vless","host":"a.example.com","port":443,"password":"aabbccdd-1234-4567-89ab-123456789abc"}]`))
++		w.Write([]byte(`[{"name":"a1","type":"vless","host":"a.example.com","port":443,"password":"<redacted>"}]`))
  	}))
  	defer apiSrv.Close()
  
@@ -478,7 +478,7 @@ index 4155eb5c..eccd3327 100644
  	got := m.extraServers(context.Background(), neConfig{
  		Enable:        true,
 -		LocalNodes:    `[{"name":"l1","type":"vless","host":"l.example.com","port":443}]`,
-+		LocalNodes:    `[{"name":"l1","type":"vless","host":"l.example.com","port":443,"password":"aabbccdd-1234-4567-89ab-123456789abc"}]`,
++		LocalNodes:    `[{"name":"l1","type":"vless","host":"l.example.com","port":443,"password":"<redacted>"}]`,
  		ClashSubURL:   clashSrv.URL,
  		APIURL:        apiSrv.URL,
  		ClashCacheTTL: 600,
@@ -553,7 +553,7 @@ index 7182f415..ba9cfa38 100644
  	got := m.localNodes(neConfig{LocalNodes: `[
  		{"name":"n1","type":"vless","host":"h1.example.com","port":443,
 -		 "password":"pw","rate":"2.50","tags":["ext",1],
-+		 "password":"aabbccdd-1234-4567-89ab-123456789abc","rate":"2.50","tags":["ext",1],
++		 "password":"<redacted>","rate":"2.50","tags":["ext",1],
  		 "protocol_settings":{"network":"tcp","tls":2,"flow":"xtls-rprx-vision"}},
  		{"name":"n2","type":"hysteria","host":"h2.example.com","port":"8443",
  		 "protocol_settings":{"version":2}}
@@ -589,7 +589,7 @@ index 7182f415..ba9cfa38 100644
  	items := make([]any, 0, 600)
  	for i := range 600 {
 -		items = append(items, map[string]any{"name": fmt.Sprintf("n%d", i), "type": "vless"})
-+		items = append(items, map[string]any{"name": fmt.Sprintf("n%d", i), "type": "vless", "host": "example.com", "port": 443, "password": "aabbccdd-1234-4567-89ab-123456789abc"})
++		items = append(items, map[string]any{"name": fmt.Sprintf("n%d", i), "type": "vless", "host": "example.com", "port": 443, "password": "<redacted>"})
  	}
  	got := neNormalizeNodes(items)
  	if len(got) != 500 {
@@ -598,7 +598,7 @@ index 7182f415..ba9cfa38 100644
  	got := m.extraServers(context.Background(), neConfig{
  		Enable:        true,
 -		LocalNodes:    `[{"name":"n1","type":"vless","host":"h","port":443}]`,
-+		LocalNodes:    `[{"name":"n1","type":"vless","host":"h","port":443,"password":"aabbccdd-1234-4567-89ab-123456789abc"}]`,
++		LocalNodes:    `[{"name":"n1","type":"vless","host":"h","port":443,"password":"<redacted>"}]`,
  		ClashCacheTTL: 600,
  	}, 42)
  	if len(got) != 1 || got[0].Name != "n1" || got[0].Type != "vless" {
@@ -666,8 +666,8 @@ index 00000000..dc9e7e98
 +		{"negative", "example.com", -1, false}, {"overflow", "example.com", 65536, false},
 +	} {
 +		t.Run(tc.name, func(t *testing.T) {
-+			node := map[string]any{"name": "candidate", "type": "hysteria", "host": tc.host, "port": tc.port, "password": "not-a-uuid"}
-+			good := map[string]any{"name": "good", "type": "trojan", "host": "example.com", "port": 443, "password": "arbitrary"}
++			node := map[string]any{"name": "candidate", "type": "hysteria", "host": tc.host, "port": tc.port, "password": "<redacted>"}
++			good := map[string]any{"name": "good", "type": "trojan", "host": "example.com", "port": 443, "password": "<redacted>"}
 +			got := neNormalizeNodes([]any{node, good})
 +			want := 1
 +			if tc.valid {
