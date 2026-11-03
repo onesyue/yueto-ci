@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yuelink-ci",
+  "pr": 35,
+  "head": "af37e0f78427c66348660d79eb79ea76ee0c4fb8",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "af37e0f78427c66348660d79eb79ea76ee0c4fb8",
+    "artifact": "reviews/merge-receipts-20261104/yuelink-ci-35.md",
+    "reviewer": "codex-ops-independent",
+    "reviewed_at": "2026-11-03T19:13:10.209888+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "af37e0f78427c66348660d79eb79ea76ee0c4fb8",
+    "command": "python3 -m unittest tests/test_update_manifest_verifier.py tests/test_release_closure.py: 48 tests passed; pinned verifier accepted signed current and archived roots",
+    "log_sha256": "81ba34a121208fff3f2777a516c57f1e43449ea363d49e505eca45d3eeda0eec",
+    "ran_at": "2026-11-03T19:07:20.276676+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}
