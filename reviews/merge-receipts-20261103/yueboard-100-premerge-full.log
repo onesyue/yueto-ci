@@ -1,0 +1,53 @@
+yueboard #100 parity at 89db33a339607d7f36d09143f8ea6b8e1711afcd 2026-11-03T02:09:43Z
+=== RUN   TestSQLExtraction
+--- PASS: TestSQLExtraction (0.00s)
+=== RUN   TestScopedFingerprint
+--- PASS: TestScopedFingerprint (0.00s)
+=== RUN   TestSQLTokenBoundary
+--- PASS: TestSQLTokenBoundary (0.00s)
+=== RUN   TestProductionGates
+=== RUN   TestProductionGates/SchemaReferences
+    gate_test.go:155: internal/modules/admin/payment.go:598: schema reference rejected: ERROR: syntax error at end of input (SQLSTATE 42601) [digest=31f67b179302b056677783d5203d28b1bb5bd944b52d60def71b1b909e8e3dc7]
+    gate_test.go:155: internal/modules/admin/payment.go:646: schema reference rejected: ERROR: syntax error at end of input (SQLSTATE 42601) [digest=b81cc07dfea78ead513e058ccd5010a849fbbd98adec22e589f347d7d6956ab9]
+    gate_test.go:155: internal/modules/nodesync/yueops_internal_tickets_ai.go:186: schema reference rejected: ERROR: syntax error at end of input (SQLSTATE 42601) [digest=d39a88e24450c2c47b2aad79379959527a7f54e94d30e4fc09d8c58b818d1d9c]
+    gate_test.go:155: internal/modules/nodesync/yueops_internal_tickets_summary.go:129: schema reference rejected: ERROR: syntax error at end of input (SQLSTATE 42601) [digest=f8315aa8217a918003bc89efa0d20db4e6e149b0c33a2ae7a3621f3485d02de2]
+    gate_test.go:155: internal/platform/credentialreset/credentialreset.go:517: schema reference rejected: ERROR: syntax error at end of input (SQLSTATE 42601) [digest=1d5b95cde3bd0555679c792c244634dfeb73675613ed2a59b90f4036748f8df3]
+    gate_test.go:166: stale exception: remove 0aa882e0b4d7f48a94bed15fbd10c47ba7387ef996e15acd076b18c5e3b71385 internal/platform/credentialreset/credentialreset.go 42601
+    gate_test.go:166: stale exception: remove 22e54b4566c6d4203ba327838aad447c3e6a69d91b71c5e7408a2ea43967ebe8 internal/modules/admin/payment.go 42601
+    gate_test.go:166: stale exception: remove 8a971d733f5c71da8ed0aab0451e482efd5798c4909797d5a55def13dcca175e internal/modules/admin/payment.go 42601
+    gate_test.go:166: stale exception: remove ab9660716dcd88ab898a46b3520152740ec8ab57dc619026ca944ea910fcb3dd internal/modules/nodesync/yueops_internal_tickets_ai.go 42601
+    gate_test.go:166: stale exception: remove ed267d7459eff6c25cfe7df22bd0d7744046a303ccdec721b4b7bc81ff7fa656 internal/modules/nodesync/yueops_internal_tickets_summary.go 42601
+    gate_test.go:178: validated 1442 SQL statements; 198 frozen exceptions
+=== RUN   TestProductionGates/ServiceRoleGrants
+    gate_test.go:181: checked runtime planning for 1442 SQL statements
+=== RUN   TestProductionGates/MutationControls
+--- FAIL: TestProductionGates (4.77s)
+    --- FAIL: TestProductionGates/SchemaReferences (0.16s)
+    --- PASS: TestProductionGates/ServiceRoleGrants (0.40s)
+    --- PASS: TestProductionGates/MutationControls (0.02s)
+=== RUN   TestPrePushStopsOnFailure
+=== RUN   TestPrePushStopsOnFailure/vet
+=== RUN   TestPrePushStopsOnFailure/test
+=== RUN   TestPrePushStopsOnFailure/none
+--- PASS: TestPrePushStopsOnFailure (0.02s)
+    --- PASS: TestPrePushStopsOnFailure/vet (0.01s)
+    --- PASS: TestPrePushStopsOnFailure/test (0.01s)
+    --- PASS: TestPrePushStopsOnFailure/none (0.01s)
+=== RUN   TestGatePreservesOuterRepository
+=== RUN   TestGatePreservesOuterRepository/scripts/premerge.sh/GIT_DIR
+=== RUN   TestGatePreservesOuterRepository/scripts/premerge.sh/all-selectors
+=== RUN   TestGatePreservesOuterRepository/scripts/git-hooks/pre-push/GIT_DIR
+=== RUN   TestGatePreservesOuterRepository/scripts/git-hooks/pre-push/all-selectors
+--- PASS: TestGatePreservesOuterRepository (0.11s)
+    --- PASS: TestGatePreservesOuterRepository/scripts/premerge.sh/GIT_DIR (0.03s)
+    --- PASS: TestGatePreservesOuterRepository/scripts/premerge.sh/all-selectors (0.02s)
+    --- PASS: TestGatePreservesOuterRepository/scripts/git-hooks/pre-push/GIT_DIR (0.03s)
+    --- PASS: TestGatePreservesOuterRepository/scripts/git-hooks/pre-push/all-selectors (0.03s)
+=== RUN   TestDebtRatchet
+--- PASS: TestDebtRatchet (0.10s)
+=== RUN   TestDebtRatchetMissingDescendantManifest
+--- PASS: TestDebtRatchetMissingDescendantManifest (0.03s)
+FAIL
+FAIL	github.com/onesyue/yueboard/internal/platform/schemagate	5.029s
+FAIL
+premerge rc=1
