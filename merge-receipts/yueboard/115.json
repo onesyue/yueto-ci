@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 115,
+  "head": "e74f600f93d2c6382015dd2f34013b7ce2835dc9",
+  "backfilled": false,
+  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "e74f600f93d2c6382015dd2f34013b7ce2835dc9", "artifact": "reviews/merge-receipts-20261103/yueboard-115-exact-head.md", "reviewer": "codex", "reviewed_at": "2026-11-03T12:29:46Z"},
+  "parity": {"result": "pass", "head": "e74f600f93d2c6382015dd2f34013b7ce2835dc9", "command": "pnpm test (web) && go test -count=1 -p 1 ./... && validate-native-node-contract.py --kind yueboard", "log_sha256": "777d69e6273b41021dafe196c8330112d7edadc72779289ba54c01ea0d171113", "ran_at": "2026-11-03T12:17:36Z", "runner": "box"}
+}
