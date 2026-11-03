@@ -1,0 +1,52 @@
+# Codex review — yueto-ci PR #194 @ 5ea29f24e54e811df14255a740c64a229a90ce87 (Mac, read-only)
+
+DONE — yueto-ci PR #194 只读审阅；未发现需要修改的问题。
+审阅 HEAD: 5ea29f24e54e811df14255a740c64a229a90ce87
+父提交: c51e1a24d8a6eefc27986aa89e55d36fd2253ef8
+CI 工作树: /Users/j/Projects/yueto-ci-worktrees/pin-4c7c
+yueops Git 对象来源: /Users/j/Projects/yueops-worktrees/abuser-schema
+
+条目 1：变更范围
+git diff --name-status HEAD^ HEAD 只列出 ops-first-native-successors.json。
+逐字节比较 git show HEAD^:ops-first-native-successors.json 与 git show HEAD:ops-first-native-successors.json，确认只有 source_revision 在第 490 行从 8b8d384016c67215326af555c5af1e8be82e34ad 改为 4c7c22c13015d56225741dcaf7314285895ecfa7；其他字节完全一致。
+工作树 JSON 与指定 HEAD 的 Git blob 字节一致。git diff --check 通过；审阅前后 git status --porcelain=v1 均为空，HEAD 未改变。
+
+条目 2：全部模块和共享输入
+使用 git ls-tree -z <revision> -- <path> 核对以下每一项。6 个 module_blobs 的 blob 与策略一致，模式均为 100644；shared_input 的 blob 和 mode 均与策略一致。上述输入同时与旧 pin 的树条目完全一致。
+PASS exact HEAD: 5ea29f24e54e811df14255a740c64a229a90ce87
+PASS parent: c51e1a24d8a6eefc27986aa89e55d36fd2253ef8
+PASS sole change: source_revision 8b8d384016c67215326af555c5af1e8be82e34ad -> 4c7c22c13015d56225741dcaf7314285895ecfa7; all other bytes identical
+PASS working policy bytes equal reviewed commit
+PASS tests/test_frozen_manifest_reader_20261015.py 100644 086246934ab623ad6df49be9225bc7ee04f4fee5 (also unchanged from previous pin)
+PASS tests/test_install_operator_host_source.py 100644 64550a55f127f2db77cde4e7e4a6576158a02b56 (also unchanged from previous pin)
+PASS tests/test_panel_subscribe_delivery_alert_20261012.py 100644 0d382f25ff22113ff54968d233555739da6da0d9 (also unchanged from previous pin)
+PASS tests/test_protocol_liveness_results_install.py 100644 a4383cf33b167cb55578116b44a3f7c26d6e41b7 (also unchanged from previous pin)
+PASS tests/test_protocol_liveness_results_pull.py 100644 882a60ee11cc6e6206219d115d947586be18c452 (also unchanged from previous pin)
+PASS tests/test_status_tls_installer_20261027.py 100644 39c99459df135a7b5463930ce626c9f9d6b848ca (also unchanged from previous pin)
+PASS tests/_native_root_lab.py 100644 614ba6cbdce76989b9028e3bed2fdf0799eba3eb (also unchanged from previous pin)
+PASS old pin is first parent of yueops #303 merge; no pinned input in the source delta
+PASS module blobs/modes: 6 ; shared inputs: 1
+PASS policy cases (execution not evaluated): 52
+
+条目 3：yueops 增量
+git log --format='%H %P %s' 8b8d3840..4c7c22c13015d56225741dcaf7314285895ecfa7 确认目标为 #303 合并，旧 pin 是目标提交的第一父提交。
+git diff --name-status 8b8d3840 4c7c22c13015d56225741dcaf7314285895ecfa7:
+M docs/runbook/release-root-retention.md
+M scripts/make-release-root.sh
+M scripts/security_scan.allowlist
+A tests/test_make_release_root_restore_20261103.py
+这 4 个增量文件均不属于上述 7 个固定输入。
+
+条目 4：仓库自带只读源契约检查
+命令：
+python3 -B scripts/check-first-native-source.py --source /Users/j/Projects/yueops-worktrees/abuser-schema
+退出码：0
+{"execution_evaluated": false, "modules": 6, "native_case_obligations": 52, "release_acceptance": false, "source_revision": "4c7c22c13015d56225741dcaf7314285895ecfa7", "status": "FROZEN_SOURCE_CONTRACT_VALID"}
+
+范围说明：本次结论针对指定 HEAD 的 pin 更新及冻结源码契约；未执行 52 个原生运行义务，也不构成发布验收。全部检查使用本地 Git 对象，没有网络访问、网络写入或提交；没有修改被审阅仓库或 yueops 源码，没有打印秘密。-B 禁止生成 Python 字节码缓存。
+
+审阅时间 UTC: 2026-11-03T05:50:12.899042+00:00
+
+DONE_WITH_CONCERNS 报告交付：沙箱拒绝写入指定路径 /Users/j/Projects/lane-ci/review-pin4c7c.txt，报告保存到 /private/tmp/review-pin4c7c.txt。该交付限制不影响上述源码审阅结论。
+
+VERDICT: APPROVE
