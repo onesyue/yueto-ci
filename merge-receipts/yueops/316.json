@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 316,
+  "head": "80f7c8e6589c68eefa88aff25cad2e1f55e17350",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "80f7c8e6589c68eefa88aff25cad2e1f55e17350",
+    "artifact": "reviews/merge-receipts-20261103/yueops-316-review.txt",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T08:20:00Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "80f7c8e6589c68eefa88aff25cad2e1f55e17350",
+    "command": "python -m pytest -q -p no:xdist tests/test_active_topology_ledger_20260805.py tests/test_cf_origin_shield_sentinel.py tests/test_refresh_cloudflare_ips.py tests/test_relay_topology.py tests/test_relay_topology_history_20261009.py tests/test_yueops_shield_20260828.py (176 passed, 1 skipped)",
+    "log_sha256": "27c47da3f9349e5c44265e85fd683d453b93ad63ebb137236206ce0328f40620",
+    "ran_at": "2026-11-03T08:22:00Z",
+    "runner": "box"
+  }
+}

@@ -1,0 +1,239 @@
+.....................................................E.................. [ 56%]
+...EEEEEEEEEEEE........................................                  [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of test_real_sshd_one_authenticated_connection_for_both_generations _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_one_authenticat0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759d2890>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+___ ERROR at setup of test_real_sshd_distinct_invocations_never_share_master ___
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_distinct_invoca0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759ede10>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+_ ERROR at setup of test_real_sshd_dead_master_has_no_fresh_connection_fallback _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_dead_master_has0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759ec600>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+_ ERROR at setup of test_real_sshd_lost_mutation_reply_is_never_replayed[request] _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_lost_mutation_r0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759ec750>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+_ ERROR at setup of test_real_sshd_lost_mutation_reply_is_never_replayed[install] _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_lost_mutation_r1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759ec1a0>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+__ ERROR at setup of test_real_sshd_master_lost_during_signing_blocks_import ___
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_master_lost_dur0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759ec360>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+_ ERROR at setup of test_real_sshd_replaced_socket_cannot_attach_or_clean_foreign_master _
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_replaced_socket0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759ecad0>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+_______ ERROR at setup of test_real_sshd_missing_socket_never_reconnects _______
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_missing_socket_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759edd30>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+_ ERROR at setup of test_real_sshd_failure_reaps_only_owned_master[exception] __
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_failure_reaps_o0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759ecde0>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+__ ERROR at setup of test_real_sshd_failure_reaps_only_owned_master[timeout] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_failure_reaps_o1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759ed010>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+________ ERROR at setup of test_real_sshd_signal_reaps_owned_master[2] _________
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_signal_reaps_ow0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759eda90>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+________ ERROR at setup of test_real_sshd_signal_reaps_owned_master[15] ________
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_signal_reaps_ow1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759ee200>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+________ ERROR at setup of test_real_sshd_signal_reaps_owned_master[1] _________
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-1485/test_real_sshd_signal_reaps_ow2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3b759ee3c0>
+
+    @pytest.fixture
+    def local_sshd(tmp_path, monkeypatch):
+        """Real loopback server with disposable keys; never contact a fleet host."""
+        sshd = shutil.which('sshd') or '/usr/sbin/sshd'
+>       assert Path(sshd).is_file(), 'real sshd is mandatory, not a skipped integration'
+E       AssertionError: real sshd is mandatory, not a skipped integration
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/usr/sbin/sshd').is_file
+E        +      where PosixPath('/usr/sbin/sshd') = Path('/usr/sbin/sshd')
+
+scripts/test-ship-sshd-authority.py:473: AssertionError
+=========================== short test summary info ============================
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_one_authenticated_connection_for_both_generations
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_distinct_invocations_never_share_master
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_dead_master_has_no_fresh_connection_fallback
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_lost_mutation_reply_is_never_replayed[request]
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_lost_mutation_reply_is_never_replayed[install]
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_master_lost_during_signing_blocks_import
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_replaced_socket_cannot_attach_or_clean_foreign_master
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_missing_socket_never_reconnects
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_failure_reaps_only_owned_master[exception]
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_failure_reaps_only_owned_master[timeout]
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_signal_reaps_owned_master[2]
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_signal_reaps_owned_master[15]
+ERROR scripts/test-ship-sshd-authority.py::test_real_sshd_signal_reaps_owned_master[1]
+114 passed, 13 errors in 3.80s
