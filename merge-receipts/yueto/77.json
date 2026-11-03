@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "repo": "yueto",
+  "pr": 77,
+  "head": "3dced5a53e9b56ed41fd60fce2f48c2de5de4eee",
+  "backfilled": false,
+  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "3dced5a53e9b56ed41fd60fce2f48c2de5de4eee", "artifact": "reviews/merge-receipts-20261103/yueto-77.md", "reviewer": "codex", "reviewed_at": "2026-11-03T16:25:10Z"},
+  "parity": {"result": "pass", "head": "3dced5a53e9b56ed41fd60fce2f48c2de5de4eee", "command": "node --test design/test/", "log_sha256": "2073dab624b6ce99a0f732ae75978d5f87fab258ebc9beba0bad0b2448a10f61", "ran_at": "2026-11-03T16:33:11Z", "runner": "box"}
+}
