@@ -972,6 +972,36 @@
       "pr": 51,
       "reason": "Exact-head independent Codex review of c9d086905bcdec6cfd6d7c66a221c8c1f9ad5aa7 returned VERDICT: approve (reviews/merge-receipts-20261102/yueto-51-review.txt). Parity cannot be green because master itself is red: same-env box run PR 19 failed/1114 passed (log yueto-51-parity-pr.log sha256 3c6a9b10f8dc3cab01d9f314d591ef810ab2bf6d47923092ffc93e3038c2b02a) vs master 36 failed/1096 passed (yueto-51-parity-master.log sha256 17591bc97a6360b7c6db621096079e23c6154db95f1d393af7f69dcbaa4fbd33). The PR fixes 18 master failures; its only new failure, test_workspace_source_check_passes, is environmental live pin drift, not a code defect. Missing evidence: a passing parity log.",
       "approver": "xiaoming su 2026-11-03 05:13 SGT owner decision (receipt exception approved for yueto #51)"
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 156,
+      "approver": "coordinator 2026-11-03 09:06 SGT decision (receipt exceptions delegated by owner)",
+      "reason": "Merged at head 697f740fa284d271ede9ef88014738f20ffc1701 at 2026-11-03T00:10:43Z while CI was still running (required check \"policy tests + workflow lint\" started 2026-11-03T00:04:45Z, completed 2026-11-03T00:11:10Z). That same check later passed (success) at this exact head, so the merged code is green; the audit cannot see a completed check at merge time. Accepted history; rule \"no merge before required CI passes at exact head\" adopted 11-03 (guard-proposal.md). Missing evidence: a completed required check at merge time."
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 157,
+      "approver": "coordinator 2026-11-03 09:06 SGT decision (receipt exceptions delegated by owner)",
+      "reason": "Merged at head 26a288564231fb0795ce6799c08c3961b44c4e65 at 2026-11-03T00:10:38Z before CI started (required check \"policy tests + workflow lint\" started 2026-11-03T00:10:40Z, completed 2026-11-03T00:15:50Z). That same check later passed (success) at this exact head, so the merged code is green; the audit cannot see a completed check at merge time. Accepted history; rule \"no merge before required CI passes at exact head\" adopted 11-03 (guard-proposal.md). Missing evidence: a completed required check at merge time."
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 158,
+      "approver": "coordinator 2026-11-03 09:06 SGT decision (receipt exceptions delegated by owner)",
+      "reason": "Merged at head 14b2caacd56855390e9b63fee5e045183dba7c40 at 2026-11-03T00:15:34Z while CI was still running (required check \"policy tests + workflow lint\" started 2026-11-03T00:15:33Z, completed 2026-11-03T00:19:56Z). That same check later passed (success) at this exact head, so the merged code is green; the audit cannot see a completed check at merge time. Accepted history; rule \"no merge before required CI passes at exact head\" adopted 11-03 (guard-proposal.md). Missing evidence: a completed required check at merge time."
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 160,
+      "approver": "coordinator 2026-11-03 09:06 SGT decision (receipt exceptions delegated by owner)",
+      "reason": "Merged at head 9c83dd89d92c1b8c65d189cdd4b425e27111e46f at 2026-11-03T00:37:14Z while CI was still running (required check \"policy tests + workflow lint\" started 2026-11-03T00:35:37Z, completed 2026-11-03T00:41:00Z). That same check later passed (success) at this exact head, so the merged code is green; the audit cannot see a completed check at merge time. Accepted history; rule \"no merge before required CI passes at exact head\" adopted 11-03 (guard-proposal.md). Missing evidence: a completed required check at merge time."
+    },
+    {
+      "repo": "yueto-ci",
+      "pr": 161,
+      "approver": "coordinator 2026-11-03 09:06 SGT decision (receipt exceptions delegated by owner)",
+      "reason": "Merged at head 137e0502bc89505da7ab9b787a2c93e8f5985b99 at 2026-11-03T00:37:14Z before CI started (required check \"policy tests + workflow lint\" started 2026-11-03T00:38:14Z, completed 2026-11-03T00:44:40Z). That same check later passed (success) at this exact head, so the merged code is green; the audit cannot see a completed check at merge time. Accepted history; rule \"no merge before required CI passes at exact head\" adopted 11-03 (guard-proposal.md). Missing evidence: a completed required check at merge time."
     }
   ]
 }
