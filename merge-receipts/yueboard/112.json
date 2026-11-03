@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 112,
+  "head": "6ddd8c052695ed8b2932e8499ab3bb1f03577fe6",
+  "backfilled": false,
+  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "6ddd8c052695ed8b2932e8499ab3bb1f03577fe6", "artifact": "reviews/merge-receipts-20261103/yueboard-112-exact-head.md", "reviewer": "codex", "reviewed_at": "2026-11-03T11:20:45Z"},
+  "parity": {"result": "pass", "head": "6ddd8c052695ed8b2932e8499ab3bb1f03577fe6", "command": "go test -count=1 -p 1 ./...", "log_sha256": "d1dca1b672064f25f1cd22f75144868dec3384863975247d46fba1a88d5c900a", "ran_at": "2026-11-03T11:05:16Z", "runner": "box"}
+}
