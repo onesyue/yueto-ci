@@ -1,0 +1,6 @@
+head db8e72238737e656b8a743584925deed4d7af08d
+$ python -m pytest -q scripts/test-i18n-catalogs.py scripts/test-i18n-source-digest.py scripts/test-i18n-template-publish.py
+..........................ss....................ssssssssss               [100%]
+46 passed, 12 skipped in 1.33s
+base origin/master (pre-merge): 46 passed, 12 skipped (identical)
+ran_at 2026-11-03T03:20:28Z
