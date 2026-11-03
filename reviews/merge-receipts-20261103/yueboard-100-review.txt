@@ -1,0 +1,126 @@
+ct{}
+   838		for _, k := range keys {
+   839			values = append(values, unique[k])
+   840		}
+   841		return Object{"anyOf": values}
+   842	}
+   843	
+   844	// valueSchema retains literal object keys without guessing computed values.
+   845	func (s *scanner) valueSchema(e ast.Expr, vars map[string]ast.Expr, src *source) Object {
+   846		if lit, ok := e.(*ast.CompositeLit); ok {
+   847			if _, ok := lit.Type.(*ast.MapType); ok {
+   848				props := Object{}
+   849				for _, el := range lit.Elts {
+   850					kv, ok := el.(*ast.KeyValueExpr)
+   851					if !ok {
+   852						return s.schema(lit.Type, src, 0)
+   853					}
+   854					key, ok := kv.Key.(*ast.BasicLit)
+   855					if !ok || key.Kind != token.STRING {
+   856						return s.schema(lit.Type, src, 0)
+   857					}
+   858					name, err := strconv.Unquote(key.Value)
+   859					if err != nil {
+   860						return Object{"x-body": "unresolved"}
+   861					}
+   862					props[name] = s.valueSchema(kv.Value, vars, src)
+   863				}
+   864				return Object{"type": "object", "properties": props}
+   865			}
+   866			return s.schema(lit.Type, src, 0)
+   867		}
+   868		if id, ok := e.(*ast.Ident); ok {
+   869			if id.Name == "true" || id.Name == "false" {
+   870				return Object{"type": "boolean"}
+   871			}
+   872			if id.Name == "nil" {
+   873				return Object{"type": "null"}
+   874			}
+   875			return s.schema(vars[id.Name], src, 0)
+   876		}
+   877		if lit, ok := e.(*ast.BasicLit); ok {
+   878			switch lit.Kind {
+   879			case token.STRING:
+   880				return Object{"type": "string"}
+   881			case token.INT:
+   882				return Object{"type": "integer"}
+   883			case token.FLOAT:
+   884				return Object{"type": "number"}
+   885			}
+   886		}
+   887		return Object{"x-body": "unresolved"}
+
+exec
+/bin/zsh -lc "python3 -B -c '
+import json, pathlib, re, subprocess
+base = \"92377c1f87d99d83705e00d92f8d9742142f7e17\"
+head = \"89db33a339607d7f36d09143f8ea6b8e1711afcd\"
+snapshot = \"contracts/openapi/yueboard-api.v1.json\"
+docs = [json.loads(subprocess.check_output([\"git\", \"show\", rev + \":\" + snapshot], text=True)) for rev in (base, head)]
+changes = []
+def compare(a, b, path=()):
+    if isinstance(a, dict) and isinstance(b, dict):
+        for k in sorted(a.keys() | b.keys()):
+            if k not in a:
+                changes.append((\"added\", path + (k,), b[k]))
+            elif k not in b:
+                changes.append((\"removed\", path + (k,), a[k]))
+            else:
+                compare(a[k], b[k], path + (k,))
+    elif a "'!= b:
+        changes.append(("changed", path, (a, b)))
+compare(*docs)
+assert len(changes) == 6, changes
+for kind, path, value in changes:
+    assert kind == "added" and path[-1] in ("fleet_state", "promoted") and value == {"x-body": "unresolved"}
+    print(kind, path[1], path[2], path[-1])
+source = pathlib.Path("internal/platform/metrics/cron_coverage_contract_test.go").read_text()
+block = source.split("var requestScopedTickers = map[string]string{", 1)[1].split("'"\\n}\", 1)[0]
+allowed = set(re.findall(r'\\''\"(internal/["'^"]+'"\\.go)\"\\s*:'\\'', block))
+tickers = {}
+for path in pathlib.Path(\"internal\").rglob(\"*.go\"):
+    if path.name.endswith(\"_test.go\"):
+        continue
+    code = path.read_text()
+    if any(re.search(r\"time\\.NewTicker\\(\", line) and not line.lstrip().startswith(\"//\") for line in code.splitlines()):
+        tickers[path.as_posix()] = bool(re.search(r'\\''CronTick\\(\"([a-z_]+)\"\\)'\\'', code))
+missing = sorted(p for p, ticked in tickers.items() if not ticked and p not in allowed)
+assert not missing, missing
+removed = allowed - {\"internal/modules/nodesync/credential_ack.go\"}
+assert sorted(p for p, ticked in tickers.items() if not ticked and p not in removed) == [\"internal/modules/nodesync/credential_ack.go\"]
+assert tickers[\"internal/modules/nodesync/credential_promoter.go\"]
+assert \"internal/modules/nodesync/credential_promoter.go\" not in allowed
+print(f\"Supplemental read-only source scan: {len(tickers)} ticker files, {len(allowed)} explicit exceptions, zero uncovered files.\")
+print(\"Negative control in memory: removing the new exception exposes credential_ack.go; promoter remains covered.\")
+'" in /Users/j/Projects/yueboard-worktrees/r100
+ succeeded in 583ms:
+added /api/v1/internal/yueops/users/reset-subscription post fleet_state
+added /api/v1/internal/yueops/users/reset-subscription post promoted
+added /api/v1/user/devices/reset-all post fleet_state
+added /api/v1/user/devices/reset-all post promoted
+added /api/v1/user/resetSecurity post fleet_state
+added /api/v1/user/resetSecurity post promoted
+Supplemental read-only source scan: 39 ticker files, 3 explicit exceptions, zero uncovered files.
+Negative control in memory: removing the new exception exposes credential_ack.go; promoter remains covered.
+
+codex
+DONE_WITH_CONCERNS — No P0–P3 findings in `92377c1f..89db33a3`.
+
+- All six snapshot additions match the three handlers. Their `x-body: unresolved` markers match exporter behavior.
+- The ACK ticker is correctly classified: call-scoped, bounded to two seconds, and stopped on return. Background reconciliation retains its own heartbeat.
+- Compatibility, whitespace, formatting, and supplemental ticker-source checks passed.
+
+Go tests and exporter drift verification were blocked by the read-only sandbox’s restriction on temporary build directories. No files modified.
+
+VERDICT: APPROVE
+tokens used
+70,492
+DONE_WITH_CONCERNS — No P0–P3 findings in `92377c1f..89db33a3`.
+
+- All six snapshot additions match the three handlers. Their `x-body: unresolved` markers match exporter behavior.
+- The ACK ticker is correctly classified: call-scoped, bounded to two seconds, and stopped on return. Background reconciliation retains its own heartbeat.
+- Compatibility, whitespace, formatting, and supplemental ticker-source checks passed.
+
+Go tests and exporter drift verification were blocked by the read-only sandbox’s restriction on temporary build directories. No files modified.
+
+VERDICT: APPROVE

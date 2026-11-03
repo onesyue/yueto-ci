@@ -1,0 +1,10 @@
+yueboard #100 targeted parity at 89db33a339607d7f36d09143f8ea6b8e1711afcd 2026-11-03T02:27:18Z
+$ make check-http-contract
+go run ./cmd/export-openapi --check
+yueboard v1 HTTP contract: OK
+python3 scripts/check-openapi-compat.py --merge-base origin/master contracts/openapi/yueboard-api.v1.json
+rc=0
+$ go test -count=1 ./internal/platform/metrics/ ./internal/modules/...
+ok  	github.com/onesyue/yueboard/internal/platform/metrics	0.059s
+metrics rc=0
+NOTE: scripts/premerge.sh stops at internal/platform/schemagate SchemaReferences (5 rejections) identically at base 92377c1f; pre-existing, not touched by this PR (diff: openapi json + metrics test)
