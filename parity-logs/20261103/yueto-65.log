@@ -1,0 +1,50 @@
+SKIP (missing sibling checkout): yuelink/lib/theme_semantic.g.dart
+SKIP (missing sibling checkout): yueboard/scripts/ci/verify-design-projection.mjs
+SKIP (missing sibling checkout): yueops/scripts/verify-design-projection.mjs
+SKIP (missing sibling checkout): yueops/scripts/design-tokens.snapshot.json
+SKIP (missing sibling checkout): yueboard/scripts/ci/design-tokens.snapshot.json
+SKIP (missing sibling checkout): yueops/packages/yue-web-kit/src/motion.g.ts
+SKIP (missing sibling checkout): yueboard/packages/ui/src/tokens.css
+SKIP (missing sibling checkout): yueboard/internal/platform/mailtheme/tokens.g.go
+SKIP (missing sibling checkout): yueops/web/static/status.html
+SKIP (missing sibling checkout): yueops/site/src/styles/yue-tokens.css
+SKIP (missing sibling checkout): yueops/frontend/src/core/styles/tokens.css
+SKIP (missing sibling checkout): yueops/frontend/src/core/theme/antd-tokens.g.ts
+SKIP (missing sibling checkout): yueops/telegram-bot/yue/miniapp/src/styles.css
+SKIP (missing sibling checkout): yuelink/lib/theme.g.dart
+SKIP (missing sibling checkout): docs/yue-visual-language-2026.md
+design tokens: 15 target(s) out of sync with design/tokens/yue.tokens.json
+✔ brand stays Apple blue, with accessible text and component pairs in every mode (4.261ms)
+✔ CSS and Dart expose components, scales, reduced motion and exact brand (133.669417ms)
+✔ numeric projections preserve both primitive scales and wrapped chrome values (17.172333ms)
+✔ default generator is deterministic, checked in, and writes no application paths (703.193666ms)
+✔ single-repo snapshot needs neither parent root nor other products (105.288958ms)
+✔ deleted modern fallback fence, spring and semantic override mutations fail (993.500792ms)
+✔ missing snapshot fails rather than falling back to an unverified literal palette (101.348791ms)
+✔ Ops site source fences remain verified after separating public bytes (381.366208ms)
+✔ font stacks name only OS-shipped fonts (no web font is loaded anywhere) (60.508167ms)
+✔ scale, weights and motion match the spec (0.584625ms)
+✔ generator covers the status page and YueBoard emails (140.627583ms)
+✔ CSS Color 4 conversion is reversible across the sRGB cube (11.582375ms)
+✔ authoring source resolves aliases and checks every declared contrast contract (7.876958ms)
+✔ small status text keeps margin on its actual tinted badge surfaces (13.416708ms)
+✔ missing targets, cyclic aliases, type mismatches, malformed colors fail closed (10.227375ms)
+✔ derived hex, gamut delta and real foreground contrast cannot silently drift (13.1575ms)
+✔ springs share physical damping and sampled stable endpoints (1.550458ms)
+✔ CSS precision stays within surface delta and palettes never leak as literals (12.126292ms)
+✔ both vendored core projections are checked without runtime sibling imports (179.792416ms)
+✔ core drift, deleted projection, stale module, source floor and missing sibling fail (1669.811625ms)
+✔ format unknown quota, fractional bytes, and CNY unambiguously (8.081958ms)
+✔ locale negotiation and persisted theme modes keep product defaults explicit (0.242208ms)
+✔ problem projection handles RFC and legacy errors without inventing retryable 4xx (0.173291ms)
+✔ operation identity is preserved and mutations are never retried (25.489791ms)
+✔ deadline remains active after headers while the body is stalled (10.94975ms)
+✔ upstream cancellation propagates once and timeout origin cannot be relabelled (16.864ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4738.600667
