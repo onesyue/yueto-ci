@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 303,
+  "head": "d54f0d5be052261f01a96a10cd507eca64dcc7de",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "d54f0d5be052261f01a96a10cd507eca64dcc7de",
+    "artifact": "reviews/merge-receipts-20261103/yueops-303-review.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T05:17:34Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "d54f0d5be052261f01a96a10cd507eca64dcc7de",
+    "command": "python -m pytest -q -p no:xdist tests/test_make_release_root_restore_20261103.py",
+    "log_sha256": "b4ae19695493a321dcc9403ecebb20def2f745a072b86c7db67e0a7d176cc7a8",
+    "ran_at": "2026-11-03T05:20:32Z",
+    "runner": "box"
+  }
+}
