@@ -410,6 +410,95 @@ def merged_findings(owner, repo, pr):
     return reasons, only_evidence
 
 
+def merged_row(owner, repo, pr, enforced_since, registered):
+    reasons, only_evidence = merged_findings(owner, repo, pr)
+    if only_evidence:
+        reasons = [r for r in reasons if r not in (
+            "no_approving_review_at_merge", "no_check_evidence_at_merge")]
+    evidence = receipt(repo, pr)
+    satisfied = []
+    if evidence:
+        satisfied = [r for r in reasons if r in (
+            "no_approving_review_at_merge", "no_check_evidence_at_merge")]
+        reasons = [r for r in reasons if r not in satisfied]
+    required = enforced_since is not None and timestamp(pr["merged_at"]) > enforced_since
+    if required and not evidence and not only_evidence:
+        reasons.append("required_merge_receipt_missing")
+    return {"repo": repo, "pr": pr["number"], "url": pr["html_url"],
+            "head": pr["head"]["sha"], "merged_at": pr["merged_at"], "findings": reasons,
+            "exception": None if required else registered.get((repo, pr["number"])),
+            "receipt": evidence, "satisfied_by_receipt": satisfied,
+            **({"evidence_only": True} if only_evidence else {})}
+
+
+def indirect_merge(owner, repo, pr, enforced_since, registered):
+    """Attribute automatic ancestor closure to its independently admitted merge source."""
+    prefix = f"repos/{owner}/{repo}"
+    merge_sha, old_head = pr["merge_commit_sha"], pr["head"]["sha"]
+    commit = api(f"{prefix}/git/commits/{merge_sha}")
+    if not isinstance(commit, dict):
+        raise ValueError("invalid indirect merge commit response")
+    parents = commit.get("parents")
+    if (commit.get("sha") != merge_sha or not isinstance(parents, list)
+            or any(not isinstance(p, dict) or not isinstance(p.get("sha"), str)
+                   or not re.fullmatch(r"[0-9a-f]{40}", p["sha"]) for p in parents)
+            or len({p["sha"] for p in parents}) != len(parents)):
+        raise ValueError("invalid indirect merge parent evidence")
+    if len(parents) != 2:
+        return None  # Unsupported topology retains ordinary findings and history rules.
+    first, second = (p["sha"] for p in parents)
+    if old_head == second:
+        return None  # A direct source's red/missing evidence is never transferable.
+    associated = all_rows(f"{prefix}/commits/{merge_sha}/pulls")
+    if any(not isinstance(p, dict) for p in associated):
+        raise ValueError("invalid associated PR response")
+    direct = [p for p in associated if p.get("merged_at") and p.get("merge_commit_sha") == merge_sha
+              and p["head"]["sha"] == second]
+    if len(direct) != 1:
+        raise ValueError("indirect merge requires one unambiguous associated direct PR")
+    direct = direct[0]
+    expected_repo = f"{owner}/{repo}"
+    if (type(direct["number"]) is not int or direct["number"] <= 0
+            or not isinstance(direct.get("merged_at"), str)
+            or not isinstance(pr.get("merged_at"), str)
+            or direct["number"] == pr["number"] or direct.get("state") != "closed"
+            or pr.get("state") != "closed"
+            or direct["base"]["repo"]["full_name"] != expected_repo
+            or pr["base"]["repo"]["full_name"] != expected_repo
+            or not pr["base"]["ref"] or direct["base"]["ref"] != pr["base"]["ref"]
+            or timestamp(direct["merged_at"]) > timestamp(pr["merged_at"])):
+        raise ValueError("indirect merge target or timestamp mismatch")
+    # Both immutable comparisons still use authenticated fresh HTTP/ETag evidence.
+    for target, ancestor in ((second, True), (first, False)):
+        comparison = api(f"{prefix}/compare/{old_head}...{target}")
+        if not isinstance(comparison, dict):
+            raise ValueError("invalid indirect merge comparison response")
+        ahead, behind = comparison.get("ahead_by"), comparison.get("behind_by")
+        merge_base = comparison["merge_base_commit"]["sha"]
+        if (comparison["base_commit"]["sha"] != old_head
+                or not isinstance(merge_base, str) or not re.fullmatch(r"[0-9a-f]{40}", merge_base)
+                or type(ahead) is not int or type(behind) is not int or min(ahead, behind) < 0
+                or type(comparison.get("total_commits")) is not int
+                or comparison["total_commits"] != ahead):
+            raise ValueError("incomplete indirect merge ancestry evidence")
+        if ancestor:
+            valid = comparison.get("status") == "ahead" and merge_base == old_head and behind == 0 and ahead > 0
+        else:
+            valid = (comparison.get("status") in ("behind", "diverged")
+                     and merge_base != old_head and behind > 0
+                     and (comparison["status"] == "behind") == (ahead == 0))
+        if not valid:
+            raise ValueError("old head is not newly introduced ancestry of this merge")
+    # Evaluate the actual source normally, at its own merge time. No recursion,
+    # baseline exception, evidence-only waiver or post-merge green substitution.
+    direct_row = merged_row(owner, repo, direct, enforced_since, registered)
+    if direct_row["findings"] or not direct_row["receipt"] or direct_row.get("evidence_only"):
+        raise ValueError("indirect merge direct source lacks ordinary passing receipt admission")
+    return {"direct_pr": direct["number"], "direct_head": second, "merge_sha": merge_sha,
+            "direct_merged_at": direct["merged_at"], "indirect_merged_at": pr["merged_at"],
+            "direct_receipt_artifact": direct_row["receipt"]["review"]["artifact"]}
+
+
 def audit(owner, repos, cutoff, registered, now):
     enforced_since = enforcement_cutoff(owner)
     # Post-activation violations cannot age out through --hours or a quiet repo.
@@ -418,6 +507,8 @@ def audit(owner, repos, cutoff, registered, now):
     results = []
     for repo in repos:
         prefix = f"repos/{owner}/{repo}"
+        merged = []
+        rows = []
         for batch in pages(prefix + "/pulls?state=closed&sort=updated&direction=desc"):
             for pr in batch:
                 if not pr.get("merged_at") or not cutoff <= timestamp(pr["merged_at"]) <= now:
@@ -425,29 +516,22 @@ def audit(owner, repos, cutoff, registered, now):
                 sha = pr["head"]["sha"]
                 if not re.fullmatch(r"[0-9a-f]{40}", sha):
                     raise ValueError("invalid PR head SHA")
-                reasons, only_evidence = merged_findings(owner, repo, pr)
-                if only_evidence:
-                    reasons = [r for r in reasons if r not in (
-                        "no_approving_review_at_merge", "no_check_evidence_at_merge")]
-                evidence = receipt(repo, pr)
-                satisfied = []
-                if evidence:
-                    satisfied = [r for r in reasons if r in (
-                        "no_approving_review_at_merge", "no_check_evidence_at_merge")]
-                    reasons = [r for r in reasons if r not in satisfied]
-                required = enforced_since is not None and timestamp(pr["merged_at"]) > enforced_since
-                if required and not evidence and not only_evidence:
-                    reasons.append("required_merge_receipt_missing")
-                if reasons or evidence or only_evidence:
-                    results.append({"repo": repo, "pr": pr["number"], "url": pr["html_url"],
-                                    "head": sha, "merged_at": pr["merged_at"], "findings": reasons,
-                                    "exception": None if required else registered.get((repo, pr["number"])),
-                                    "receipt": evidence, "satisfied_by_receipt": satisfied,
-                                    **({"evidence_only": True} if only_evidence else {})})
+                row = merged_row(owner, repo, pr, enforced_since, registered)
+                merged.append(pr)
+                rows.append(row)
             if batch and timestamp(batch[-1]["updated_at"]) < cutoff:
-                # merged_at alone is unsafe: an older merge can be updated today
-                # and precede newer merges in this updated-descending listing.
                 break
+        for pr, row in zip(merged, rows):
+            # Only investigate observed collateral closures, never turn a lone
+            # bad merge into an ancestry search for some unrelated green PR.
+            siblings = [p for p in merged if p["merge_commit_sha"] == pr["merge_commit_sha"]]
+            if row["findings"] and len(siblings) > 1:
+                binding = indirect_merge(owner, repo, pr, enforced_since, registered)
+                if binding:
+                    row["indirect_merge"] = binding | {"historical_findings": list(row["findings"])}
+                    row["findings"] = []
+            if row["findings"] or row["receipt"] or row.get("evidence_only") or row.get("indirect_merge"):
+                results.append(row)
     return results
 
 
@@ -534,6 +618,12 @@ def main():
         print(result["error"])
     else:
         for row in result["findings"]:
+            if row.get("indirect_merge"):
+                binding = row["indirect_merge"]
+                print(f'INDIRECT {row["url"]}: actual-source PR{binding["direct_pr"]} '
+                      f'head={binding["direct_head"]} merge={binding["merge_sha"]}')
+                print(f'  historical old-head findings (not passed): {", ".join(binding["historical_findings"])}')
+                continue
             if row.get("accepted_history"):
                 print(f'INFO accepted-history {row["url"]}: {", ".join(row["findings"])}')
                 print(f'  {row["accepted_history"]["reason"]}')
