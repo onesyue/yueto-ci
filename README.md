@@ -268,7 +268,7 @@ preceding page only when it has no `next`; other backward jumps fail.
 
 ## Toolchains and runner boundaries
 
-Build and source-poll jobs require `yue-local-release`; there is no hosted fallback.
+Hosted jobs pin `ubuntu-24.04`; implicit `ubuntu-latest` drift is rejected.
 Review runner major, Python/toolchains and evidence identity together.
 [Verified Buildx](scripts/install-verified-buildx.sh) and
 [verified Trivy](scripts/install-verified-trivy.sh) installers own exact versions
@@ -285,7 +285,8 @@ Only then use a dedicated disposable Debian13 x86_64 VM without production
 credentials or network access and an `--ephemeral --disableupdate` runner.
 Registration must retain `self-hosted`, `Linux`, `X64` and add `yue-local-release`.
 All four labels must match. It takes one job; export permitted diagnostics and
-destroy the VM/Docker state. Manual and poll-triggered builds always select it. Bootstrap GNU make,
+destroy the VM/Docker state. Only an authorized manual dispatch can select it;
+default manual runs and poll-triggered builds use hosted runners. Bootstrap GNU make,
 required Go/C toolchains and gettext-base; Debian13 verifies system Python3.13,
 while hosted jobs use setup-python. Manual runner state is not validation evidence.
 

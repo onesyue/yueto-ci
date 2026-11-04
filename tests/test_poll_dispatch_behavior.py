@@ -75,7 +75,7 @@ fi
         for statuses in (["completed"], []):
             with self.subTest(statuses=statuses):
                 self.assertEqual(self.run_dispatch(statuses), [
-                    f"workflow run build.yml -R onesyue/yueto-ci -f service=yue-node -f ref={'a' * 40} -f promote=false -f runner=yue-local-release"
+                    f"workflow run build.yml -R onesyue/yueto-ci -f service=yue-node -f ref={'a' * 40} -f promote=false"
                 ])
 
     def test_unreadable_history_defers_without_dispatch(self):
@@ -84,7 +84,7 @@ fi
     def test_ops_dispatch_preserves_verified_migration_base(self):
         item = {"group": "yueops", "sha": "a" * 40, "repo": "onesyue/yueops", "migration_base": "b" * 40}
         self.assertEqual(self.run_dispatch([], pending=[item]), [
-            f"workflow run build.yml -R onesyue/yueto-ci -f service=yueops -f ref={'a' * 40} -f promote=false -f runner=yue-local-release -f migration_base={'b' * 40}"
+            f"workflow run build.yml -R onesyue/yueto-ci -f service=yueops -f ref={'a' * 40} -f promote=false -f migration_base={'b' * 40}"
         ])
         for missing in (None, "", "HEAD^", "b" * 12):
             item["migration_base"] = missing
