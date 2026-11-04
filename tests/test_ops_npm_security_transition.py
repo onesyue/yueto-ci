@@ -19,6 +19,8 @@ EVIDENCE = ROOT / 'reviews/ops-npm-security-20261031'
 class SecurityTransition(unittest.TestCase):
     def setUp(self):
         self.baseline = json.loads((ROOT / M.SKIP_BASELINE).read_text())
+        # Exercise this historical security seal at its original native-input epoch.
+        self.baseline, _ = M.reviewed_native_input_successor(self.baseline)
         self.prior, self.record = M.reviewed_npm_security_transition(self.baseline)
         self.freeze = json.loads((EVIDENCE / 'source-freeze.json').read_text())
         self.common = self.freeze['common_inputs']

@@ -2193,8 +2193,9 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
     _, active_required = required_native_inputs(baseline)
-    require(not active_required or active_required == NATIVE_INPUTS,
-            "required native input successor missing")
+    # Historical transition validators may receive an already-peeled baseline.
+    # All production entry points first use skip_baseline(), which requires the
+    # current successor; its effective inputs still reject the predecessor blob.
     common, files = admit_pr_shared_inputs(common, files, source_revision)
     common, files = admit_reviewed_pr_inputs(common, files, source_revision)
     common, files = admit_first_native_helper(common, files, source_revision)

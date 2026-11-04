@@ -500,7 +500,8 @@ class LoadShedNativeRegistration(unittest.TestCase):
         common = original["common_inputs"] | inputs
         files = {p: ("100644", blob) for p, blob in common.items()}
         self.consumer.admit_shared_inputs(self.baseline, common, files)
-        for changed in (original["common_inputs"], common | {self.target: "f" * 40}):
+        for changed in (original["common_inputs"], common | {self.target: "f" * 40},
+                        common | self.consumer.HISTORICAL_NATIVE_INPUTS):
             with self.subTest(changed=changed.get(self.target)), self.assertRaisesRegex(
                     ValueError, "missing or changed required native input"):
                 self.consumer.admit_shared_inputs(self.baseline, changed)
@@ -542,8 +543,9 @@ class LoadShedNativeRegistration(unittest.TestCase):
         old.pop(key)
         original, inputs = self.consumer.required_native_inputs(old)
         self.assertEqual(inputs, self.consumer.HISTORICAL_NATIVE_INPUTS)
-        with self.assertRaisesRegex(ValueError, "successor missing"):
-            self.consumer.admit_shared_inputs(old, original["common_inputs"] | inputs)
+        with patch.object(self.consumer, "read_json", return_value=old):
+            with self.assertRaisesRegex(ValueError, "successor missing"):
+                self.consumer.skip_baseline()
         changed = copy.deepcopy(self.baseline)
         first = next(iter(changed["cases"]))
         changed["cases"][first]["reason"] = "invented historical reason"

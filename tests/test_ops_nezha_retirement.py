@@ -31,7 +31,8 @@ class NezhaRetirement(unittest.TestCase):
         for nodeid in self.removed:
             del expected["cases"][nodeid]
         expected[M.NEZHA_RETIREMENT_KEY] = self.baseline[M.NEZHA_RETIREMENT_KEY]
-        self.assertEqual(M.baseline_bytes(expected), raw)
+        predecessor, _ = M.reviewed_native_input_successor(self.baseline)
+        self.assertEqual(M.baseline_bytes(expected), M.baseline_bytes(predecessor))
         self.assertEqual(M.sha(M.baseline_bytes(self.prior)), M.NEZHA_PRIOR_BASELINE_SHA256)
         self.assertEqual(M.historical_skip_baseline_bytes(), M.baseline_bytes(self.prior))
         # The returned history is independent of the active case mapping.

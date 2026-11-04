@@ -48,7 +48,7 @@ def check_review_and_qualification_bound_to_exact_source(name):
 def check_full_admission_exact_successor_and_predecessor_preserve_history(name):
     _, freeze = evidence(name)
     record = M.reviewed_pr_input_transition(name)
-    baseline = M.skip_baseline()
+    baseline, _ = M.reviewed_native_input_successor(M.skip_baseline())
     historical = copy.deepcopy(baseline)
     pin = M.first_native_policy() | {'source_revision': freeze['merge_revision']}
     common = freeze['common_inputs']
@@ -96,7 +96,7 @@ def check_full_admission_rejects_partial_bundles_unknown_bytes_modes_and_wrong_p
             files[path] = ('100644', change['before_blob'])
         else:
             revision = 'f' * 40
-        baseline = M.skip_baseline()
+        baseline, _ = M.reviewed_native_input_successor(M.skip_baseline())
         with patch.object(M, 'first_native_policy', return_value={
                 **M.first_native_policy(), 'source_revision': freeze['merge_revision']}):
             with unittest.TestCase().assertRaises(ValueError):

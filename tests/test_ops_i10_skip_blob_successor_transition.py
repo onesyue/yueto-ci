@@ -60,7 +60,9 @@ class I10SkipBlobSuccessorTransition(unittest.TestCase):
     def test_red_before_green_after_and_historical_blobs(self):
         with patch.object(SHARDS, "skip_baseline", return_value=self.prior):
             with self.assertRaisesRegex(ValueError, "new or changed case skip/xfail: " + NODE):
-                self.admit()
+                # The historical epoch uses its own required native input.
+                self.admit(self.value | {"common_inputs": self.value["common_inputs"]
+                           | SHARDS.required_native_inputs(self.prior)[1]})
         for blob in (AFTER, BEFORE, self.prior["cases"][NODE]["module_blob"]):
             with self.subTest(blob=blob):
                 accepted = self.admit(self.value | {"skip_module_blobs": {MODULE: blob}})
