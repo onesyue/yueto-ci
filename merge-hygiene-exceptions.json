@@ -1026,6 +1026,24 @@
       "pr": 108,
       "reason": "EXCEPTION: merged 2026-11-03T10:07:36Z by cursor[bot] (merge ed6166eabf13ae7a66137385db745a24a18d72f7) without a prior receipt. Exact-head independent Codex review of head ae53f2f31f6dcce2d338c365edee1a92ffe0d8bd returned CHANGES (P2 web/src/routes/_app/devices.tsx:176: over_limit copy must keep disconnect guidance). Fix landed in yueboard #112 (c7d21273). Re-review of the #108 findings against master 305452a3f75f4854a49c175b5d54c16e8aaa6d3c: APPROVE. Box parity at head: go test -count=1 -p 1 ./... rc=0 (log sha256 c37d81069649f13229c28cf12c12dfc6cc71925fec3aa412fae071e8dd89025c). Review at exact head is NOT approve. Evidence: reviews/merge-receipts-20261103/yueboard-108-exception.md.",
       "approver": "owner decision 2026-11-03 20:03 SGT: record #108 as an exception receipt (exact-head CHANGES, fixed by #112, master re-review APPROVE); logged under low-level-error-guard"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 132,
+      "reason": "Landed by direct signed fast-forward c55245103d7a9960ed77a833d7b50544f4926c72 instead of through PR #132's head, so the PR closed unmerged and the receipt writer cannot bind it. Exact-head independent review approve (reviews/merge-receipts-20261104/yueboard-c5524510.md); outside-sandbox parity go vet + go test rc 0 (parity-logs/20261104/yueboard-c5524510.log). Missing evidence: a merged-PR binding only.",
+      "approver": "xiaoming su 2026-11-04 20:57 SGT approved exception for direct pushes"
+    },
+    {
+      "repo": "yueboard",
+      "pr": 133,
+      "reason": "Landed by direct signed fast-forwards 42e9b97050558d3279f8813ed4a293d9a26d257f then dc16f627bb8f2410635e9b2ff930494e01794f6e instead of through PR #133's head. 42e9b970 review was request_changes (five missing Campaign audit retirements, reviews/merge-receipts-20261104/yueboard-42e9b970.md); dc16f627 fixes it, review approve (reviews/merge-receipts-20261104/yueboard-dc16f627.md), outside-sandbox parity rc 0 (parity-logs/20261104/yueboard-dc16f627.log). 42e9b970 alone was never independently approved. Missing evidence: merged-PR binding.",
+      "approver": "xiaoming su 2026-11-04 20:57 SGT approved exception for direct pushes"
+    },
+    {
+      "repo": "yueto",
+      "pr": 105,
+      "reason": "Landed by direct signed fast-forward 668fd7fad2ad391962e9847c6ac24e2ccf2fc3cf instead of through PR #105's head. Review approve, documentation scope (reviews/merge-receipts-20261104/yueto-668fd7fa.md); real-workspace pytest 99 passed (parity-logs/20261104/yueto-668fd7fa.log). CRLF diff-check finding fixed afterwards by PR #106 (3bda428b). Missing evidence: merged-PR binding.",
+      "approver": "xiaoming su 2026-11-04 20:57 SGT approved exception for direct pushes"
     }
   ]
 }

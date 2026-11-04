@@ -1,0 +1,10 @@
+Started: 2026-11-04T12:40:17Z
+Runner: mac-5f08d00f
+Command: python -m pytest -q tests/test_write_merge_receipt.py tests/test_merge_hygiene_audit.py
+Sanitization: local filesystem paths replaced if present.
+....................................... [ 65%]
+.....................                                                 [100%]
+60 passed, 180 subtests passed in 0.34s
+
+Finished: 2026-11-04T12:40:17Z
+Exit code: 0

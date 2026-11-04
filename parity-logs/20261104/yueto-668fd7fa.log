@@ -1,0 +1,64 @@
+head=668fd7fad2ad391962e9847c6ac24e2ccf2fc3cf
+runner=mac-5f08d00f
+started_at=2026-11-04T12:41:02Z
+Interpreter: python denotes the preinstalled workspace virtual-environment Python; executable location omitted for privacy.
+Scope: documentation parity; independent components are absent from this detached root checkout.
+Output redactions: internal absolute paths (including temporary and runtime fixture paths) and IP addresses replaced; pytest traceback and captured output disabled at invocation.
+$ bash scripts/status-all.sh
+yueto(根仓)          (detached-or-unknown)  dirty:0    unpushed:UNKNOWN
+
+[33m↪  主检出不在默认分支（跨仓守卫读的是主检出，红守卫先排除这个）[0m
+   yueto(根仓)：默认分支测不到（origin/HEAD 缺失；git -C <仓> remote set-head origin -a 可补）
+
+UNKNOWN: Git status or upstream comparison could not be measured; this is not a clean/pushed verdict.
+
+command_rc=1
+$ git diff --check HEAD^ HEAD
+
+command_rc=0
+$ python -m pytest -q --tb=no --show-capture=no scripts/test-root-doc-truth.py scripts/test-doc-path-truth.py
+...............................sss..ssFFF.....FFFFFFFFFFFFFFF.FF........ [ 72%]
+.........FF................                                              [100%]
+=========================== short test summary info ============================
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_accepts_current_facts_with_history
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_mutated_configured_relay_field[product]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_mutated_configured_relay_field[alignment]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[## 0. Current facts and their sources-## 9. Current facts and their sources]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[| Fleet topology |-| Deleted fleet topology |]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[../yueops/scripts/node-control-auth-migrate.py-../yueops/scripts/missing-inventory.py]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[<internal-path>]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[UNKNOWN-healthy]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[only proprietary client under active development and release-one of several maintained clients]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[../scripts/release-state.py-../scripts/missing-release-state.py]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[../schedule/registry.yaml-../schedule/missing.yaml]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[../yuelink/core/mihomo-../yuelink/core/missing]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[<stable-version>-Current signed stable root: v999.999.999]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[<stable-source>-0000000000000000000000000000000000000000]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[<stable-hash>-0000000000000000000000000000000000000000000000000000000000000000]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[The release pipeline verified the complete artifact set and completed signed promotion.-Only local files were checked.]
+FAILED scripts/test-root-doc-truth.py::test_actual_doc_cli_rejects_current_only_mutation_despite_intact_history[<policy-run>-https://example.invalid/no-policy-evidence]
+FAILED scripts/test-root-doc-truth.py::test_current_card_accepts_equivalent_chinese_labels_without_history
+FAILED scripts/test-doc-path-truth.py::test_real_workspace_is_green - assert ...
+FAILED scripts/test-doc-path-truth.py::test_every_registered_doc_exists - Ass...
+FAILED scripts/test-doc-path-truth.py::test_resolves_relative_to_the_docs_own_repo
+FAILED scripts/test-doc-path-truth.py::test_resolves_a_prefix_spelling - Asse...
+22 failed, 72 passed, 5 skipped in 6.12s
+
+command_rc=1
+finished_at=2026-11-04T12:41:09Z
+
+--- Real-workspace run outside sandbox (owner-approved 11-04) ---
+runner: mac-5f08d00f
+head: 668fd7fad2ad391962e9847c6ac24e2ccf2fc3cf
+workspace: real component checkouts linked as siblings (<home>/Projects/yueto/*)
+started_at: 2026-11-04T13:01:56Z
+command: python -m pytest -q scripts/test-root-doc-truth.py scripts/test-doc-path-truth.py
+
+........................................................................ [ 72%]
+...........................                                              [100%]
+99 passed in 16.33s
+ended_at: 2026-11-04T13:02:13Z
+exit_code: 0
+
+command: git diff --check HEAD^ HEAD
+exit_code: 0

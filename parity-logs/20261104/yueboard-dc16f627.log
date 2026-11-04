@@ -1,0 +1,617 @@
+runner: mac-5f08d00f
+head: dc16f627bb8f2410635e9b2ff930494e01794f6e
+parent: 42e9b97050558d3279f8813ed4a293d9a26d257f
+started_at: 2026-11-04T12:40:08Z
+command: go vet ./... && YUEBOARD_CONTRACT_BASELINE=42e9b97050558d3279f8813ed4a293d9a26d257f go test ./...
+Sanitization: local absolute paths and IP literals redacted from command output.
+
+go: downloading go1.27.3 (darwin/arm64)
+go: download go1.27.3: golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64: Get "https://proxy.golang.org/golang.org/toolchain/@v/v0.0.1-go1.27.3.darwin-arm64.zip": dial tcp: lookup proxy.golang.org: no such host
+
+ended_at: 2026-11-04T12:40:08Z
+exit_code: 1
+
+--- Retry using installed pinned toolchain and module cache ---
+runner: mac-5f08d00f
+head: dc16f627bb8f2410635e9b2ff930494e01794f6e
+parent: 42e9b97050558d3279f8813ed4a293d9a26d257f
+started_at: 2026-11-04T12:44:03Z
+command: go vet ./... && YUEBOARD_CONTRACT_BASELINE=42e9b97050558d3279f8813ed4a293d9a26d257f go test ./...
+Sanitization: local absolute paths and IP literals redacted from command output.
+
+ok  	github.com/onesyue/yueboard/cmd/economy-contract-pack	0.312s
+?   	github.com/onesyue/yueboard/cmd/export-openapi	[no test files]
+ok  	github.com/onesyue/yueboard/cmd/graycheck	0.317s
+?   	github.com/onesyue/yueboard/cmd/schemafloor	[no test files]
+--- FAIL: TestProbeTelegramGetMe (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 <redacted-ip>:0: bind: operation not permitted [recovered, repanicked]
+
+goroutine 846 [running]:
+testing.tRunner.func1.2({0x102c47a68, 0x7da71527aff0})
+	<redacted-local-path>:2125 +0x1a0
+testing.tRunner.func1()
+	<redacted-local-path>:2128 +0x2c8
+panic({0x102c47a68?, 0x7da71527aff0?})
+	<redacted-local-path>:859 +0x120
+net/http/httptest.newLocalListener()
+	<redacted-local-path>:226 +0xd4
+net/http/httptest.NewUnstartedServer(...)
+	<redacted-local-path>:284
+net/http/httptest.NewServer({0x102dcd308, 0x7da7153faed0})
+	<redacted-local-path>:267 +0x28
+github.com/onesyue/yueboard/cmd/yueboard.probeServer(0x7da714d1d208, 0xc8, {0x101c86501, 0x41}, 0x7da71527af20)
+	<redacted-local-path>:18 +0x9c
+github.com/onesyue/yueboard/cmd/yueboard.TestProbeTelegramGetMe(0x7da714d1d208)
+	<redacted-local-path>:39 +0xd4
+testing.tRunner(0x7da714d1d208, 0x102df1828)
+	<redacted-local-path>:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	<redacted-local-path>:2260 +0x3b8
+FAIL	github.com/onesyue/yueboard/cmd/yueboard	1.400s
+?   	github.com/onesyue/yueboard/internal/config	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/accountcenter	0.415s
+ok  	github.com/onesyue/yueboard/internal/modules/admin	1.614s
+ok  	github.com/onesyue/yueboard/internal/modules/aiops	0.413s
+ok  	github.com/onesyue/yueboard/internal/modules/bannedprotect	0.330s
+ok  	github.com/onesyue/yueboard/internal/modules/changeemail	0.504s
+ok  	github.com/onesyue/yueboard/internal/modules/clientconfig	0.848s
+?   	github.com/onesyue/yueboard/internal/modules/commissioncron	[no test files]
+?   	github.com/onesyue/yueboard/internal/modules/commissiontiercron	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/diagnostics	0.413s
+--- FAIL: TestClientDoPropagatesShedErrors (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 <redacted-ip>:0: bind: operation not permitted [recovered, repanicked]
+
+goroutine 52 [running]:
+testing.tRunner.func1.2({0x103350610, 0x69a6341b3a0})
+	<redacted-local-path>:2125 +0x1a0
+testing.tRunner.func1()
+	<redacted-local-path>:2128 +0x2c8
+panic({0x103350610?, 0x69a6341b3a0?})
+	<redacted-local-path>:859 +0x120
+net/http/httptest.newLocalListener()
+	<redacted-local-path>:226 +0xd4
+net/http/httptest.NewUnstartedServer(...)
+	<redacted-local-path>:284
+net/http/httptest.NewServer({0x1033d9f48, 0x69a6341b360})
+	<redacted-local-path>:267 +0x28
+github.com/onesyue/yueboard/internal/modules/emby.TestClientDoPropagatesShedErrors(0x69a63263688)
+	<redacted-local-path>:80 +0x94
+testing.tRunner(0x69a63263688, 0x1033e35a8)
+	<redacted-local-path>:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	<redacted-local-path>:2260 +0x3b8
+FAIL	github.com/onesyue/yueboard/internal/modules/emby	0.417s
+?   	github.com/onesyue/yueboard/internal/modules/funnel	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/giftcard	0.736s
+ok  	github.com/onesyue/yueboard/internal/modules/giftledger	0.647s
+ok  	github.com/onesyue/yueboard/internal/modules/guest	0.507s
+ok  	github.com/onesyue/yueboard/internal/modules/handoff	0.843s
+ok  	github.com/onesyue/yueboard/internal/modules/idlepurgecron	0.814s
+ok  	github.com/onesyue/yueboard/internal/modules/invitealias	0.836s
+ok  	github.com/onesyue/yueboard/internal/modules/lifecyclecron	0.508s
+?   	github.com/onesyue/yueboard/internal/modules/memories	[no test files]
+?   	github.com/onesyue/yueboard/internal/modules/message	[no test files]
+2026/11/04 20:44:29 WARN nodeext: Clash YAML 解析失败 err="yaml: line 1: did not find expected node content"
+--- FAIL: TestAPINodesOK (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 <redacted-ip>:0: bind: operation not permitted [recovered, repanicked]
+
+goroutine 50 [running]:
+testing.tRunner.func1.2({0x102c0f770, 0x7e1f93a1b630})
+	<redacted-local-path>:2125 +0x1a0
+testing.tRunner.func1()
+	<redacted-local-path>:2128 +0x2c8
+panic({0x102c0f770?, 0x7e1f93a1b630?})
+	<redacted-local-path>:859 +0x120
+net/http/httptest.newLocalListener()
+	<redacted-local-path>:226 +0xd4
+net/http/httptest.NewUnstartedServer(...)
+	<redacted-local-path>:284
+net/http/httptest.NewServer({0x102c8f330, 0x7e1f9377aee8})
+	<redacted-local-path>:267 +0x28
+github.com/onesyue/yueboard/internal/modules/nodeext.TestAPINodesOK(0x7e1f93999d48)
+	<redacted-local-path>:30 +0xb8
+testing.tRunner(0x7e1f93999d48, 0x102c97eb0)
+	<redacted-local-path>:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	<redacted-local-path>:2260 +0x3b8
+FAIL	github.com/onesyue/yueboard/internal/modules/nodeext	0.456s
+2026/11/04 20:44:33 INFO node presence generation requires reconciliation procedure=/yuenode.v1.NodeControlPlane/ReportDevices code=failed_precondition reason=user elapsed_ms=0 suppressed_since_last=0 err="failed_precondition: node generations require reconciliation: user generation requires reconciliation"
+--- FAIL: TestRPCOutcomesReachUnaryAndStreamWire (0.00s)
+    --- FAIL: TestRPCOutcomesReachUnaryAndStreamWire/ok (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 <redacted-ip>:0: bind: operation not permitted [recovered, repanicked]
+
+goroutine 281 [running]:
+testing.tRunner.func1.2({0x106733cd8, 0x49a512cc0310})
+	<redacted-local-path>:2125 +0x1a0
+testing.tRunner.func1()
+	<redacted-local-path>:2128 +0x2c8
+panic({0x106733cd8?, 0x49a512cc0310?})
+	<redacted-local-path>:859 +0x120
+net/http/httptest.newLocalListener()
+	<redacted-local-path>:226 +0xd4
+net/http/httptest.NewUnstartedServer(...)
+	<redacted-local-path>:284
+net/http/httptest.NewServer({0x1068cf758, 0x49a516d13080})
+	<redacted-local-path>:267 +0x28
+github.com/onesyue/yueboard/internal/modules/nodesync.TestRPCOutcomesReachUnaryAndStreamWire.func1(0x49a512ca2488)
+	<redacted-local-path>:42 +0x19c
+testing.tRunner(0x49a512ca2488, 0x49a513153440)
+	<redacted-local-path>:2195 +0xc4
+created by testing.(*T).Run in goroutine 280
+	<redacted-local-path>:2260 +0x3b8
+FAIL	github.com/onesyue/yueboard/internal/modules/nodesync	0.796s
+?   	github.com/onesyue/yueboard/internal/modules/nodesync/store	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/notice	1.046s
+?   	github.com/onesyue/yueboard/internal/modules/notify	[no test files]
+2026/11/04 20:44:33 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+2026/11/04 20:44:33 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+2026/11/04 20:44:33 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+2026/11/04 20:44:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+2026/11/04 20:44:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+2026/11/04 20:44:33 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+--- FAIL: TestEpayQueryOrderParsesPaidTerminalState (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 <redacted-ip>:0: bind: operation not permitted [recovered, repanicked]
+
+goroutine 246 [running]:
+testing.tRunner.func1.2({0x103474d58, 0x76a55ef966c0})
+	<redacted-local-path>:2125 +0x1a0
+testing.tRunner.func1()
+	<redacted-local-path>:2128 +0x2c8
+panic({0x103474d58?, 0x76a55ef966c0?})
+	<redacted-local-path>:859 +0x120
+net/http/httptest.newLocalListener()
+	<redacted-local-path>:226 +0xd4
+net/http/httptest.NewUnstartedServer(...)
+	<redacted-local-path>:284
+net/http/httptest.NewServer({0x103526920, 0x76a55ef96680})
+	<redacted-local-path>:267 +0x28
+github.com/onesyue/yueboard/internal/modules/order.fakeEPayServer(0x76a55f171b08, 0x76a55f2b16b0)
+	<redacted-local-path>:39 +0x7c
+github.com/onesyue/yueboard/internal/modules/order.TestEpayQueryOrderParsesPaidTerminalState(0x76a55f171b08)
+	<redacted-local-path>:57 +0x110
+testing.tRunner(0x76a55f171b08, 0x103533448)
+	<redacted-local-path>:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	<redacted-local-path>:2260 +0x3b8
+FAIL	github.com/onesyue/yueboard/internal/modules/order	0.859s
+?   	github.com/onesyue/yueboard/internal/modules/order/store	[no test files]
+?   	github.com/onesyue/yueboard/internal/modules/payment	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/plan	0.412s
+?   	github.com/onesyue/yueboard/internal/modules/plan/store	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/pluginapi	0.357s
+ok  	github.com/onesyue/yueboard/internal/modules/remindmailcron	0.391s
+ok  	github.com/onesyue/yueboard/internal/modules/resettrafficcron	0.342s
+ok  	github.com/onesyue/yueboard/internal/modules/speedlimitcron	0.399s
+ok  	github.com/onesyue/yueboard/internal/modules/statcron	0.344s
+ok  	github.com/onesyue/yueboard/internal/modules/subextra	0.383s
+ok  	github.com/onesyue/yueboard/internal/modules/subrisk	0.366s
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	1.418s
+ok  	github.com/onesyue/yueboard/internal/modules/support	0.383s
+2026/11/04 20:44:33 ERROR telegram: 管理员通知部分或全部投递失败 total=1 succeeded=0 failed=1
+--- FAIL: TestTgSendMDOpensSealedSettingToken (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 <redacted-ip>:0: bind: operation not permitted [recovered, repanicked]
+
+goroutine 60 [running]:
+testing.tRunner.func1.2({0x101695748, 0x6e22d22b4f40})
+	<redacted-local-path>:2125 +0x1a0
+testing.tRunner.func1()
+	<redacted-local-path>:2128 +0x2c8
+panic({0x101695748?, 0x6e22d22b4f40?})
+	<redacted-local-path>:859 +0x120
+net/http/httptest.newLocalListener()
+	<redacted-local-path>:226 +0xd4
+net/http/httptest.NewUnstartedServer(...)
+	<redacted-local-path>:284
+net/http/httptest.NewServer({0x101714538, 0x6e22d22b4f00})
+	<redacted-local-path>:267 +0x28
+github.com/onesyue/yueboard/internal/modules/telegram.tgTestAPI(0x6e22d23f8b48, 0x6e22d22b4f00)
+	<redacted-local-path>:355 +0x3c
+github.com/onesyue/yueboard/internal/modules/telegram.TestTgSendMDOpensSealedSettingToken(0x6e22d23f8b48)
+	<redacted-local-path>:32 +0x124
+testing.tRunner(0x6e22d23f8b48, 0x10171d2d8)
+	<redacted-local-path>:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	<redacted-local-path>:2260 +0x3b8
+FAIL	github.com/onesyue/yueboard/internal/modules/telegram	0.373s
+ok  	github.com/onesyue/yueboard/internal/modules/theme	0.350s
+ok  	github.com/onesyue/yueboard/internal/modules/usagepolicy	0.746s
+ok  	github.com/onesyue/yueboard/internal/modules/user	0.753s
+ok  	github.com/onesyue/yueboard/internal/modules/userx	0.444s
+ok  	github.com/onesyue/yueboard/internal/modules/uticket	0.405s
+ok  	github.com/onesyue/yueboard/internal/modules/webvitals	0.474s
+?   	github.com/onesyue/yueboard/internal/noderpc/gen/yuenode/v1	[no test files]
+?   	github.com/onesyue/yueboard/internal/noderpc/gen/yuenode/v1/yuenodev1connect	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/actionledger	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/advisorylock	0.438s
+ok  	github.com/onesyue/yueboard/internal/platform/antigfw	0.452s
+ok  	github.com/onesyue/yueboard/internal/platform/apiresp	1.578s
+ok  	github.com/onesyue/yueboard/internal/platform/apptime	0.295s
+ok  	github.com/onesyue/yueboard/internal/platform/audit	0.668s
+ok  	github.com/onesyue/yueboard/internal/platform/auth	0.387s
+?   	github.com/onesyue/yueboard/internal/platform/auth/store	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/authattempt	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/brand	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/checkoutorigin	0.288s
+ok  	github.com/onesyue/yueboard/internal/platform/clientnotice	0.321s
+ok  	github.com/onesyue/yueboard/internal/platform/commission	0.341s
+ok  	github.com/onesyue/yueboard/internal/platform/commissiontier	0.350s
+?   	github.com/onesyue/yueboard/internal/platform/commissiontier/store	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/contractpack	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/controltoken	0.290s
+ok  	github.com/onesyue/yueboard/internal/platform/credentialreset	1.188s
+?   	github.com/onesyue/yueboard/internal/platform/dailyclaim	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/db	1.738s
+ok  	github.com/onesyue/yueboard/internal/platform/dbreserve	0.379s
+ok  	github.com/onesyue/yueboard/internal/platform/devicecount	1.461s
+ok  	github.com/onesyue/yueboard/internal/platform/deviceidentity	0.361s
+ok  	github.com/onesyue/yueboard/internal/platform/devicelimit	0.441s
+ok  	github.com/onesyue/yueboard/internal/platform/economy	0.849s
+ok  	github.com/onesyue/yueboard/internal/platform/emailaddr	0.331s
+ok  	github.com/onesyue/yueboard/internal/platform/entitlement	0.299s
+ok  	github.com/onesyue/yueboard/internal/platform/entrypath	0.320s
+ok  	github.com/onesyue/yueboard/internal/platform/entryretire	0.405s
+ok  	github.com/onesyue/yueboard/internal/platform/entrysalt	0.328s
+ok  	github.com/onesyue/yueboard/internal/platform/envflag	0.560s
+?   	github.com/onesyue/yueboard/internal/platform/epochtz	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/errcode	0.452s
+ok  	github.com/onesyue/yueboard/internal/platform/fairuse	0.434s
+ok  	github.com/onesyue/yueboard/internal/platform/featureflag	0.349s
+ok  	github.com/onesyue/yueboard/internal/platform/fleetegress	0.387s
+?   	github.com/onesyue/yueboard/internal/platform/funnel	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/goldenfile	5.113s
+ok  	github.com/onesyue/yueboard/internal/platform/growthtransport	0.381s
+ok  	github.com/onesyue/yueboard/internal/platform/httpcontract	2.376s
+ok  	github.com/onesyue/yueboard/internal/platform/httpencoding	0.513s
+ok  	github.com/onesyue/yueboard/internal/platform/i18n	0.387s
+ok  	github.com/onesyue/yueboard/internal/platform/idempotency	0.756s
+ok  	github.com/onesyue/yueboard/internal/platform/inbox	0.375s
+ok  	github.com/onesyue/yueboard/internal/platform/internalauth	0.420s
+ok  	github.com/onesyue/yueboard/internal/platform/ipfingerprint	0.402s
+ok  	github.com/onesyue/yueboard/internal/platform/ipgeo	0.769s
+--- FAIL: TestSMTPFinalDataAcceptanceSurvivesQuitFailure (0.00s)
+    --- FAIL: TestSMTPFinalDataAcceptanceSurvivesQuitFailure/quit-ok (0.00s)
+        acceptance_test.go:21: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPFinalDataAcceptanceSurvivesQuitFailure/quit-disconnect (0.00s)
+        acceptance_test.go:21: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPFinalDataAcceptanceSurvivesQuitFailure/quit-rejected (0.00s)
+        acceptance_test.go:21: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPFinalDataAcceptanceSurvivesQuitFailure/data-rejected (0.00s)
+        acceptance_test.go:21: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPFinalDataAcceptanceSurvivesQuitFailure/data-disconnect (0.00s)
+        acceptance_test.go:21: listen tcp <redacted-ip>:0: bind: operation not permitted
+--- FAIL: TestSMTPRequiredCapabilities (0.00s)
+    --- FAIL: TestSMTPRequiredCapabilities/explicit_STARTTLS (0.00s)
+        capabilities_test.go:30: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPRequiredCapabilities/tls_alias (0.00s)
+        capabilities_test.go:30: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPRequiredCapabilities/configured_authentication (0.00s)
+        capabilities_test.go:30: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPRequiredCapabilities/explicit_unauthenticated_relay (0.00s)
+        capabilities_test.go:30: listen tcp <redacted-ip>:0: bind: operation not permitted
+--- FAIL: TestSMTPConversationIsBoundedByDeadline (0.00s)
+    deadline_test.go:16: listen tcp <redacted-ip>:0: bind: operation not permitted
+--- FAIL: TestSMTPTemporaryAuthClassificationAtTheProtocolBoundary (0.00s)
+    --- FAIL: TestSMTPTemporaryAuthClassificationAtTheProtocolBoundary/AUTH-454 (0.00s)
+        retry_test.go:32: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPTemporaryAuthClassificationAtTheProtocolBoundary/AUTH-535 (0.00s)
+        retry_test.go:32: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPTemporaryAuthClassificationAtTheProtocolBoundary/MAIL-454 (0.00s)
+        retry_test.go:32: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPTemporaryAuthClassificationAtTheProtocolBoundary/RCPT-454 (0.00s)
+        retry_test.go:32: listen tcp <redacted-ip>:0: bind: operation not permitted
+    --- FAIL: TestSMTPTemporaryAuthClassificationAtTheProtocolBoundary/DATA-454 (0.00s)
+        retry_test.go:32: listen tcp <redacted-ip>:0: bind: operation not permitted
+FAIL
+FAIL	github.com/onesyue/yueboard/internal/platform/mail	0.447s
+ok  	github.com/onesyue/yueboard/internal/platform/mailtheme	0.376s
+ok  	github.com/onesyue/yueboard/internal/platform/metrics	0.662s
+ok  	github.com/onesyue/yueboard/internal/platform/money	0.376s
+ok  	github.com/onesyue/yueboard/internal/platform/nativeproto	0.372s
+?   	github.com/onesyue/yueboard/internal/platform/nodecredential	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/nodeservice	0.363s
+ok  	github.com/onesyue/yueboard/internal/platform/onlinestate	0.300s
+ok  	github.com/onesyue/yueboard/internal/platform/orderfulfill	0.410s
+ok  	github.com/onesyue/yueboard/internal/platform/ordertype	0.519s
+--- FAIL: TestHTTPMiddlewareNamesSpansByRouteAndSharesIDsWithTracectx (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 <redacted-ip>:0: bind: operation not permitted [recovered, repanicked]
+
+goroutine 10 [running]:
+testing.tRunner.func1.2({0x1014b61c0, 0x673943bb92a0})
+	<redacted-local-path>:2125 +0x1a0
+testing.tRunner.func1()
+	<redacted-local-path>:2128 +0x2c8
+panic({0x1014b61c0?, 0x673943bb92a0?})
+	<redacted-local-path>:859 +0x120
+net/http/httptest.newLocalListener()
+	<redacted-local-path>:226 +0xd4
+net/http/httptest.NewUnstartedServer(...)
+	<redacted-local-path>:284
+net/http/httptest.NewServer({0x1015ab4d8, 0x673943c12c60})
+	<redacted-local-path>:267 +0x28
+github.com/onesyue/yueboard/internal/platform/otelobs.TestHTTPMiddlewareNamesSpansByRouteAndSharesIDsWithTracectx(0x673943c77b08)
+	<redacted-local-path>:116 +0x47c
+testing.tRunner(0x673943c77b08, 0x1015bdba8)
+	<redacted-local-path>:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	<redacted-local-path>:2260 +0x3b8
+FAIL	github.com/onesyue/yueboard/internal/platform/otelobs	0.499s
+?   	github.com/onesyue/yueboard/internal/platform/outagecomp	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/outbox	0.433s
+ok  	github.com/onesyue/yueboard/internal/platform/passwordhash	2.633s
+ok  	github.com/onesyue/yueboard/internal/platform/paymethod	0.740s
+ok  	github.com/onesyue/yueboard/internal/platform/period	0.546s
+ok  	github.com/onesyue/yueboard/internal/platform/pluginconfig	0.683s
+ok  	github.com/onesyue/yueboard/internal/platform/pluginsecret	1.161s
+?   	github.com/onesyue/yueboard/internal/platform/promocode	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/quotaidentity	0.506s
+ok  	github.com/onesyue/yueboard/internal/platform/ratelimit	0.598s
+ok  	github.com/onesyue/yueboard/internal/platform/referencelock	0.440s
+?   	github.com/onesyue/yueboard/internal/platform/reminderrules	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/resetschedule	1.698s
+ok  	github.com/onesyue/yueboard/internal/platform/resource	0.387s
+ok  	github.com/onesyue/yueboard/internal/platform/safego	0.804s
+ok  	github.com/onesyue/yueboard/internal/platform/secureurl	0.310s
+ok  	github.com/onesyue/yueboard/internal/platform/serverroute	0.294s
+ok  	github.com/onesyue/yueboard/internal/platform/settings	0.399s
+ok  	github.com/onesyue/yueboard/internal/platform/speedpolicy	0.667s
+ok  	github.com/onesyue/yueboard/internal/platform/statuspage	0.322s
+ok  	github.com/onesyue/yueboard/internal/platform/subscribeurl	0.391s
+ok  	github.com/onesyue/yueboard/internal/platform/ticketattachment	0.632s
+ok  	github.com/onesyue/yueboard/internal/platform/ticketcategory	0.425s
+ok  	github.com/onesyue/yueboard/internal/platform/tickettext	0.777s
+ok  	github.com/onesyue/yueboard/internal/platform/tokenvault	1.277s
+ok  	github.com/onesyue/yueboard/internal/platform/toolchain	2.253s
+ok  	github.com/onesyue/yueboard/internal/platform/totp	0.532s
+ok  	github.com/onesyue/yueboard/internal/platform/tracectx	0.329s
+?   	github.com/onesyue/yueboard/internal/platform/trafficledger	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/typedsearch	0.321s
+--- FAIL: TestTimeoutBoundsAHungUpstream (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 <redacted-ip>:0: bind: operation not permitted [recovered, repanicked]
+
+goroutine 29 [running]:
+testing.tRunner.func1.2({0x1048eaca8, 0x4813307949a0})
+	<redacted-local-path>:2125 +0x1a0
+testing.tRunner.func1()
+	<redacted-local-path>:2128 +0x2c8
+panic({0x1048eaca8?, 0x4813307949a0?})
+	<redacted-local-path>:859 +0x120
+net/http/httptest.newLocalListener()
+	<redacted-local-path>:226 +0xd4
+net/http/httptest.NewUnstartedServer(...)
+	<redacted-local-path>:284
+net/http/httptest.NewServer({0x10495cba0, 0x4813307c4cd8})
+	<redacted-local-path>:267 +0x28
+github.com/onesyue/yueboard/internal/platform/upstream.hangingServer(0x4813307be6c8)
+	<redacted-local-path>:19 +0xa4
+github.com/onesyue/yueboard/internal/platform/upstream.TestTimeoutBoundsAHungUpstream(0x4813307be6c8)
+	<redacted-local-path>:39 +0x24
+testing.tRunner(0x4813307be6c8, 0x104964330)
+	<redacted-local-path>:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	<redacted-local-path>:2260 +0x3b8
+FAIL	github.com/onesyue/yueboard/internal/platform/upstream	0.412s
+?   	github.com/onesyue/yueboard/internal/platform/user360	[no test files]
+--- FAIL: TestSiteverifyClassifiesProviderOutcomes (0.00s)
+    --- FAIL: TestSiteverifyClassifiesProviderOutcomes/success (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 <redacted-ip>:0: bind: operation not permitted [recovered, repanicked]
+
+goroutine 48 [running]:
+testing.tRunner.func1.2({0x10161b520, 0x5fe3ac7b8970})
+	<redacted-local-path>:2125 +0x1a0
+testing.tRunner.func1()
+	<redacted-local-path>:2128 +0x2c8
+panic({0x10161b520?, 0x5fe3ac7b8970?})
+	<redacted-local-path>:859 +0x120
+net/http/httptest.newLocalListener()
+	<redacted-local-path>:226 +0xd4
+net/http/httptest.NewUnstartedServer(...)
+	<redacted-local-path>:284
+net/http/httptest.NewServer({0x1016c20f8, 0x5fe3ac7fe780})
+	<redacted-local-path>:267 +0x28
+github.com/onesyue/yueboard/internal/platform/verify.TestSiteverifyClassifiesProviderOutcomes.func1(0x5fe3ac832fc8)
+	<redacted-local-path>:46 +0xd0
+testing.tRunner(0x5fe3ac832fc8, 0x5fe3ac7c1240)
+	<redacted-local-path>:2195 +0xc4
+created by testing.(*T).Run in goroutine 47
+	<redacted-local-path>:2260 +0x3b8
+FAIL	github.com/onesyue/yueboard/internal/platform/verify	0.425s
+ok  	github.com/onesyue/yueboard/internal/platform/visibilityaudit	0.316s
+ok  	github.com/onesyue/yueboard/internal/platform/withdrawpolicy	0.309s
+--- FAIL: TestTronConstantStateRequiresConfirmedHeadsAndExactBoolean (0.00s)
+    --- FAIL: TestTronConstantStateRequiresConfirmedHeadsAndExactBoolean/clear (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 <redacted-ip>:0: bind: operation not permitted [recovered, repanicked]
+
+goroutine 47 [running]:
+testing.tRunner.func1.2({0x101275e18, 0x31e4dd9a4200})
+	<redacted-local-path>:2125 +0x1a0
+testing.tRunner.func1()
+	<redacted-local-path>:2128 +0x2c8
+panic({0x101275e18?, 0x31e4dd9a4200?})
+	<redacted-local-path>:859 +0x120
+net/http/httptest.newLocalListener()
+	<redacted-local-path>:226 +0xd4
+net/http/httptest.NewUnstartedServer(...)
+	<redacted-local-path>:284
+net/http/httptest.NewServer({0x1012e9df8, 0x31e4dd94cc00})
+	<redacted-local-path>:267 +0x28
+github.com/onesyue/yueboard/internal/platform/withdrawrisk.TestTronConstantStateRequiresConfirmedHeadsAndExactBoolean.func1(0x31e4dd959208)
+	<redacted-local-path>:33 +0x138
+testing.tRunner(0x31e4dd959208, 0x31e4dd9e89a0)
+	<redacted-local-path>:2195 +0xc4
+created by testing.(*T).Run in goroutine 46
+	<redacted-local-path>:2260 +0x3b8
+FAIL	github.com/onesyue/yueboard/internal/platform/withdrawrisk	0.374s
+ok  	github.com/onesyue/yueboard/internal/restorecheck	0.658s
+ok  	github.com/onesyue/yueboard/internal/server	0.492s
+ok  	github.com/onesyue/yueboard/test/contractaudit	1.472s
+?   	github.com/onesyue/yueboard/web	[no test files]
+?   	github.com/onesyue/yueboard/web-admin	[no test files]
+FAIL
+
+ended_at: 2026-11-04T12:44:46Z
+exit_code: 1
+
+--- Outside-sandbox run (owner-approved 11-04) ---
+runner: mac-5f08d00f
+head: dc16f627bb8f2410635e9b2ff930494e01794f6e
+parent: 42e9b97050558d3279f8813ed4a293d9a26d257f
+started_at: 2026-11-04T13:02:46Z
+command: go vet ./... && YUEBOARD_CONTRACT_BASELINE=42e9b97050558d3279f8813ed4a293d9a26d257f go test ./...
+Sanitization: local absolute paths and IP literals redacted from command output.
+
+ok  	github.com/onesyue/yueboard/cmd/economy-contract-pack	0.386s
+?   	github.com/onesyue/yueboard/cmd/export-openapi	[no test files]
+ok  	github.com/onesyue/yueboard/cmd/graycheck	0.461s
+?   	github.com/onesyue/yueboard/cmd/schemafloor	[no test files]
+ok  	github.com/onesyue/yueboard/cmd/yueboard	1.394s
+?   	github.com/onesyue/yueboard/internal/config	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/accountcenter	0.411s
+ok  	github.com/onesyue/yueboard/internal/modules/admin	1.774s
+ok  	github.com/onesyue/yueboard/internal/modules/aiops	0.387s
+ok  	github.com/onesyue/yueboard/internal/modules/bannedprotect	0.349s
+ok  	github.com/onesyue/yueboard/internal/modules/changeemail	0.464s
+ok  	github.com/onesyue/yueboard/internal/modules/clientconfig	0.867s
+?   	github.com/onesyue/yueboard/internal/modules/commissioncron	[no test files]
+?   	github.com/onesyue/yueboard/internal/modules/commissiontiercron	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/diagnostics	0.500s
+ok  	github.com/onesyue/yueboard/internal/modules/emby	0.636s
+?   	github.com/onesyue/yueboard/internal/modules/funnel	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/giftcard	0.479s
+ok  	github.com/onesyue/yueboard/internal/modules/giftledger	0.395s
+ok  	github.com/onesyue/yueboard/internal/modules/guest	0.393s
+ok  	github.com/onesyue/yueboard/internal/modules/handoff	0.395s
+ok  	github.com/onesyue/yueboard/internal/modules/idlepurgecron	0.476s
+ok  	github.com/onesyue/yueboard/internal/modules/invitealias	0.451s
+ok  	github.com/onesyue/yueboard/internal/modules/lifecyclecron	0.418s
+?   	github.com/onesyue/yueboard/internal/modules/memories	[no test files]
+?   	github.com/onesyue/yueboard/internal/modules/message	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/nodeext	0.715s
+ok  	github.com/onesyue/yueboard/internal/modules/nodesync	12.041s
+?   	github.com/onesyue/yueboard/internal/modules/nodesync/store	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/notice	0.706s
+?   	github.com/onesyue/yueboard/internal/modules/notify	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/order	0.468s
+?   	github.com/onesyue/yueboard/internal/modules/order/store	[no test files]
+?   	github.com/onesyue/yueboard/internal/modules/payment	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/plan	0.422s
+?   	github.com/onesyue/yueboard/internal/modules/plan/store	[no test files]
+ok  	github.com/onesyue/yueboard/internal/modules/pluginapi	0.434s
+ok  	github.com/onesyue/yueboard/internal/modules/remindmailcron	0.380s
+ok  	github.com/onesyue/yueboard/internal/modules/resettrafficcron	0.353s
+ok  	github.com/onesyue/yueboard/internal/modules/speedlimitcron	0.423s
+ok  	github.com/onesyue/yueboard/internal/modules/statcron	0.368s
+ok  	github.com/onesyue/yueboard/internal/modules/subextra	0.402s
+ok  	github.com/onesyue/yueboard/internal/modules/subrisk	0.391s
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	1.421s
+ok  	github.com/onesyue/yueboard/internal/modules/support	0.395s
+ok  	github.com/onesyue/yueboard/internal/modules/telegram	0.816s
+ok  	github.com/onesyue/yueboard/internal/modules/theme	0.777s
+ok  	github.com/onesyue/yueboard/internal/modules/usagepolicy	0.780s
+ok  	github.com/onesyue/yueboard/internal/modules/user	0.787s
+ok  	github.com/onesyue/yueboard/internal/modules/userx	0.393s
+ok  	github.com/onesyue/yueboard/internal/modules/uticket	0.566s
+ok  	github.com/onesyue/yueboard/internal/modules/webvitals	0.468s
+?   	github.com/onesyue/yueboard/internal/noderpc/gen/yuenode/v1	[no test files]
+?   	github.com/onesyue/yueboard/internal/noderpc/gen/yuenode/v1/yuenodev1connect	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/actionledger	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/advisorylock	0.469s
+ok  	github.com/onesyue/yueboard/internal/platform/antigfw	0.365s
+ok  	github.com/onesyue/yueboard/internal/platform/apiresp	1.442s
+ok  	github.com/onesyue/yueboard/internal/platform/apptime	0.300s
+ok  	github.com/onesyue/yueboard/internal/platform/audit	0.648s
+ok  	github.com/onesyue/yueboard/internal/platform/auth	0.392s
+?   	github.com/onesyue/yueboard/internal/platform/auth/store	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/authattempt	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/brand	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/checkoutorigin	0.303s
+ok  	github.com/onesyue/yueboard/internal/platform/clientnotice	0.374s
+ok  	github.com/onesyue/yueboard/internal/platform/commission	0.340s
+ok  	github.com/onesyue/yueboard/internal/platform/commissiontier	0.419s
+?   	github.com/onesyue/yueboard/internal/platform/commissiontier/store	[no test files]
+?   	github.com/onesyue/yueboard/internal/platform/contractpack	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/controltoken	0.301s
+ok  	github.com/onesyue/yueboard/internal/platform/credentialreset	0.971s
+?   	github.com/onesyue/yueboard/internal/platform/dailyclaim	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/db	1.344s
+ok  	github.com/onesyue/yueboard/internal/platform/dbreserve	0.357s
+ok  	github.com/onesyue/yueboard/internal/platform/devicecount	1.164s
+ok  	github.com/onesyue/yueboard/internal/platform/deviceidentity	0.459s
+ok  	github.com/onesyue/yueboard/internal/platform/devicelimit	0.360s
+ok  	github.com/onesyue/yueboard/internal/platform/economy	0.461s
+ok  	github.com/onesyue/yueboard/internal/platform/emailaddr	0.300s
+ok  	github.com/onesyue/yueboard/internal/platform/entitlement	0.353s
+ok  	github.com/onesyue/yueboard/internal/platform/entrypath	0.327s
+ok  	github.com/onesyue/yueboard/internal/platform/entryretire	0.388s
+ok  	github.com/onesyue/yueboard/internal/platform/entrysalt	0.326s
+ok  	github.com/onesyue/yueboard/internal/platform/envflag	0.354s
+?   	github.com/onesyue/yueboard/internal/platform/epochtz	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/errcode	0.300s
+ok  	github.com/onesyue/yueboard/internal/platform/fairuse	0.302s
+ok  	github.com/onesyue/yueboard/internal/platform/featureflag	0.312s
+ok  	github.com/onesyue/yueboard/internal/platform/fleetegress	0.370s
+?   	github.com/onesyue/yueboard/internal/platform/funnel	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/goldenfile	5.144s
+ok  	github.com/onesyue/yueboard/internal/platform/growthtransport	0.375s
+ok  	github.com/onesyue/yueboard/internal/platform/httpcontract	2.701s
+ok  	github.com/onesyue/yueboard/internal/platform/httpencoding	0.456s
+ok  	github.com/onesyue/yueboard/internal/platform/i18n	0.330s
+ok  	github.com/onesyue/yueboard/internal/platform/idempotency	0.685s
+ok  	github.com/onesyue/yueboard/internal/platform/inbox	0.335s
+ok  	github.com/onesyue/yueboard/internal/platform/internalauth	0.418s
+ok  	github.com/onesyue/yueboard/internal/platform/ipfingerprint	0.374s
+ok  	github.com/onesyue/yueboard/internal/platform/ipgeo	0.335s
+ok  	github.com/onesyue/yueboard/internal/platform/mail	0.776s
+ok  	github.com/onesyue/yueboard/internal/platform/mailtheme	0.351s
+ok  	github.com/onesyue/yueboard/internal/platform/metrics	0.682s
+ok  	github.com/onesyue/yueboard/internal/platform/money	0.301s
+ok  	github.com/onesyue/yueboard/internal/platform/nativeproto	0.364s
+?   	github.com/onesyue/yueboard/internal/platform/nodecredential	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/nodeservice	0.319s
+ok  	github.com/onesyue/yueboard/internal/platform/onlinestate	0.307s
+ok  	github.com/onesyue/yueboard/internal/platform/orderfulfill	0.438s
+ok  	github.com/onesyue/yueboard/internal/platform/ordertype	0.535s
+ok  	github.com/onesyue/yueboard/internal/platform/otelobs	0.460s
+?   	github.com/onesyue/yueboard/internal/platform/outagecomp	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/outbox	0.363s
+ok  	github.com/onesyue/yueboard/internal/platform/passwordhash	2.410s
+ok  	github.com/onesyue/yueboard/internal/platform/paymethod	0.355s
+ok  	github.com/onesyue/yueboard/internal/platform/period	0.587s
+ok  	github.com/onesyue/yueboard/internal/platform/pluginconfig	0.377s
+ok  	github.com/onesyue/yueboard/internal/platform/pluginsecret	0.880s
+?   	github.com/onesyue/yueboard/internal/platform/promocode	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/quotaidentity	0.332s
+ok  	github.com/onesyue/yueboard/internal/platform/ratelimit	0.516s
+ok  	github.com/onesyue/yueboard/internal/platform/referencelock	0.319s
+?   	github.com/onesyue/yueboard/internal/platform/reminderrules	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/resetschedule	1.526s
+ok  	github.com/onesyue/yueboard/internal/platform/resource	0.357s
+ok  	github.com/onesyue/yueboard/internal/platform/safego	0.816s
+ok  	github.com/onesyue/yueboard/internal/platform/secureurl	0.304s
+ok  	github.com/onesyue/yueboard/internal/platform/serverroute	0.312s
+ok  	github.com/onesyue/yueboard/internal/platform/settings	0.404s
+ok  	github.com/onesyue/yueboard/internal/platform/speedpolicy	0.329s
+ok  	github.com/onesyue/yueboard/internal/platform/statuspage	0.321s
+ok  	github.com/onesyue/yueboard/internal/platform/subscribeurl	0.421s
+ok  	github.com/onesyue/yueboard/internal/platform/ticketattachment	0.437s
+ok  	github.com/onesyue/yueboard/internal/platform/ticketcategory	0.307s
+ok  	github.com/onesyue/yueboard/internal/platform/tickettext	0.315s
+ok  	github.com/onesyue/yueboard/internal/platform/tokenvault	0.743s
+ok  	github.com/onesyue/yueboard/internal/platform/toolchain	1.784s
+ok  	github.com/onesyue/yueboard/internal/platform/totp	0.313s
+ok  	github.com/onesyue/yueboard/internal/platform/tracectx	0.379s
+?   	github.com/onesyue/yueboard/internal/platform/trafficledger	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/typedsearch	0.317s
+ok  	github.com/onesyue/yueboard/internal/platform/upstream	1.034s
+?   	github.com/onesyue/yueboard/internal/platform/user360	[no test files]
+ok  	github.com/onesyue/yueboard/internal/platform/verify	0.432s
+ok  	github.com/onesyue/yueboard/internal/platform/visibilityaudit	0.328s
+ok  	github.com/onesyue/yueboard/internal/platform/withdrawpolicy	0.314s
+ok  	github.com/onesyue/yueboard/internal/platform/withdrawrisk	0.433s
+ok  	github.com/onesyue/yueboard/internal/restorecheck	0.436s
+ok  	github.com/onesyue/yueboard/internal/server	0.540s
+ok  	github.com/onesyue/yueboard/test/contractaudit	1.407s
+?   	github.com/onesyue/yueboard/web	[no test files]
+?   	github.com/onesyue/yueboard/web-admin	[no test files]
+
+ended_at: 2026-11-04T13:03:24Z
+exit_code: 0
