@@ -1,0 +1,15 @@
+{"command": ["bash", "scripts/check-all-contracts.sh", "--template-publication-phase", "template-cas-writer-20261104", "design-tokens", "i18n-catalogs-generated", "language-switch-contract", "page-consistency-contract", "subscribe-template-drift"], "heads": {".": "18968b1c4a77518a8fb28f1d265d4aaee872f932", "yueboard": "d2141bb4f99b85a95c67edff79652db78e8a678c", "yuelink": "23fe44ac886f4fa48704d5b3e2bd2b4067ff782a", "yuelink-ci": "84fb8597d716cd9d1d14e153c58a1ac291145013", "yueops": "6071403f98e52a6ea8381722571716ba95328e49"}, "scope": "Five selected source contracts and bounded PREPUBLICATION; not the complete release gate or final live convergence", "started_at": "2026-11-04T01:08:16.870262+00:00"}
+PREPUBLICATION: template-cas-writer-20261104; ordinary final convergence remains required
+── 并行执行 5 项守卫（8 条泳道）──
+
+══ 跨仓契约汇总 ══
+  PASS  subscribe-template-drift 2s
+  PASS  design-tokens            0s
+  PASS  i18n-catalogs-generated  0s
+  PASS  language-switch-contract 85s
+  PASS  page-consistency-contract 16s
+
+  跑了 5 项 · 失败 0 项 · 跳过 0 项
+
+全部 5 项跨仓契约完好。
+{"exit_code": 0, "finished_at": "2026-11-04T01:09:58.531868+00:00"}

@@ -1,0 +1,97 @@
+=== RUN   TestCanonicalBuilderCompletion
+=== RUN   TestCanonicalBuilderCompletion/internal/modules/order/auto_renew.go
+=== RUN   TestCanonicalBuilderCompletion/internal/modules/order/save.go
+=== RUN   TestCanonicalBuilderCompletion/internal/platform/deviceidentity/identity.go
+--- PASS: TestCanonicalBuilderCompletion (0.07s)
+    --- PASS: TestCanonicalBuilderCompletion/internal/modules/order/auto_renew.go (0.04s)
+    --- PASS: TestCanonicalBuilderCompletion/internal/modules/order/save.go (0.03s)
+    --- PASS: TestCanonicalBuilderCompletion/internal/platform/deviceidentity/identity.go (0.01s)
+=== RUN   TestMigrationReferenceFailureIsLimited
+--- PASS: TestMigrationReferenceFailureIsLimited (0.00s)
+=== RUN   TestSQLExtraction
+--- PASS: TestSQLExtraction (0.00s)
+=== RUN   TestScopedFingerprint
+--- PASS: TestScopedFingerprint (0.00s)
+=== RUN   TestSQLTokenBoundary
+--- PASS: TestSQLTokenBoundary (0.00s)
+=== RUN   TestDynamicSQLDiagnostic
+=== RUN   TestDynamicSQLDiagnostic/update_concatenation
+=== RUN   TestDynamicSQLDiagnostic/insert_concatenation
+=== RUN   TestDynamicSQLDiagnostic/select_helper
+=== RUN   TestDynamicSQLDiagnostic/predicate_concatenation
+=== RUN   TestDynamicSQLDiagnostic/dynamic_format
+=== RUN   TestDynamicSQLDiagnostic/dynamic_join
+=== RUN   TestDynamicSQLDiagnostic/static_invalid_literal
+=== RUN   TestDynamicSQLDiagnostic/static_invalid_concatenation
+=== RUN   TestDynamicSQLDiagnostic/constant_concatenation
+=== RUN   TestDynamicSQLDiagnostic/constant_format
+=== RUN   TestDynamicSQLDiagnostic/constant_join
+=== RUN   TestDynamicSQLDiagnostic/query_argument
+=== RUN   TestDynamicSQLDiagnostic/nested_query
+=== RUN   TestDynamicSQLDiagnostic/query_inside_closure
+=== RUN   TestDynamicSQLDiagnostic/query_argument_concatenation
+--- PASS: TestDynamicSQLDiagnostic (0.02s)
+    --- PASS: TestDynamicSQLDiagnostic/update_concatenation (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/insert_concatenation (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/select_helper (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/predicate_concatenation (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/dynamic_format (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/dynamic_join (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/static_invalid_literal (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/static_invalid_concatenation (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/constant_concatenation (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/constant_format (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/constant_join (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/query_argument (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/nested_query (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/query_inside_closure (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/query_argument_concatenation (0.00s)
+=== RUN   TestProductionGates
+=== RUN   TestProductionGates/SchemaReferences
+    gate_test.go:178: validated 1445 SQL statements; 195 frozen exceptions
+=== RUN   TestProductionGates/ServiceRoleGrants
+    gate_test.go:181: checked runtime planning for 1445 SQL statements
+=== RUN   TestProductionGates/MigrationShipNotes/00152
+    gate_test.go:196: checked runtime planning for 4 SQL statements
+=== RUN   TestProductionGates/MutationControls
+--- PASS: TestProductionGates (7.96s)
+    --- PASS: TestProductionGates/SchemaReferences (0.65s)
+    --- PASS: TestProductionGates/ServiceRoleGrants (1.90s)
+    --- PASS: TestProductionGates/MigrationShipNotes/00152 (0.06s)
+    --- PASS: TestProductionGates/MutationControls (0.04s)
+=== RUN   TestPrePushStopsOnFailure
+=== RUN   TestPrePushStopsOnFailure/vet
+=== RUN   TestPrePushStopsOnFailure/test
+=== RUN   TestPrePushStopsOnFailure/none
+--- PASS: TestPrePushStopsOnFailure (0.13s)
+    --- PASS: TestPrePushStopsOnFailure/vet (0.04s)
+    --- PASS: TestPrePushStopsOnFailure/test (0.05s)
+    --- PASS: TestPrePushStopsOnFailure/none (0.05s)
+=== RUN   TestGatePreservesOuterRepository
+=== RUN   TestGatePreservesOuterRepository/scripts/premerge.sh/GIT_DIR
+=== RUN   TestGatePreservesOuterRepository/scripts/premerge.sh/all-selectors
+=== RUN   TestGatePreservesOuterRepository/scripts/git-hooks/pre-push/GIT_DIR
+=== RUN   TestGatePreservesOuterRepository/scripts/git-hooks/pre-push/all-selectors
+--- PASS: TestGatePreservesOuterRepository (0.63s)
+    --- PASS: TestGatePreservesOuterRepository/scripts/premerge.sh/GIT_DIR (0.14s)
+    --- PASS: TestGatePreservesOuterRepository/scripts/premerge.sh/all-selectors (0.14s)
+    --- PASS: TestGatePreservesOuterRepository/scripts/git-hooks/pre-push/GIT_DIR (0.16s)
+    --- PASS: TestGatePreservesOuterRepository/scripts/git-hooks/pre-push/all-selectors (0.16s)
+=== RUN   TestDebtRatchet
+--- PASS: TestDebtRatchet (0.83s)
+=== RUN   TestDebtRatchetMissingDescendantManifest
+--- PASS: TestDebtRatchetMissingDescendantManifest (0.19s)
+=== RUN   TestRewrittenQueriesAreStatic
+=== RUN   TestRewrittenQueriesAreStatic/internal/modules/admin/payment.go/UPDATE_payments_SET_name_=
+=== RUN   TestRewrittenQueriesAreStatic/internal/modules/admin/payment.go/INSERT_INTO_payments_(
+=== RUN   TestRewrittenQueriesAreStatic/internal/modules/nodesync/yueops_internal_tickets_ai.go/SELECT_latest.ticket_id,
+=== RUN   TestRewrittenQueriesAreStatic/internal/modules/nodesync/yueops_internal_tickets_summary.go/SELECT_t.id,_t.user_id,_t.subject,_t.status,_t.reply_status,
+=== RUN   TestRewrittenQueriesAreStatic/internal/platform/credentialreset/credentialreset.go/SELECT_NOT_EXISTS_(_SELECT_1_FROM_users_WHERE_lower(btrim(uuid))=$1_OR
+--- PASS: TestRewrittenQueriesAreStatic (1.25s)
+    --- PASS: TestRewrittenQueriesAreStatic/internal/modules/admin/payment.go/UPDATE_payments_SET_name_= (0.00s)
+    --- PASS: TestRewrittenQueriesAreStatic/internal/modules/admin/payment.go/INSERT_INTO_payments_( (0.00s)
+    --- PASS: TestRewrittenQueriesAreStatic/internal/modules/nodesync/yueops_internal_tickets_ai.go/SELECT_latest.ticket_id, (0.00s)
+    --- PASS: TestRewrittenQueriesAreStatic/internal/modules/nodesync/yueops_internal_tickets_summary.go/SELECT_t.id,_t.user_id,_t.subject,_t.status,_t.reply_status, (0.00s)
+    --- PASS: TestRewrittenQueriesAreStatic/internal/platform/credentialreset/credentialreset.go/SELECT_NOT_EXISTS_(_SELECT_1_FROM_users_WHERE_lower(btrim(uuid))=$1_OR (0.00s)
+PASS
+ok  	github.com/onesyue/yueboard/internal/platform/schemagate	11.110s

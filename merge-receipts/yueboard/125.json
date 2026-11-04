@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 125,
+  "head": "d2141bb4f99b85a95c67edff79652db78e8a678c",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "d2141bb4f99b85a95c67edff79652db78e8a678c",
+    "artifact": "reviews/merge-receipts-20261104/yueboard-125.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-04T01:11:04.004435+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "d2141bb4f99b85a95c67edff79652db78e8a678c",
+    "command": "Fixed Linux Docker TZ=UTC: go test -count=1 -tags schemagate -v -run \"^(TestCanonicalBuilderCompletion|TestMigrationReferenceFailureIsLimited|TestSQLExtraction|TestDynamicSQLDiagnostic)$\" ./internal/platform/schemagate",
+    "log_sha256": "ccb2c25e18efe3060df08ef113e42cb63500fc1bae6c182532ea9a941e408d98",
+    "ran_at": "2026-11-04T01:10:09.770600+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}

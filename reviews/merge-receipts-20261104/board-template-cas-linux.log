@@ -1,0 +1,1161 @@
+source=61c93489171ec0a25c920e8c38414384f9fa72ce image=sha256:cf320c534782414c6e047c7d79b7c3a1f31433c5e4774c5889d43df525030e48 pg=sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
+WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
+=== RUN   TestSharingSuspectsUseTheEffectiveDeviceAllowance
+--- PASS: TestSharingSuspectsUseTheEffectiveDeviceAllowance (0.00s)
+=== RUN   TestOrderTradeNoBareValueIsSubstring
+--- PASS: TestOrderTradeNoBareValueIsSubstring (0.00s)
+=== RUN   TestOrderUserEmailVirtualFilter
+--- PASS: TestOrderUserEmailVirtualFilter (0.00s)
+=== RUN   TestOrderUserEmailWiredIntoListAndExport
+--- PASS: TestOrderUserEmailWiredIntoListAndExport (0.00s)
+=== RUN   TestTicketEmailFilterIsLowercasePrefix
+--- PASS: TestTicketEmailFilterIsLowercasePrefix (0.00s)
+=== RUN   TestTicketEmptyEmailIsRejectedWith400
+--- PASS: TestTicketEmptyEmailIsRejectedWith400 (0.00s)
+=== RUN   TestUserSearchHashIDAndEmailShapes
+--- PASS: TestUserSearchHashIDAndEmailShapes (0.00s)
+=== RUN   TestCouponKeywordSearchesNameOrCode
+--- PASS: TestCouponKeywordSearchesNameOrCode (0.00s)
+=== RUN   TestGiftCodesKeywordAndUserEmail
+--- PASS: TestGiftCodesKeywordAndUserEmail (0.00s)
+=== RUN   TestDecideAdminGateMatrix
+=== RUN   TestDecideAdminGateMatrix/non-admin_wins_over_everything
+=== RUN   TestDecideAdminGateMatrix/fresh_totp_session
+=== RUN   TestDecideAdminGateMatrix/fresh_passkey_session_on_passkey-only_account
+=== RUN   TestDecideAdminGateMatrix/absolute_12h_exceeded_even_if_just_used
+=== RUN   TestDecideAdminGateMatrix/exactly_at_12h_still_valid
+=== RUN   TestDecideAdminGateMatrix/idle_>_30m
+=== RUN   TestDecideAdminGateMatrix/never_used,_issued_31m_ago
+=== RUN   TestDecideAdminGateMatrix/never_used,_issued_5m_ago
+=== RUN   TestDecideAdminGateMatrix/zero_issue_time_fails_closed
+=== RUN   TestDecideAdminGateMatrix/epoch_issue_time_(NULL_created_at)_fails_closed
+=== RUN   TestDecideAdminGateMatrix/no_factor_enrolled
+=== RUN   TestDecideAdminGateMatrix/enrolled_but_session_skipped_the_factor_(mail_link_/_pre-00091)
+=== RUN   TestDecideAdminGateMatrix/passkey-only_account,_password_session
+=== RUN   TestDecideAdminGateMatrix/factor_session_but_factor_since_removed
+=== RUN   TestDecideAdminGateMatrix/expiry_is_checked_before_mfa
+--- PASS: TestDecideAdminGateMatrix (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/non-admin_wins_over_everything (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/fresh_totp_session (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/fresh_passkey_session_on_passkey-only_account (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/absolute_12h_exceeded_even_if_just_used (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/exactly_at_12h_still_valid (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/idle_>_30m (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/never_used,_issued_31m_ago (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/never_used,_issued_5m_ago (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/zero_issue_time_fails_closed (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/epoch_issue_time_(NULL_created_at)_fails_closed (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/no_factor_enrolled (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/enrolled_but_session_skipped_the_factor_(mail_link_/_pre-00091) (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/passkey-only_account,_password_session (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/factor_session_but_factor_since_removed (0.00s)
+    --- PASS: TestDecideAdminGateMatrix/expiry_is_checked_before_mfa (0.00s)
+=== RUN   TestRequireAdminEnrollmentRequiredOnlyAllowsBindingFlow
+--- PASS: TestRequireAdminEnrollmentRequiredOnlyAllowsBindingFlow (0.00s)
+=== RUN   TestRequireAdminSessionWithoutFactorIsRefusedEvenWhenAccountIsEnrolled
+--- PASS: TestRequireAdminSessionWithoutFactorIsRefusedEvenWhenAccountIsEnrolled (0.00s)
+=== RUN   TestRequireAdminExpiredSessionIsTheLogoutSignal
+--- PASS: TestRequireAdminExpiredSessionIsTheLogoutSignal (0.00s)
+=== RUN   TestRequireAdminAllowsFactorSessionAndTouchesLastUsed
+--- PASS: TestRequireAdminAllowsFactorSessionAndTouchesLastUsed (0.00s)
+=== RUN   TestRequireAdminNonAdminStill403WithoutLeakingMFAState
+--- PASS: TestRequireAdminNonAdminStill403WithoutLeakingMFAState (0.00s)
+=== RUN   TestRequireAdminSessionWithoutFactorCannotReachBindingFlowOnEnrolledAccount
+--- PASS: TestRequireAdminSessionWithoutFactorCannotReachBindingFlowOnEnrolledAccount (0.00s)
+=== RUN   TestAdminRoutesAssemble
+    admin_test.go:39: admin 路由组装成功，共 250 条
+--- PASS: TestAdminRoutesAssemble (0.00s)
+=== RUN   TestAuditLeafPatternResolvesEveryIntentOnTheRealRouteTree
+--- PASS: TestAuditLeafPatternResolvesEveryIntentOnTheRealRouteTree (0.02s)
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//aikb/drop
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//aikb/save
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//aikb/setStatus
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//campaigns/institution
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//campaigns/{id}/approve
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//campaigns/{id}/pause
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//campaigns/{id}/preview
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//campaigns/{id}/review
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//coupon/drop
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//coupon/generate
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//coupon/show
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//coupon/update
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/create-template
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/delete-code
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/delete-template
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/generate-codes
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/toggle-code
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/update-code
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/update-template
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//message/broadcast
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//message/broadcast/withdraw
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//message/send
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//notice/drop
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//notice/save
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//notice/show
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//notice/sort
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//notice/update
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//order/assign
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//order/cancel
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//payment/enable
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//payment/sort
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plan/drop
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plan/save
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plan/sort
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plan/update
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plugin/disable
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plugin/enable
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/group/drop
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/group/save
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/batchDelete
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/batchResetTraffic
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/batchUpdate
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/copy
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/resetTraffic
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/save
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/sort
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/update
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/route/drop
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/route/save
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//theme/saveThemeConfig
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//theme/switch
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//ticket/close
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//ticket/reply
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//traffic-reset/reset-user
+=== RUN   TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//user/sendMail
+--- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter (0.01s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//aikb/drop (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//aikb/save (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//aikb/setStatus (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//campaigns/institution (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//campaigns/{id}/approve (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//campaigns/{id}/pause (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//campaigns/{id}/preview (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//campaigns/{id}/review (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//coupon/drop (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//coupon/generate (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//coupon/show (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//coupon/update (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/create-template (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/delete-code (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/delete-template (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/generate-codes (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/toggle-code (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/update-code (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//gift-card/update-template (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//message/broadcast (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//message/broadcast/withdraw (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//message/send (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//notice/drop (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//notice/save (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//notice/show (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//notice/sort (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//notice/update (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//order/assign (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//order/cancel (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//payment/enable (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//payment/sort (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plan/drop (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plan/save (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plan/sort (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plan/update (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plugin/disable (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//plugin/enable (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/group/drop (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/group/save (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/batchDelete (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/batchResetTraffic (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/batchUpdate (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/copy (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/resetTraffic (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/save (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/sort (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/manage/update (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/route/drop (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//server/route/save (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//theme/saveThemeConfig (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//theme/switch (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//ticket/close (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//ticket/reply (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//traffic-reset/reset-user (0.00s)
+    --- PASS: TestAutoAuditRecordsEveryIntentWithoutExplicitWriter//user/sendMail (0.00s)
+=== RUN   TestAutoAuditSkipsExplicitRoutesAndFailures
+=== RUN   TestAutoAuditSkipsExplicitRoutesAndFailures/explicit_route
+=== RUN   TestAutoAuditSkipsExplicitRoutesAndFailures/validation_failure
+=== RUN   TestAutoAuditSkipsExplicitRoutesAndFailures/server_error
+=== RUN   TestAutoAuditSkipsExplicitRoutesAndFailures/unregistered_route
+--- PASS: TestAutoAuditSkipsExplicitRoutesAndFailures (0.00s)
+    --- PASS: TestAutoAuditSkipsExplicitRoutesAndFailures/explicit_route (0.00s)
+    --- PASS: TestAutoAuditSkipsExplicitRoutesAndFailures/validation_failure (0.00s)
+    --- PASS: TestAutoAuditSkipsExplicitRoutesAndFailures/server_error (0.00s)
+    --- PASS: TestAutoAuditSkipsExplicitRoutesAndFailures/unregistered_route (0.00s)
+=== RUN   TestAutoAuditDetailBounds
+--- PASS: TestAutoAuditDetailBounds (0.01s)
+=== RUN   TestAuditExplicitRoutesReallyWriteAndOthersDoNot
+--- PASS: TestAuditExplicitRoutesReallyWriteAndOthersDoNot (0.03s)
+=== RUN   TestRoutesMountsAutoAudit
+--- PASS: TestRoutesMountsAutoAudit (0.00s)
+=== RUN   TestAuditIntentCoversAllMutationRoutes
+--- PASS: TestAuditIntentCoversAllMutationRoutes (0.00s)
+=== RUN   TestAuditIntentActionsAreCatalogued
+--- PASS: TestAuditIntentActionsAreCatalogued (0.00s)
+=== RUN   TestAuditRedactionCoversRealSecretKeyShapes
+--- PASS: TestAuditRedactionCoversRealSecretKeyShapes (0.00s)
+=== RUN   TestAuditRedactionKeepsNonSecretKeys
+--- PASS: TestAuditRedactionKeepsNonSecretKeys (0.00s)
+=== RUN   TestAuditRedactDeepReachesNestedAndArrayedSecrets
+--- PASS: TestAuditRedactDeepReachesNestedAndArrayedSecrets (0.00s)
+=== RUN   TestMailTemplateRequiredVarsNeverMarshalsToNull
+--- PASS: TestMailTemplateRequiredVarsNeverMarshalsToNull (0.00s)
+=== RUN   TestUserBareFilterUsesColumnExprAndTimestampHandling
+=== RUN   TestUserBareFilterUsesColumnExprAndTimestampHandling/total_used
+=== RUN   TestUserBareFilterUsesColumnExprAndTimestampHandling/created_at
+--- PASS: TestUserBareFilterUsesColumnExprAndTimestampHandling (0.00s)
+    --- PASS: TestUserBareFilterUsesColumnExprAndTimestampHandling/total_used (0.00s)
+    --- PASS: TestUserBareFilterUsesColumnExprAndTimestampHandling/created_at (0.00s)
+=== RUN   TestUserUnknownColumnFilterIsSkipped
+--- PASS: TestUserUnknownColumnFilterIsSkipped (0.00s)
+=== RUN   TestOrderQuerySortIsDeterministicAcrossRuns
+--- PASS: TestOrderQuerySortIsDeterministicAcrossRuns (0.00s)
+=== RUN   TestRecaptchaEnableIsNotWritable
+--- PASS: TestRecaptchaEnableIsNotWritable (0.00s)
+=== RUN   TestCheckoutFallbackOriginValidation
+--- PASS: TestCheckoutFallbackOriginValidation (0.00s)
+=== RUN   TestConnTagRolloutValidation
+--- PASS: TestConnTagRolloutValidation (0.00s)
+=== RUN   TestDeadConfigTogglesAreNotWritable
+--- PASS: TestDeadConfigTogglesAreNotWritable (0.00s)
+=== RUN   TestNewAccountFeaturesHaveWritableEmergencyControls
+--- PASS: TestNewAccountFeaturesHaveWritableEmergencyControls (0.00s)
+=== RUN   TestNewAccountFeatureControlsAreReturnedWithFailSafeValues
+--- PASS: TestNewAccountFeatureControlsAreReturnedWithFailSafeValues (0.00s)
+=== RUN   TestNewAccountFeatureNumericControlsRejectUnsafeValues
+--- PASS: TestNewAccountFeatureNumericControlsRejectUnsafeValues (0.00s)
+=== RUN   TestEmergencyBooleanControlsRejectAmbiguousWireValues
+--- PASS: TestEmergencyBooleanControlsRejectAmbiguousWireValues (0.00s)
+=== RUN   TestFairUseSaveValidationMatchesWorkerBounds
+--- PASS: TestFairUseSaveValidationMatchesWorkerBounds (0.00s)
+=== RUN   TestFairUseDailyModeSaveAcceptsOnlyLegacyOrTiered
+--- PASS: TestFairUseDailyModeSaveAcceptsOnlyLegacyOrTiered (0.00s)
+=== RUN   TestConfigLimitRangesRejectValuesThatBreakReaders
+--- PASS: TestConfigLimitRangesRejectValuesThatBreakReaders (0.00s)
+=== RUN   TestConfigLimitRangesAcceptBoundariesAndEmpty
+--- PASS: TestConfigLimitRangesAcceptBoundariesAndEmpty (0.00s)
+=== RUN   TestConfigSecurePathAbsentIsNotValidated
+--- PASS: TestConfigSecurePathAbsentIsNotValidated (0.00s)
+=== RUN   TestPasswordLimitIPCountIsWritableAndFetched
+--- PASS: TestPasswordLimitIPCountIsWritableAndFetched (0.00s)
+=== RUN   TestOrdersRetentionWritableAndFetched
+=== RUN   TestOrdersRetentionWritableAndFetched/defaults
+=== RUN   TestOrdersRetentionWritableAndFetched/archive
+=== RUN   TestOrdersRetentionWritableAndFetched/keep
+--- PASS: TestOrdersRetentionWritableAndFetched (0.00s)
+    --- PASS: TestOrdersRetentionWritableAndFetched/defaults (0.00s)
+    --- PASS: TestOrdersRetentionWritableAndFetched/archive (0.00s)
+    --- PASS: TestOrdersRetentionWritableAndFetched/keep (0.00s)
+=== RUN   TestOrdersRetentionValidation
+=== RUN   TestOrdersRetentionValidation/orders_retention_mode
+=== RUN   TestOrdersRetentionValidation/orders_archive_after_days
+--- PASS: TestOrdersRetentionValidation (0.00s)
+    --- PASS: TestOrdersRetentionValidation/orders_retention_mode (0.00s)
+    --- PASS: TestOrdersRetentionValidation/orders_archive_after_days (0.00s)
+=== RUN   TestOrdersRetentionSaveRejectsBeforeDatabaseAccess
+=== RUN   TestOrdersRetentionSaveRejectsBeforeDatabaseAccess/{"orders_retention_mode":"delete","app_name":"must_not_be_saved"}
+=== RUN   TestOrdersRetentionSaveRejectsBeforeDatabaseAccess/{"orders_retention_mode":"archive","orders_archive_after_days":90}
+=== RUN   TestOrdersRetentionSaveRejectsBeforeDatabaseAccess/{"orders_archive_after_days":89}
+=== RUN   TestOrdersRetentionSaveRejectsBeforeDatabaseAccess/{"orders_archive_after_days":3651}
+=== RUN   TestOrdersRetentionSaveRejectsBeforeDatabaseAccess/{"orders_archive_after_days":90.5}
+--- PASS: TestOrdersRetentionSaveRejectsBeforeDatabaseAccess (0.00s)
+    --- PASS: TestOrdersRetentionSaveRejectsBeforeDatabaseAccess/{"orders_retention_mode":"delete","app_name":"must_not_be_saved"} (0.00s)
+    --- PASS: TestOrdersRetentionSaveRejectsBeforeDatabaseAccess/{"orders_retention_mode":"archive","orders_archive_after_days":90} (0.00s)
+    --- PASS: TestOrdersRetentionSaveRejectsBeforeDatabaseAccess/{"orders_archive_after_days":89} (0.00s)
+    --- PASS: TestOrdersRetentionSaveRejectsBeforeDatabaseAccess/{"orders_archive_after_days":3651} (0.00s)
+    --- PASS: TestOrdersRetentionSaveRejectsBeforeDatabaseAccess/{"orders_archive_after_days":90.5} (0.00s)
+=== RUN   TestOrdersRetentionPreservesEconomicDefaults
+--- PASS: TestOrdersRetentionPreservesEconomicDefaults (0.00s)
+=== RUN   TestOrdersRetentionPreservesEconomicValidation
+=== RUN   TestOrdersRetentionPreservesEconomicValidation/invite_commission
+=== RUN   TestOrdersRetentionPreservesEconomicValidation/commission_distribution_l1
+=== RUN   TestOrdersRetentionPreservesEconomicValidation/commission_distribution_l2
+=== RUN   TestOrdersRetentionPreservesEconomicValidation/commission_distribution_l3
+=== RUN   TestOrdersRetentionPreservesEconomicValidation/commission_withdraw_limit
+=== RUN   TestOrdersRetentionPreservesEconomicValidation/refund_to_balance_bonus_pct
+=== RUN   TestOrdersRetentionPreservesEconomicValidation/refund_bonus_min_remain_pct
+=== RUN   TestOrdersRetentionPreservesEconomicValidation/refund_self_min_cents
+=== RUN   TestOrdersRetentionPreservesEconomicValidation/refund_self_enabled
+--- PASS: TestOrdersRetentionPreservesEconomicValidation (0.00s)
+    --- PASS: TestOrdersRetentionPreservesEconomicValidation/invite_commission (0.00s)
+    --- PASS: TestOrdersRetentionPreservesEconomicValidation/commission_distribution_l1 (0.00s)
+    --- PASS: TestOrdersRetentionPreservesEconomicValidation/commission_distribution_l2 (0.00s)
+    --- PASS: TestOrdersRetentionPreservesEconomicValidation/commission_distribution_l3 (0.00s)
+    --- PASS: TestOrdersRetentionPreservesEconomicValidation/commission_withdraw_limit (0.00s)
+    --- PASS: TestOrdersRetentionPreservesEconomicValidation/refund_to_balance_bonus_pct (0.00s)
+    --- PASS: TestOrdersRetentionPreservesEconomicValidation/refund_bonus_min_remain_pct (0.00s)
+    --- PASS: TestOrdersRetentionPreservesEconomicValidation/refund_self_min_cents (0.00s)
+    --- PASS: TestOrdersRetentionPreservesEconomicValidation/refund_self_enabled (0.00s)
+=== RUN   TestCfgSealSettingNeverStoresPlaintext
+--- PASS: TestCfgSealSettingNeverStoresPlaintext (0.00s)
+=== RUN   TestSecretStatusFingerprintStableAcrossSettingSeal
+--- PASS: TestSecretStatusFingerprintStableAcrossSettingSeal (0.00s)
+=== RUN   TestStatusPageControlsAreWritableAndReturned
+--- PASS: TestStatusPageControlsAreWritableAndReturned (0.00s)
+=== RUN   TestStatusPageControlsRejectUnsafeValues
+--- PASS: TestStatusPageControlsRejectUnsafeValues (0.00s)
+=== RUN   TestTelegramBotUsernameSettingIsNonSecretAndStrict
+--- PASS: TestTelegramBotUsernameSettingIsNonSecretAndStrict (0.00s)
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_empty
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_whitespace
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_empty
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/surge_empty
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/surfboard_whitespace
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_valid
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_anchors_kept_valid
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_broken_yaml
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_tabs_are_illegal_yaml
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_top-level_sequence
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_top-level_scalar
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clash_same_rules
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/stash_same_rules
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_valid
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_truncated
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_top-level_array
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_yaml_pasted_into_json_slot
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_json_null
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/surge_arbitrary_text_ok
+=== RUN   TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/surfboard_arbitrary_text_ok
+--- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_empty (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_whitespace (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_empty (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/surge_empty (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/surfboard_whitespace (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_valid (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_anchors_kept_valid (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_broken_yaml (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_tabs_are_illegal_yaml (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_top-level_sequence (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clashmeta_top-level_scalar (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/clash_same_rules (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/stash_same_rules (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_valid (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_truncated (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_top-level_array (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_yaml_pasted_into_json_slot (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/singbox_json_null (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/surge_arbitrary_text_ok (0.00s)
+    --- PASS: TestCfgValidateTemplateRejectsWhatTheRenderersCannotLoad/surfboard_arbitrary_text_ok (0.00s)
+=== RUN   TestCfgValidateTemplateTableCoversBothDirections
+--- PASS: TestCfgValidateTemplateTableCoversBothDirections (0.00s)
+=== RUN   TestCfgValidateTemplateUnknownProtoOnlyBlocksBlank
+--- PASS: TestCfgValidateTemplateUnknownProtoOnlyBlocksBlank (0.00s)
+=== RUN   TestEveryTemplateKeyHasAKnownValidationShape
+--- PASS: TestEveryTemplateKeyHasAKnownValidationShape (0.00s)
+=== RUN   TestTemplateValidationIsAPrecheckNotInsideTheWriteLoop
+--- PASS: TestTemplateValidationIsAPrecheckNotInsideTheWriteLoop (0.02s)
+=== RUN   TestConfigSaveCommitsWritesAndAuditAtomically
+--- PASS: TestConfigSaveCommitsWritesAndAuditAtomically (0.02s)
+=== RUN   TestConfigVolumeModeValidationAndReadback
+--- PASS: TestConfigVolumeModeValidationAndReadback (0.00s)
+=== RUN   TestCouponIsDuplicateCodeOnlyMatchesTheCodeIndex
+--- PASS: TestCouponIsDuplicateCodeOnlyMatchesTheCodeIndex (0.00s)
+=== RUN   TestCouponWritePointsMapDuplicateCode
+--- PASS: TestCouponWritePointsMapDuplicateCode (0.02s)
+=== RUN   TestTotpHandlersRecordAndCheckAcceptedStep
+--- PASS: TestTotpHandlersRecordAndCheckAcceptedStep (0.00s)
+=== RUN   TestCouponDropRefusesTheFirstOrderPromoRow
+--- PASS: TestCouponDropRefusesTheFirstOrderPromoRow (0.00s)
+=== RUN   TestCouponDropReservedCheckIsCaseAndSpaceInsensitive
+--- PASS: TestCouponDropReservedCheckIsCaseAndSpaceInsensitive (0.00s)
+=== RUN   TestOrdinaryCouponsStayDeletable
+--- PASS: TestOrdinaryCouponsStayDeletable (0.00s)
+=== RUN   TestCouponDropHandlerConsultsTheReservedGuard
+--- PASS: TestCouponDropHandlerConsultsTheReservedGuard (0.02s)
+=== RUN   TestCouponGenerateEditBranchGuardsReservedCode
+--- PASS: TestCouponGenerateEditBranchGuardsReservedCode (0.02s)
+=== RUN   TestAdminUIKnowsTheReservedPromoCode
+--- PASS: TestAdminUIKnowsTheReservedPromoCode (0.00s)
+=== RUN   TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess
+=== RUN   TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/overview
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+=== RUN   TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/stats
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+=== RUN   TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/order_chart
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+=== RUN   TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/withdraw_stats
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+=== RUN   TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/totp_status
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+=== RUN   TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/totp_setup
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+=== RUN   TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/route_impact
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+=== RUN   TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/payment_impact
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+--- PASS: TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess (0.00s)
+    --- PASS: TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/overview (0.00s)
+    --- PASS: TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/stats (0.00s)
+    --- PASS: TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/order_chart (0.00s)
+    --- PASS: TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/withdraw_stats (0.00s)
+    --- PASS: TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/totp_status (0.00s)
+    --- PASS: TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/totp_setup (0.00s)
+    --- PASS: TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/route_impact (0.00s)
+    --- PASS: TestAdminReadModelsDoNotTurnDatabaseFailureIntoZeroSuccess/payment_impact (0.00s)
+=== RUN   TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations
+=== RUN   TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/drop_group
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+=== RUN   TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/update_server
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+=== RUN   TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/reset_server_traffic
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+=== RUN   TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/delete_gift_code
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+=== RUN   TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/mark_order_paid
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+=== RUN   TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/cancel_order
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=POST request_id="" err="forced database failure"
+=== RUN   TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/plugin_config
+2026/11/04 00:47:33 ERROR request failed route=unmatched method=GET request_id="" err="forced database failure"
+--- PASS: TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations (0.00s)
+    --- PASS: TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/drop_group (0.00s)
+    --- PASS: TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/update_server (0.00s)
+    --- PASS: TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/reset_server_traffic (0.00s)
+    --- PASS: TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/delete_gift_code (0.00s)
+    --- PASS: TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/mark_order_paid (0.00s)
+    --- PASS: TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/cancel_order (0.00s)
+    --- PASS: TestAdminDatabaseFailuresDoNotAuthorizeOrReportSuccessfulServerOperations/plugin_config (0.00s)
+=== RUN   TestTicketReplyDoesNotMisreportDatabaseFailureAsMissingTicket
+--- PASS: TestTicketReplyDoesNotMisreportDatabaseFailureAsMissingTicket (0.00s)
+=== RUN   TestECHConfigIDPropagatesRandomSourceFailure
+--- PASS: TestECHConfigIDPropagatesRandomSourceFailure (0.00s)
+=== RUN   TestAdminEnabledParamIsStrictAndRequired
+--- PASS: TestAdminEnabledParamIsStrictAndRequired (0.00s)
+=== RUN   TestToggleEndpointsRequireExplicitEnabled
+--- PASS: TestToggleEndpointsRequireExplicitEnabled (0.00s)
+=== RUN   TestPaymentShowToggleIsRetired
+--- PASS: TestPaymentShowToggleIsRetired (0.00s)
+=== RUN   TestNoticeShowRejectsMalformedExplicitEnabled
+--- PASS: TestNoticeShowRejectsMalformedExplicitEnabled (0.00s)
+=== RUN   TestNativeErasureScrubsExpiryReceiptsBeforeDeletingUser
+--- PASS: TestNativeErasureScrubsExpiryReceiptsBeforeDeletingUser (0.00s)
+=== RUN   TestGiftBatchIDPatternRejectsHeaderInjection
+--- PASS: TestGiftBatchIDPatternRejectsHeaderInjection (0.00s)
+=== RUN   TestUserUpdateRefusalsMatchAdminFixture
+--- PASS: TestUserUpdateRefusalsMatchAdminFixture (0.00s)
+=== RUN   TestAdminGateRefusalMatchesAdminFixture
+--- PASS: TestAdminGateRefusalMatchesAdminFixture (0.00s)
+=== RUN   TestAdminCredentialResetReceiptMatchesAdminFixture
+--- PASS: TestAdminCredentialResetReceiptMatchesAdminFixture (0.00s)
+=== RUN   TestConfigSaveResultMatchesAdminFixture
+--- PASS: TestConfigSaveResultMatchesAdminFixture (0.00s)
+=== RUN   TestRecoverDriftRefusalMatchesAdminFixture
+--- PASS: TestRecoverDriftRefusalMatchesAdminFixture (0.00s)
+=== RUN   TestWithdrawListMatchesAdminFixture
+--- PASS: TestWithdrawListMatchesAdminFixture (0.00s)
+=== RUN   TestUserBanResultMatchesAdminFixture
+--- PASS: TestUserBanResultMatchesAdminFixture (0.00s)
+=== RUN   TestCouponListAndStaleEditMatchAdminFixture
+--- PASS: TestCouponListAndStaleEditMatchAdminFixture (0.00s)
+=== RUN   TestServerRouteImpactMatchesLegacyStringAndNumericReferences
+--- PASS: TestServerRouteImpactMatchesLegacyStringAndNumericReferences (0.00s)
+=== RUN   TestPaymentImpactCountsDoNotMultiplyOrdersByAttempts
+--- PASS: TestPaymentImpactCountsDoNotMultiplyOrdersByAttempts (0.00s)
+=== RUN   TestPaymentDeletionPreservesHistoricalAuditLinks
+--- PASS: TestPaymentDeletionPreservesHistoricalAuditLinks (0.00s)
+=== RUN   TestRouteReferenceWritersShareTheDeletionLockDomain
+--- PASS: TestRouteReferenceWritersShareTheDeletionLockDomain (0.09s)
+=== RUN   TestPaymentDeleteAndCheckoutShareTheKeyedReferenceLock
+--- PASS: TestPaymentDeleteAndCheckoutShareTheKeyedReferenceLock (0.02s)
+=== RUN   TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen
+=== RUN   TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/legacy-content-only
+=== RUN   TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/evergreen
+=== RUN   TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/activity-missing-end
+=== RUN   TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/activity-bounded
+=== RUN   TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/equal-boundary
+=== RUN   TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/partial-clear
+=== RUN   TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/malformed
+--- PASS: TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen (0.00s)
+    --- PASS: TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/legacy-content-only (0.00s)
+    --- PASS: TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/evergreen (0.00s)
+    --- PASS: TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/activity-missing-end (0.00s)
+    --- PASS: TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/activity-bounded (0.00s)
+    --- PASS: TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/equal-boundary (0.00s)
+    --- PASS: TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/partial-clear (0.00s)
+    --- PASS: TestNoticeWindowRequiresActivityExpiryAndPreservesEvergreen/malformed (0.00s)
+=== RUN   TestNETScopeOnlyContainsPriorAndReviewedOrigins
+--- PASS: TestNETScopeOnlyContainsPriorAndReviewedOrigins (0.00s)
+=== RUN   TestNativeConfigFetchReturnsStoredFallbackModeWithoutInventingPassive
+--- PASS: TestNativeConfigFetchReturnsStoredFallbackModeWithoutInventingPassive (0.00s)
+=== RUN   TestAssignPausedPlanChange
+--- PASS: TestAssignPausedPlanChange (0.00s)
+=== RUN   TestOrderPeriodFilterTranslatesLegacyKeys
+=== RUN   TestOrderPeriodFilterTranslatesLegacyKeys/带_eq_算子
+=== RUN   TestOrderPeriodFilterTranslatesLegacyKeys/裸值走_ILIKE_分支
+=== RUN   TestOrderPeriodFilterTranslatesLegacyKeys/重置流量
+=== RUN   TestOrderPeriodFilterTranslatesLegacyKeys/一次性
+=== RUN   TestOrderPeriodFilterTranslatesLegacyKeys/数组形态
+=== RUN   TestOrderPeriodFilterTranslatesLegacyKeys/原生键幂等
+=== RUN   TestOrderPeriodFilterTranslatesLegacyKeys/未知值
+--- PASS: TestOrderPeriodFilterTranslatesLegacyKeys (0.00s)
+    --- PASS: TestOrderPeriodFilterTranslatesLegacyKeys/带_eq_算子 (0.00s)
+    --- PASS: TestOrderPeriodFilterTranslatesLegacyKeys/裸值走_ILIKE_分支 (0.00s)
+    --- PASS: TestOrderPeriodFilterTranslatesLegacyKeys/重置流量 (0.00s)
+    --- PASS: TestOrderPeriodFilterTranslatesLegacyKeys/一次性 (0.00s)
+    --- PASS: TestOrderPeriodFilterTranslatesLegacyKeys/数组形态 (0.00s)
+    --- PASS: TestOrderPeriodFilterTranslatesLegacyKeys/原生键幂等 (0.00s)
+    --- PASS: TestOrderPeriodFilterTranslatesLegacyKeys/未知值 (0.00s)
+=== RUN   TestOrderPeriodFilterLeavesOtherFieldsAlone
+--- PASS: TestOrderPeriodFilterLeavesOtherFieldsAlone (0.00s)
+=== RUN   TestParseOrderFiltersSortsTranslatesPeriodOnBothPaths
+=== RUN   TestParseOrderFiltersSortsTranslatesPeriodOnBothPaths/query_bracket_记法
+=== RUN   TestParseOrderFiltersSortsTranslatesPeriodOnBothPaths/JSON_body_记法
+--- PASS: TestParseOrderFiltersSortsTranslatesPeriodOnBothPaths (0.00s)
+    --- PASS: TestParseOrderFiltersSortsTranslatesPeriodOnBothPaths/query_bracket_记法 (0.00s)
+    --- PASS: TestParseOrderFiltersSortsTranslatesPeriodOnBothPaths/JSON_body_记法 (0.00s)
+=== RUN   TestOrderPeriodIsAFilterableColumn
+--- PASS: TestOrderPeriodIsAFilterableColumn (0.00s)
+=== RUN   TestOrderTradeNoBareValueIsSubstringMatch
+--- PASS: TestOrderTradeNoBareValueIsSubstringMatch (0.00s)
+=== RUN   TestRecoverDriftCodesHaveAdminLabels
+--- PASS: TestRecoverDriftCodesHaveAdminLabels (0.00s)
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/one_yuan
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/one_cent
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/exact_decimal_string
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/fractional_cent
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/numeric_suffix
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/nan
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/infinity
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/negative
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/zero
+=== RUN   TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/storage_overflow
+--- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney (0.00s)
+    --- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/one_yuan (0.00s)
+    --- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/one_cent (0.00s)
+    --- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/exact_decimal_string (0.00s)
+    --- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/fractional_cent (0.00s)
+    --- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/numeric_suffix (0.00s)
+    --- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/nan (0.00s)
+    --- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/infinity (0.00s)
+    --- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/negative (0.00s)
+    --- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/zero (0.00s)
+    --- PASS: TestAdminRefundYuanToCentsIsExactAndRejectsAmbiguousMoney/storage_overflow (0.00s)
+=== RUN   TestPackageSourceScanIsNotEmpty
+--- PASS: TestPackageSourceScanIsNotEmpty (0.02s)
+=== RUN   TestAdminClampPageBounds
+--- PASS: TestAdminClampPageBounds (0.00s)
+=== RUN   TestPageParamsClampsHugeCurrent
+--- PASS: TestPageParamsClampsHugeCurrent (0.00s)
+=== RUN   TestAuditActionFilterPrefixAndExact
+--- PASS: TestAuditActionFilterPrefixAndExact (0.00s)
+=== RUN   TestStatUserPageIsClamped
+--- PASS: TestStatUserPageIsClamped (0.00s)
+=== RUN   TestStatRankLimitIsClamped
+--- PASS: TestStatRankLimitIsClamped (0.00s)
+=== RUN   TestAdminEnableableEqualsImplementedAdapters
+--- PASS: TestAdminEnableableEqualsImplementedAdapters (0.00s)
+=== RUN   TestImplementedAdaptersFullyDeclaredInAdmin
+--- PASS: TestImplementedAdaptersFullyDeclaredInAdmin (0.00s)
+=== RUN   TestLegacyChannelsAreNotEnableable
+--- PASS: TestLegacyChannelsAreNotEnableable (0.00s)
+=== RUN   TestPayDecodeStoredConfig
+=== RUN   TestPayDecodeStoredConfig/object
+=== RUN   TestPayDecodeStoredConfig/empty_object
+=== RUN   TestPayDecodeStoredConfig/truncated
+=== RUN   TestPayDecodeStoredConfig/array
+=== RUN   TestPayDecodeStoredConfig/string
+=== RUN   TestPayDecodeStoredConfig/number
+=== RUN   TestPayDecodeStoredConfig/boolean
+=== RUN   TestPayDecodeStoredConfig/null
+=== RUN   TestPayDecodeStoredConfig/empty
+--- PASS: TestPayDecodeStoredConfig (0.00s)
+    --- PASS: TestPayDecodeStoredConfig/object (0.00s)
+    --- PASS: TestPayDecodeStoredConfig/empty_object (0.00s)
+    --- PASS: TestPayDecodeStoredConfig/truncated (0.00s)
+    --- PASS: TestPayDecodeStoredConfig/array (0.00s)
+    --- PASS: TestPayDecodeStoredConfig/string (0.00s)
+    --- PASS: TestPayDecodeStoredConfig/number (0.00s)
+    --- PASS: TestPayDecodeStoredConfig/boolean (0.00s)
+    --- PASS: TestPayDecodeStoredConfig/null (0.00s)
+    --- PASS: TestPayDecodeStoredConfig/empty (0.00s)
+=== RUN   TestPayStoredConfigForFormCorrupt
+--- PASS: TestPayStoredConfigForFormCorrupt (0.00s)
+=== RUN   TestPayCredentialsChangedOnlyForCredentialKeys
+--- PASS: TestPayCredentialsChangedOnlyForCredentialKeys (0.00s)
+=== RUN   TestPaymentSaveStaticBindings
+--- PASS: TestPaymentSaveStaticBindings (0.00s)
+=== RUN   TestPlDecodeConfigLegacyShapes
+--- PASS: TestPlDecodeConfigLegacyShapes (0.00s)
+=== RUN   TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues
+=== PAUSE TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues
+=== RUN   TestPlDecodeConfigRejectsNonObjectValues
+=== PAUSE TestPlDecodeConfigRejectsNonObjectValues
+=== RUN   TestInviteAliasAIReviewSchemaIsExplicitAndSecretSafe
+--- PASS: TestInviteAliasAIReviewSchemaIsExplicitAndSecretSafe (0.00s)
+=== RUN   TestExternalNodeSaveValidation
+=== RUN   TestExternalNodeSaveValidation/vless/
+=== RUN   TestExternalNodeSaveValidation/vless/invalid
+=== RUN   TestExternalNodeSaveValidation/vless/AABBCCDD1234456789AB123456789ABC
+=== RUN   TestExternalNodeSaveValidation/vmess/
+=== RUN   TestExternalNodeSaveValidation/vmess/invalid
+=== RUN   TestExternalNodeSaveValidation/vmess/AABBCCDD1234456789AB123456789ABC
+=== RUN   TestExternalNodeSaveValidation/tuic/
+=== RUN   TestExternalNodeSaveValidation/tuic/invalid
+=== RUN   TestExternalNodeSaveValidation/tuic/AABBCCDD1234456789AB123456789ABC
+=== RUN   TestExternalNodeSaveValidation/hysteria/
+=== RUN   TestExternalNodeSaveValidation/hysteria/invalid
+=== RUN   TestExternalNodeSaveValidation/hysteria/AABBCCDD1234456789AB123456789ABC
+--- PASS: TestExternalNodeSaveValidation (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/vless/ (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/vless/invalid (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/vless/AABBCCDD1234456789AB123456789ABC (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/vmess/ (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/vmess/invalid (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/vmess/AABBCCDD1234456789AB123456789ABC (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/tuic/ (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/tuic/invalid (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/tuic/AABBCCDD1234456789AB123456789ABC (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/hysteria/ (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/hysteria/invalid (0.00s)
+    --- PASS: TestExternalNodeSaveValidation/hysteria/AABBCCDD1234456789AB123456789ABC (0.00s)
+=== RUN   TestPluginSecretFieldsAreWriteOnly
+--- PASS: TestPluginSecretFieldsAreWriteOnly (0.00s)
+=== RUN   TestPluginSecretClassifierAvoidsOrdinaryFields
+--- PASS: TestPluginSecretClassifierAvoidsOrdinaryFields (0.00s)
+=== RUN   TestPluginMaskedAndEmptySecretSubmissionsPreserveStoredValue
+--- PASS: TestPluginMaskedAndEmptySecretSubmissionsPreserveStoredValue (0.00s)
+=== RUN   TestAllEmbeddedPluginSchemasMaskOnlySecretFields
+--- PASS: TestAllEmbeddedPluginSchemasMaskOnlySecretFields (0.00s)
+=== RUN   TestSystemAndPaymentSecretsAreWriteOnly
+--- PASS: TestSystemAndPaymentSecretsAreWriteOnly (0.00s)
+=== RUN   TestPluginPatchSealsOnlyBotTokens
+--- PASS: TestPluginPatchSealsOnlyBotTokens (0.00s)
+=== RUN   TestPluginFingerprintIsOfPlaintextAcrossSealing
+--- PASS: TestPluginFingerprintIsOfPlaintextAcrossSealing (0.00s)
+=== RUN   TestPluginSchemaDefaultsMatchGoDefaults
+=== RUN   TestPluginSchemaDefaultsMatchGoDefaults/dry_run_默认必须一致且为真
+=== RUN   TestPluginSchemaDefaultsMatchGoDefaults/容量族默认梯子两处一致
+=== RUN   TestPluginSchemaDefaultsMatchGoDefaults/上传倒挂族默认梯子两处一致
+=== RUN   TestPluginSchemaDefaultsMatchGoDefaults/标量默认两处一致（且_schema_每个键都必须被覆盖）
+--- PASS: TestPluginSchemaDefaultsMatchGoDefaults (0.00s)
+    --- PASS: TestPluginSchemaDefaultsMatchGoDefaults/dry_run_默认必须一致且为真 (0.00s)
+    --- PASS: TestPluginSchemaDefaultsMatchGoDefaults/容量族默认梯子两处一致 (0.00s)
+    --- PASS: TestPluginSchemaDefaultsMatchGoDefaults/上传倒挂族默认梯子两处一致 (0.00s)
+    --- PASS: TestPluginSchemaDefaultsMatchGoDefaults/标量默认两处一致（且_schema_每个键都必须被覆盖） (0.00s)
+=== RUN   TestPluginSchemaDefaultLadderPassesValidation
+--- PASS: TestPluginSchemaDefaultLadderPassesValidation (0.00s)
+=== RUN   TestSaveTimeValidationRejectsBelowFloorLadder
+--- PASS: TestSaveTimeValidationRejectsBelowFloorLadder (0.00s)
+=== RUN   TestSaveTimeValidationRejectsNonHystereticGate
+=== RUN   TestSaveTimeValidationRejectsNonHystereticGate/相等无迟滞
+=== RUN   TestSaveTimeValidationRejectsNonHystereticGate/倒挂
+--- PASS: TestSaveTimeValidationRejectsNonHystereticGate (0.00s)
+    --- PASS: TestSaveTimeValidationRejectsNonHystereticGate/相等无迟滞 (0.00s)
+    --- PASS: TestSaveTimeValidationRejectsNonHystereticGate/倒挂 (0.00s)
+=== RUN   TestValidationIsScopedToThisPlugin
+--- PASS: TestValidationIsScopedToThisPlugin (0.00s)
+=== RUN   TestRequireAdminDoesNotTurnDatabaseFailureIntoLogout
+--- PASS: TestRequireAdminDoesNotTurnDatabaseFailureIntoLogout (0.00s)
+=== RUN   TestRequireAdminStillRejectsAnonymousWith403
+--- PASS: TestRequireAdminStillRejectsAnonymousWith403 (0.00s)
+=== RUN   TestParseScopes
+--- PASS: TestParseScopes (0.00s)
+=== RUN   TestScopedTokenCIDRs
+--- PASS: TestScopedTokenCIDRs (0.00s)
+=== RUN   TestValidDailyCap
+--- PASS: TestValidDailyCap (0.00s)
+=== RUN   TestScopedTemplateProto
+--- PASS: TestScopedTemplateProto (0.00s)
+=== RUN   TestRequireScopedTokenGates
+--- PASS: TestRequireScopedTokenGates (0.00s)
+=== RUN   TestRequireScopeDeniesMissingScope
+--- PASS: TestRequireScopeDeniesMissingScope (0.00s)
+=== RUN   TestConfigFetchSerializationNeverLeaksSecretValues
+--- PASS: TestConfigFetchSerializationNeverLeaksSecretValues (0.00s)
+=== RUN   TestConfigSecretClassifierConsistency
+--- PASS: TestConfigSecretClassifierConsistency (0.00s)
+=== RUN   TestPaymentSerializationNeverLeaksSecretValues
+--- PASS: TestPaymentSerializationNeverLeaksSecretValues (0.00s)
+=== RUN   TestPluginSerializationNeverLeaksSecretValues
+--- PASS: TestPluginSerializationNeverLeaksSecretValues (0.00s)
+=== RUN   TestParseServerGroupIDsNormalizesToDecimalStrings
+--- PASS: TestParseServerGroupIDsNormalizesToDecimalStrings (0.00s)
+=== RUN   TestParseServerGroupIDsRejectsMalformed
+--- PASS: TestParseServerGroupIDsRejectsMalformed (0.00s)
+=== RUN   TestNotifyServersChangedDelegatesCommittedIDs
+--- PASS: TestNotifyServersChangedDelegatesCommittedIDs (0.00s)
+=== RUN   TestNotifyServersChangedIsOptional
+--- PASS: TestNotifyServersChangedIsOptional (0.00s)
+=== RUN   TestParseRequestedRouteIDsIsStrictAndOrderPreserving
+--- PASS: TestParseRequestedRouteIDsIsStrictAndOrderPreserving (0.00s)
+=== RUN   TestServerRouteSaveRejectsRowsTheNodeCannotLoad
+--- PASS: TestServerRouteSaveRejectsRowsTheNodeCannotLoad (0.00s)
+=== RUN   TestServerSaveXHTTPAdmission
+--- PASS: TestServerSaveXHTTPAdmission (0.00s)
+=== RUN   TestBuildAdminOrderByAllowList
+=== RUN   TestBuildAdminOrderByAllowList/empty_falls_back_to_tiebreak_only
+=== RUN   TestBuildAdminOrderByAllowList/allowed_asc
+=== RUN   TestBuildAdminOrderByAllowList/allowed_desc
+=== RUN   TestBuildAdminOrderByAllowList/unknown_column_dropped
+=== RUN   TestBuildAdminOrderByAllowList/injection_dropped
+=== RUN   TestBuildAdminOrderByAllowList/duplicate_collapses
+=== RUN   TestBuildAdminOrderByAllowList/multi_preserves_order
+--- PASS: TestBuildAdminOrderByAllowList (0.00s)
+    --- PASS: TestBuildAdminOrderByAllowList/empty_falls_back_to_tiebreak_only (0.00s)
+    --- PASS: TestBuildAdminOrderByAllowList/allowed_asc (0.00s)
+    --- PASS: TestBuildAdminOrderByAllowList/allowed_desc (0.00s)
+    --- PASS: TestBuildAdminOrderByAllowList/unknown_column_dropped (0.00s)
+    --- PASS: TestBuildAdminOrderByAllowList/injection_dropped (0.00s)
+    --- PASS: TestBuildAdminOrderByAllowList/duplicate_collapses (0.00s)
+    --- PASS: TestBuildAdminOrderByAllowList/multi_preserves_order (0.00s)
+=== RUN   TestParseAdminSortsQueryAndBody
+--- PASS: TestParseAdminSortsQueryAndBody (0.00s)
+=== RUN   TestStatMemoSweepsExpiredEntries
+--- PASS: TestStatMemoSweepsExpiredEntries (0.00s)
+=== RUN   TestStatMemoSingleflightsConcurrentMisses
+--- PASS: TestStatMemoSingleflightsConcurrentMisses (0.00s)
+=== RUN   TestStatTrafficRankPresetWindowsUseShanghaiNaturalDays
+=== RUN   TestStatTrafficRankPresetWindowsUseShanghaiNaturalDays/today
+=== RUN   TestStatTrafficRankPresetWindowsUseShanghaiNaturalDays/7d
+=== RUN   TestStatTrafficRankPresetWindowsUseShanghaiNaturalDays/30d
+--- PASS: TestStatTrafficRankPresetWindowsUseShanghaiNaturalDays (0.00s)
+    --- PASS: TestStatTrafficRankPresetWindowsUseShanghaiNaturalDays/today (0.00s)
+    --- PASS: TestStatTrafficRankPresetWindowsUseShanghaiNaturalDays/7d (0.00s)
+    --- PASS: TestStatTrafficRankPresetWindowsUseShanghaiNaturalDays/30d (0.00s)
+=== RUN   TestStatTrafficRankLegacyTodayGetsCompleteYesterdayBucket
+--- PASS: TestStatTrafficRankLegacyTodayGetsCompleteYesterdayBucket (0.00s)
+=== RUN   TestStatTrafficRankRejectsUnboundedLegacyWindow
+--- PASS: TestStatTrafficRankRejectsUnboundedLegacyWindow (0.00s)
+=== RUN   TestStatTrafficRankPreservesArbitraryLegacyWindow
+--- PASS: TestStatTrafficRankPreservesArbitraryLegacyWindow (0.00s)
+=== RUN   TestStatTrafficWindowUsesShanghaiNaturalBoundaries
+--- PASS: TestStatTrafficWindowUsesShanghaiNaturalBoundaries (0.00s)
+=== RUN   TestStatDashboardMemoKeyChangesAtShanghaiMidnight
+--- PASS: TestStatDashboardMemoKeyChangesAtShanghaiMidnight (0.00s)
+=== RUN   TestStatTrafficSummarySQLIsSinglePassDailyAsOfSnapshot
+--- PASS: TestStatTrafficSummarySQLIsSinglePassDailyAsOfSnapshot (0.00s)
+=== RUN   TestStatTrafficValueKeepsDirectionsSeparate
+--- PASS: TestStatTrafficValueKeepsDirectionsSeparate (0.00s)
+=== RUN   TestSensitiveAdminRoutesNeedNoStepUpAfterLogin2FA
+    stepup_retired_test.go:125: totp session reached 28 sensitive routes without step-up
+    stepup_retired_test.go:125: passkey session reached 28 sensitive routes without step-up
+--- PASS: TestSensitiveAdminRoutesNeedNoStepUpAfterLogin2FA (0.01s)
+=== RUN   TestSensitiveAdminRoutesStillRequireLogin2FASession
+--- PASS: TestSensitiveAdminRoutesStillRequireLogin2FASession (0.00s)
+=== RUN   TestTemplateCASPostgres
+=== RUN   TestTemplateCASPostgres/success_and_locale_isolation
+=== RUN   TestTemplateCASPostgres/stale_hash
+=== RUN   TestTemplateCASPostgres/missing_row
+=== RUN   TestTemplateCASPostgres/rollback_archival_and_write
+=== RUN   TestTemplateCASPostgres/ordinary_writer_serializes
+--- PASS: TestTemplateCASPostgres (0.14s)
+    --- PASS: TestTemplateCASPostgres/success_and_locale_isolation (0.01s)
+    --- PASS: TestTemplateCASPostgres/stale_hash (0.00s)
+    --- PASS: TestTemplateCASPostgres/missing_row (0.00s)
+    --- PASS: TestTemplateCASPostgres/rollback_archival_and_write (0.00s)
+    --- PASS: TestTemplateCASPostgres/ordinary_writer_serializes (0.11s)
+=== RUN   TestTemplateSHA256
+--- PASS: TestTemplateSHA256 (0.00s)
+=== RUN   TestScopedTemplateSaveRequiresExpectedHash
+--- PASS: TestScopedTemplateSaveRequiresExpectedHash (0.00s)
+=== RUN   TestManagedTemplateLocale
+=== PAUSE TestManagedTemplateLocale
+=== RUN   TestBuiltInMailTemplatesHaveEnglishContent
+=== PAUSE TestBuiltInMailTemplatesHaveEnglishContent
+=== RUN   TestLocalizedTemplateCRUDAlwaysScopesNameWithLocale
+=== PAUSE TestLocalizedTemplateCRUDAlwaysScopesNameWithLocale
+=== RUN   TestAnnotateTicketCategoryReadsTheSubjectPrefix
+--- PASS: TestAnnotateTicketCategoryReadsTheSubjectPrefix (0.00s)
+=== RUN   TestTicketCategoryFilterRejectsUnknownBeforeQuery
+--- PASS: TestTicketCategoryFilterRejectsUnknownBeforeQuery (0.00s)
+=== RUN   TestTicketReplyRefusesClosedTicketsInsideTheTransaction
+--- PASS: TestTicketReplyRefusesClosedTicketsInsideTheTransaction (0.00s)
+=== RUN   TestCfgSaveResultFlagsSecurePathRestart
+--- PASS: TestCfgSaveResultFlagsSecurePathRestart (0.00s)
+=== RUN   TestCfgSaveHandlerReturnsSaveResult
+--- PASS: TestCfgSaveHandlerReturnsSaveResult (0.02s)
+=== RUN   TestAdminTicketReplyRejectsMalformedMessage
+--- PASS: TestAdminTicketReplyRejectsMalformedMessage (0.00s)
+=== RUN   TestTotpDisableRequiresRecentAuthentication
+--- PASS: TestTotpDisableRequiresRecentAuthentication (0.00s)
+=== RUN   TestTotpDisableIsRateLimitedPerAdmin
+--- PASS: TestTotpDisableIsRateLimitedPerAdmin (0.00s)
+=== RUN   TestTotpDisableSharedBudgetUnavailableFailsClosed
+--- PASS: TestTotpDisableSharedBudgetUnavailableFailsClosed (0.00s)
+=== RUN   TestTotpEnableRefusesToOverwriteAnEnrolledSecret
+--- PASS: TestTotpEnableRefusesToOverwriteAnEnrolledSecret (0.00s)
+=== RUN   TestUserUpdateAuditDetail
+--- PASS: TestUserUpdateAuditDetail (0.00s)
+=== RUN   TestAdminDeletionIsNotBlockedBySelfServiceGates
+--- PASS: TestAdminDeletionIsNotBlockedBySelfServiceGates (0.00s)
+=== RUN   TestAdminForcedDeletionLeavesEvidence
+--- PASS: TestAdminForcedDeletionLeavesEvidence (0.00s)
+=== RUN   TestSelfDeleteSourceIsAConstant
+--- PASS: TestSelfDeleteSourceIsAConstant (0.00s)
+=== RUN   TestErasureBlockersEnumerateAllSixGatesInRefusalOrder
+--- PASS: TestErasureBlockersEnumerateAllSixGatesInRefusalOrder (0.00s)
+=== RUN   TestErasureBlockersAreEmptyForACleanAccount
+--- PASS: TestErasureBlockersAreEmptyForACleanAccount (0.00s)
+=== RUN   TestOnlyTheTrippedGateIsReported
+--- PASS: TestOnlyTheTrippedGateIsReported (0.00s)
+=== RUN   TestPreflightAndInLockGateShareOnePredicate
+--- PASS: TestPreflightAndInLockGateShareOnePredicate (0.00s)
+=== RUN   TestExternalErasureBlockPreservesCauseWithoutExposingIt
+--- PASS: TestExternalErasureBlockPreservesCauseWithoutExposingIt (0.00s)
+=== RUN   TestUserErasureCoversEveryUserKeyedTable
+--- PASS: TestUserErasureCoversEveryUserKeyedTable (0.01s)
+=== RUN   TestErasurePlanNeverDeletesRowsOwnedBySomeoneElse
+--- PASS: TestErasurePlanNeverDeletesRowsOwnedBySomeoneElse (0.00s)
+=== RUN   TestErasurePlanHasNoDuplicateOrUnsafeEntries
+--- PASS: TestErasurePlanHasNoDuplicateOrUnsafeEntries (0.00s)
+=== RUN   TestTelegramNamespaceTablesAreNeverErasedByPanelID
+--- PASS: TestTelegramNamespaceTablesAreNeverErasedByPanelID (0.00s)
+=== RUN   TestUserErasureFunctionMatchesTheReviewedCatalog
+    user_erasure_test.go:179: 擦除函数事实源 = ../../../test/fixtures/schema.sql
+--- PASS: TestUserErasureFunctionMatchesTheReviewedCatalog (0.00s)
+=== RUN   TestErasureDetachColumnsAreNullable
+--- PASS: TestErasureDetachColumnsAreNullable (0.01s)
+=== RUN   TestExternalIdentityPreparationRunsInsideAuthorizationFence
+--- PASS: TestExternalIdentityPreparationRunsInsideAuthorizationFence (0.00s)
+=== RUN   TestUserErasureFinancialAndInviteGuardsMirrorAccountingTruth
+--- PASS: TestUserErasureFinancialAndInviteGuardsMirrorAccountingTruth (0.00s)
+=== RUN   TestUserErasureLocksOwnedOrdersBeforeUserRow
+--- PASS: TestUserErasureLocksOwnedOrdersBeforeUserRow (0.00s)
+=== RUN   TestAdminOrderAssignDoesNotInvertDatabaseInviterLockOrder
+--- PASS: TestAdminOrderAssignDoesNotInvertDatabaseInviterLockOrder (0.02s)
+=== RUN   TestOrdinaryAccountCreationRejectsHistoricalInviteIDInheritance
+--- PASS: TestOrdinaryAccountCreationRejectsHistoricalInviteIDInheritance (0.00s)
+=== RUN   TestErasureSkipIfAbsentOnlyCoversYueOpsOwnedRuntimeTables
+--- PASS: TestErasureSkipIfAbsentOnlyCoversYueOpsOwnedRuntimeTables (0.03s)
+=== RUN   TestErasureRetiringTablesHaveLiveSuccessors
+--- PASS: TestErasureRetiringTablesHaveLiveSuccessors (0.00s)
+=== RUN   TestEveryAdminSPAUserFilterFieldIsAccepted
+--- PASS: TestEveryAdminSPAUserFilterFieldIsAccepted (0.00s)
+=== RUN   TestEveryAdminSPAListFilterFieldIsWhitelisted
+=== RUN   TestEveryAdminSPAListFilterFieldIsWhitelisted/orders
+=== RUN   TestEveryAdminSPAListFilterFieldIsWhitelisted/tickets
+=== RUN   TestEveryAdminSPAListFilterFieldIsWhitelisted/coupons
+--- PASS: TestEveryAdminSPAListFilterFieldIsWhitelisted (0.00s)
+    --- PASS: TestEveryAdminSPAListFilterFieldIsWhitelisted/orders (0.00s)
+    --- PASS: TestEveryAdminSPAListFilterFieldIsWhitelisted/tickets (0.00s)
+    --- PASS: TestEveryAdminSPAListFilterFieldIsWhitelisted/coupons (0.00s)
+=== RUN   TestUserGenerateBudgetGrowsWithTheWork
+--- PASS: TestUserGenerateBudgetGrowsWithTheWork (0.00s)
+=== RUN   TestUserGenerateBudgetCoversTheMeasuredWorstCase
+--- PASS: TestUserGenerateBudgetCoversTheMeasuredWorstCase (0.00s)
+=== RUN   TestUserGenerateBudgetStaysUnderTheUpstreamOriginTimeout
+--- PASS: TestUserGenerateBudgetStaysUnderTheUpstreamOriginTimeout (0.00s)
+=== RUN   TestUserGenerateBudgetIsClampedAtBothEnds
+--- PASS: TestUserGenerateBudgetIsClampedAtBothEnds (0.00s)
+=== RUN   TestInjectedRuntimeTimeoutStillWins
+--- PASS: TestInjectedRuntimeTimeoutStillWins (0.00s)
+=== RUN   TestUserGenerateBudgetIsExportedForTheIntegrationHarness
+--- PASS: TestUserGenerateBudgetIsExportedForTheIntegrationHarness (0.00s)
+=== RUN   TestUserToInt64IsStrictNonNegativeBounded
+--- PASS: TestUserToInt64IsStrictNonNegativeBounded (0.00s)
+=== RUN   TestUserUnbanBlockedOnlyWhenFilterOverridesAnUnban
+--- PASS: TestUserUnbanBlockedOnlyWhenFilterOverridesAnUnban (0.00s)
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/whole
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/ordinary_cents
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/fractional_cent_legacy_value
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/negative
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/negative_zero_canonicalized
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/numeric_maximum
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/above_numeric_maximum
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/too_much_precision
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/exponent_is_not_a_reviewed_wire_form
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/nan
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/infinity
+=== RUN   TestUserMoneyYuanToNumericCentsIsExactAndBounded/trailing_junk
+--- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/whole (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/ordinary_cents (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/fractional_cent_legacy_value (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/negative (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/negative_zero_canonicalized (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/numeric_maximum (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/above_numeric_maximum (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/too_much_precision (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/exponent_is_not_a_reviewed_wire_form (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/nan (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/infinity (0.00s)
+    --- PASS: TestUserMoneyYuanToNumericCentsIsExactAndBounded/trailing_junk (0.00s)
+=== RUN   TestEveryAdminUserReadPathConvertsMoneyToYuan
+--- PASS: TestEveryAdminUserReadPathConvertsMoneyToYuan (0.01s)
+=== RUN   TestAdminUserUpdateConvertsYuanBackToCents
+--- PASS: TestAdminUserUpdateConvertsYuanBackToCents (0.00s)
+=== RUN   TestUserOnlineCountExpressionMasksExpiredLease
+--- PASS: TestUserOnlineCountExpressionMasksExpiredLease (0.00s)
+=== RUN   TestUserOnlineFilterAndSortUseFreshLeaseExpression
+--- PASS: TestUserOnlineFilterAndSortUseFreshLeaseExpression (0.00s)
+=== RUN   TestUserSendMailBatchKeysAreUniquePerRecipientAndPatternIsBounded
+--- PASS: TestUserSendMailBatchKeysAreUniquePerRecipientAndPatternIsBounded (0.00s)
+=== RUN   TestUserSendMailStatusRejectsInvalidBatchIDBeforeQueryingTheDatabase
+--- PASS: TestUserSendMailStatusRejectsInvalidBatchIDBeforeQueryingTheDatabase (0.00s)
+=== RUN   TestUserSendMailEnqueuesInsteadOfSendingSynchronously
+--- PASS: TestUserSendMailEnqueuesInsteadOfSendingSynchronously (0.02s)
+=== RUN   TestUserSendMailStatusRouteIsMounted
+--- PASS: TestUserSendMailStatusRouteIsMounted (0.00s)
+=== RUN   TestTransformUserDataStripsCredentialColumns
+--- PASS: TestTransformUserDataStripsCredentialColumns (0.00s)
+=== RUN   TestTransformUserDataWithoutAuthorityDropsSubscriptionAuthority
+--- PASS: TestTransformUserDataWithoutAuthorityDropsSubscriptionAuthority (0.00s)
+=== RUN   TestUserStripSensitiveOnNestedObjects
+--- PASS: TestUserStripSensitiveOnNestedObjects (0.00s)
+=== RUN   TestUserBuildOrderRejectsCredentialColumns
+--- PASS: TestUserBuildOrderRejectsCredentialColumns (0.00s)
+=== RUN   TestOnlyTheDetailPathMintsSubscriptionAuthority
+--- PASS: TestOnlyTheDetailPathMintsSubscriptionAuthority (0.01s)
+=== RUN   TestUserBatchScopeGuard
+--- PASS: TestUserBatchScopeGuard (0.00s)
+=== RUN   TestUserIdentitySearchMatrix
+=== RUN   TestUserIdentitySearchMatrix/complete_email_is_exact
+=== RUN   TestUserIdentitySearchMatrix/email_prefix_is_indexable
+=== RUN   TestUserIdentitySearchMatrix/explicit_suffix_wildcard
+=== RUN   TestUserIdentitySearchMatrix/numeric_bare_value_is_user_id
+=== RUN   TestUserIdentitySearchMatrix/uuid_bare_value
+=== RUN   TestUserIdentitySearchMatrix/token_bare_value
+=== RUN   TestUserIdentitySearchMatrix/subscription_path_resolves_token
+=== RUN   TestUserIdentitySearchMatrix/subscription_query_resolves_token
+=== RUN   TestUserIdentitySearchMatrix/schemeless_subscription_path_resolves_token
+=== RUN   TestUserIdentitySearchMatrix/schemeless_subscription_query_resolves_token
+=== RUN   TestUserIdentitySearchMatrix/bare_word_stays_an_email_prefix
+=== RUN   TestUserIdentitySearchMatrix/telegram_qualifier
+=== RUN   TestUserIdentitySearchMatrix/clauses_are_anded
+=== RUN   TestUserIdentitySearchMatrix/partial_token_rejected
+=== RUN   TestUserIdentitySearchMatrix/unknown_qualifier_rejected
+=== RUN   TestUserIdentitySearchMatrix/unclosed_quote_rejected
+--- PASS: TestUserIdentitySearchMatrix (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/complete_email_is_exact (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/email_prefix_is_indexable (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/explicit_suffix_wildcard (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/numeric_bare_value_is_user_id (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/uuid_bare_value (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/token_bare_value (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/subscription_path_resolves_token (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/subscription_query_resolves_token (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/schemeless_subscription_path_resolves_token (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/schemeless_subscription_query_resolves_token (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/bare_word_stays_an_email_prefix (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/telegram_qualifier (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/clauses_are_anded (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/partial_token_rejected (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/unknown_qualifier_rejected (0.00s)
+    --- PASS: TestUserIdentitySearchMatrix/unclosed_quote_rejected (0.00s)
+=== RUN   TestUserSearchKeepsBatchScopeIdenticalToList
+--- PASS: TestUserSearchKeepsBatchScopeIdenticalToList (0.00s)
+=== RUN   TestUserSensitiveSearchMustNotUseQueryString
+--- PASS: TestUserSensitiveSearchMustNotUseQueryString (0.00s)
+=== RUN   TestUserSubscriptionStatusesAreMutuallyExclusive
+--- PASS: TestUserSubscriptionStatusesAreMutuallyExclusive (0.00s)
+=== RUN   TestUserNoStoreCoversPIIResponses
+--- PASS: TestUserNoStoreCoversPIIResponses (0.00s)
+=== RUN   TestUserGenerateAuditDetailCapsIDsButKeepsFullCount
+--- PASS: TestUserGenerateAuditDetailCapsIDsButKeepsFullCount (0.00s)
+=== RUN   TestAdminUserNodeEntitlementWritersUseDurableOutbox
+--- PASS: TestAdminUserNodeEntitlementWritersUseDurableOutbox (0.02s)
+=== RUN   TestUserNodeEntitlementPayloadCanonicalization
+--- PASS: TestUserNodeEntitlementPayloadCanonicalization (0.00s)
+=== RUN   TestUserNodeAccessColumnsExact
+--- PASS: TestUserNodeAccessColumnsExact (0.00s)
+=== RUN   TestUserGenerateCountStrictIntegerMatrix
+=== RUN   TestUserGenerateCountStrictIntegerMatrix/zero
+=== RUN   TestUserGenerateCountStrictIntegerMatrix/decimal_integer
+=== RUN   TestUserGenerateCountStrictIntegerMatrix/exponent_integer_in_range
+=== RUN   TestUserGenerateCountStrictIntegerMatrix/exponent_over_max_marker
+=== RUN   TestUserGenerateCountStrictIntegerMatrix/negative_integer
+=== RUN   TestUserGenerateCountStrictIntegerMatrix/over_max_marker
+=== RUN   TestUserGenerateCountStrictIntegerMatrix/fraction
+=== RUN   TestUserGenerateCountStrictIntegerMatrix/numeric_string
+=== RUN   TestUserGenerateCountStrictIntegerMatrix/null
+=== RUN   TestUserGenerateCountStrictIntegerMatrix/boolean
+--- PASS: TestUserGenerateCountStrictIntegerMatrix (0.00s)
+    --- PASS: TestUserGenerateCountStrictIntegerMatrix/zero (0.00s)
+    --- PASS: TestUserGenerateCountStrictIntegerMatrix/decimal_integer (0.00s)
+    --- PASS: TestUserGenerateCountStrictIntegerMatrix/exponent_integer_in_range (0.00s)
+    --- PASS: TestUserGenerateCountStrictIntegerMatrix/exponent_over_max_marker (0.00s)
+    --- PASS: TestUserGenerateCountStrictIntegerMatrix/negative_integer (0.00s)
+    --- PASS: TestUserGenerateCountStrictIntegerMatrix/over_max_marker (0.00s)
+    --- PASS: TestUserGenerateCountStrictIntegerMatrix/fraction (0.00s)
+    --- PASS: TestUserGenerateCountStrictIntegerMatrix/numeric_string (0.00s)
+    --- PASS: TestUserGenerateCountStrictIntegerMatrix/null (0.00s)
+    --- PASS: TestUserGenerateCountStrictIntegerMatrix/boolean (0.00s)
+=== RUN   TestUserGenerateBatchBoundary
+--- PASS: TestUserGenerateBatchBoundary (0.00s)
+=== RUN   TestUserGenerateRandomEmailsAreCaseInsensitiveUniqueAndBounded
+--- PASS: TestUserGenerateRandomEmailsAreCaseInsensitiveUniqueAndBounded (0.00s)
+=== RUN   TestPrepareUserGenerateCredentialsChecksDeadlineAfterEveryHash
+--- PASS: TestPrepareUserGenerateCredentialsChecksDeadlineAfterEveryHash (0.02s)
+=== RUN   TestPrepareUserGenerateCredentialsHashesEachUserIndependently
+--- PASS: TestPrepareUserGenerateCredentialsHashesEachUserIndependently (0.00s)
+=== RUN   TestPrepareUserGenerateCredentialsBoundsIdentityRegeneration
+--- PASS: TestPrepareUserGenerateCredentialsBoundsIdentityRegeneration (0.00s)
+=== RUN   TestUserGenerateExpiredContextReturns504BeforeDatabaseWrite
+--- PASS: TestUserGenerateExpiredContextReturns504BeforeDatabaseWrite (0.00s)
+=== RUN   TestUserGenerateHashDeadlineReturns504BeforeTransaction
+--- PASS: TestUserGenerateHashDeadlineReturns504BeforeTransaction (0.00s)
+=== RUN   TestUserGenerateGateCoversSingleAndBatchCost12Work
+--- PASS: TestUserGenerateGateCoversSingleAndBatchCost12Work (0.00s)
+=== RUN   TestUserGenerateRandomExhaustionIsBoundedInternalFailure
+--- PASS: TestUserGenerateRandomExhaustionIsBoundedInternalFailure (0.00s)
+=== RUN   TestClassifyUserGenerateConflict
+=== RUN   TestClassifyUserGenerateConflict/fixture_email_index
+=== RUN   TestClassifyUserGenerateConflict/migration_email_detail
+=== RUN   TestClassifyUserGenerateConflict/uuid
+=== RUN   TestClassifyUserGenerateConflict/token
+=== RUN   TestClassifyUserGenerateConflict/unknown_unique
+=== RUN   TestClassifyUserGenerateConflict/non_unique
+--- PASS: TestClassifyUserGenerateConflict (0.00s)
+    --- PASS: TestClassifyUserGenerateConflict/fixture_email_index (0.00s)
+    --- PASS: TestClassifyUserGenerateConflict/migration_email_detail (0.00s)
+    --- PASS: TestClassifyUserGenerateConflict/uuid (0.00s)
+    --- PASS: TestClassifyUserGenerateConflict/token (0.00s)
+    --- PASS: TestClassifyUserGenerateConflict/unknown_unique (0.00s)
+    --- PASS: TestClassifyUserGenerateConflict/non_unique (0.00s)
+=== RUN   TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely
+=== RUN   TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely/email
+=== RUN   TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely/uuid
+=== RUN   TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely/token
+=== RUN   TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely/unknown_unique_remains_retryable
+=== RUN   TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely/ordinary_database_failure
+--- PASS: TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely (0.00s)
+    --- PASS: TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely/email (0.00s)
+    --- PASS: TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely/uuid (0.00s)
+    --- PASS: TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely/token (0.00s)
+    --- PASS: TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely/unknown_unique_remains_retryable (0.00s)
+    --- PASS: TestUserWriteGenerateErrorMapsUniqueColumnsPrecisely/ordinary_database_failure (0.00s)
+=== RUN   TestUserTimestampColumnExprIsBare
+--- PASS: TestUserTimestampColumnExprIsBare (0.00s)
+=== RUN   TestUserTimestampFilterWrapsValue
+--- PASS: TestUserTimestampFilterWrapsValue (0.00s)
+=== RUN   TestUserUnbanValidatesBeforeMutation
+=== RUN   TestUserUnbanValidatesBeforeMutation/missing_ID
+=== RUN   TestUserUnbanValidatesBeforeMutation/zero_ID
+=== RUN   TestUserUnbanValidatesBeforeMutation/negative_ID
+=== RUN   TestUserUnbanValidatesBeforeMutation/fractional_ID
+=== RUN   TestUserUnbanValidatesBeforeMutation/missing_reason
+=== RUN   TestUserUnbanValidatesBeforeMutation/empty_reason
+=== RUN   TestUserUnbanValidatesBeforeMutation/blank_reason
+=== RUN   TestUserUnbanValidatesBeforeMutation/non-string_reason
+=== RUN   TestUserUnbanValidatesBeforeMutation/long_reason
+=== RUN   TestUserUnbanValidatesBeforeMutation/malformed_JSON
+--- PASS: TestUserUnbanValidatesBeforeMutation (0.00s)
+    --- PASS: TestUserUnbanValidatesBeforeMutation/missing_ID (0.00s)
+    --- PASS: TestUserUnbanValidatesBeforeMutation/zero_ID (0.00s)
+    --- PASS: TestUserUnbanValidatesBeforeMutation/negative_ID (0.00s)
+    --- PASS: TestUserUnbanValidatesBeforeMutation/fractional_ID (0.00s)
+    --- PASS: TestUserUnbanValidatesBeforeMutation/missing_reason (0.00s)
+    --- PASS: TestUserUnbanValidatesBeforeMutation/empty_reason (0.00s)
+    --- PASS: TestUserUnbanValidatesBeforeMutation/blank_reason (0.00s)
+    --- PASS: TestUserUnbanValidatesBeforeMutation/non-string_reason (0.00s)
+    --- PASS: TestUserUnbanValidatesBeforeMutation/long_reason (0.00s)
+    --- PASS: TestUserUnbanValidatesBeforeMutation/malformed_JSON (0.00s)
+=== RUN   TestUserUnbanRejectsNonAdmin
+=== RUN   TestUserUnbanRejectsNonAdmin/anonymous
+=== RUN   TestUserUnbanRejectsNonAdmin/non-admin
+--- PASS: TestUserUnbanRejectsNonAdmin (0.00s)
+    --- PASS: TestUserUnbanRejectsNonAdmin/anonymous (0.00s)
+    --- PASS: TestUserUnbanRejectsNonAdmin/non-admin (0.00s)
+=== RUN   TestUserSpeedLimitChangedComparesWithLockedValue
+--- PASS: TestUserSpeedLimitChangedComparesWithLockedValue (0.00s)
+=== RUN   TestUserUpdateRevisionClause
+--- PASS: TestUserUpdateRevisionClause (0.00s)
+=== RUN   TestUserUpdateConflictMessageDistinguishesRevisionFromMoney
+--- PASS: TestUserUpdateConflictMessageDistinguishesRevisionFromMoney (0.00s)
+=== RUN   TestUserPauseEndClauses
+--- PASS: TestUserPauseEndClauses (0.00s)
+=== RUN   TestUserUpdateAuditDetailDropsRevisionToken
+--- PASS: TestUserUpdateAuditDetailDropsRevisionToken (0.00s)
+=== RUN   TestUserUpdateHandlerWiresRevisionAndPauseHelpers
+--- PASS: TestUserUpdateHandlerWiresRevisionAndPauseHelpers (0.02s)
+=== RUN   TestWithdrawListWhereFrozenAndUserID
+--- PASS: TestWithdrawListWhereFrozenAndUserID (0.00s)
+=== RUN   TestWithdrawListWhereRejectsBadUserID
+--- PASS: TestWithdrawListWhereRejectsBadUserID (0.00s)
+=== RUN   TestWithdrawListWhereQueryParamAndNoFilter
+--- PASS: TestWithdrawListWhereQueryParamAndNoFilter (0.00s)
+=== RUN   TestWithdrawRelayAuthenticatesBeforeEveryMoneyCall
+--- PASS: TestWithdrawRelayAuthenticatesBeforeEveryMoneyCall (0.00s)
+=== RUN   TestNoAIActionTouchesWithdrawals
+--- PASS: TestNoAIActionTouchesWithdrawals (0.00s)
+=== RUN   TestOrphanedWithdrawalCanStillBeClosed
+--- PASS: TestOrphanedWithdrawalCanStillBeClosed (0.00s)
+=== RUN   TestRejectDoesNotRefundToADeletedUser
+--- PASS: TestRejectDoesNotRefundToADeletedUser (0.00s)
+=== CONT  TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues
+=== RUN   TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/object
+=== CONT  TestBuiltInMailTemplatesHaveEnglishContent
+=== PAUSE TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/object
+=== RUN   TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/empty_object
+--- PASS: TestBuiltInMailTemplatesHaveEnglishContent (0.00s)
+=== PAUSE TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/empty_object
+=== RUN   TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/legacy_empty_array
+=== PAUSE TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/legacy_empty_array
+=== RUN   TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/null
+=== PAUSE TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/null
+=== CONT  TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/object
+=== CONT  TestManagedTemplateLocale
+=== CONT  TestLocalizedTemplateCRUDAlwaysScopesNameWithLocale
+=== RUN   TestManagedTemplateLocale/#00
+=== PAUSE TestManagedTemplateLocale/#00
+=== RUN   TestManagedTemplateLocale/zh-CN
+=== PAUSE TestManagedTemplateLocale/zh-CN
+=== RUN   TestManagedTemplateLocale/zh_Hans
+=== PAUSE TestManagedTemplateLocale/zh_Hans
+=== RUN   TestManagedTemplateLocale/en
+=== PAUSE TestManagedTemplateLocale/en
+=== RUN   TestManagedTemplateLocale/en-US
+=== PAUSE TestManagedTemplateLocale/en-US
+=== RUN   TestManagedTemplateLocale/auto
+=== PAUSE TestManagedTemplateLocale/auto
+=== RUN   TestManagedTemplateLocale/englsh
+=== PAUSE TestManagedTemplateLocale/englsh
+=== CONT  TestManagedTemplateLocale/#00
+=== CONT  TestPlDecodeConfigRejectsNonObjectValues
+=== RUN   TestPlDecodeConfigRejectsNonObjectValues/[{"enabled":true}]
+=== PAUSE TestPlDecodeConfigRejectsNonObjectValues/[{"enabled":true}]
+=== RUN   TestPlDecodeConfigRejectsNonObjectValues/"value"
+=== PAUSE TestPlDecodeConfigRejectsNonObjectValues/"value"
+=== RUN   TestPlDecodeConfigRejectsNonObjectValues/1
+=== PAUSE TestPlDecodeConfigRejectsNonObjectValues/1
+=== RUN   TestPlDecodeConfigRejectsNonObjectValues/true
+=== PAUSE TestPlDecodeConfigRejectsNonObjectValues/true
+=== RUN   TestPlDecodeConfigRejectsNonObjectValues/{
+=== PAUSE TestPlDecodeConfigRejectsNonObjectValues/{
+=== CONT  TestPlDecodeConfigRejectsNonObjectValues/[{"enabled":true}]
+=== CONT  TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/null
+=== CONT  TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/legacy_empty_array
+=== CONT  TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/empty_object
+--- PASS: TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues (0.00s)
+    --- PASS: TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/object (0.00s)
+    --- PASS: TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/null (0.00s)
+    --- PASS: TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/legacy_empty_array (0.00s)
+    --- PASS: TestPlDecodeConfigAcceptsObjectsAndLegacyEmptyValues/empty_object (0.00s)
+=== CONT  TestManagedTemplateLocale/englsh
+=== CONT  TestManagedTemplateLocale/auto
+=== CONT  TestManagedTemplateLocale/en-US
+=== CONT  TestManagedTemplateLocale/en
+=== CONT  TestManagedTemplateLocale/zh_Hans
+=== CONT  TestManagedTemplateLocale/zh-CN
+--- PASS: TestManagedTemplateLocale (0.00s)
+    --- PASS: TestManagedTemplateLocale/#00 (0.00s)
+    --- PASS: TestManagedTemplateLocale/englsh (0.00s)
+    --- PASS: TestManagedTemplateLocale/auto (0.00s)
+    --- PASS: TestManagedTemplateLocale/en-US (0.00s)
+    --- PASS: TestManagedTemplateLocale/en (0.00s)
+    --- PASS: TestManagedTemplateLocale/zh_Hans (0.00s)
+    --- PASS: TestManagedTemplateLocale/zh-CN (0.00s)
+=== CONT  TestPlDecodeConfigRejectsNonObjectValues/{
+=== CONT  TestPlDecodeConfigRejectsNonObjectValues/true
+=== CONT  TestPlDecodeConfigRejectsNonObjectValues/1
+=== CONT  TestPlDecodeConfigRejectsNonObjectValues/"value"
+--- PASS: TestPlDecodeConfigRejectsNonObjectValues (0.00s)
+    --- PASS: TestPlDecodeConfigRejectsNonObjectValues/[{"enabled":true}] (0.00s)
+    --- PASS: TestPlDecodeConfigRejectsNonObjectValues/{ (0.00s)
+    --- PASS: TestPlDecodeConfigRejectsNonObjectValues/true (0.00s)
+    --- PASS: TestPlDecodeConfigRejectsNonObjectValues/1 (0.00s)
+    --- PASS: TestPlDecodeConfigRejectsNonObjectValues/"value" (0.00s)
+--- PASS: TestLocalizedTemplateCRUDAlwaysScopesNameWithLocale (0.04s)
+PASS
+ok  	github.com/onesyue/yueboard/internal/modules/admin	0.843s
