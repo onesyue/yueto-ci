@@ -1,0 +1,23 @@
+{
+ "schema": 1,
+ "repo": "yueops",
+ "pr": 374,
+ "head": "5a014e5664cc127e37686edd9c7d0324d213a468",
+ "backfilled": false,
+ "review": {
+  "tool": "codex",
+  "verdict": "approve",
+  "reviewed_head": "5a014e5664cc127e37686edd9c7d0324d213a468",
+  "artifact": "reviews/merge-receipts-20261105/yueops-374.md",
+  "reviewer": "codex+coordinator-executor",
+  "reviewed_at": "2026-11-04T23:30:00Z"
+ },
+ "parity": {
+  "result": "pass",
+  "head": "5a014e5664cc127e37686edd9c7d0324d213a468",
+  "command": "HEAD: cd yueops/w-c5drop && TZ=UTC python -m pytest -q -p no:cacheprovider tests/test_entry_diagnostics_runtime_20261001.py tests/test_entry_diagnostics_signed_closure_20261008.py tests/test_loadshed_dropin_manifest_20261028.py\nBASE: same files at 5702a9953",
+  "log_sha256": "b815012f43747eb5ebb963670aedd84e23f3b989f95b7bb35cc88a48bffcff42",
+  "ran_at": "2026-11-04T23:28:00+00:00",
+  "runner": "mac-5f08d00f"
+ }
+}
