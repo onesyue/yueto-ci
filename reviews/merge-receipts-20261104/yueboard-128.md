@@ -200,3 +200,19 @@ Original supplemental artifact: `.claude/state/board-takeover/20261104/ui-b1/la-
 ```
 
 The native Linux run passed14 cases (12 new and2 existing) with no skips;24 original screenshots were independently approved. The first failed fixture run and incomplete optional local failure-archive copy remain recorded; complete originals are retained remotely.
+
+## Native exit and redundant outer cleanup
+
+The original log ends with a Docker network-not-found message and an exit-status-1 line from the outer launcher’s redundant cleanup. The launcher uses `check=True` for the complete native command and sets its test-phase result to zero only after that command returns successfully. Its `finally` cleanup invokes the second network removal without checking the result; the native EXIT trap already removed the network. The original terminal receipt records test phase exit zero. Thus the native command and its 14 browser cases passed; the redundant outer cleanup emitted a nonzero diagnostic. The raw log, including that diagnostic, is retained unchanged. Independent reviewers confirmed this from the existing launcher and terminal receipts without rerunning tests.
+
+- `.claude/state/board-takeover/20261104/ui-b1/remote-run-r2.py` SHA-256 `91547f3393f5f7f39e261d883293954f155aada0194295ae18ef30c68ea3353c`.
+- `.claude/state/board-takeover/20261104/ui-b1/la-r2-proof/terminal.json` SHA-256 `2bbaf761885efbdddb876d0637290603ff36e7986a4336e4bde6f42566c39446`.
+
+Original terminal receipt:
+
+```json
+{
+  "exit_code": 0,
+  "phase": "tests",
+  "finished_unix": 1793766602.8607287
+}```
