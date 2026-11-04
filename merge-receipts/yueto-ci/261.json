@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto-ci",
+  "pr": 261,
+  "head": "a17d2b4aa9f9e5fab300b2d621df349833b81626",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "a17d2b4aa9f9e5fab300b2d621df349833b81626",
+    "artifact": "reviews/merge-receipts-20261104-four/yueto-ci-261.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-04T06:49:53.332467+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "a17d2b4aa9f9e5fab300b2d621df349833b81626",
+    "command": "bash .claude/state/takeover/20261104/resume-1039/ops-ef8-pin-linux/run.sh",
+    "log_sha256": "fb21158e1009e76a3fb6c184789b8adb1e1a3ca34a160e1a92f0c1dc85be567f",
+    "ran_at": "2026-11-04T07:13:55.813201+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}

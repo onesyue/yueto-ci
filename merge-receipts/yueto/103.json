@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto",
+  "pr": 103,
+  "head": "78f831ece1b96ed75c38dd2119b865dae3e63e2c",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "78f831ece1b96ed75c38dd2119b865dae3e63e2c",
+    "artifact": "reviews/merge-receipts-20261104-four/yueto-103.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-04T07:39:39.999072+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "78f831ece1b96ed75c38dd2119b865dae3e63e2c",
+    "command": "bash .claude/state/link-takeover/20261104/1039/first-contract-owner/linux-r2.sh",
+    "log_sha256": "c0be9e10bccfe2f06a39b6769c0246412d0efb5aed2d72878ee5e7c4d936250c",
+    "ran_at": "2026-11-04T07:46:58.302976+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}
