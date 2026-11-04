@@ -1,0 +1,48 @@
+=== RUN   TestCredentialCommandBoundary
+--- PASS: TestCredentialCommandBoundary (0.00s)
+=== RUN   TestCredentialHelperRaceOptionsAreLocal
+--- PASS: TestCredentialHelperRaceOptionsAreLocal (0.07s)
+=== RUN   TestWorkflowPrivateForkCredentialStopsAtVerification
+--- PASS: TestWorkflowPrivateForkCredentialStopsAtVerification (1.38s)
+=== RUN   TestWorkflowRefusalsStopDownstreamChildren
+=== RUN   TestWorkflowRefusalsStopDownstreamChildren/missing-secret
+=== RUN   TestWorkflowRefusalsStopDownstreamChildren/fetch
+=== RUN   TestWorkflowRefusalsStopDownstreamChildren/unannotated
+=== RUN   TestWorkflowRefusalsStopDownstreamChildren/signature
+=== RUN   TestWorkflowRefusalsStopDownstreamChildren/wrong-signer
+=== RUN   TestWorkflowRefusalsStopDownstreamChildren/peeled
+=== RUN   TestWorkflowRefusalsStopDownstreamChildren/dependency
+=== RUN   TestWorkflowRefusalsStopDownstreamChildren/vulnerability-tests
+=== RUN   TestWorkflowRefusalsStopDownstreamChildren/test
+--- PASS: TestWorkflowRefusalsStopDownstreamChildren (6.16s)
+    --- PASS: TestWorkflowRefusalsStopDownstreamChildren/missing-secret (0.07s)
+    --- PASS: TestWorkflowRefusalsStopDownstreamChildren/fetch (0.47s)
+    --- PASS: TestWorkflowRefusalsStopDownstreamChildren/unannotated (0.49s)
+    --- PASS: TestWorkflowRefusalsStopDownstreamChildren/signature (0.50s)
+    --- PASS: TestWorkflowRefusalsStopDownstreamChildren/wrong-signer (0.55s)
+    --- PASS: TestWorkflowRefusalsStopDownstreamChildren/peeled (0.54s)
+    --- PASS: TestWorkflowRefusalsStopDownstreamChildren/dependency (1.06s)
+    --- PASS: TestWorkflowRefusalsStopDownstreamChildren/vulnerability-tests (1.23s)
+    --- PASS: TestWorkflowRefusalsStopDownstreamChildren/test (1.25s)
+=== RUN   TestVendoredWorkflowRejectsMissingVendor
+--- PASS: TestVendoredWorkflowRejectsMissingVendor (1.07s)
+=== RUN   TestDefaultMakeVerificationPrecedesParallelTestBody
+=== RUN   TestDefaultMakeVerificationPrecedesParallelTestBody/Linux
+=== RUN   TestDefaultMakeVerificationPrecedesParallelTestBody/Darwin
+--- PASS: TestDefaultMakeVerificationPrecedesParallelTestBody (3.10s)
+    --- PASS: TestDefaultMakeVerificationPrecedesParallelTestBody/Linux (1.23s)
+    --- PASS: TestDefaultMakeVerificationPrecedesParallelTestBody/Darwin (1.40s)
+=== RUN   TestVendoredMakeDoesNotRepeatPrivateFetch
+=== RUN   TestVendoredMakeDoesNotRepeatPrivateFetch/Linux
+=== RUN   TestVendoredMakeDoesNotRepeatPrivateFetch/Darwin
+--- PASS: TestVendoredMakeDoesNotRepeatPrivateFetch (1.25s)
+    --- PASS: TestVendoredMakeDoesNotRepeatPrivateFetch/Linux (0.52s)
+    --- PASS: TestVendoredMakeDoesNotRepeatPrivateFetch/Darwin (0.73s)
+=== RUN   TestGoPatchPinsMoveTogether
+--- PASS: TestGoPatchPinsMoveTogether (0.00s)
+=== RUN   TestSourceCICannotBecomeASecondReleaseAuthority
+--- PASS: TestSourceCICannotBecomeASecondReleaseAuthority (0.00s)
+=== RUN   TestWithdrawnEmSignRootsAreAbsent
+--- PASS: TestWithdrawnEmSignRootsAreAbsent (0.00s)
+PASS
+ok  	github.com/onesyue/yue-node/internal/toolchain	13.036s

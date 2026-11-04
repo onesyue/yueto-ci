@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yue-node",
+  "pr": 26,
+  "head": "fbaf0e53c7ee13e123997f2ae87ecc23699cfc1b",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "fbaf0e53c7ee13e123997f2ae87ecc23699cfc1b",
+    "artifact": "reviews/merge-receipts-20261104/yue-node-26.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-04T02:15:04.587133+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "fbaf0e53c7ee13e123997f2ae87ecc23699cfc1b",
+    "command": "GOMAXPROCS=1 GOFLAGS=-p=1 go test -count=1 -timeout=30s -v ./internal/toolchain",
+    "log_sha256": "8366420f075a5d212782be24efb76ca65c768789166f07a202382ef794a422cd",
+    "ran_at": "2026-11-04T02:10:51.495563+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}
