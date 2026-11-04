@@ -16,7 +16,7 @@ DOMAIN = ['./test/integration']
 COMMANDS = ['./cmd/yueboard']
 MODULES = [
     './internal/platform/emailcoupon',
-    './internal/modules/user', './internal/platform/referencelock',
+    './internal/modules/admin', './internal/modules/user', './internal/platform/referencelock',
     './internal/modules/order', './internal/modules/emby', './internal/modules/handoff',
     './internal/platform/deviceidentity', './internal/modules/nodesync',
     './internal/modules/subscribe', './internal/modules/statcron',
@@ -41,10 +41,12 @@ CAPABILITY_ADDITIONS = {
 # Require their suite when the production writer supports the pending intent;
 # older sources retain their actual suite inventory, including floor 144.
 SOURCE_CAPABILITY_ADDITIONS = {
+    './internal/modules/admin': (Path('internal/modules/admin/scoped_token.go'), 'expected_sha256'),
     './internal/modules/usagepolicy': (Path('internal/modules/usagepolicy/abuse.go'), 'reset_link_pending'),
 }
 DSNS = ['YUEBOARD_TEST_DATABASE_URL', 'YUEBOARD_TRAFFIC_TEST_DATABASE_URL',
-        'YUEBOARD_EMAILVERIFY_TEST_DATABASE_URL', 'YUEBOARD_MIGRATION_TEST_DATABASE_URL']
+        'YUEBOARD_EMAILVERIFY_TEST_DATABASE_URL', 'YUEBOARD_MIGRATION_TEST_DATABASE_URL',
+        'YUEBOARD_TEMPLATE_TEST_DATABASE_URL']
 
 
 def fail(message: str) -> None:
@@ -62,7 +64,7 @@ def check_environment(phase: str) -> None:
             fail(f'{key} must point at the loopback disposable yueboard_test service')
         values.append(value)
     if len(set(values)) != 1:
-        fail('all four integration DSNs must address the same disposable service/database')
+        fail('all integration DSNs must address the same disposable service/database')
     if phase == 'remaining' and os.environ.get(
             'YUEBOARD_MIGRATION_TEST_ALLOW_RESET') != 'YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE':
         fail('disposable migration reset acknowledgement is required')
