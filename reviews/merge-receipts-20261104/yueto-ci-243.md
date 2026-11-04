@@ -1,6 +1,10 @@
 # yueto-ci #243 independent review
 
-Verdict: APPROVE. Exact reviewed head: `182ccd9d62d06ee45c9231498d4844093609d87f`.
+Verdict: APPROVE. Exact reviewed head: `8eac654bf48cfab8e485dfa4c50845ef2b93c9b2`.
+
+The coordinator independently approved the appended seven-file historical-fixture correction. The three production consumers still call strict skip_baseline before admission; historical validators retain their sealed epoch. Old current-input blobs and a missing current successor remain rejected. Original 182ccd9 source review and logs below remain historical evidence.
+
+Final Hosted Linux policy and workflow lint passed at exact 8eac654 (run 41747074043), raw log yueto-ci-243-hosted-final.log. The local full 691-test attempt had one unchanged GNU checksum-tool environment failure and one explicit skip; the entire affected nine-case retry module passed with actual GNU coreutils. That local run is not represented as wholly green. Central native Ops execution remains a separate qualification gate.
 
 Independent reviewer: Codex coordinator `/root`, separately from implementation. The coordinator read all four files, verified the three actual review/freeze/qualification hashes and approved the exact signed head.
 

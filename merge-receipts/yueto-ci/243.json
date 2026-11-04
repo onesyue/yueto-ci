@@ -2,22 +2,22 @@
   "schema": 1,
   "repo": "yueto-ci",
   "pr": 243,
-  "head": "182ccd9d62d06ee45c9231498d4844093609d87f",
+  "head": "8eac654bf48cfab8e485dfa4c50845ef2b93c9b2",
   "backfilled": false,
   "review": {
     "tool": "codex",
     "verdict": "approve",
-    "reviewed_head": "182ccd9d62d06ee45c9231498d4844093609d87f",
+    "reviewed_head": "8eac654bf48cfab8e485dfa4c50845ef2b93c9b2",
     "artifact": "reviews/merge-receipts-20261104/yueto-ci-243.md",
     "reviewer": "codex",
-    "reviewed_at": "2026-11-04T00:10:14.439028+00:00"
+    "reviewed_at": "2026-11-04T00:37:56.284692+00:00"
   },
   "parity": {
     "result": "pass",
-    "head": "182ccd9d62d06ee45c9231498d4844093609d87f",
-    "command": "TZ=UTC PYTHONDONTWRITEBYTECODE=1 /Users/j/Projects/yueto/scripts/heavy-run.sh /opt/homebrew/bin/gtimeout --signal=TERM --kill-after=30 600 /Users/j/.venvs/yueto/bin/python -m pytest -q -p no:cacheprovider tests/test_pytest_shards.py tests/test_ops_shard_workflow.py",
-    "log_sha256": "bc75490cfcf54f0355c762efcc815a6593c0ce4fbe104719bed2ee8f5ba8c0c5",
-    "ran_at": "2026-11-04T00:05:32.754255+00:00",
-    "runner": "mac-5f08d00f"
+    "head": "8eac654bf48cfab8e485dfa4c50845ef2b93c9b2",
+    "command": "GitHub Actions policy-ci.yml: python3 -m unittest discover -s tests -p 'test_*.py' -v; workflow lint (run 41747074043)",
+    "log_sha256": "7c5bab2c254c2149b10e990f73976d65bac6ec4b8b8de194dfe55118d0e11e24",
+    "ran_at": "2026-11-04T00:33:46Z",
+    "runner": "yueto-ci"
   }
 }
