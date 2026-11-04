@@ -102,3 +102,26 @@ proposed evidence. This checks the prospective contents, not git commitment:
 commit the receipt and review artifact through the companion evidence flow
 before running the normal audit, which still requires exact committed contents.
 This post-merge writer does not replace the premerge gate described above.
+
+## Automatic ancestor PR closure
+
+GitHub can mark an open ancestor PR merged when a reviewed descendant is merged.
+The old head's failed checks remain failed; do not fabricate a passing receipt
+for that old head. The audit can classify an observed shared-merge ancestor as
+`INDIRECT` only with a normal two-parent merge, a complete associated-PR lookup
+identifying one direct PR at the second parent, the same repository/target and
+valid direct-before-indirect merge timestamps. It must prove the old head is a
+strict ancestor of the second parent and is not already in the first parent's
+history. GitHub propagation can make the two timestamps differ.
+
+The direct source receives the ordinary fresh as-of-merge review/check/status
+and exact committed-receipt validation. Red, pending, unknown, late-only green,
+missing or malformed evidence never transfers acceptance. Evidence-only and
+accepted-history exceptions cannot certify this direct source. No recursive
+inheritance is allowed. Missing/ambiguous API, topology or ancestry proof leaves
+the audit incomplete. Premerge still checks the actual proposed live head.
+
+Machine and text output preserve the old findings as explicitly historical,
+not-passed evidence alongside the direct PR, head, merge SHA and both timestamps.
+Only immutable file-comparison cache entries are reused; no indirect verdict is
+persisted or accepted without current authenticated evidence.
