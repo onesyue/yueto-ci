@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yue-node",
+  "pr": 25,
+  "head": "d5692e9b7480af32815dce969890fac87cd8db47",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "d5692e9b7480af32815dce969890fac87cd8db47",
+    "artifact": "reviews/merge-receipts-20261104/yue-node-25.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-03T23:46:47.679770+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "d5692e9b7480af32815dce969890fac87cd8db47",
+    "command": "scripts/premerge.sh origin/master",
+    "log_sha256": "67884f94d06be0dca4078176e276fc7c4bdf748718e23a219ca4bb565254281a",
+    "ran_at": "2026-11-03T23:21:00.849246+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}

@@ -1,0 +1,12 @@
+ok      yueboard/web/src/i18n/en.json
+ok      yueboard/web-admin/src/i18n/en.json
+ok      yueboard/packages/ui/src/i18n/en.json
+ok      yueboard/internal/platform/i18n/locales/en.json
+ok      yueops/telegram-bot/yue/i18n/en.json
+ok      yueops/telegram-bot/yue/miniapp/src/i18n/en.json
+ok      yueops/frontend/src/core/i18n/en.json
+ok      yueops/checkin-api/i18n/en.json
+ok      yueops/web/i18n/en.json
+ok      yuelink/lib/i18n/strings.i18n.json
+ok      yuelink/lib/i18n/strings_zh-CN.i18n.json
+i18n catalogs: 全部运行时目录与 i18n/catalog 一致

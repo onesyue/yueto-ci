@@ -1,0 +1,23 @@
+✔ headings, paragraphs and CJK soft line breaks (2.020125ms)
+✔ level-1 and level-4 headings are not headings (0.244708ms)
+✔ lists: one level, continuation lines, ordered start (0.343875ms)
+✔ inline: strong, code, https link, help link; other schemes degrade to text (0.499708ms)
+✔ raw HTML stays literal text (rendered as a text node, never markup) (0.25775ms)
+✔ fenced code keeps content verbatim, including markdown-looking lines (0.219417ms)
+✔ callouts: TIP/NOTE/WARNING with paragraphs and lists inside (0.481458ms)
+✔ parseHelpRef accepts only help:<slug> with a contract-shaped slug (1.2115ms)
+✔ resolveHelpRef maps to the public /help/$slug route and falls back to the help home (0.899958ms)
+✔ helpPublicUrl uses the same hash-query lang form as the Bot projection (0.128333ms)
+✔ help search keeps a bounded query and drops anything else (0.349959ms)
+✔ parseHelpLang only admits the two product languages (0.152792ms)
+✔ groupHelpArticles orders categories, drops empty ones and unlisted articles (0.234584ms)
+✔ searchHelpArticles requires every term, ranks title hits first and skips unlisted (0.456625ms)
+✔ findHelpArticle opens unlisted articles by deep link (0.159583ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 145.945917
