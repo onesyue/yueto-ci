@@ -573,6 +573,9 @@ class RunnerAndActionRuntimeTest(unittest.TestCase):
             if "ubuntu-latest" in text:
                 bad.append(f"{name}: ubuntu-latest")
             for line in re.findall(r"(?m)^\s+runs-on:.*$", text):
+                if name in ("build.yml", "poll-sources.yml"):
+                    if line.strip() != "runs-on: [self-hosted, Linux, X64, yue-local-release]":
+                        bad.append(f"{name}: {line.strip()}")
                 if "ubuntu" not in line:
                     continue
                 hosted += 1
@@ -583,22 +586,19 @@ class RunnerAndActionRuntimeTest(unittest.TestCase):
     def test_no_workflow_uses_the_moving_ubuntu_label(self) -> None:
         bad, hosted = self.runner_violations(self.workflows())
         self.assertEqual(bad, [])
-        # Scan floor: plan/validate/build selectors, shadow, poll, rescan x3,
-        # deadman, policy.
-        self.assertGreaterEqual(hosted, 10)
-        build = BUILD.read_text()
-        # The signing job's hosted selector is the pinned image too.
-        self.assertIn("'[\"ubuntu-24.04\"]')", job(build, "build"))
+        for name, count in (("build.yml", 9), ("poll-sources.yml", 2)):
+            self.assertEqual(len(re.findall(r"(?m)^\s+runs-on:.*$", self.workflows()[name])), count)
 
-    def test_mutation_back_to_latest_is_caught(self) -> None:
-        for mutated_label in ("ubuntu-latest", "ubuntu-26.04"):
-            with self.subTest(label=mutated_label):
-                workflows = self.workflows()
-                workflows["build.yml"] = workflows["build.yml"].replace(
-                    "'[\"ubuntu-24.04\"]'", f"'[\"{mutated_label}\"]'", 1
-                )
-                bad, _ = self.runner_violations(workflows)
-                self.assertTrue(bad, mutated_label)
+    def test_mutation_back_to_hosted_or_incomplete_labels_is_caught(self) -> None:
+        for mutated_label in ("ubuntu-latest", "ubuntu-26.04", "ubuntu-24.04", "[self-hosted, Linux, X64]"):
+            for name in ("build.yml", "poll-sources.yml"):
+                with self.subTest(label=mutated_label, workflow=name):
+                    workflows = self.workflows()
+                    workflows[name] = workflows[name].replace(
+                        "[self-hosted, Linux, X64, yue-local-release]", mutated_label, 1
+                    )
+                    bad, _ = self.runner_violations(workflows)
+                    self.assertTrue(bad, mutated_label)
 
     def test_archived_node20_buf_setup_is_replaced_by_verified_buf_action(self) -> None:
         for name, text in self.workflows().items():

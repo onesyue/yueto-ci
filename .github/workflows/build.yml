@@ -36,12 +36,11 @@ on:
         required: false
         type: string
       runner:
-        description: 'runner label; self-hosted fallback is manual-only'
+        description: 'required self-hosted release runner'
         required: true
         type: choice
-        default: ubuntu-24.04
+        default: yue-local-release
         options:
-          - ubuntu-24.04
           - yue-local-release
   # repository_dispatch 入口已于 2026-09-28 删除：最近 300 次构建全部是 workflow_dispatch，
   # 工作区没有任何发送方，而它仍能以 onesyue 身份触发 promote——死入口只增加攻击面。
@@ -64,7 +63,7 @@ concurrency:
 
 jobs:
   plan:
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    runs-on: [self-hosted, Linux, X64, yue-local-release]
     # Bounded on purpose: the Actions default is 360 minutes, and a wedged
     # job would hold its concurrency group (and the release) for six hours.
     # Floors come from the 2026-09 run history: plan <1 min, validate
@@ -333,7 +332,7 @@ jobs:
       - name: Plan complete Ops jobs before collection
         id: ops_plan
         env:
-          OPS_RUNNER: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}
+          OPS_RUNNER: ${{ github.event.inputs.runner || 'yue-local-release' }}
           OPS_BOARD: ${{ steps.plan.outputs.yueboard_contract_ref }}
           # Public yueto-ci can run the whole validation matrix at once.
           # Sixteen ordinary groups plus native, reference and serial stay
@@ -377,7 +376,7 @@ jobs:
     needs: plan
     if: needs.plan.outputs.has_builds == 'true'
     continue-on-error: true
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64, yue-local-release]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -442,7 +441,7 @@ jobs:
 
   validate:
     needs: plan
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    runs-on: [self-hosted, Linux, X64, yue-local-release]
     # The 22k-test serial Ops gate reached 96% at the former 60-minute limit.
     # Keep all tests and allow the remaining suite/frontend stages to finish.
     timeout-minutes: 120
@@ -1731,7 +1730,7 @@ jobs:
   validation-evidence:
     needs: [plan, validate]
     if: always() && needs.plan.result == 'success'
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    runs-on: [self-hosted, Linux, X64, yue-local-release]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1808,7 +1807,7 @@ jobs:
     # target therefore skips this job without asking Actions to expand or run
     # an empty Docker matrix.
     if: needs.plan.outputs.has_builds == 'true'
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    runs-on: [self-hosted, Linux, X64, yue-local-release]
     timeout-minutes: 120
     permissions:
       contents: read
@@ -1916,7 +1915,7 @@ jobs:
         id: meta
         env:
           EVENT_NAME: ${{ github.event_name }}
-          RUNNER_KIND: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}
+          RUNNER_KIND: ${{ github.event.inputs.runner || 'yue-local-release' }}
         run: |
           set -euo pipefail
           SOURCE_SHA=$(git rev-parse HEAD)
@@ -2267,7 +2266,7 @@ jobs:
     # they go red (roll back to the previous signed digest if needed).
     # A failed or skipped candidate still skips this job.
     if: needs.plan.outputs.has_builds == 'true'
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    runs-on: [self-hosted, Linux, X64, yue-local-release]
     timeout-minutes: 30
     permissions:
       contents: read
@@ -2693,7 +2692,7 @@ jobs:
     # of publish, not separate job IDs. Wait for their publication result.
     needs: [plan, validate, validation-evidence, publish]
     if: failure()
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64, yue-local-release]
     timeout-minutes: 5
     permissions:
       issues: write
@@ -2734,7 +2733,7 @@ jobs:
     # so a fixed problem never leaves stale open issues behind.
     needs: [plan, validate, validation-evidence]
     if: success() && needs.plan.outputs.has_builds == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64, yue-local-release]
     timeout-minutes: 5
     permissions:
       issues: write
@@ -2760,7 +2759,7 @@ jobs:
     # privilege is cancelling this very run. Never runs on success.
     needs: [plan, build]
     if: failure()
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64, yue-local-release]
     timeout-minutes: 5
     permissions:
       actions: write

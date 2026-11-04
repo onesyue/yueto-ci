@@ -929,7 +929,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIsNotNone(build)
         assert compute is not None and build is not None
         self.assertIn(
-            "RUNNER_KIND: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}",
+            "RUNNER_KIND: ${{ github.event.inputs.runner || 'yue-local-release' }}",
             compute.group("body"),
         )
         self.assertIn(
@@ -963,7 +963,7 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow,
         )
 
-    def test_self_hosted_fallback_is_manual_and_opt_in(self) -> None:
+    def test_build_jobs_require_self_hosted_runner(self) -> None:
         runner_input = re.search(
             r"(?ms)^\s{6}runner:\n(?P<body>(?:^\s{8}.+\n)+)",
             self.workflow,
@@ -971,16 +971,12 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIsNotNone(runner_input)
         assert runner_input is not None
         self.assertIn("type: choice", runner_input.group("body"))
-        self.assertIn("default: ubuntu-24.04", runner_input.group("body"))
+        self.assertIn("default: yue-local-release", runner_input.group("body"))
+        self.assertNotIn("ubuntu-24.04", runner_input.group("body"))
         self.assertIn("- yue-local-release", runner_input.group("body"))
-        selector = (
-            "fromJSON(github.event_name == 'workflow_dispatch' && "
-            "github.event.inputs.runner == 'yue-local-release' && "
-            "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
-            "'[\"ubuntu-24.04\"]')"
-        )
-        # plan, validate, validation-evidence, candidate build, and publish.
-        self.assertEqual(self.workflow.count(selector), 5)
+        selectors = re.findall(r"^    runs-on: (.+)$", self.workflow, re.M)
+        self.assertEqual(len(selectors), 9)
+        self.assertEqual(set(selectors), {"[self-hosted, Linux, X64, yue-local-release]"})
         self.assertIn(
             "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,
