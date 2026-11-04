@@ -1,0 +1,605 @@
+Flutter 3.47.8 • channel stable • https://github.com/flutter/flutter.git
+Framework • revision 737ba8f885 (12 days ago) • 2026-10-22 21:37:31 -0700
+Engine • hash dfd2e6cb7d319db05e3bf1503f3e2ac60f6288a2 (revision cf636b1dfb) (12 days ago) • 2026-10-23 02:13:38.000Z
+Tools • Dart 3.13.7 • DevTools 2.60.0
+Resolving dependencies...
+Downloading packages...
+! hotkey_manager_macos 0.2.0 from path third_party/hotkey_manager_macos (overridden)
+! media_kit_libs_android_video 1.3.8 from path third_party/media_kit_libs_android_video (overridden)
+! media_kit_libs_ios_video 1.1.4 from path third_party/media_kit_libs_ios_video (overridden)
+! media_kit_libs_linux 1.2.1 from path third_party/media_kit_libs_linux (overridden)
+! media_kit_libs_macos_video 1.1.4 from path third_party/media_kit_libs_macos_video (overridden)
+! media_kit_libs_windows_video 1.0.11 from path third_party/media_kit_libs_windows_video (overridden)
+! media_kit_video 2.0.1 from path third_party/media_kit_video (overridden)
+Got dependencies!
+00:00 +0: loading /src/test/infrastructure/transport/rate_limit_backoff_test.dart
+00:00 +0: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: 429 surfaces as RateLimitedException with the server cooldown GET carries Retry-After
+00:00 +1: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: 429 surfaces as RateLimitedException with the server cooldown POST carries Retry-After
+00:00 +2: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: 429 surfaces as RateLimitedException with the server cooldown getList does not flatten a 429 into an empty list
+00:00 +3: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: 429 surfaces as RateLimitedException with the server cooldown a 429 with no/garbage Retry-After still yields a usable cooldown
+00:00 +4: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: 429 surfaces as RateLimitedException with the server cooldown a 429 is sent exactly once — no proxy->direct re-fire
+00:00 +5: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: repositories must not swallow the rate-limit signal AccountRepository.getAccountOverview rethrows instead of null
+00:00 +6: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: repositories must not swallow the rate-limit signal AccountRepository.getNotices rethrows instead of an empty list
+00:00 +7: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: repositories must not swallow the rate-limit signal CheckinRepository.checkin propagates the rate limit
+00:00 +8: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: presence poll cadence + backoff the idle cadence is minutes, not the 60s that caused the outage
+00:00 +9: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: presence poll cadence + backoff backoff is exponential, not a fixed interval
+00:00 +10: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: presence poll cadence + backoff a longer server Retry-After always wins
+00:00 +11: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: presence poll cadence + backoff a shorter server Retry-After never shortens our own backoff
+00:00 +12: /src/test/infrastructure/transport/rate_limit_backoff_test.dart: presence poll cadence + backoff backoff is capped so a wedged server cannot park us forever
+00:00 +13: loading /src/test/infrastructure/transport/doh_resolver_test.dart
+00:00 +13: /src/test/infrastructure/transport/doh_resolver_test.dart: default bootstrap survives unavailable overseas resolvers
+00:01 +14: /src/test/infrastructure/transport/doh_resolver_test.dart: an oversized DNS reply is rejected and never cached
+00:01 +15: /src/test/infrastructure/transport/doh_resolver_test.dart: a blackholed first resolver cannot hide a working fallback
+00:01 +16: /src/test/infrastructure/transport/doh_resolver_test.dart: a stalled AAAA response does not delay a usable A answer
+00:01 +17: /src/test/infrastructure/transport/doh_resolver_test.dart: concurrent callers share lookup and cannot mutate cached answers
+00:01 +18: /src/test/infrastructure/transport/doh_resolver_test.dart: mismatched DNS responses are rejected and are not cached
+00:01 +19: /src/test/infrastructure/transport/doh_resolver_test.dart: one deadline cancels all providers and permits a fresh retry
+00:01 +20: /src/test/infrastructure/transport/doh_resolver_test.dart: an invalid DNS name falls back without an unhandled error
+00:01 +21: /src/test/infrastructure/transport/doh_resolver_test.dart: edge health probe reaches a real server via the fallback answer
+00:01 +22: loading /src/test/infrastructure/transport/edge_business_dns_test.dart
+00:02 +22: /src/test/infrastructure/transport/edge_business_dns_test.dart: (setUpAll)
+00:02 +22: /src/test/infrastructure/transport/edge_business_dns_test.dart: cold panel GET reaches the authenticated origin through DoH
+00:03 +23: /src/test/infrastructure/transport/edge_business_dns_test.dart: one-shot panel POST uses the same DNS path and sends once
+00:03 +24: /src/test/infrastructure/transport/edge_business_dns_test.dart: reach uploader target fetch uses trusted edge DoH and original TLS host
+00:03 +25: /src/test/infrastructure/transport/edge_business_dns_test.dart: reach uploader rejects a mismatched certificate after DoH
+00:03 +26: /src/test/infrastructure/transport/edge_business_dns_test.dart: account and check-in transport uses the authenticated DNS path
+00:03 +27: /src/test/infrastructure/transport/edge_business_dns_test.dart: panel tries the proxy before the direct DoH fallback
+[PanelApi] Proxied route failed, falling back to direct: ClientException
+00:03 +28: /src/test/infrastructure/transport/edge_business_dns_test.dart: account tries the proxy before the direct DoH fallback
+[YueLinkHttp] Proxied request failed, falling back to direct: HttpException: Proxy failed to establish tunnel (502 Bad Gateway), uri = //api.edgemetrics.dev:46289
+00:03 +29: /src/test/infrastructure/transport/edge_business_dns_test.dart: DoH pinning still rejects a certificate for a different edge
+[PanelApi] All hosts exhausted: HandshakeException
+00:03 +30: /src/test/infrastructure/transport/edge_business_dns_test.dart: third-party hosts do not enter the edge DNS path
+[PanelApi] All hosts exhausted: HandshakeException
+00:03 +31: /src/test/infrastructure/transport/edge_business_dns_test.dart: auth rejection remains single-shot after successful DNS recovery
+00:03 +32: /src/test/infrastructure/transport/edge_business_dns_test.dart: an explicitly aborted HTTP request never falls back
+00:03 +33: /src/test/infrastructure/transport/edge_business_dns_test.dart: edge and site roster reads use DoH without relaxing signatures
+00:03 +34: /src/test/infrastructure/transport/edge_business_dns_test.dart: (tearDownAll)
+00:03 +34: loading /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart
+00:04 +34: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: (setUpAll)
+00:04 +34: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: login uses the trusted DoH survivor with failed OS DNS
+00:04 +35: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: login uses the trusted DoH survivor with poisoned OS DNS
+00:04 +36: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: login exhausts DoH and failed OS DNS without submitting
+[PanelApi] one-shot connect failed before send (route=direct): SocketException
+[PanelApi] one-shot connect failed before send (route=direct): SocketException
+00:04 +37: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: login rejects a poisoned OS answer after all DoH providers fail
+[PanelApi] one-shot connect failed before send (route=direct): HandshakeException
+00:05 +38: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: login retains its trusted entry after a signed rollback roster
+[EndpointPool] roster ver=9 < 已见 10, 拒绝降级
+[EndpointPool] roster from https://api.edgemetrics.dev:40515/roster was not acceptable; 试下一个
+[EndpointPool] 所有 roster host 均失败, 使用 builtinFallback
+00:05 +39: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: login retains its trusted entry after a signed expired roster
+[EndpointPool] roster 已过期 (expiresAt 早于现在), 拒绝 merge
+[EndpointPool] roster from https://api.edgemetrics.dev:44267/roster was not acceptable; 试下一个
+[EndpointPool] 所有 roster host 均失败, 使用 builtinFallback
+00:05 +40: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: login bounds stalled OS DNS and rejects its late answer
+00:05 +41: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: cached-refresh uses the trusted DoH survivor with failed OS DNS
+00:05 +42: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: cached-refresh uses the trusted DoH survivor with poisoned OS DNS
+00:05 +43: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: cached-refresh exhausts DoH and failed OS DNS without submitting
+[PanelApi] Primary unreachable, trying fallback: https://hub.edgemetrics.dev:44177
+[PanelApi] All hosts exhausted: _ClientSocketException
+00:05 +44: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: cached-refresh rejects a poisoned OS answer after all DoH providers fail
+[PanelApi] All hosts exhausted: HandshakeException
+00:06 +45: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: cached-refresh retains its trusted entry after a signed rollback roster
+[EndpointPool] roster ver=9 < 已见 10, 拒绝降级
+[EndpointPool] roster from https://api.edgemetrics.dev:36053/roster was not acceptable; 试下一个
+[EndpointPool] 所有 roster host 均失败, 使用 builtinFallback
+00:06 +46: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: cached-refresh retains its trusted entry after a signed expired roster
+[EndpointPool] roster 已过期 (expiresAt 早于现在), 拒绝 merge
+[EndpointPool] roster from https://api.edgemetrics.dev:42873/roster was not acceptable; 试下一个
+[EndpointPool] 所有 roster host 均失败, 使用 builtinFallback
+00:06 +47: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: cached-refresh bounds stalled OS DNS and rejects its late answer
+00:06 +48: /src/test/infrastructure/transport/cn01_joint_dns_consumer_test.dart: (tearDownAll)
+00:06 +48: loading /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart
+00:07 +48: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: (setUpAll)
+00:07 +48: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: real TLS preserves short writes, read pause, segmented bytes and metadata
+00:07 +49: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: close flushes the write side while peer EOF remains observable
+00:07 +50: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: deadline closes a real TLS read stall at the peer
+00:07 +51: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: destroy releases a blocked write and closes its real TLS peer
+00:07 +52: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: destroy hard-aborts actual pending TLS output to a paused peer
+00:07 +53: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: late authenticated delivery is rejected and its real peer closes
+00:07 +54: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: bounded CONNECT rejects non-200 and closes its raw peer
+00:07 +55: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: bounded CONNECT rejects oversized and closes its raw peer
+00:07 +56: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: bounded CONNECT rejects early-eof and closes its raw peer
+00:07 +57: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: bounded CONNECT rejects headers-stall and closes its raw peer
+00:08 +58: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: numeric TCP still rejects the wrong original TLS hostname
+00:08 +59: /src/test/infrastructure/transport/bootstrap_tls_socket_test.dart: (tearDownAll)
+00:08 +59: loading /src/test/infrastructure/transport/endpoint_pool_address_test.dart
+00:08 +59: /src/test/infrastructure/transport/endpoint_pool_address_test.dart: a refused first DNS address does not hide a reachable address
+00:08 +60: /src/test/infrastructure/transport/endpoint_pool_address_test.dart: an IPv6-only endpoint remains usable when its A answer fails
+00:08 +61: loading /src/test/infrastructure/transport/resolved_connection_test.dart
+00:09 +61: /src/test/infrastructure/transport/resolved_connection_test.dart: IPv6 overtakes a stalled IPv4 and cancels the losing dial
+00:09 +62: /src/test/infrastructure/transport/resolved_connection_test.dart: the deadline cancels every blackholed connection
+00:09 +63: /src/test/infrastructure/transport/resolved_connection_test.dart: cancellation also cancels a connection admitted afterwards
+00:09 +64: /src/test/infrastructure/transport/resolved_connection_test.dart: empty resolution and all refused addresses fail visibly
+00:09 +65: loading /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart
+00:10 +65: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: diagnosis is not replayed after the server accepts its body
+00:10 +66: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: diagnosis still fails over before any request is sent
+[YueLinkHttp] Edge route failed (SocketException); trying next
+00:10 +67: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: a non-JSON 401 is still an auth PanelApiException
+00:10 +68: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: transport failure falls through to a different edge host
+[YueLinkHttp] Edge route failed (PanelApiException); trying next
+00:10 +69: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: EndpointPool winner leads the deduplicated business route
+00:10 +70: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: check-in POST preserves auth/body across edge fallback
+[YueLinkHttp] Edge route failed (PanelApiException); trying next
+00:10 +71: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: POST performs at most one cross-host failover
+[YueLinkHttp] Edge route failed (PanelApiException); trying next
+[YueLinkHttp] Edge route failed (PanelApiException); trying next
+00:10 +72: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: 401 is authoritative and never replayed on another host
+00:10 +73: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: 429 and HTTP-200 business errors are never replayed
+00:10 +74: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: Cloudflare 520-524 on a read tries the next edge
+[YueLinkHttp] Edge route failed (PanelApiException); trying next
+[YueLinkHttp] Edge route failed (PanelApiException); trying next
+[YueLinkHttp] Edge route failed (PanelApiException); trying next
+[YueLinkHttp] Edge route failed (PanelApiException); trying next
+[YueLinkHttp] Edge route failed (PanelApiException); trying next
+00:10 +75: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: origin 500 on a read does not try the next edge
+00:10 +76: /src/test/infrastructure/transport/yuelink_http_client_wire_test.dart: getList treats 523 as an edge failure instead of an empty list
+[YueLinkHttp] Edge route failed (PanelApiException); trying next
+00:10 +77: loading /src/test/infrastructure/transport/signed_json_test.dart
+00:11 +77: /src/test/infrastructure/transport/signed_json_test.dart: canonical form matches Python sort_keys + compact separators
+00:11 +78: /src/test/infrastructure/transport/signed_json_test.dart: verify returns the payload without sig
+00:11 +79: /src/test/infrastructure/transport/signed_json_test.dart: any tampering is rejected
+00:11 +80: /src/test/infrastructure/transport/signed_json_test.dart: a different key is rejected
+00:11 +81: loading /src/test/infrastructure/transport/cn01_transport_final_test.dart
+00:15 +81: /src/test/infrastructure/transport/cn01_transport_final_test.dart: (setUpAll)
+00:15 +81: /src/test/infrastructure/transport/cn01_transport_final_test.dart: IPv6 blackhole is canceled while real IPv4 TLS login succeeds
+00:16 +82: /src/test/infrastructure/transport/cn01_transport_final_test.dart: login body accepted then TLS response lost is never replayed
+00:16 +83: /src/test/infrastructure/transport/cn01_transport_final_test.dart: register body accepted then TLS response lost is never replayed
+00:16 +84: /src/test/infrastructure/transport/cn01_transport_final_test.dart: first-login has one deadline and closes the stalled TLS socket
+CN01_DEADLINE_BOUNDED operation=first-login elapsed_ms=308 configured_ms=300
+00:16 +85: /src/test/infrastructure/transport/cn01_transport_final_test.dart: cached-account-refresh-leg has one deadline and closes the stalled TLS socket
+CN01_DEADLINE_BOUNDED operation=cached-account-refresh-leg elapsed_ms=311 configured_ms=300
+00:16 +86: /src/test/infrastructure/transport/cn01_transport_final_test.dart: ordinary panel read closes the stalled TLS socket
+[PanelApi] All hosts exhausted: TimeoutException
+00:17 +87: /src/test/infrastructure/transport/cn01_transport_final_test.dart: late DNS completion after login deadline admits no socket or fallback
+00:17 +88: /src/test/infrastructure/transport/cn01_transport_final_test.dart: deadline closes a response body stall without replaying login
+00:17 +89: /src/test/infrastructure/transport/cn01_transport_final_test.dart: a TCP task admitted after caller expiry is canceled exactly once
+00:17 +90: /src/test/infrastructure/transport/cn01_transport_final_test.dart: proxy CONNECT then TLS stall closes its raw peer at the shared deadline
+00:17 +91: /src/test/infrastructure/transport/cn01_transport_final_test.dart: actual proxy TLS login succeeds without local origin DNS
+00:17 +92: /src/test/infrastructure/transport/cn01_transport_final_test.dart: proxy login body accepted then lost reply is not replayed direct or fallback
+00:17 +93: /src/test/infrastructure/transport/cn01_transport_final_test.dart: stored account bootstrap stays single-flight while Dashboard starts its cached account profile
+CN01_CACHED_STAGE start=temporary-directory
+CN01_CACHED_STAGE complete=temporary-directory
+CN01_CACHED_STAGE start=persist-account-and-profile
+CN01_CACHED_STAGE complete=persist-account-and-profile
+CN01_CACHED_STAGE start=initialize-io-signals
+CN01_CACHED_STAGE complete=initialize-io-signals
+CN01_CACHED_STAGE start=restore-and-join-bootstrap
+CN01_CACHED_STAGE complete=restore-and-join-bootstrap
+[Messages] inbox endpoint unavailable, falling back: PanelApiException(404): fixture unavailable
+CN01_CACHED_STAGE start=start-cached-profile-and-abort-bootstrap
+[PanelApi] All hosts exhausted: RequestAbortedException
+[Auth] subscription sync failed: RequestAbortedException
+[Auth] subscription sync failed: RequestAbortedException
+CN01_CACHED_STAGE complete=start-cached-profile-and-abort-bootstrap
+[YueLinkHttp] Edge route failed (SocketException); trying next
+[YueLinkHttp] Edge route failed (SocketException); trying next
+[YueLinkHttp] Edge route failed (SocketException); trying next
+[YueLinkHttp] Edge route failed (SocketException); trying next
+CN01_CACHED_STAGE start=cleanup
+CN01_CACHED_STAGE complete=cleanup
+00:19 +94: /src/test/infrastructure/transport/cn01_transport_final_test.dart: (tearDownAll)
+00:19 +94: loading /src/test/infrastructure/transport/site_roster_loader_test.dart
+00:20 +94: /src/test/infrastructure/transport/site_roster_loader_test.dart: (setUpAll)
+00:20 +94: /src/test/infrastructure/transport/site_roster_loader_test.dart: parses the canonical roster and keeps mirror ordering
+00:20 +95: /src/test/infrastructure/transport/site_roster_loader_test.dart: a roster without www is accepted
+00:20 +96: /src/test/infrastructure/transport/site_roster_loader_test.dart: an empty www no longer discards the whole roster
+00:20 +97: /src/test/infrastructure/transport/site_roster_loader_test.dart: a field the server adds later is ignored, not fatal
+00:20 +98: /src/test/infrastructure/transport/site_roster_loader_test.dart: a mirror entry missing its panel is skipped, not fatal
+00:20 +99: /src/test/infrastructure/transport/site_roster_loader_test.dart: a roster without a usable panel is still rejected
+00:20 +100: /src/test/infrastructure/transport/site_roster_loader_test.dart: trust is unchanged: an unsigned or tampered roster is rejected
+00:20 +101: /src/test/infrastructure/transport/site_roster_loader_test.dart: (tearDownAll)
+00:20 +101: loading /src/test/infrastructure/transport/yuelink_http_client_assert_success_test.dart
+00:21 +101: /src/test/infrastructure/transport/yuelink_http_client_assert_success_test.dart: YueLinkHttpClient.assertSuccessForTest 200 + status:"fail" → throws (existing contract)
+00:21 +102: /src/test/infrastructure/transport/yuelink_http_client_assert_success_test.dart: YueLinkHttpClient.assertSuccessForTest 200 + status:"error" → throws (was the leak path)
+00:21 +103: /src/test/infrastructure/transport/yuelink_http_client_assert_success_test.dart: YueLinkHttpClient.assertSuccessForTest 200 + status:"success" → returns normally
+00:21 +104: /src/test/infrastructure/transport/yuelink_http_client_assert_success_test.dart: YueLinkHttpClient.assertSuccessForTest 200 + no status field → returns normally
+00:21 +105: /src/test/infrastructure/transport/yuelink_http_client_assert_success_test.dart: YueLinkHttpClient.assertSuccessForTest 401 → throws Unauthorized regardless of body
+00:21 +106: /src/test/infrastructure/transport/yuelink_http_client_assert_success_test.dart: YueLinkHttpClient.assertSuccessForTest 502 → throws (does not get coerced into success)
+00:21 +107: /src/test/infrastructure/transport/yuelink_http_client_assert_success_test.dart: YueLinkHttpClient.assertSuccessForTest 404 → throws Not found (specific branch)
+00:21 +108: loading /src/test/infrastructure/transport/request_deadline_test.dart
+00:22 +108: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline successful waits leave the shared deadline active
+00:22 +109: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline preserves an active sync error
+00:22 +110: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline preserves an active async error
+00:22 +111: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline later stages consume the original timer budget
+00:22 +112: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline timer expiry cleans resources even without a waiter
+00:22 +113: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline close is reentrant and isolates throwing cleanup callbacks
+00:22 +114: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline rejects 0:00:00.000000 before invoking an action
+00:22 +115: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline rejects -0:00:01.000000 before invoking an action
+00:22 +116: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline explicit close prevents admission while time remains
+00:22 +117: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline close wins over a queued value
+00:22 +118: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline late value cannot replace a timeout
+00:22 +119: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline close wins over a queued error
+00:22 +120: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline late error cannot replace a timeout
+00:22 +121: /src/test/infrastructure/transport/request_deadline_test.dart: RequestDeadline closing one caller releases its waiters without canceling shared work
+00:22 +122: loading /src/test/infrastructure/transport/endpoint_pool_roster_watermark_test.dart
+00:22 +122: /src/test/infrastructure/transport/endpoint_pool_roster_watermark_test.dart: persisted roster watermark rejects a lower signed version after restart
+[EndpointPool] roster ver=9 < 已见 10, 拒绝降级
+[EndpointPool] roster merged (ver=11): 1 remote + 0 builtin
+00:22 +123: /src/test/infrastructure/transport/endpoint_pool_roster_watermark_test.dart: current persisted version repopulates endpoints after restart
+[EndpointPool] roster merged (ver=10): 1 remote + 0 builtin
+00:22 +124: /src/test/infrastructure/transport/endpoint_pool_roster_watermark_test.dart: a stale first roster host does not block a fresher fallback
+[EndpointPool] roster ver=9 < 已见 10, 拒绝降级
+[EndpointPool] roster from https://stale.example was not acceptable; 试下一个
+[EndpointPool] roster merged (ver=11): 1 remote + 1 builtin
+00:22 +125: loading /src/test/core/transport/edge_kill_switch_removal_test.dart
+00:23 +125: /src/test/core/transport/edge_kill_switch_removal_test.dart: (setUpAll)
+00:23 +125: /src/test/core/transport/edge_kill_switch_removal_test.dart: the build-time flag is the single source of truth
+00:23 +126: /src/test/core/transport/edge_kill_switch_removal_test.dart: a stale kill-switch value from an upgraded install is inert
+00:23 +127: /src/test/core/transport/edge_kill_switch_removal_test.dart: (tearDownAll)
+00:23 +127: loading /src/test/core/transport/transport_rum_consent_test.dart
+00:24 +127: /src/test/core/transport/transport_rum_consent_test.dart: switch ON + foreground: samples the core (baseline taken)
+00:24 +128: /src/test/core/transport/transport_rum_consent_test.dart: switch OFF: never reads the core, drops any baseline
+00:24 +129: /src/test/core/transport/transport_rum_consent_test.dart: background: pauses sampling and discards the baseline
+00:24 +130: loading /src/test/core/transport/reach_probe_uploader_test.dart
+00:25 +130: /src/test/core/transport/reach_probe_uploader_test.dart: disabled: core forgets, queue cleared, no network at all
+00:25 +131: /src/test/core/transport/reach_probe_uploader_test.dart: switching diagnostics off mid-upload stops the remaining POSTs
+00:25 +132: /src/test/core/transport/reach_probe_uploader_test.dart: happy path: verified list → core, drain → one contract POST
+00:25 +133: /src/test/core/transport/reach_probe_uploader_test.dart: entry-list fetch carries the panel Bearer credential
+00:25 +134: /src/test/core/transport/reach_probe_uploader_test.dart: logged out: no entry-list request and no active probe
+00:25 +135: /src/test/core/transport/reach_probe_uploader_test.dart: bearerHeader normalises the stored credential
+00:25 +136: /src/test/core/transport/reach_probe_uploader_test.dart: tampered target list never reaches the core
+[Reach] targets unavailable: FormatException
+00:25 +137: /src/test/core/transport/reach_probe_uploader_test.dart: iOS with the tunnel up: no token, batches wait locally
+00:25 +138: /src/test/core/transport/reach_probe_uploader_test.dart: 401 drops the token and keeps the batch; 5xx retries at most 3 times; 4xx drops
+00:25 +139: /src/test/core/transport/reach_probe_uploader_test.dart: expired or malformed whoami answers are not used
+00:25 +140: /src/test/core/transport/reach_probe_uploader_test.dart: observations are chunked at 200 per POST
+00:25 +141: /src/test/core/transport/reach_probe_uploader_test.dart: switch turned off mid-run: the forced run is not lost
+00:25 +142: /src/test/core/transport/reach_probe_uploader_test.dart: foreground runs are rate limited
+00:25 +143: /src/test/core/transport/reach_probe_uploader_test.dart: sanitizeObs keeps only contract rows and fields
+00:25 +144: /src/test/core/transport/reach_probe_uploader_test.dart: pending queue is bounded to 100 KB, oldest dropped first
+00:25 +145: /src/test/core/transport/reach_probe_uploader_test.dart: older servers retain bounded unknown observations without attribution
+00:25 +146: /src/test/core/transport/reach_probe_uploader_test.dart: Wi-Fi, same-type epoch and account changes retire cached geo tokens
+00:25 +147: /src/test/core/transport/reach_probe_uploader_test.dart: late whoami cannot cross network context
+00:25 +148: /src/test/core/transport/reach_probe_uploader_test.dart: late whoami cannot cross account context
+00:25 +149: /src/test/core/transport/reach_probe_uploader_test.dart: context change between queued uploads preserves the unsent batch
+00:25 +150: /src/test/core/transport/reach_probe_uploader_test.dart: network type is normalised to the contract set
+00:25 +151: loading /src/test/core/transport/site_host_resolver_test.dart
+00:26 +151: /src/test/core/transport/site_host_resolver_test.dart: keeps the persisted host when every fresh candidate is unreachable
+00:26 +152: /src/test/core/transport/site_host_resolver_test.dart: chooses the first candidate whose health check succeeds
+00:26 +153: /src/test/core/transport/site_host_resolver_test.dart: persisted roster recovery same current version preserves freshness and recovers mirrors
+[SiteHostResolver] resolved panel=https://panel-b.example ver=10
+00:26 +154: /src/test/core/transport/site_host_resolver_test.dart: persisted roster recovery newer version preserves freshness and recovers mirrors
+[SiteHostResolver] resolved panel=https://panel-b.example ver=11
+00:26 +155: /src/test/core/transport/site_host_resolver_test.dart: persisted roster recovery downgrade preserves freshness and recovers mirrors
+[SiteHostResolver] stale site-roster ver=9 from https://api.edgemetrics.dev; 试下一个 host
+[SiteHostResolver] stale site-roster ver=9 from https://edge-relay-hub.b-cdn.net; 试下一个 host
+[SiteHostResolver] stale site-roster ver=9 from https://hub.edgemetrics.dev; 试下一个 host
+[SiteHostResolver] stale site-roster ver=9 from https://cdn.edgemetrics.dev; 试下一个 host
+00:26 +156: /src/test/core/transport/site_host_resolver_test.dart: persisted roster recovery expired current version preserves freshness and recovers mirrors
+[SiteHostResolver] stale site-roster ver=10 from https://api.edgemetrics.dev; 试下一个 host
+[SiteHostResolver] stale site-roster ver=10 from https://edge-relay-hub.b-cdn.net; 试下一个 host
+[SiteHostResolver] stale site-roster ver=10 from https://hub.edgemetrics.dev; 试下一个 host
+[SiteHostResolver] stale site-roster ver=10 from https://cdn.edgemetrics.dev; 试下一个 host
+00:26 +157: loading /src/test/core/transport/edge_fallback_contract_test.dart
+00:27 +157: /src/test/core/transport/edge_fallback_contract_test.dart: working production edge is the pre-bootstrap primary
+00:27 +158: /src/test/core/transport/edge_fallback_contract_test.dart: client contains no legacy brand host anywhere
+00:27 +159: /src/test/core/transport/edge_fallback_contract_test.dart: fallback chain is the builtin edge list minus the primary
+00:27 +160: /src/test/core/transport/edge_fallback_contract_test.dart: isKnownApiHost accepts edge hosts and rejects dead legacy hosts
+00:27 +161: loading /src/test/core/transport/transport_rum_test.dart
+00:28 +161: /src/test/core/transport/transport_rum_test.dart: readCounters 归因到 chains 的第一个元素（实际出口），不是 group
+00:28 +162: /src/test/core/transport/transport_rum_test.dart: readCounters 内置出站（DIRECT/REJECT/REJECT-DROP/PASS/COMPATIBLE）不当节点上报
+00:28 +163: /src/test/core/transport/transport_rum_test.dart: readCounters 畸形条目被逐条跳过，而不是让整份快照作废
+00:28 +164: /src/test/core/transport/transport_rum_test.dart: readCounters 快照结构不对时返回空表而不是抛异常
+00:28 +165: /src/test/core/transport/transport_rum_test.dart: diff 只统计两次快照都在的连接，且是增量
+00:28 +166: /src/test/core/transport/transport_rum_test.dart: diff 偏差方向一致地保守：新连接的累计量绝不被当成本窗口的增量
+00:28 +167: /src/test/core/transport/transport_rum_test.dart: diff 同一个 id 换了出口 = 连接被重建，该段增量不可归因
+00:28 +168: /src/test/core/transport/transport_rum_test.dart: diff 计数倒退（id 复用）被跳过，不产生负样本
+00:28 +169: /src/test/core/transport/transport_rum_test.dart: diff 零增量的空闲连接不占样本位
+00:28 +170: /src/test/core/transport/transport_rum_test.dart: diff 多条连接按出口聚合
+00:28 +171: /src/test/core/transport/transport_rum_test.dart: countryFromLocale 从 locale 取国家段
+00:28 +172: /src/test/core/transport/transport_rum_test.dart: countryFromLocale 拿不到就返回 null，而不是猜一个
+00:28 +173: /src/test/core/transport/transport_rum_test.dart: countryFromLocale 真实设备 locale 不会让它抛异常
+00:28 +174: /src/test/core/transport/transport_rum_test.dart: 它必须保持被动 🚨 源码里不得出现任何会自己发起连接的内核调用
+00:28 +175: /src/test/core/transport/transport_rum_test.dart: 它必须保持被动 样本下限与批量上限是显式常量，不是散在代码里的魔数
+00:28 +176: loading /src/test/services/panel_api_test.dart
+00:28 +176: /src/test/services/panel_api_test.dart: login success — returns token from auth_data
+00:28 +177: /src/test/services/panel_api_test.dart: login rejects raw database token when auth_data is empty
+00:28 +178: /src/test/services/panel_api_test.dart: login failure — panel returns status:fail
+00:28 +179: /src/test/services/panel_api_test.dart: login failure — HTTP 500 throws without replay
+00:28 +180: /src/test/services/panel_api_test.dart: login failure — empty token in response
+00:28 +181: /src/test/services/panel_api_test.dart: user locale reads nullable stored preference without collapsing auto
+00:28 +182: /src/test/services/panel_api_test.dart: user locale confirms follow-system null and an explicit locale
+00:28 +183: /src/test/services/panel_api_test.dart: user locale rejects malformed, mismatched, and unsupported confirmations
+[PanelApi] setUserLocale not applied (HTTP 0)
+[PanelApi] setUserLocale not applied (HTTP 0)
+[PanelApi] setUserLocale not applied (HTTP 0)
+[PanelApi] setUserLocale not applied (HTTP 0)
+00:28 +184: /src/test/services/panel_api_test.dart: getSubscribeData success — parses the credential-free account overview
+00:28 +185: /src/test/services/panel_api_test.dart: getSubscribeData profile metadata does not depend on the legacy subscribe_url
+00:28 +186: /src/test/services/panel_api_test.dart: getSubscribeData failure — status:fail (e.g., token expired)
+00:28 +187: /src/test/services/panel_api_test.dart: getSubscribeData runtime API prefers proxy then falls back to direct
+[PanelApi] Proxied route failed, falling back to direct: SocketException
+00:28 +188: /src/test/services/panel_api_test.dart: getSubscribeData HttpException on proxy route also falls back to direct
+[PanelApi] Proxied route failed, falling back to direct: HttpException
+00:28 +189: /src/test/services/panel_api_test.dart: durable account subscription reset operations reset sends operation ID and accepts HTTP 202 pending data
+00:28 +190: /src/test/services/panel_api_test.dart: getAccountSubscription returns the account subscription URL
+00:28 +191: /src/test/services/panel_api_test.dart: getAccountSubscription rejects a URL that could redirect the download
+00:28 +192: /src/test/services/panel_api_test.dart: getAccountSubscription still accepts a response that arrives after the ordinary 8-second bootstrap deadline
+00:37 +193: /src/test/services/panel_api_test.dart: subscription mutation timeout isolation ordinary reads keep their shorter deadline
+00:37 +194: /src/test/services/panel_api_test.dart: subscription mutation timeout isolation handoff and reset use the subscription deadline
+00:38 +195: /src/test/services/panel_api_test.dart: exchangeSubscriptionHandoff posts only the handoff code and returns the subscription
+00:38 +196: /src/test/services/panel_api_test.dart: exchangeSubscriptionHandoff rejects an unsafe URL returned by the exchange endpoint
+00:38 +197: /src/test/services/panel_api_test.dart: exchangeSubscriptionHandoff retries and falls back because the same code is idempotent
+[PanelApi] Retry 1/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: PanelApiException(status=503, business=false)
+00:39 +198: /src/test/services/panel_api_test.dart: Emby launch ticket uses authenticated POST and validates the fixed service origin
+00:39 +199: /src/test/services/panel_api_test.dart: Emby launch ticket rejects a reusable access token disguised as launch URL
+00:39 +200: /src/test/services/panel_api_test.dart: UserProfile accepts canonical YueBoard JSON numbers
+00:39 +201: /src/test/services/panel_api_test.dart: UserProfile extracts plan name from nested plan object
+00:39 +202: /src/test/services/panel_api_test.dart: UserProfile usagePercent calculation
+00:39 +203: /src/test/services/panel_api_test.dart: UserProfile usagePercent null when transferEnable is 0
+00:39 +204: /src/test/services/panel_api_test.dart: UserProfile missing or invalid traffic counters remain unknown, never zero
+00:39 +205: /src/test/services/panel_api_test.dart: UserProfile known zero traffic remains zero and overuse is safely clamped
+00:39 +206: /src/test/services/panel_api_test.dart: UserProfile toJson round-trip
+00:39 +207: /src/test/services/panel_api_test.dart: UserProfile canonical account id never truncates or coerces aliases
+00:39 +208: /src/test/services/panel_api_test.dart: UserProfile drops the account node UUID instead of retaining a secret
+00:39 +209: /src/test/services/panel_api_test.dart: _assertSuccess (via API calls) does not interpret boolean status as YueBoard business failure
+00:39 +210: /src/test/services/panel_api_test.dart: _assertSuccess (via API calls) does not interpret numeric status as YueBoard business failure
+00:39 +211: /src/test/services/panel_api_test.dart: _assertSuccess (via API calls) empty fallback message when no message or error field
+00:39 +212: /src/test/services/panel_api_test.dart: retry logic extra retries reuse the final backoff instead of indexing past it
+00:39 +213: /src/test/services/panel_api_test.dart: retry logic retries on SocketException (transient)
+[PanelApi] Retry 1/3 after: SocketException
+[PanelApi] Retry 2/3 after: SocketException
+00:41 +214: /src/test/services/panel_api_test.dart: retry logic does NOT retry on PanelApiException with status < 500
+00:41 +215: /src/test/services/panel_api_test.dart: retry logic retries on HTTP 500 (transient)
+[PanelApi] Retry 1/3 after: PanelApiException(status=500, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=500, business=false)
+00:42 +216: /src/test/services/panel_api_test.dart: retry logic exhausts all retries and rethrows last error
+[PanelApi] Retry 1/3 after: SocketException
+[PanelApi] Retry 2/3 after: SocketException
+[PanelApi] All hosts exhausted: SocketException
+00:44 +217: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/transfer: 503 retries on the same key
+[PanelApi] Retry 1/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: PanelApiException(status=503, business=false)
+00:45 +218: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/transfer: timeout retries on the same key
+[PanelApi] Retry 1/3 after: TimeoutException
+[PanelApi] Retry 2/3 after: TimeoutException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: TimeoutException
+00:47 +219: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/transfer: socket retries on the same key
+[PanelApi] Retry 1/3 after: SocketException
+[PanelApi] Retry 2/3 after: SocketException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: SocketException
+00:48 +220: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/transfer: proxy failure falls back to direct on the same key
+[PanelApi] Proxied route failed, falling back to direct: SocketException
+00:48 +221: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/transfer: two user operations use different keys
+00:48 +222: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/transfer: 409 in-flight retries on the same key, then is a localized "still processing"
+00:48 +223: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/transfer: 409 in-flight then the replayed response succeeds
+00:48 +224: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/apply: 503 retries on the same key
+[PanelApi] Retry 1/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: PanelApiException(status=503, business=false)
+00:50 +225: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/apply: timeout retries on the same key
+[PanelApi] Retry 1/3 after: TimeoutException
+[PanelApi] Retry 2/3 after: TimeoutException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: TimeoutException
+00:51 +226: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/apply: socket retries on the same key
+[PanelApi] Retry 1/3 after: SocketException
+[PanelApi] Retry 2/3 after: SocketException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: SocketException
+00:53 +227: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/apply: proxy failure falls back to direct on the same key
+[PanelApi] Proxied route failed, falling back to direct: SocketException
+00:53 +228: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/apply: two user operations use different keys
+00:53 +229: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/apply: 409 in-flight retries on the same key, then is a localized "still processing"
+00:53 +230: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/apply: 409 in-flight then the replayed response succeeds
+00:53 +231: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/cancel: 503 retries on the same key
+[PanelApi] Retry 1/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: PanelApiException(status=503, business=false)
+00:54 +232: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/cancel: timeout retries on the same key
+[PanelApi] Retry 1/3 after: TimeoutException
+[PanelApi] Retry 2/3 after: TimeoutException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: TimeoutException
+00:56 +233: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/cancel: socket retries on the same key
+[PanelApi] Retry 1/3 after: SocketException
+[PanelApi] Retry 2/3 after: SocketException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: SocketException
+00:58 +234: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/cancel: proxy failure falls back to direct on the same key
+[PanelApi] Proxied route failed, falling back to direct: SocketException
+00:58 +235: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/cancel: two user operations use different keys
+00:58 +236: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/cancel: 409 in-flight retries on the same key, then is a localized "still processing"
+00:58 +237: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/withdraw/cancel: 409 in-flight then the replayed response succeeds
+00:58 +238: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/save: 503 retries on the same key
+[PanelApi] Retry 1/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: PanelApiException(status=503, business=false)
+00:59 +239: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/save: timeout retries on the same key
+[PanelApi] Retry 1/3 after: TimeoutException
+[PanelApi] Retry 2/3 after: TimeoutException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: TimeoutException
+01:01 +240: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/save: socket retries on the same key
+[PanelApi] Retry 1/3 after: SocketException
+[PanelApi] Retry 2/3 after: SocketException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: SocketException
+01:02 +241: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/save: proxy failure falls back to direct on the same key
+[PanelApi] Proxied route failed, falling back to direct: SocketException
+01:02 +242: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/save: two user operations use different keys
+01:02 +243: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/save: 409 in-flight retries on the same key, then is a localized "still processing"
+01:02 +244: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/save: 409 in-flight then the replayed response succeeds
+01:02 +245: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/checkout: 503 retries on the same key
+[PanelApi] Retry 1/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: PanelApiException(status=503, business=false)
+01:04 +246: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/checkout: timeout retries on the same key
+[PanelApi] Retry 1/3 after: TimeoutException
+[PanelApi] Retry 2/3 after: TimeoutException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: TimeoutException
+01:05 +247: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/checkout: socket retries on the same key
+[PanelApi] Retry 1/3 after: SocketException
+[PanelApi] Retry 2/3 after: SocketException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: SocketException
+01:07 +248: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/checkout: proxy failure falls back to direct on the same key
+[PanelApi] Proxied route failed, falling back to direct: SocketException
+01:07 +249: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/checkout: two user operations use different keys
+01:07 +250: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/checkout: 409 in-flight retries on the same key, then is a localized "still processing"
+01:07 +251: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/checkout: 409 in-flight then the replayed response succeeds
+01:07 +252: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/gift-card/redeem: 503 retries on the same key
+[PanelApi] Retry 1/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: PanelApiException(status=503, business=false)
+01:08 +253: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/gift-card/redeem: timeout retries on the same key
+[PanelApi] Retry 1/3 after: TimeoutException
+[PanelApi] Retry 2/3 after: TimeoutException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: TimeoutException
+01:10 +254: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/gift-card/redeem: socket retries on the same key
+[PanelApi] Retry 1/3 after: SocketException
+[PanelApi] Retry 2/3 after: SocketException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: SocketException
+01:11 +255: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/gift-card/redeem: proxy failure falls back to direct on the same key
+[PanelApi] Proxied route failed, falling back to direct: SocketException
+01:11 +256: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/gift-card/redeem: two user operations use different keys
+01:11 +257: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/gift-card/redeem: 409 in-flight retries on the same key, then is a localized "still processing"
+01:11 +258: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/gift-card/redeem: 409 in-flight then the replayed response succeeds
+01:11 +259: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/refund: 503 retries on the same key
+[PanelApi] Retry 1/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: PanelApiException(status=503, business=false)
+01:13 +260: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/refund: timeout retries on the same key
+[PanelApi] Retry 1/3 after: TimeoutException
+[PanelApi] Retry 2/3 after: TimeoutException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: TimeoutException
+01:14 +261: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/refund: socket retries on the same key
+[PanelApi] Retry 1/3 after: SocketException
+[PanelApi] Retry 2/3 after: SocketException
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] All hosts exhausted: SocketException
+01:16 +262: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/refund: proxy failure falls back to direct on the same key
+[PanelApi] Proxied route failed, falling back to direct: SocketException
+01:16 +263: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/refund: two user operations use different keys
+01:16 +264: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/refund: 409 in-flight retries on the same key, then is a localized "still processing"
+01:16 +265: /src/test/services/panel_api_test.dart: keyed mutations retry and fail over with one Idempotency-Key /api/v1/user/order/refund: 409 in-flight then the replayed response succeeds
+01:16 +266: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/auth/login: 503 is not replayed
+01:16 +267: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/auth/login: timeout is not replayed
+01:16 +268: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/auth/login: socket is not replayed
+01:16 +269: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/changePassword: 503 is not replayed
+01:16 +270: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/changePassword: timeout is not replayed
+01:16 +271: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/changePassword: socket is not replayed
+01:16 +272: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/order/cancel: 503 is not replayed
+01:16 +273: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/order/cancel: timeout is not replayed
+01:16 +274: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/order/cancel: socket is not replayed
+01:16 +275: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/ticket/save: 503 is not replayed
+01:16 +276: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/ticket/save: timeout is not replayed
+01:16 +277: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/ticket/save: socket is not replayed
+01:16 +278: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/ticket/reply: 503 is not replayed
+01:16 +279: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/ticket/reply: timeout is not replayed
+01:16 +280: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/ticket/reply: socket is not replayed
+01:16 +281: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/ticket/close: 503 is not replayed
+01:16 +282: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/ticket/close: timeout is not replayed
+01:16 +283: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/ticket/close: socket is not replayed
+01:16 +284: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/comm/sendEmailVerify: 503 is not replayed
+01:16 +285: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/comm/sendEmailVerify: timeout is not replayed
+01:16 +286: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/comm/sendEmailVerify: socket is not replayed
+01:16 +287: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/auth/register: 503 is not replayed
+01:16 +288: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/auth/register: timeout is not replayed
+01:16 +289: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/auth/register: socket is not replayed
+01:16 +290: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/auth/forget: 503 is not replayed
+01:16 +291: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/auth/forget: timeout is not replayed
+01:16 +292: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/passport/auth/forget: socket is not replayed
+01:16 +293: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/totp/enable: 503 is not replayed
+01:16 +294: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/totp/enable: timeout is not replayed
+01:16 +295: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/totp/enable: socket is not replayed
+01:16 +296: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/totp/disable: 503 is not replayed
+01:16 +297: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/totp/disable: timeout is not replayed
+01:16 +298: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/totp/disable: socket is not replayed
+01:16 +299: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/totp/recovery-codes: 503 is not replayed
+01:16 +300: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/totp/recovery-codes: timeout is not replayed
+01:16 +301: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once /api/v1/user/totp/recovery-codes: socket is not replayed
+01:16 +302: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once without a proxy the single attempt goes direct to the primary
+01:16 +303: /src/test/services/panel_api_test.dart: un-keyed non-idempotent mutations are sent exactly once a successful one-shot sends the authorization header and body
+01:16 +304: /src/test/services/panel_api_test.dart: idempotent query POSTs keep transport retries and send no key
+[PanelApi] Retry 1/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=503, business=false)
+01:18 +305: /src/test/services/panel_api_test.dart: api.dart: every non-idempotent path uses its replay-safe helper
+01:18 +306: /src/test/services/panel_api_test.dart: PanelApiException extracts message from JSON body
+01:18 +307: /src/test/services/panel_api_test.dart: PanelApiException keeps structured error data without exposing a raw-body API
+01:18 +308: /src/test/services/panel_api_test.dart: PanelApiException returns raw body when not JSON
+01:18 +309: /src/test/services/panel_api_test.dart: PanelApiException toString includes status code and message
+01:18 +310: /src/test/services/panel_api_test.dart: LoginResponse uses YueBoard auth_data
+01:18 +311: /src/test/services/panel_api_test.dart: LoginResponse throws when both fields empty
+01:18 +312: /src/test/services/panel_api_test.dart: createOrder native shape accepts bare string trade_no
+01:18 +313: /src/test/services/panel_api_test.dart: createOrder native shape rejects wrapped trade_no objects
+01:18 +314: /src/test/services/panel_api_test.dart: createOrder native shape rejects unrecognised data shape
+01:18 +315: /src/test/services/panel_api_test.dart: coupon validation wire shape sends the selected billing period
+01:18 +316: /src/test/services/panel_api_test.dart: payment-method wire shape malformed list entries surface as PanelApiException
+01:18 +317: /src/test/services/panel_api_test.dart: fetchOrders native shape rejects paginator envelopes
+01:18 +318: /src/test/services/panel_api_test.dart: fetchOrders native shape accepts YueBoard list response
+01:18 +319: /src/test/services/panel_api_test.dart: getEmby 400 means "no Emby for this user", not a fault
+01:18 +320: /src/test/services/panel_api_test.dart: getEmby 404 means "no Emby for this user", not a fault
+01:18 +321: /src/test/services/panel_api_test.dart: getEmby 409 surfaces as an error, never as "no access"
+01:18 +322: /src/test/services/panel_api_test.dart: getEmby 500 surfaces as an error, never as "no access"
+[PanelApi] Retry 1/3 after: PanelApiException(status=500, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=500, business=false)
+[PanelApi] All hosts exhausted: PanelApiException(status=500, business=false)
+01:19 +323: /src/test/services/panel_api_test.dart: getEmby 502 surfaces as an error, never as "no access"
+[PanelApi] Retry 1/3 after: PanelApiException(status=502, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=502, business=false)
+[PanelApi] All hosts exhausted: PanelApiException(status=502, business=false)
+01:21 +324: /src/test/services/panel_api_test.dart: getEmby 503 surfaces as an error, never as "no access"
+[PanelApi] Retry 1/3 after: PanelApiException(status=503, business=false)
+[PanelApi] Retry 2/3 after: PanelApiException(status=503, business=false)
+[PanelApi] All hosts exhausted: PanelApiException(status=503, business=false)
+01:22 +325: loading /src/test/services/panel_one_shot_failover_test.dart
+01:23 +325: /src/test/services/panel_one_shot_failover_test.dart: a refused connect on the primary fails over, sent exactly once
+[PanelApi] one-shot connect failed before send (route=direct): SocketException
+01:23 +326: /src/test/services/panel_one_shot_failover_test.dart: a failure after the body was sent is never replayed
+01:23 +327: /src/test/services/panel_one_shot_failover_test.dart: a 5xx answer is surfaced, not failed over
+01:23 +328: /src/test/services/panel_one_shot_failover_test.dart: proxy route refused before send → direct, sent exactly once
+[PanelApi] one-shot connect failed before send (route=proxy): SocketException
+01:23 +329: /src/test/services/panel_one_shot_failover_test.dart: proxy got the request, response lost → never replayed direct
+01:23 +330: /src/test/services/panel_one_shot_failover_test.dart: proxy got the request, response timed out → never replayed direct
+01:24 +331: /src/test/services/panel_one_shot_failover_test.dart: two-factor disable follows the same rule (proxy dead → direct once)
+[PanelApi] one-shot connect failed before send (route=proxy): SocketException
+01:24 +332: /src/test/services/panel_one_shot_failover_test.dart: invite code generation is sent once even when the answer is a 5xx
+01:24 +333: /src/test/services/panel_one_shot_failover_test.dart: invite code generation still fails over before send
+[PanelApi] one-shot connect failed before send (route=direct): SocketException
+01:24 +334: /src/test/services/panel_one_shot_failover_test.dart: every host refusing surfaces the connect error
+[PanelApi] one-shot connect failed before send (route=direct): SocketException
+[PanelApi] one-shot connect failed before send (route=direct): SocketException
+01:24 +335: /src/test/services/panel_one_shot_failover_test.dart: password login safely selects a fallback before submitting
+[PanelApi] one-shot connect failed before send (route=direct): SocketException
+01:24 +336: /src/test/services/panel_one_shot_failover_test.dart: password login safely selects direct after proxy connect refusal
+[PanelApi] one-shot connect failed before send (route=proxy): SocketException
+01:24 +337: /src/test/services/panel_one_shot_failover_test.dart: password login accepted through proxy is not replayed after lost response
+01:24 +338: /src/test/services/panel_one_shot_failover_test.dart: password login accepted through proxy is not replayed after 503
+01:24 +339: /src/test/services/panel_one_shot_failover_test.dart: password login accepted through proxy is not replayed after timeout
+01:25 +340: loading /src/test/services/panel_edge_status_failover_test.dart
+01:25 +340: /src/test/services/panel_edge_status_failover_test.dart: 520–524 on a read tries the next entry and can succeed there
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+[PanelApi] Primary unreachable, trying fallback: https://fallback.example.com
+01:25 +341: /src/test/services/panel_edge_status_failover_test.dart: origin 5xx and client 4xx do not switch entries
+[PanelApi] All hosts exhausted: PanelApiException(status=500, business=false)
+[PanelApi] All hosts exhausted: PanelApiException(status=501, business=false)
+[PanelApi] All hosts exhausted: PanelApiException(status=418, business=false)
+[PanelApi] All hosts exhausted: PanelApiException(status=404, business=false)
+01:25 +342: /src/test/services/panel_edge_status_failover_test.dart: a proxied 522 falls back to direct; a proxied 500 does not
+[PanelApi] Proxied route failed, falling back to direct: PanelApiException(status=522, business=false)
+01:25 +343: /src/test/services/panel_edge_status_failover_test.dart: a received 520 on a one-shot mutation is not sent again
+01:25 +344: All tests passed!

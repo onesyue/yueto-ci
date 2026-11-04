@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yuelink",
+  "pr": 63,
+  "head": "bb034c504e01eecd9777f992edd892958787927f",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "bb034c504e01eecd9777f992edd892958787927f",
+    "artifact": "reviews/merge-receipts-20261104/yuelink-63.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-04T04:27:57.015079+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "bb034c504e01eecd9777f992edd892958787927f",
+    "command": "flutter test --no-pub --concurrency=1 --reporter=expanded test/infrastructure/transport test/core/transport test/services/panel_api_test.dart test/services/panel_one_shot_failover_test.dart test/services/panel_edge_status_failover_test.dart",
+    "log_sha256": "63dbf6d99d5a39b55b040216790439ac88fcc378b518d13f84bcf1a57840d398",
+    "ran_at": "2026-11-04T04:09:44.530019+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}
