@@ -439,11 +439,13 @@ def indirect_merge(owner, repo, pr, enforced_since, registered):
     if not isinstance(commit, dict):
         raise ValueError("invalid indirect merge commit response")
     parents = commit.get("parents")
-    if (commit.get("sha") != merge_sha or not isinstance(parents, list) or len(parents) != 2
+    if (commit.get("sha") != merge_sha or not isinstance(parents, list)
             or any(not isinstance(p, dict) or not isinstance(p.get("sha"), str)
                    or not re.fullmatch(r"[0-9a-f]{40}", p["sha"]) for p in parents)
-            or parents[0]["sha"] == parents[1]["sha"]):
-        raise ValueError("indirect merge requires an exact two-parent merge")
+            or len({p["sha"] for p in parents}) != len(parents)):
+        raise ValueError("invalid indirect merge parent evidence")
+    if len(parents) != 2:
+        return None  # Unsupported topology retains ordinary findings and history rules.
     first, second = (p["sha"] for p in parents)
     if old_head == second:
         return None  # A direct source's red/missing evidence is never transferable.

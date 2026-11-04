@@ -146,13 +146,61 @@ class IndirectMergeSource(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.run_audit()
 
-    def test_only_exact_normal_two_parent_merge_is_supported(self):
-        for parents in ([], self.parents[:1], self.parents * 2, [{"sha": "bad"}, self.parents[1]],
-                        [self.parents[0], self.parents[0]]):
+    def main_result(self, accepted=None):
+        output = io.StringIO()
+        with patch.object(AUDIT, "api", side_effect=self.api), patch.object(
+                AUDIT, "receipt", side_effect=self.receipt), patch.object(
+                AUDIT, "enforcement_cutoff", return_value=AUDIT.timestamp("2026-11-01T00:00:00Z")), patch.object(
+                AUDIT, "baseline", return_value=(AUDIT.timestamp("2026-11-03T00:00:00Z"), accepted or {})), patch.object(
+                AUDIT, "exceptions", return_value={}), patch(
+                "sys.argv", ["audit", "--repos", "yueto-ci", "--format", "json"]), contextlib.redirect_stdout(output):
+            code = AUDIT.main()
+        return code, json.loads(output.getvalue())
+
+    def test_unsupported_valid_topology_retains_unregistered_red_findings(self):
+        for parents in ([], [{"sha": "b" * 40}],
+                        [{"sha": letter * 40} for letter in "bef"]):
             with self.subTest(parents=parents):
                 self.parents = parents
-                with self.assertRaises(ValueError):
-                    self.run_audit()
+                code, result = self.main_result()
+                self.assertEqual(code, 1)
+                self.assertTrue(result["complete"])
+                self.assertEqual(result["unregistered"], 1)
+                old = next(row for row in result["findings"] if row["pr"] == 248)
+                self.assertIn("check_nonpassing_at_merge:policy", old["findings"])
+                self.assertIn("required_merge_receipt_missing", old["findings"])
+                self.assertNotIn("indirect_merge", old)
+
+    def test_unsupported_topology_preserves_exact_accepted_history_and_old_findings(self):
+        self.parents = [{"sha": "b" * 40}]
+        check = self.old_checks[0]
+        for checks in ([check | {"status": "queued", "completed_at": None}],
+                       [check | {"started_at": "2026-11-03T10:00:00Z", "completed_at": "2026-11-03T10:01:00Z"}]):
+            with self.subTest(checks=checks):
+                self.old_checks = checks
+                old = self.run_audit()[0]
+                findings = list(old["findings"])
+                accepted = {("yueto-ci", 248, self.old["head"]["sha"]): {"findings": findings}}
+                code, result = self.main_result(accepted)
+                self.assertEqual(code, 0)
+                self.assertTrue(result["complete"])
+                self.assertEqual(result["unregistered"], 0)
+                retained = next(row for row in result["findings"] if row["pr"] == 248)
+                self.assertEqual(retained["findings"], findings)
+                self.assertTrue(retained["accepted_history"])
+                self.assertNotIn("indirect_merge", retained)
+                self.assertIsNone(retained["receipt"])
+                self.assertEqual(self.main_result()[0], 1)
+
+    def test_malformed_or_duplicate_parent_evidence_remains_incomplete(self):
+        for parents in (None, {}, [None], [{"sha": None}], [{"sha": "bad"}],
+                        [{"sha": "b" * 40}, {"sha": "b" * 40}],
+                        [{"sha": "b" * 40}, {"sha": "e" * 40}, {"sha": "b" * 40}]):
+            with self.subTest(parents=parents):
+                self.parents = parents
+                code, result = self.main_result()
+                self.assertEqual(code, 2)
+                self.assertFalse(result["complete"])
 
     def test_commit_identity_and_target_and_time_must_match(self):
         original = copy.deepcopy(self.direct)

@@ -118,8 +118,12 @@ The direct source receives the ordinary fresh as-of-merge review/check/status
 and exact committed-receipt validation. Red, pending, unknown, late-only green,
 missing or malformed evidence never transfers acceptance. Evidence-only and
 accepted-history exceptions cannot certify this direct source. No recursive
-inheritance is allowed. Missing/ambiguous API, topology or ancestry proof leaves
-the audit incomplete. Premerge still checks the actual proposed live head.
+inheritance is allowed. Missing/ambiguous API or ancestry proof and malformed
+commit/parent evidence leave the audit incomplete. A well-formed merge with a
+parent count other than two cannot receive indirect attribution: its ordinary
+findings remain unchanged, including any existing exact accepted-history
+classification. Unaccepted red findings still block. Premerge still checks the
+actual proposed live head.
 
 Machine and text output preserve the old findings as explicitly historical,
 not-passed evidence alongside the direct PR, head, merge SHA and both timestamps.
