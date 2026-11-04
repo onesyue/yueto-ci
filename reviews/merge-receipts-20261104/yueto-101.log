@@ -1,0 +1,12 @@
+{
+  "command": [
+    "git",
+    "diff",
+    "--check",
+    "HEAD^",
+    "HEAD"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+}

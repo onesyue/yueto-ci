@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueboard",
+  "pr": 129,
+  "head": "a751ea8a652a2cef888b2416f4a7f8e617eab7e2",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "a751ea8a652a2cef888b2416f4a7f8e617eab7e2",
+    "artifact": "reviews/merge-receipts-20261104/yueboard-129.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-04T05:19:19.770045+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "a751ea8a652a2cef888b2416f4a7f8e617eab7e2",
+    "command": "YUEBOARD_FROZEN_CORPUS_OUTPUT=/receipt/linux-artifacts timeout --signal=TERM --kill-after=10s 240 go test -count=1 -timeout=180s -run \"^TestFrozenTemplateCorpus\" -v ./internal/modules/subscribe",
+    "log_sha256": "1019a0f79503e93aed0ae650d8f3ddc4e004899be4a93143f91a5ecf64ade88f",
+    "ran_at": "2026-11-04T05:17:06.763331+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}
