@@ -18,6 +18,6 @@
     "command": "Linux full scripts/test-release-lock.py + scripts/test-box-lock-registry.py: 190 passed, 1 explicit Darwin native skip, zero unexpected skips; corresponding Mac full modules 191 passed zero skips, final frozen focused cases 10 passed/74 deselected. Exact commit diff matches tested overlay SHA256 1104d8a5040119f5bbe6e358030025d549c49c3e6922cd5880beb50a93c9d7bc.",
     "log_sha256": "86b689915f31560b3f58ef61e38c99c15a4665fe317eda09456cdbd05a26ce3b",
     "ran_at": "2026-11-03T23:01:05.032310+00:00",
-    "runner": "linux-container-sha256:ee698ffafd0f02befc8b1350046f7c661001d0552dba5207e980022fdc6b0257"
+    "runner": "mac-5f08d00f"
   }
 }

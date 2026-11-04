@@ -1,0 +1,62 @@
+SKIP (missing sibling checkout): yuelink/lib/theme_semantic.g.dart
+SKIP (missing sibling checkout): yueboard/scripts/ci/verify-design-projection.mjs
+SKIP (missing sibling checkout): yueops/scripts/verify-design-projection.mjs
+SKIP (missing sibling checkout): yueops/scripts/design-tokens.snapshot.json
+SKIP (missing sibling checkout): yueboard/scripts/ci/design-tokens.snapshot.json
+SKIP (missing sibling checkout): yueops/packages/yue-web-kit/src/motion.g.ts
+SKIP (missing sibling checkout): yueboard/packages/ui/src/tokens.css
+SKIP (missing sibling checkout): yueboard/packages/ui/src/tokens.g.ts
+SKIP (missing sibling checkout): yueboard/internal/platform/mailtheme/tokens.g.go
+SKIP (missing sibling checkout): yueops/web/static/status.html
+SKIP (missing sibling checkout): yueops/site/src/styles/yue-tokens.css
+SKIP (missing sibling checkout): yueops/frontend/src/core/styles/tokens.css
+SKIP (missing sibling checkout): yueops/frontend/src/core/theme/antd-tokens.g.ts
+SKIP (missing sibling checkout): yueops/telegram-bot/yue/miniapp/src/styles.css
+SKIP (missing sibling checkout): yuelink/lib/theme.g.dart
+SKIP (missing sibling checkout): docs/yue-visual-language-2026.md
+design tokens: 16 target(s) out of sync with design/tokens/yue.tokens.json
+✔ Board literal module uses the same generated light and dark CSS roles (60.374625ms)
+✔ native generation check rejects a stale Board literal fallback (61.706958ms)
+✔ brand stays Apple blue, with accessible text and component pairs in every mode (2.2095ms)
+✔ CSS and Dart expose components, scales, reduced motion and exact brand (5.982708ms)
+✔ numeric projections preserve both primitive scales and wrapped chrome values (5.426625ms)
+✔ default generator is deterministic, checked in, and writes no application paths (240.54ms)
+✔ single-repo snapshot needs neither parent root nor other products (37.792375ms)
+✔ Board product scopes allow tenant text, default-palette bridges and purchase fills (637.655917ms)
+✔ tenant exceptions reject mixed selector lists (127.084958ms)
+✔ tenant exceptions reject non-positive theme constraints (429.153917ms)
+✔ default-palette exceptions reject mixed selector lists (155.402875ms)
+✔ default-palette exceptions reject non-positive theme constraints (451.767583ms)
+✔ purchase fills require every selector branch to be purchase-scoped (227.448084ms)
+✔ default-palette bridges require every media-query branch to exclude increased contrast (157.29075ms)
+✔ Board override exceptions reject unrelated properties and missing scopes (241.884292ms)
+✔ generator rejects whole-file verifier drift and regenerates exact template bytes (481.031459ms)
+✔ deleted modern fallback fence, spring and semantic override mutations fail (143.888917ms)
+✔ missing snapshot fails rather than falling back to an unverified literal palette (35.35775ms)
+✔ Ops site source fences remain verified after separating public bytes (127.946583ms)
+✔ font stacks name only OS-shipped fonts (no web font is loaded anywhere) (0.0745ms)
+✔ scale, weights and motion match the spec (0.133584ms)
+✔ generator covers the status page and YueBoard emails (46.161875ms)
+✔ CSS Color 4 conversion is reversible across the sRGB cube (3.6465ms)
+✔ authoring source resolves aliases and checks every declared contrast contract (2.170792ms)
+✔ small status text keeps margin on its actual tinted badge surfaces (3.760791ms)
+✔ missing targets, cyclic aliases, type mismatches, malformed colors fail closed (2.639708ms)
+✔ derived hex, gamut delta and real foreground contrast cannot silently drift (3.60425ms)
+✔ springs share physical damping and sampled stable endpoints (0.448916ms)
+✔ CSS precision stays within surface delta and palettes never leak as literals (2.735916ms)
+✔ both vendored core projections are checked without runtime sibling imports (60.159042ms)
+✔ core drift, deleted projection, stale module, source floor and missing sibling fail (294.582ms)
+✔ format unknown quota, fractional bytes, and CNY unambiguously (3.085417ms)
+✔ locale negotiation and persisted theme modes keep product defaults explicit (0.105084ms)
+✔ problem projection handles RFC and legacy errors without inventing retryable 4xx (0.073083ms)
+✔ operation identity is preserved and mutations are never retried (8.131833ms)
+✔ deadline remains active after headers while the body is stalled (4.662041ms)
+✔ upstream cancellation propagates once and timeout origin cannot be relabelled (16.024417ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4173.419667
