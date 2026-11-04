@@ -1,0 +1,11 @@
+UTC: 2026-11-04T21:23:07.598605+00:00
+Command: cd /tmp/rc-371 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 /Users/j/Projects/yueto/yueops/.venv/bin/python /Users/j/codex-runs/1104c/rcpt-bind.py 371
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+Exact prefetched diff matches local base..head; mergeCommit equals head.
+base 72bf60474359d831f0cee70a6246ebf50952ea26 head d91a87f73b3aa20a0320b92252b8ee9be1f01743
+371.json 52292da25db11771eabc5d867bfc2325bbec1c7b0be461d3a0f15774f30f98eb
+371.diff 7f32bedb5615abb638928058f5966002da67fd890c38a9cbfc3da0005a86849c
+whitespace exit 0
+Source tracked changes: none
+
+Exit code: 0

@@ -1,0 +1,7 @@
+UTC: 2026-11-04T21:22:15.499544+00:00
+Command: cd /tmp/rc-360 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 docker info --format '{{.OSType}}'
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+
+permission denied while trying to connect to the docker API at unix:///Users/j/.docker/run/docker.sock
+
+Exit code: 1

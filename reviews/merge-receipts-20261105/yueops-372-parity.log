@@ -1,0 +1,23 @@
+Scoped head/base evidence bundle. Individual logs follow verbatim.
+
+UTC: 2026-11-04T21:24:19.428662+00:00
+Command: cd /tmp/rc-372 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 /Users/j/Projects/yueto/yueops/.venv/bin/python -m pytest -q -n 4 -p no:cacheprovider tests/test_provision_tuning_private_stage_20260905.py
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+bringing up nodes...
+bringing up nodes...
+
+.......................................                                  [100%]
+39 passed in 1.44s
+
+Exit code: 0
+
+UTC: 2026-11-04T21:24:21.211965+00:00
+Command: cd /tmp/rc-371 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 /Users/j/Projects/yueto/yueops/.venv/bin/python -m pytest -q -n 4 -p no:cacheprovider tests/test_provision_tuning_private_stage_20260905.py
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+bringing up nodes...
+bringing up nodes...
+
+.......................................                                  [100%]
+39 passed in 1.58s
+
+Exit code: 0

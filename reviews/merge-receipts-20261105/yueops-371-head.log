@@ -1,0 +1,16 @@
+UTC: 2026-11-04T21:22:01.832834+00:00
+Command: cd /tmp/rc-371 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 /Users/j/Projects/yueto/yueops/.venv/bin/python -m pytest -q -n 4 -p no:cacheprovider tests/test_service_role_grants_20261102.py tests/test_service_grant_dependencies_20261102.py tests/test_role_grant_manifest_generated.py tests/test_ai_quality_round2_20261105.py tests/test_ai_quality_p015_20261101.py tests/test_yueboard_chat_transcript.py
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+bringing up nodes...
+bringing up nodes...
+
+ss.s...............................s..ss......sssssssssssssssss.ss...... [ 14%]
+...................xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx [ 29%]
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx [ 44%]
+xxxxxxxxxxxxxxxxxx..ss........s.xxxx.sxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx [ 59%]
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx... [ 74%]
+........................................................................ [ 89%]
+..............xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.....                       [100%]
+172 passed, 29 skipped, 281 xfailed in 52.09s
+
+Exit code: 0
