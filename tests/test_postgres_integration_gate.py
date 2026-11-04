@@ -541,6 +541,48 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
                         for group in ('domain', 'commands', 'modules', 'migrations')), [])
         self.assertEqual(executed, [path for path in GATE.ORDER if path != abuse_package])
 
+    def test_template_cas_writer_requires_its_real_integration_suite(self):
+        (self.root / 'schema-floor.txt').write_text('153\n')
+        abuse_package = './internal/modules/admin'
+        for path in GATE.ORDER:
+            if path != abuse_package:
+                self.package(path)
+        self.command_gate()
+        source, marker = GATE.SOURCE_CAPABILITY_ADDITIONS[abuse_package]
+        source = self.root / source
+        source.parent.mkdir(parents=True)
+        source.write_text('package fixture\nconst pendingIntent = "' + marker + '"\n')
+        result = self.command('domain', self.root / 'receipt.json')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing=['./internal/modules/admin']", result.stderr)
+        self.package(abuse_package)
+        receipt = self.root / 'recovered.json'
+        domain = self.command('domain', receipt)
+        self.assertEqual(domain.returncode, 0, domain.stdout + domain.stderr)
+        remaining = self.command('remaining', receipt)
+        self.assertEqual(remaining.returncode, 0, remaining.stdout + remaining.stderr)
+        self.assertIn(abuse_package, json.loads(receipt.read_text())['modules']['packages'])
+
+    def test_pre_cas_source_keeps_its_actual_suites(self):
+        (self.root / 'schema-floor.txt').write_text('153\n')
+        abuse_package = './internal/modules/admin'
+        for path in GATE.ORDER:
+            if path != abuse_package:
+                self.package(path)
+        self.command_gate()
+        source, _ = GATE.SOURCE_CAPABILITY_ADDITIONS[abuse_package]
+        source = self.root / source
+        source.parent.mkdir(parents=True)
+        source.write_text('package fixture\nconst previousWriter = true\n')
+        receipt = self.root / 'receipt.json'
+        domain = self.command('domain', receipt)
+        self.assertEqual(domain.returncode, 0, domain.stdout + domain.stderr)
+        remaining = self.command('remaining', receipt)
+        self.assertEqual(remaining.returncode, 0, remaining.stdout + remaining.stderr)
+        executed = sum((json.loads(receipt.read_text())[group]['packages']
+                        for group in ('domain', 'commands', 'modules', 'migrations')), [])
+        self.assertEqual(executed, [path for path in GATE.ORDER if path != abuse_package])
+
     def test_pg_execution_does_not_run_unrelated_optional_unit_test(self):
         row = self.package('./internal/modules/subscribe')
         (self.root / row['path'] / 'unit_test.go').write_text(
