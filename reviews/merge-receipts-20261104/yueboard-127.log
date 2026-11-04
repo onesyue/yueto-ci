@@ -1,0 +1,4 @@
+=== RUN   TestOpenPullRequestMigrationNumbers
+--- PASS: TestOpenPullRequestMigrationNumbers (22.75s)
+PASS
+ok  	github.com/onesyue/yueboard/internal/platform/db	22.756s

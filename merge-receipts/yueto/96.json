@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto",
+  "pr": 96,
+  "head": "89351c89b20b9b3064e06295aede55467860a319",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "89351c89b20b9b3064e06295aede55467860a319",
+    "artifact": "reviews/merge-receipts-20261104/yueto-96.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-04T02:43:11.458800+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "89351c89b20b9b3064e06295aede55467860a319",
+    "command": "Linux lens: python scripts/test-release-chain-drivers.py; python -m pytest -q -rs scripts/test-check-go-test-skips.py scripts/test-gauntlet-preflight.py scripts/test-ui-scope.py scripts/test-contracts-unit-select.py",
+    "log_sha256": "843fb75437cac833b1bf0e22bf4c2d8ea79e55b7f3667f53e2cef2d994804d1c",
+    "ran_at": "2026-11-04T02:44:01.483459+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}
