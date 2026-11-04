@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto-ci",
+  "pr": 243,
+  "head": "182ccd9d62d06ee45c9231498d4844093609d87f",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "182ccd9d62d06ee45c9231498d4844093609d87f",
+    "artifact": "reviews/merge-receipts-20261104/yueto-ci-243.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-04T00:10:14.439028+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "182ccd9d62d06ee45c9231498d4844093609d87f",
+    "command": "TZ=UTC PYTHONDONTWRITEBYTECODE=1 /Users/j/Projects/yueto/scripts/heavy-run.sh /opt/homebrew/bin/gtimeout --signal=TERM --kill-after=30 600 /Users/j/.venvs/yueto/bin/python -m pytest -q -p no:cacheprovider tests/test_pytest_shards.py tests/test_ops_shard_workflow.py",
+    "log_sha256": "bc75490cfcf54f0355c762efcc815a6593c0ce4fbe104719bed2ee8f5ba8c0c5",
+    "ran_at": "2026-11-04T00:05:32.754255+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}
