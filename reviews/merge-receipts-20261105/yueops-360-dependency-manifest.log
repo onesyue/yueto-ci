@@ -1,0 +1,6 @@
+UTC: 2026-11-04T21:22:15.179065+00:00
+Command: cd /tmp/rc-360 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 /Users/j/Projects/yueto/yueops/.venv/bin/python scripts/check-python-dependency-groups.py
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+Python dependency groups match all production compatibility inputs.
+
+Exit code: 0

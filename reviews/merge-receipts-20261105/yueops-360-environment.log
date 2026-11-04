@@ -1,0 +1,7 @@
+UTC: 2026-11-04T21:22:15.293617+00:00
+Command: cd /tmp/rc-360 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 /Users/j/Projects/yueto/yueops/.venv/bin/python -c 'import platform,pytest,sqlglot;print(platform.platform());print("Python",platform.python_version(),"pytest",pytest.__version__,"SQLGlot",sqlglot.__version__)'
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+macOS-27.0.1-arm64-arm-64bit-Mach-O
+Python 3.13.15 pytest 9.1.1 SQLGlot 28.0.0
+
+Exit code: 0

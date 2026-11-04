@@ -1,0 +1,52 @@
+UTC: 2026-11-04T21:21:07.199843+00:00
+Command: cd /tmp/rc-360 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 /Users/j/Projects/yueto/yueops/.venv/bin/python -m pytest -q -n 4 -p no:cacheprovider tests/test_sql_columns_exist_in_schema_20261102.py tests/test_monitor_role_covers_guard_sql_20260924.py tests/test_service_role_grants_20261102.py
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [ 33%]
+................................................................s..s.... [ 66%]
+..s..ss..sFsssssssssssss.ssssss...............F........................  [100%]
+=================================== FAILURES ===================================
+______________ test_static_service_grants[app_yueops_web_bot_ro] _______________
+[gw3] darwin -- Python 3.13.15 /Users/j/Projects/yueto/yueops/.venv/bin/python
+
+service = Service(role='app_yueops_web_bot_ro', database='yue-to', paths=('web/api', 'web/scheduler_support_alerts.py'), policy='deploy/sql/yueops-web-bot-reader.sql', gap='web reader/writer routing and ORM require review')
+
+    @pytest.mark.parametrize("service", SERVICES, ids=lambda s: s.role)
+    def test_static_service_grants(service):
+        checked, _ = inventory(service)
+        if not checked:
+            pytest.skip("Uncovered static consumer: " + (service.gap or "complex SQL; see matrix"))
+        failures = [item for item in missing(service) if (service.role, *item) not in REAL_GAPS]
+>       assert not failures, f"{service.role}: {failures}"
+E       AssertionError: app_yueops_web_bot_ro: [('web/api/support.py:33', 'ai_feedback', 'SELECT', 'ref_key'), ('web/api/support.py:619', 'ai_feedback', 'SELECT', 'ref_key'), ('web/api/support.py:638', 'ai_feedback', 'SELECT', 'ref_key')]
+E       assert not [('web/api/support.py:33', 'ai_feedback', 'SELECT', 'ref_key'), ('web/api/support.py:619', 'ai_feedback', 'SELECT', 'ref_key'), ('web/api/support.py:638', 'ai_feedback', 'SELECT', 'ref_key')]
+
+tests/test_service_role_grants_20261102.py:517: AssertionError
+__________ test_new_unresolved_requirements_need_explicit_gap_review ___________
+[gw1] darwin -- Python 3.13.15 /Users/j/Projects/yueto/yueops/.venv/bin/python
+
+    def test_new_unresolved_requirements_need_explicit_gap_review():
+        documented = set()
+        for line in read("docs/role-grant-matrix-20261102.md").splitlines():
+            fields = [v.strip().replace('`', '') for v in line.split('|')[1:-1]]
+            if len(fields) == 5 and fields[0] == "unresolved":
+                for col in fields[4].split(', '):
+                    documented.add((*fields[1:4], col))
+        actual = {(s.role, table, op, col) for s in SERVICES
+                  for _, table, op, col in inventory(s)[1]}
+>       assert actual <= documented, f"New uncovered requirements need review: {sorted(actual - documented)}"
+E       AssertionError: New uncovered requirements need review: [('app_yueops', 'ai_feedback', 'SELECT', 'ref_key')]
+E       assert {('app_checki...ef_key'), ...} <= {('app_checki...ef_key'), ...}
+E         
+E         Extra items in the left set:
+E         ('app_yueops', 'ai_feedback', 'SELECT', 'ref_key')
+
+tests/test_service_role_grants_20261102.py:700: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_service_role_grants_20261102.py::test_static_service_grants[app_yueops_web_bot_ro]
+FAILED tests/test_service_role_grants_20261102.py::test_new_unresolved_requirements_need_explicit_gap_review
+2 failed, 188 passed, 25 skipped in 33.56s
+
+Exit code: 1

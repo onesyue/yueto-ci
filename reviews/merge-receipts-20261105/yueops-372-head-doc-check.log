@@ -1,0 +1,7 @@
+UTC: 2026-11-04T21:24:23.468883+00:00
+Command: cd /tmp/rc-372 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 /Users/j/Projects/yueto/yueops/.venv/bin/python /Users/j/codex-runs/1104c/rcpt-doc-check.py
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+No tracked inbound references to deleted document stem; git grep exit 1 (expected).
+git diff --check HEAD^ HEAD passed
+
+Exit code: 0

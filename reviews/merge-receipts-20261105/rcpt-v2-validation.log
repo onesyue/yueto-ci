@@ -1,0 +1,4 @@
+PR 360: exact template keys, head binding, artifact presence, all log hashes and source tracked cleanliness PASS; parity=pass
+PR 371: exact template keys, head binding, artifact presence, all log hashes and source tracked cleanliness PASS; parity=unknown
+PR 372: exact template keys, head binding, artifact presence, all log hashes and source tracked cleanliness PASS; parity=pass
+Report copies identical; lane HEAD unchanged; no commits.

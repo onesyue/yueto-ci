@@ -1,0 +1,20 @@
+Command: python3 -m unittest discover -s tests -p test_write_merge_receipt.py -v
+test_audit_rejection_preserves_existing_receipt (test_write_merge_receipt.WriteMergeReceiptTests.test_audit_rejection_preserves_existing_receipt) ... ok
+test_audit_validation_rejects_author_as_reviewer_and_empty_command (test_write_merge_receipt.WriteMergeReceiptTests.test_audit_validation_rejects_author_as_reviewer_and_empty_command) ... ok
+test_backfilled_computed_for_either_timestamp_including_24h_boundary (test_write_merge_receipt.WriteMergeReceiptTests.test_backfilled_computed_for_either_timestamp_including_24h_boundary) ... ok
+test_dry_run_replace_preserves_existing (test_write_merge_receipt.WriteMergeReceiptTests.test_dry_run_replace_preserves_existing) ... ok
+test_dry_run_writes_nothing (test_write_merge_receipt.WriteMergeReceiptTests.test_dry_run_writes_nothing) ... ok
+test_evidence_paths_must_exist_inside_repository (test_write_merge_receipt.WriteMergeReceiptTests.test_evidence_paths_must_exist_inside_repository) ... ok
+test_merged_head_success (test_write_merge_receipt.WriteMergeReceiptTests.test_merged_head_success) ... ok
+test_over_24_hours_refused (test_write_merge_receipt.WriteMergeReceiptTests.test_over_24_hours_refused) ... ok
+test_pre_merge_head_refused (test_write_merge_receipt.WriteMergeReceiptTests.test_pre_merge_head_refused) ... ok
+test_refuse_overwrite_and_replace_without_backup (test_write_merge_receipt.WriteMergeReceiptTests.test_refuse_overwrite_and_replace_without_backup) ... ok
+test_timezone_required (test_write_merge_receipt.WriteMergeReceiptTests.test_timezone_required) ... ok
+test_unmerged_refused (test_write_merge_receipt.WriteMergeReceiptTests.test_unmerged_refused) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.072s
+
+OK
+
+Exit code: 0

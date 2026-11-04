@@ -1,0 +1,232 @@
+UTC: 2026-11-04T21:22:54.151331+00:00
+Command: cd /tmp/rc-360 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 /Users/j/Projects/yueto/yueops/.venv/bin/python -m pytest -q -n 4 -p no:cacheprovider tests/test_service_role_grants_20261102.py tests/test_service_grant_dependencies_20261102.py tests/test_role_grant_manifest_generated.py tests/test_ai_quality_round2_20261105.py tests/test_ai_quality_p015_20261101.py tests/test_yueboard_chat_transcript.py
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+bringing up nodes...
+bringing up nodes...
+
+sss.s...s................................s..ss.....ss.sssssssssssssF.... [ 15%]
+........FssF......Fxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx [ 30%]
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx [ 45%]
+xxxxxxxxxxxxxFFss........s.xxxxxxxxxxxxxxxxxx.xsxxxxxxxxxxxxxxxxxxxxxxxx [ 61%]
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.......... [ 76%]
+..................................................x....x..x..x....x....x [ 91%]
+x..x..x....x..xxx.xxxxxxxxxxxxxxxE.E....                                 [100%]
+==================================== ERRORS ====================================
+__________________ ERROR at setup of test_generated_manifest ___________________
+[gw0] darwin -- Python 3.13.15 /Users/j/Projects/yueto/yueops/.venv/bin/python
+
+    @pytest.fixture(scope='module')
+    def generated():
+>       return gate.generate()
+               ^^^^^^^^^^^^^^^
+
+tests/test_role_grant_manifest_generated.py:15: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/gen-role-grant-tests.py:99: in generate
+    validate_gaps(service, actual, documented)
+scripts/gen-role-grant-tests.py:79: in validate_gaps
+    audit.assert_checkin_gap_baseline({row[:3] for row in actual})
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+actual = {('ai_cost_daily', 'INSERT', '*'), ('ai_cost_daily', 'SELECT', '*'), ('ai_cost_daily', 'UPDATE', '*'), ('ai_feedback', 'INSERT', '*'), ('ai_interactions', 'INSERT', '*'), ('ai_interactions', 'SELECT', '*'), ...}
+baseline = frozenset({('ai_cost_daily', 'INSERT', '*'), ('ai_cost_daily', 'SELECT', '*'), ('ai_cost_daily', 'UPDATE', '*'), ('ai_feedback', 'INSERT', '*'), ('ai_interactions', 'INSERT', '*'), ('ai_interactions', 'SELECT', '*'), ...})
+
+    def assert_checkin_gap_baseline(actual, baseline=CHECKIN_HISTORICAL_GAPS):
+>       assert actual == baseline, (
+            f'New checkin gaps: {sorted(actual - baseline)}; '
+            f'Remove resolved checkin baseline entries: {sorted(baseline - actual)}'
+        )
+E       AssertionError: New checkin gaps: [('it', 'UPDATE', '*')]; Remove resolved checkin baseline entries: []
+E       assert {('ai_cost_da...T', '*'), ...} == frozenset({('...', '*'), ...})
+E         
+E         Extra items in the left set:
+E         ('it', 'UPDATE', '*')
+E         Use -v to get more diff
+
+tests/test_service_grant_dependencies_20261102.py:335: AssertionError
+______________ ERROR at setup of test_missing_and_stale_manifest _______________
+[gw0] darwin -- Python 3.13.15 /Users/j/Projects/yueto/yueops/.venv/bin/python
+
+    @pytest.fixture(scope='module')
+    def generated():
+>       return gate.generate()
+               ^^^^^^^^^^^^^^^
+
+tests/test_role_grant_manifest_generated.py:15: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/gen-role-grant-tests.py:99: in generate
+    validate_gaps(service, actual, documented)
+scripts/gen-role-grant-tests.py:79: in validate_gaps
+    audit.assert_checkin_gap_baseline({row[:3] for row in actual})
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+actual = {('ai_cost_daily', 'INSERT', '*'), ('ai_cost_daily', 'SELECT', '*'), ('ai_cost_daily', 'UPDATE', '*'), ('ai_feedback', 'INSERT', '*'), ('ai_interactions', 'INSERT', '*'), ('ai_interactions', 'SELECT', '*'), ...}
+baseline = frozenset({('ai_cost_daily', 'INSERT', '*'), ('ai_cost_daily', 'SELECT', '*'), ('ai_cost_daily', 'UPDATE', '*'), ('ai_feedback', 'INSERT', '*'), ('ai_interactions', 'INSERT', '*'), ('ai_interactions', 'SELECT', '*'), ...})
+
+    def assert_checkin_gap_baseline(actual, baseline=CHECKIN_HISTORICAL_GAPS):
+>       assert actual == baseline, (
+            f'New checkin gaps: {sorted(actual - baseline)}; '
+            f'Remove resolved checkin baseline entries: {sorted(baseline - actual)}'
+        )
+E       AssertionError: New checkin gaps: [('it', 'UPDATE', '*')]; Remove resolved checkin baseline entries: []
+E       assert {('ai_cost_da...T', '*'), ...} == frozenset({('...', '*'), ...})
+E         
+E         Extra items in the left set:
+E         ('it', 'UPDATE', '*')
+E         Use -v to get more diff
+
+tests/test_service_grant_dependencies_20261102.py:335: AssertionError
+=================================== FAILURES ===================================
+__________ test_new_unresolved_requirements_need_explicit_gap_review ___________
+[gw2] darwin -- Python 3.13.15 /Users/j/Projects/yueto/yueops/.venv/bin/python
+
+    def test_new_unresolved_requirements_need_explicit_gap_review():
+        documented = set()
+        for line in read("docs/role-grant-matrix-20261102.md").splitlines():
+            fields = [v.strip().replace('`', '') for v in line.split('|')[1:-1]]
+            if len(fields) == 5 and fields[0] == "unresolved":
+                for col in fields[4].split(', '):
+                    documented.add((*fields[1:4], col))
+        actual = {(s.role, table, op, col) for s in SERVICES
+                  for _, table, op, col in inventory(s)[1]}
+>       assert actual <= documented, f"New uncovered requirements need review: {sorted(actual - documented)}"
+E       AssertionError: New uncovered requirements need review: [('app_yueops', 'ai_feedback', 'SELECT', 'ref_key')]
+E       assert {('app_checki...ef_key'), ...} <= {('app_checki...ef_key'), ...}
+E         
+E         Extra items in the left set:
+E         ('app_yueops', 'ai_feedback', 'SELECT', 'ref_key')
+
+tests/test_service_role_grants_20261102.py:700: AssertionError
+______________ test_static_service_grants[app_yueops_web_bot_ro] _______________
+[gw0] darwin -- Python 3.13.15 /Users/j/Projects/yueto/yueops/.venv/bin/python
+
+service = Service(role='app_yueops_web_bot_ro', database='yue-to', paths=('web/api', 'web/scheduler_support_alerts.py'), policy='deploy/sql/yueops-web-bot-reader.sql', gap='web reader/writer routing and ORM require review')
+
+    @pytest.mark.parametrize("service", SERVICES, ids=lambda s: s.role)
+    def test_static_service_grants(service):
+        checked, _ = inventory(service)
+        if not checked:
+            pytest.skip("Uncovered static consumer: " + (service.gap or "complex SQL; see matrix"))
+        failures = [item for item in missing(service) if (service.role, *item) not in REAL_GAPS]
+>       assert not failures, f"{service.role}: {failures}"
+E       AssertionError: app_yueops_web_bot_ro: [('web/api/support.py:33', 'ai_feedback', 'SELECT', 'ref_key'), ('web/api/support.py:619', 'ai_feedback', 'SELECT', 'ref_key'), ('web/api/support.py:638', 'ai_feedback', 'SELECT', 'ref_key')]
+E       assert not [('web/api/support.py:33', 'ai_feedback', 'SELECT', 'ref_key'), ('web/api/support.py:619', 'ai_feedback', 'SELECT', 'ref_key'), ('web/api/support.py:638', 'ai_feedback', 'SELECT', 'ref_key')]
+
+tests/test_service_role_grants_20261102.py:517: AssertionError
+________________________ test_checkin_transitive_grants ________________________
+[gw2] darwin -- Python 3.13.15 /Users/j/Projects/yueto/yueops/.venv/bin/python
+
+    def test_checkin_transitive_grants():
+        sources = list(sql_sources(matrix.SERVICES[0]))
+        assert len(sources) > 100
+        assert any('dao/membership.py:' in site and 'FROM miniapp_membership' in sql for site, sql in sources)
+        assert any('dao/membership.py:' in site and 'FROM membership_settings' in sql for site, sql in sources)
+        actual = {gap[:3] for gap in findings(matrix.SERVICES[0])}
+>       assert_checkin_gap_baseline(actual)
+
+tests/test_service_grant_dependencies_20261102.py:356: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+actual = {('ai_cost_daily', 'INSERT', '*'), ('ai_cost_daily', 'SELECT', '*'), ('ai_cost_daily', 'UPDATE', '*'), ('ai_feedback', 'INSERT', '*'), ('ai_interactions', 'INSERT', '*'), ('ai_interactions', 'SELECT', '*'), ...}
+baseline = frozenset({('ai_cost_daily', 'INSERT', '*'), ('ai_cost_daily', 'SELECT', '*'), ('ai_cost_daily', 'UPDATE', '*'), ('ai_feedback', 'INSERT', '*'), ('ai_interactions', 'INSERT', '*'), ('ai_interactions', 'SELECT', '*'), ...})
+
+    def assert_checkin_gap_baseline(actual, baseline=CHECKIN_HISTORICAL_GAPS):
+>       assert actual == baseline, (
+            f'New checkin gaps: {sorted(actual - baseline)}; '
+            f'Remove resolved checkin baseline entries: {sorted(baseline - actual)}'
+        )
+E       AssertionError: New checkin gaps: [('it', 'UPDATE', '*')]; Remove resolved checkin baseline entries: []
+E       assert {('ai_cost_da...T', '*'), ...} == frozenset({('...', '*'), ...})
+E         
+E         Extra items in the left set:
+E         ('it', 'UPDATE', '*')
+E         Use -v to get more diff
+
+tests/test_service_grant_dependencies_20261102.py:335: AssertionError
+_________________ test_other_service_gap_ratchet[app_yue_bot] __________________
+[gw3] darwin -- Python 3.13.15 /Users/j/Projects/yueto/yueops/.venv/bin/python
+
+service = Service(role='app_yue_bot', database='yue-to', paths=('telegram-bot/yue',), policy='', gap='')
+
+    @pytest.mark.parametrize('service', matrix.SERVICES[1:], ids=lambda s: s.role)
+    def test_other_service_gap_ratchet(service):
+        if not service.paths:
+            pytest.skip('External/function consumer: ' + service.gap)
+        assert closure(service), 'Empty consumer scan'
+        actual = {(service.role, *gap) for gap in findings(service)}
+        documented = {row for row in reported_gaps() if row[0] == service.role}
+>       assert actual == documented, f'Update explicit audit after review: new={actual - documented}; resolved={documented - actual}'
+E       AssertionError: Update explicit audit after review: new={('app_yue_bot', 'it', 'UPDATE', '*', 'telegram-bot/yue/knowledge/current_rules.py:79'), ('app_yue_bot', 'kb_documents', 'UPDATE', '*', 'telegram-bot/yue/knowledge/help_sync.py:113'), ('app_yue_bot', 'support_threads', 'INSERT', '*', 'telegram-bot/yue/support_core/web_transcript.py:34'), ('app_yue_bot', 'kb_documents', 'SELECT', '*', 'telegram-bot/yue/knowledge/help_sync.py:128'), ('app_yue_bot', 'support_threads', 'SELECT', '*', 'telegram-bot/yue/support_core/web_transcript.py:34'), ('app_yue_bot', 'kb_documents', 'INSERT', '*', 'telegram-bot/yue/knowledge/help_sync.py:134')}; resolved={('app_yue_bot', 'kb_documents', 'SELECT', '*', 'telegram-bot/yue/knowledge/help_sync.py:98'), ('app_yue_bot', 'kb_documents', 'UPDATE', '*', 'telegram-bot/yue/knowledge/help_sync.py:98'), ('app_yue_bot', 'kb_documents', 'INSERT', '*', 'telegram-bot/yue/knowledge/help_sync.py:119')}
+E       assert {('app_yue_bo...py:284'), ...} == {('app_yue_bo...py:284'), ...}
+E         
+E         Extra items in the left set:
+E         ('app_yue_bot', 'it', 'UPDATE', '*', 'telegram-bot/yue/knowledge/current_rules.py:79')
+E         ('app_yue_bot', 'kb_documents', 'UPDATE', '*', 'telegram-bot/yue/knowledge/help_sync.py:113')
+E         ('app_yue_bot', 'support_threads', 'INSERT', '*', 'telegram-bot/yue/support_core/web_transcript.py:34')
+E         ('app_yue_bot', 'kb_documents', 'SELECT', '*', 'telegram-bot/yue/knowledge/help_sync.py:128')
+E         ('app_yue_bot', 'support_threads', 'SELECT', '*', 'telegram-bot/yue/support_core/web_transcript.py:34')...
+E         
+E         ...Full output truncated (6 lines hidden), use '-vv' to show
+
+tests/test_service_grant_dependencies_20261102.py:456: AssertionError
+__________________ test_other_service_gap_ratchet[app_yueops] __________________
+[gw3] darwin -- Python 3.13.15 /Users/j/Projects/yueto/yueops/.venv/bin/python
+
+service = Service(role='app_yueops', database='yueops', paths=('web',), policy='', gap='ORM and owner/bootstrap ACL absent')
+
+    @pytest.mark.parametrize('service', matrix.SERVICES[1:], ids=lambda s: s.role)
+    def test_other_service_gap_ratchet(service):
+        if not service.paths:
+            pytest.skip('External/function consumer: ' + service.gap)
+        assert closure(service), 'Empty consumer scan'
+        actual = {(service.role, *gap) for gap in findings(service)}
+        documented = {row for row in reported_gaps() if row[0] == service.role}
+>       assert actual == documented, f'Update explicit audit after review: new={actual - documented}; resolved={documented - actual}'
+E       AssertionError: Update explicit audit after review: new={('app_yueops', 'ai_interactions', 'SELECT', '*', 'web/api/support.py:650'), ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:310'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:446'), ('app_yueops', 'ai_interactions', 'SELECT', '*', 'web/api/support.py:272'), ('app_yueops', 'support_threads', 'SELECT', '*', 'web/api/support.py:460'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:331'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:288'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:221'), ('app_yueops', 'kb_miss_log', 'SELECT', '*', 'web/api/support.py:777'), ('app_yueops', 'support_threads', 'SELECT', '*', 'web/api/support.py:264'), ('app_yueops', 'ai_feedback', 'SELECT', '*', 'web/api/support.py:638'), ('app_yueops', 'support_threads', 'SELECT', '*', 'web/api/support.py:262'), ('app_yueops', 'ai_cost_daily', 'SELECT', '*', 'web/api/support.py:182'), ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:318'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:246'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:252'), ('app_yueops', 'ai_interactions', 'SELECT', '*', 'web/api/support.py:552'), ('app_yueops', 'kb_miss_log', 'SELECT', '*', 'web/api/support.py:671'), ('app_yueops', 'ai_interactions', 'SELECT', '*', 'web/api/support.py:208'), ('app_yueops', 'ai_feedback', 'SELECT', '*', 'web/api/support.py:619'), ('app_yueops', 'ai_cost_daily', 'SELECT', '*', 'web/api/support.py:188'), ('app_yueops', 'kb_miss_log', 'SELECT', '*', 'web/api/support.py:683'), ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:348'), ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:393'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:249'), ('app_yueops', 'ai_feedback', 'SELECT', '*', 'web/api/support.py:33'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:241'), ('app_yueops', 'ai_cost_daily', 'SELECT', '*', 'web/api/support.py:197'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:498'), ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:280'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:325'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:337')}; resolved={('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:323'), ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:379'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:274'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:484'), ('app_yueops', 'ai_interactions', 'SELECT', '*', 'web/api/support.py:258'), ('app_yueops', 'ai_cost_daily', 'SELECT', '*', 'web/api/support.py:183'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:317'), ('app_yueops', 'ai_interactions', 'SELECT', '*', 'web/api/support.py:636'), ('app_yueops', 'support_threads', 'SELECT', '*', 'web/api/support.py:248'), ('app_yueops', 'ai_cost_daily', 'SELECT', '*', 'web/api/support.py:168'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:207'), ('app_yueops', 'support_threads', 'SELECT', '*', 'web/api/support.py:446'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:311'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:432'), ('app_yueops', 'ai_cost_daily', 'SELECT', '*', 'web/api/support.py:174'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:235'), ('app_yueops', 'kb_miss_log', 'SELECT', '*', 'web/api/support.py:763'), ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:334'), ('app_yueops', 'ai_feedback', 'SELECT', '*', 'web/api/support.py:624'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:227'), ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:296'), ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:304'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:238'), ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:232'), ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:266'), ('app_yueops', 'ai_interactions', 'SELECT', '*', 'web/api/support.py:538'), ('app_yueops', 'support_threads', 'SELECT', '*', 'web/api/support.py:250'), ('app_yueops', 'ai_feedback', 'SELECT', '*', 'web/api/support.py:605'), ('app_yueops', 'kb_miss_log', 'SELECT', '*', 'web/api/support.py:657'), ('app_yueops', 'kb_miss_log', 'SELECT', '*', 'web/api/support.py:669'), ('app_yueops', 'ai_interactions', 'SELECT', '*', 'web/api/support.py:194')}
+E       assert {('app_yueops...py:619'), ...} == {('app_yueops...py:624'), ...}
+E         
+E         Extra items in the left set:
+E         ('app_yueops', 'ai_interactions', 'SELECT', '*', 'web/api/support.py:650')
+E         ('app_yueops', 'ticket_events', 'SELECT', '*', 'web/api/support.py:310')
+E         ('app_yueops', 'exception_queue', 'SELECT', '*', 'web/api/support.py:446')
+E         ('app_yueops', 'ai_interactions', 'SELECT', '*', 'web/api/support.py:272')
+E         ('app_yueops', 'support_threads', 'SELECT', '*', 'web/api/support.py:460')...
+E         
+E         ...Full output truncated (60 lines hidden), use '-vv' to show
+
+tests/test_service_grant_dependencies_20261102.py:456: AssertionError
+____________ test_other_service_gap_ratchet[app_yueops_web_bot_ro] _____________
+[gw3] darwin -- Python 3.13.15 /Users/j/Projects/yueto/yueops/.venv/bin/python
+
+service = Service(role='app_yueops_web_bot_ro', database='yue-to', paths=('web/api', 'web/scheduler_support_alerts.py'), policy='deploy/sql/yueops-web-bot-reader.sql', gap='web reader/writer routing and ORM require review')
+
+    @pytest.mark.parametrize('service', matrix.SERVICES[1:], ids=lambda s: s.role)
+    def test_other_service_gap_ratchet(service):
+        if not service.paths:
+            pytest.skip('External/function consumer: ' + service.gap)
+        assert closure(service), 'Empty consumer scan'
+        actual = {(service.role, *gap) for gap in findings(service)}
+        documented = {row for row in reported_gaps() if row[0] == service.role}
+>       assert actual == documented, f'Update explicit audit after review: new={actual - documented}; resolved={documented - actual}'
+E       AssertionError: Update explicit audit after review: new={('app_yueops_web_bot_ro', 'ai_feedback', 'SELECT', 'ref_key', 'web/api/support.py:33'), ('app_yueops_web_bot_ro', 'ai_feedback', 'SELECT', 'ref_key', 'web/api/support.py:619'), ('app_yueops_web_bot_ro', 'ai_feedback', 'SELECT', 'ref_key', 'web/api/support.py:638')}; resolved=set()
+E       assert {('app_yueops...py:100'), ...} == {('app_yueops...py:198'), ...}
+E         
+E         Extra items in the left set:
+E         ('app_yueops_web_bot_ro', 'ai_feedback', 'SELECT', 'ref_key', 'web/api/support.py:33')
+E         ('app_yueops_web_bot_ro', 'ai_feedback', 'SELECT', 'ref_key', 'web/api/support.py:619')
+E         ('app_yueops_web_bot_ro', 'ai_feedback', 'SELECT', 'ref_key', 'web/api/support.py:638')
+E         Use -v to get more diff
+
+tests/test_service_grant_dependencies_20261102.py:456: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_service_role_grants_20261102.py::test_new_unresolved_requirements_need_explicit_gap_review
+FAILED tests/test_service_role_grants_20261102.py::test_static_service_grants[app_yueops_web_bot_ro]
+FAILED tests/test_service_grant_dependencies_20261102.py::test_checkin_transitive_grants
+FAILED tests/test_service_grant_dependencies_20261102.py::test_other_service_gap_ratchet[app_yue_bot]
+FAILED tests/test_service_grant_dependencies_20261102.py::test_other_service_gap_ratchet[app_yueops]
+FAILED tests/test_service_grant_dependencies_20261102.py::test_other_service_gap_ratchet[app_yueops_web_bot_ro]
+ERROR tests/test_role_grant_manifest_generated.py::test_generated_manifest - ...
+ERROR tests/test_role_grant_manifest_generated.py::test_missing_and_stale_manifest
+6 failed, 164 passed, 29 skipped, 271 xfailed, 2 errors in 60.50s (0:01:00)
+
+Exit code: 1

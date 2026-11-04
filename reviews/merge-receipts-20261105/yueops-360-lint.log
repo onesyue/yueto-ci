@@ -1,0 +1,6 @@
+UTC: 2026-11-04T21:22:15.036651+00:00
+Command: cd /tmp/rc-360 && env TZ=UTC PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/j/.cache/uv/archive-v0/Q0dWVy592ziKaZh8 /Users/j/Projects/yueto/yueops/.venv/bin/python -m ruff check tests/test_sql_columns_exist_in_schema_20261102.py
+Environment: allowlisted PATH, HOME, TMPDIR; no inherited service credentials. Darwin arm64.
+All checks passed!
+
+Exit code: 0
