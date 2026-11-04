@@ -7971,5 +7971,23 @@
     "schema": 1,
     "prior_baseline_sha256": "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d",
     "removed_case_count": 2
+  },
+  "reviewed_loadshed_native_input_successor": {
+    "schema": 1,
+    "prior_baseline_sha256": "61de86c792a14c11a884e871a8b43a221e4da610b786ad33928c2d8d5964906e",
+    "source_before": "bc4ab688f57575b0eb107da8690bd5bdd65e4f65",
+    "source_after": "926fc22b6654233e3c0dae5f6fcd7a951953c429",
+    "independent_review_sha256": "9c904cece4d95b50ee1494a7663bacb0b77f7bcc2dea7b62adeb022bcf94f3ae",
+    "source_freeze_sha256": "b11a78a5aee111d9b773a7a2b3ccd216d47b602105d65707265e8b88d7ed002d",
+    "qualification_receipt_sha256": "0f3ea4233f69636e440047e5660898c6e7a390acdbb23faee0fa573ad396169a",
+    "changes": {
+      "tests/native_loadshed_installer_20261030.py": {
+        "before_blob": "a861b1d6b30b3ba59d5321051430c73c099d25c2",
+        "after_blob": "b4a70d6d7c6c1b3e20e7263d8f12c4a69143b385",
+        "mode": "100644",
+        "floor": 14,
+        "uid": 0
+      }
+    }
   }
 }

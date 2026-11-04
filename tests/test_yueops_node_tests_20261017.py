@@ -271,7 +271,7 @@ def _assert_native_contract(test, workflow):
         'scripts/run-native-nginx-tests.py',
         'sudo -n env PATH="$PATH" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"',
         'tests/test_schema_contract_receipt_20261020.py 30 0',
-        '"$native_driver" tests/native_loadshed_installer_20261030.py 7 0',
+        '"$native_driver" tests/native_loadshed_installer_20261030.py 14 0',
     ):
         test.assertIn(required, workflow)
 
@@ -295,7 +295,7 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
             'test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"',
             'test "$(id -u)" = 1001',
             '"$native_driver" tests/test_node_systemd_pilot_20261018.py 38 0',
-            '"$native_driver" tests/native_loadshed_installer_20261030.py 7 0',
+            '"$native_driver" tests/native_loadshed_installer_20261030.py 14 0',
         ):
             with self.subTest(removed=removed), self.assertRaises(AssertionError):
                 _assert_native_contract(self, workflow.replace(removed, '', 1))
@@ -372,7 +372,7 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
                     rows = [json.loads(line) for line in log.read_text().splitlines()]
                     self.assertEqual(len(rows), 5 if code else 10)
                     self.assertEqual(rows[3]['argv'][1:4],
-                        ['tests/native_loadshed_installer_20261030.py', '7', '0'])
+                        ['tests/native_loadshed_installer_20261030.py', '14', '0'])
                     self.assertEqual(rows[3]['tz'], 'UTC')
                     self.assertIn('native-start', rows[0]['argv'])
                     self.assertEqual(rows[4]['argv'][1:],
@@ -493,7 +493,7 @@ class LoadShedNativeRegistration(unittest.TestCase):
         original, inputs = self.consumer.required_native_inputs(self.baseline)
         self.assertEqual(inputs, self.consumer.NATIVE_INPUTS)
         self.assertEqual(set(inputs), {self.target})
-        self.assertEqual(self.consumer.NATIVE_TARGETS[self.target], (7, 0))
+        self.assertEqual(self.consumer.NATIVE_TARGETS[self.target], (14, 0))
         predecessor, _ = self.consumer.reviewed_retired_host_transition(self.baseline)
         self.assertEqual(original["cases"], predecessor["cases"])
         self.consumer.reviewed_estate_input_transition(self.baseline)
@@ -521,6 +521,40 @@ class LoadShedNativeRegistration(unittest.TestCase):
             with self.subTest(mode=mode), self.assertRaises(ValueError):
                 self.consumer.required_native_inputs(changed)
 
+    def test_successor_is_exact_and_cannot_replace_historical_evidence(self):
+        import copy
+        from unittest.mock import patch
+        key = self.consumer.NATIVE_INPUT_SUCCESSOR_KEY
+        for mode in ("before", "after", "mode", "floor", "uid", "review", "source"):
+            changed = copy.deepcopy(self.baseline)
+            record = changed[key]
+            change = record["changes"][self.target]
+            if mode == "before": change["before_blob"] = "f" * 40
+            elif mode == "after": change["after_blob"] = "f" * 40
+            elif mode == "mode": change["mode"] = "120000"
+            elif mode == "floor": change["floor"] = 7
+            elif mode == "uid": change["uid"] = 1001
+            elif mode == "review": record["independent_review_sha256"] = "0" * 64
+            else: record["source_before"] = "f" * 40
+            with self.subTest(mode=mode), self.assertRaises(ValueError):
+                self.consumer.required_native_inputs(changed)
+        old = copy.deepcopy(self.baseline)
+        old.pop(key)
+        original, inputs = self.consumer.required_native_inputs(old)
+        self.assertEqual(inputs, self.consumer.HISTORICAL_NATIVE_INPUTS)
+        with self.assertRaisesRegex(ValueError, "successor missing"):
+            self.consumer.admit_shared_inputs(old, original["common_inputs"] | inputs)
+        changed = copy.deepcopy(self.baseline)
+        first = next(iter(changed["cases"]))
+        changed["cases"][first]["reason"] = "invented historical reason"
+        record = changed.pop(key)
+        record["prior_baseline_sha256"] = self.consumer.sha(self.consumer.baseline_bytes(changed))
+        changed[key] = record
+        with patch.object(self.consumer, "NATIVE_INPUT_SUCCESSOR_SHA256",
+                          self.consumer.sha(self.consumer.encoded(record))):
+            with self.assertRaises(ValueError):
+                self.consumer.reviewed_estate_input_transition(changed)
+
     def test_loadshed_receipt_is_required_and_cannot_reduce_floor_or_change_uid(self):
         import json
         from unittest.mock import patch
@@ -537,13 +571,14 @@ class LoadShedNativeRegistration(unittest.TestCase):
             original = path.read_text()
             with patch.object(self.consumer, "native_execution_context", return_value={}):
                 self.consumer.native_receipts({}, output)
-                for mode in ("missing", "floor", "uid", "incomplete"):
+                for mode in ("missing", "floor", "uid", "incomplete", "skip"):
                     row = json.loads(original)
                     if mode == "missing":
                         path.unlink()
                     else:
-                        if mode == "floor": row["floor"] = 6
+                        if mode == "floor": row["floor"] = 13
                         elif mode == "uid": row["uid"] = 1001
+                        elif mode == "skip": row["failed_or_skipped"] = [row["required"][0]]
                         else: row["passed"] = row["passed"][:-1]
                         path.write_text(json.dumps(row))
                     with self.subTest(mode=mode), self.assertRaises(ValueError):

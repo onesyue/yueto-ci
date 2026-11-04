@@ -64,11 +64,17 @@ SSH_SKIP_CASES = {
     "tests/test_installed_checker_transport_20261014.py::"
     "test_real_pinned_sshd_json_transport_plan_apply_readback_and_old_n_negative",
 }
-NATIVE_INPUTS = {
+HISTORICAL_NATIVE_INPUTS = {
     "tests/native_loadshed_installer_20261030.py": "a861b1d6b30b3ba59d5321051430c73c099d25c2",
 }
+NATIVE_INPUTS = {
+    "tests/native_loadshed_installer_20261030.py": "b4a70d6d7c6c1b3e20e7263d8f12c4a69143b385",
+}
+NATIVE_INPUT_SUCCESSOR_KEY = "reviewed_loadshed_native_input_successor"
+# Filled only from the actual signed source/review/qualification record.
+NATIVE_INPUT_SUCCESSOR_SHA256 = "4ea183023e41b30ab70b25288cd8eac09d001b198853dd073890864d684b480d"
 NATIVE_TARGETS = {
-    "tests/native_loadshed_installer_20261030.py": (7, 0),
+    "tests/native_loadshed_installer_20261030.py": (14, 0),
     "tests/test_board139_schema_acl_native_20261018.py": (6, 1001),
     "tests/test_node_systemd_pilot_20261018.py": (38, 0),
     "tests/test_schema_contract_receipt_20261020.py": (30, 0),
@@ -750,8 +756,48 @@ NEZHA_RETIRED_MODULE = "tests/test_nezha_retirement_20261013.py"
 NEZHA_PRIOR_BASELINE_SHA256 = "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d"
 
 
+def reviewed_native_input_successor(baseline):
+    """Peel the exact reviewed native successor without changing any old seal."""
+    if NATIVE_INPUT_SUCCESSOR_KEY not in baseline:
+        return baseline, None
+    original = dict(baseline)
+    record = original.pop(NATIVE_INPUT_SUCCESSOR_KEY)
+    require(isinstance(record, dict) and set(record) == {
+        "schema", "prior_baseline_sha256", "source_before", "source_after",
+        "independent_review_sha256", "source_freeze_sha256",
+        "qualification_receipt_sha256", "changes",
+    } and type(record["schema"]) is int and record["schema"] == 1,
+            "invalid native input successor")
+    require(sha(encoded(record)) == NATIVE_INPUT_SUCCESSOR_SHA256,
+            "unreviewed native input successor identity")
+    require(record["prior_baseline_sha256"] == sha(baseline_bytes(original)),
+            "native input successor changed historical baseline")
+    require(all(isinstance(record[k], str) and SHA.fullmatch(record[k])
+                for k in ("source_before", "source_after"))
+            and record["source_before"] != record["source_after"],
+            "native input successor source identity missing")
+    require(all(isinstance(record[k], str)
+                and re.fullmatch(r"[0-9a-f]{64}", record[k])
+                and record[k] != "0" * 64 for k in (
+                    "independent_review_sha256", "source_freeze_sha256",
+                    "qualification_receipt_sha256")),
+            "native input successor evidence missing")
+    changes = record["changes"]
+    require(isinstance(changes, dict) and set(changes) == set(NATIVE_INPUTS),
+            "unreviewed native input successor paths")
+    for path, after_blob in NATIVE_INPUTS.items():
+        require(changes[path] == {
+            "before_blob": HISTORICAL_NATIVE_INPUTS[path], "after_blob": after_blob,
+            "mode": "100644", "floor": 14, "uid": 0,
+        } and type(changes[path].get("floor")) is int
+          and type(changes[path].get("uid")) is int,
+                "invalid native input successor blob, mode, floor or UID")
+    return original, record
+
+
 def restore_nezha_history(baseline):
     """Restore only the owner's two retired cases for existing historical seals."""
+    baseline, _ = reviewed_native_input_successor(baseline)
     if NEZHA_RETIREMENT_KEY not in baseline:
         return baseline
     original = dict(baseline)
@@ -779,9 +825,9 @@ def restore_nezha_history(baseline):
 def historical_skip_baseline_bytes():
     # Sidecar seals bind the repository baseline, not a caller's execution fixture.
     raw = (ROOT / "ops-pytest-skip-baseline.json").read_bytes()
-    baseline = json.loads(raw)
+    baseline, successor = reviewed_native_input_successor(json.loads(raw))
     if NEZHA_RETIREMENT_KEY not in baseline:
-        return raw
+        return baseline_bytes(baseline) if successor else raw
     restored = baseline_bytes(restore_nezha_history(baseline))
     require(sha(restored) == NEZHA_PRIOR_BASELINE_SHA256,
             "Nezha retirement changed historical baseline")
@@ -1102,17 +1148,18 @@ def generate_retired_host_baseline(predecessor, source, revision):
 
 def required_native_inputs(baseline):
     """Separate new required execution inputs from immutable historical skips."""
+    baseline, successor = reviewed_native_input_successor(baseline)
     baseline, _ = reviewed_retired_host_transition(baseline)
     original = dict(baseline)
     record = original.pop("required_native_inputs", None)
     if record is None:
         return original, {}
     require(isinstance(record, dict) and set(record) == {"prior_baseline_sha256", "inputs"}
-            and record["inputs"] == NATIVE_INPUTS, "invalid required native inputs")
+            and record["inputs"] == HISTORICAL_NATIVE_INPUTS, "invalid required native inputs")
     prior = (json.dumps(original, indent=2, ensure_ascii=False) + "\n").encode()
     require(record["prior_baseline_sha256"] == sha(prior),
             "required native inputs changed historical baseline")
-    return original, record["inputs"]
+    return original, dict(NATIVE_INPUTS) if successor else record["inputs"]
 
 
 def reviewed_tornado66_dependency_transition(baseline):
@@ -2145,6 +2192,9 @@ def admit_reviewed_pr_inputs(common, files, source_revision):
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                         estate_successor_of=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    _, active_required = required_native_inputs(baseline)
+    require(not active_required or active_required == NATIVE_INPUTS,
+            "required native input successor missing")
     common, files = admit_pr_shared_inputs(common, files, source_revision)
     common, files = admit_reviewed_pr_inputs(common, files, source_revision)
     common, files = admit_first_native_helper(common, files, source_revision)
@@ -2188,7 +2238,8 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
             common = {p: v for p, v in common.items() if p != COLLECTION_SHUFFLE_INPUT}
     # The complete existing admission chain still consumes every other input.
     _, packaging = reviewed_ops_packaging_transition(baseline)
-    baseline, required = required_native_inputs(baseline)
+    baseline, _ = required_native_inputs(baseline)
+    required = active_required
     if required:
         require(isinstance(common, dict) and all(common.get(p) == b for p, b in required.items()),
                 "missing or changed required native input")
@@ -2720,7 +2771,9 @@ def skip_baseline():
             and SHA.fullmatch(value.get("source_revision", ""))
             and value.get("common_inputs") and isinstance(value.get("cases"), dict)
             and isinstance(value.get("collection_skips"), dict), "invalid skip baseline")
-    required_native_inputs(value)
+    _, required = required_native_inputs(value)
+    require(not required or required == NATIVE_INPUTS,
+            "required native input successor missing")
     return value
 
 
