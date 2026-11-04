@@ -1,5 +1,7 @@
 # Final signed successor review
 
+The current copied95-case log comes from `.claude/state/takeover/20261104/resume-1039/indirect-topology-linux-r2.log`. The original85-case copied log discussed in the retained3dd review is preserved in predecessor commit `a406ea97ea990f24f36023fa82e623dc5ccdfa70`, not in the current `.log` file.
+
 Current head `be5755522508bb2ef0f7cba6661dd3c4937bf1a0` appends the independently reviewed topology correction to original3dd1557. Host and Linux complete merge-policy modules each passed95 cases with zero skips; compile and semantic diagnostics passed. The initial Linux tmpfs did not allow the CLI fixture executables; the unchanged source passed after using executable temporary storage, matching the normal CI fixture requirement. Original failures remain retained. The old single-parent historical rows160/161 retain their exact pending/history-unavailable findings and existing accepted-history handling. No baseline bytes changed, and new unaccepted red rows remain blocking. Original source review below establishes the parent; the new independent delta approval binds this signed successor. Fresh native merge audit remains required.
 
 ```json
