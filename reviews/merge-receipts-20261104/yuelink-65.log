@@ -1,0 +1,262 @@
+Flutter 3.47.8 • channel stable • https://github.com/flutter/flutter.git
+Framework • revision 737ba8f885 (12 days ago) • 2026-10-22 21:37:31 -0700
+Engine • hash dfd2e6cb7d319db05e3bf1503f3e2ac60f6288a2 (revision cf636b1dfb) (12 days ago) • 2026-10-23 02:13:38.000Z
+Tools • Dart 3.13.7 • DevTools 2.60.0
+go version go1.27.3 linux/amd64
+Resolving dependencies...
+Downloading packages...
+! hotkey_manager_macos 0.2.0 from path third_party/hotkey_manager_macos (overridden)
+! media_kit_libs_android_video 1.3.8 from path third_party/media_kit_libs_android_video (overridden)
+! media_kit_libs_ios_video 1.1.4 from path third_party/media_kit_libs_ios_video (overridden)
+! media_kit_libs_linux 1.2.1 from path third_party/media_kit_libs_linux (overridden)
+! media_kit_libs_macos_video 1.1.4 from path third_party/media_kit_libs_macos_video (overridden)
+! media_kit_libs_windows_video 1.0.11 from path third_party/media_kit_libs_windows_video (overridden)
+! media_kit_video 2.0.1 from path third_party/media_kit_video (overridden)
+Got dependencies!
+sing-box version 1.14.3
+00:00 +0: loading /src/test/core/kernel/config/client_honours_server_template_matrix_test.dart
+00:00 +0: /src/test/core/kernel/config/client_honours_server_template_matrix_test.dart: client processing keeps the server template routing (SR01 F1)
+[Config] process start, len=94612
+[Config] 1 variables done
+[Config] 2 mixedPort done
+[Config] 3 externalController done
+[Config] 3b first-party ruleset paths scoped
+[Config] 4 dns done
+[Config] 5 sniffer done
+[Config] 6 geodata done
+[Config] 7 profile done
+[Config] 8 performance done
+[Config] 8a hysteria bandwidth stripped (BBR)
+[Config] 8b experimental done (disableLinuxQuicGso=false)
+[Config] 9 allowLan done (lan=false)
+[Config] 10 findProcessMode done
+[Config] 10b connectivityRules done
+[Config] 10b1 criticalServiceRules done
+[Config] 10b2 providerProxyDirect done
+[Config] 10b35 userCustomRules done
+[Config] 10b4 yuelinkInfrastructureRules done
+[Config] 10c quicReject done
+[Config] 11 mode done
+[Config] 12 desktopTun done (datapathAccel=true)
+[Config] 12b iosIpv6 done
+[Config] 12c dnsIpv6 done
+[Config] 13 tunFd done
+SR01 client matrix: cases=218 client-redirected=0 added=24
+00:00 +1: /src/test/core/kernel/config/client_honours_server_template_matrix_test.dart: actual Board render survives client processing: zh-CN
+[Config] process start, len=94612
+[Config] 1 variables done
+[Config] 2 mixedPort done
+[Config] 3 externalController done
+[Config] 3b first-party ruleset paths scoped
+[Config] 4 dns done
+[Config] 5 sniffer done
+[Config] 6 geodata done
+[Config] 7 profile done
+[Config] 8 performance done
+[Config] 8a hysteria bandwidth stripped (BBR)
+[Config] 8b experimental done (disableLinuxQuicGso=false)
+[Config] 9 allowLan done (lan=false)
+[Config] 10 findProcessMode done
+[Config] 10b connectivityRules done
+[Config] 10b1 criticalServiceRules done
+[Config] 10b2 providerProxyDirect done
+[Config] 10b35 userCustomRules done
+[Config] 10b4 yuelinkInfrastructureRules done
+[Config] 10c quicReject done
+[Config] 11 mode done
+[Config] 12 desktopTun done (datapathAccel=true)
+[Config] 12b iosIpv6 done
+[Config] 12c dnsIpv6 done
+[Config] 13 tunFd done
+SR01 client matrix: cases=218 client-redirected=0 added=24
+[Config] process start, len=94612
+[Config] 1 variables done
+[Config] 2 mixedPort done
+[Config] 3 externalController done
+[Config] 3b first-party ruleset paths scoped
+[Config] 4 dns done
+[Config] 5 sniffer done
+[Config] 6 geodata done
+[Config] 7 profile done
+[Config] 8 performance done
+[Config] 8a hysteria bandwidth stripped (BBR)
+[Config] 8b experimental done (disableLinuxQuicGso=false)
+[Config] 9 allowLan done (lan=false)
+[Config] 10 findProcessMode done
+[Config] 10b connectivityRules done
+[Config] 10b1 criticalServiceRules done
+[Config] 10b2 providerProxyDirect done
+[Config] 10b35 userCustomRules done
+[Config] 10b4 yuelinkInfrastructureRules done
+[Config] 10c quicReject done
+[Config] 11 mode done
+[Config] 12 desktopTun done (datapathAccel=true)
+[Config] 12b iosIpv6 done
+[Config] 12c dnsIpv6 done
+[Config] 13 tunFd done
+00:01 +2: /src/test/core/kernel/config/client_honours_server_template_matrix_test.dart: actual Board render survives client processing: en
+[Config] process start, len=96732
+[Config] 1 variables done
+[Config] 2 mixedPort done
+[Config] 3 externalController done
+[Config] 3b first-party ruleset paths scoped
+[Config] 4 dns done
+[Config] 5 sniffer done
+[Config] 6 geodata done
+[Config] 7 profile done
+[Config] 8 performance done
+[Config] 8a hysteria bandwidth stripped (BBR)
+[Config] 8b experimental done (disableLinuxQuicGso=false)
+[Config] 9 allowLan done (lan=false)
+[Config] 10 findProcessMode done
+[Config] 10b connectivityRules done
+[Config] 10b1 criticalServiceRules done
+[Config] 10b2 providerProxyDirect done
+[Config] 10b35 userCustomRules done
+[Config] 10b4 yuelinkInfrastructureRules done
+[Config] 10c quicReject done
+[Config] 11 mode done
+[Config] 12 desktopTun done (datapathAccel=true)
+[Config] 12b iosIpv6 done
+[Config] 12c dnsIpv6 done
+[Config] 13 tunFd done
+SR01 client matrix: cases=218 client-redirected=0 added=24
+[Config] process start, len=96732
+[Config] 1 variables done
+[Config] 2 mixedPort done
+[Config] 3 externalController done
+[Config] 3b first-party ruleset paths scoped
+[Config] 4 dns done
+[Config] 5 sniffer done
+[Config] 6 geodata done
+[Config] 7 profile done
+[Config] 8 performance done
+[Config] 8a hysteria bandwidth stripped (BBR)
+[Config] 8b experimental done (disableLinuxQuicGso=false)
+[Config] 9 allowLan done (lan=false)
+[Config] 10 findProcessMode done
+[Config] 10b connectivityRules done
+[Config] 10b1 criticalServiceRules done
+[Config] 10b2 providerProxyDirect done
+[Config] 10b35 userCustomRules done
+[Config] 10b4 yuelinkInfrastructureRules done
+[Config] 10c quicReject done
+[Config] 11 mode done
+[Config] 12 desktopTun done (datapathAccel=true)
+[Config] 12b iosIpv6 done
+[Config] 12c dnsIpv6 done
+[Config] 13 tunFd done
+00:01 +3: loading /src/test/core/kernel/config/rendered_template_corpus_test.dart
+00:01 +3: /src/test/core/kernel/config/rendered_template_corpus_test.dart: Board corpus bytes match the signed producer manifest
+00:02 +4: All tests passed!
+=== RUN   TestSubscriptionBootstrapDNSBypassesFakeIPAndFailedDefaultResolver
+=== RUN   TestSubscriptionBootstrapDNSBypassesFakeIPAndFailedDefaultResolver/rendered
+time="2026-11-04T05:33:39.671181262Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.673211970Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.673267470Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.677014054Z" level=info msg="Initial configuration complete, total time: 5ms"
+=== RUN   TestSubscriptionBootstrapDNSBypassesFakeIPAndFailedDefaultResolver/without-subscription-filter
+time="2026-11-04T05:33:39.694778054Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.694808262Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.694813720Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.695011845Z" level=info msg="Initial configuration complete, total time: 0ms"
+=== RUN   TestSubscriptionBootstrapDNSBypassesFakeIPAndFailedDefaultResolver/without-subscription-policy
+time="2026-11-04T05:33:39.695907470Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.695924137Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.695928304Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.696067345Z" level=info msg="Initial configuration complete, total time: 0ms"
+--- PASS: TestSubscriptionBootstrapDNSBypassesFakeIPAndFailedDefaultResolver (0.05s)
+    --- PASS: TestSubscriptionBootstrapDNSBypassesFakeIPAndFailedDefaultResolver/rendered (0.03s)
+    --- PASS: TestSubscriptionBootstrapDNSBypassesFakeIPAndFailedDefaultResolver/without-subscription-filter (0.00s)
+    --- PASS: TestSubscriptionBootstrapDNSBypassesFakeIPAndFailedDefaultResolver/without-subscription-policy (0.00s)
+=== RUN   TestRenderedCorpusSubscriptionBootstrapDNS
+=== RUN   TestRenderedCorpusSubscriptionBootstrapDNS/zh-CN
+=== RUN   TestRenderedCorpusSubscriptionBootstrapDNS/zh-CN/rendered
+time="2026-11-04T05:33:39.708594929Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.708615095Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.708618054Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.708785679Z" level=info msg="Initial configuration complete, total time: 0ms"
+=== RUN   TestRenderedCorpusSubscriptionBootstrapDNS/zh-CN/without-subscription-filter
+time="2026-11-04T05:33:39.709486137Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.709507679Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.709513637Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.709650845Z" level=info msg="Initial configuration complete, total time: 0ms"
+=== RUN   TestRenderedCorpusSubscriptionBootstrapDNS/zh-CN/without-subscription-policy
+time="2026-11-04T05:33:39.710144429Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.710161345Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.710164095Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.710261095Z" level=info msg="Initial configuration complete, total time: 0ms"
+=== RUN   TestRenderedCorpusSubscriptionBootstrapDNS/en
+=== RUN   TestRenderedCorpusSubscriptionBootstrapDNS/en/rendered
+time="2026-11-04T05:33:39.715138054Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.715156637Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.715159262Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.715265179Z" level=info msg="Initial configuration complete, total time: 0ms"
+=== RUN   TestRenderedCorpusSubscriptionBootstrapDNS/en/without-subscription-filter
+time="2026-11-04T05:33:39.715914012Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.715935720Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.715939595Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.716065012Z" level=info msg="Initial configuration complete, total time: 0ms"
+=== RUN   TestRenderedCorpusSubscriptionBootstrapDNS/en/without-subscription-policy
+time="2026-11-04T05:33:39.716411929Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.716428887Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.716432012Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.716547762Z" level=info msg="Initial configuration complete, total time: 0ms"
+--- PASS: TestRenderedCorpusSubscriptionBootstrapDNS (0.02s)
+    --- PASS: TestRenderedCorpusSubscriptionBootstrapDNS/zh-CN (0.01s)
+        --- PASS: TestRenderedCorpusSubscriptionBootstrapDNS/zh-CN/rendered (0.00s)
+        --- PASS: TestRenderedCorpusSubscriptionBootstrapDNS/zh-CN/without-subscription-filter (0.00s)
+        --- PASS: TestRenderedCorpusSubscriptionBootstrapDNS/zh-CN/without-subscription-policy (0.00s)
+    --- PASS: TestRenderedCorpusSubscriptionBootstrapDNS/en (0.01s)
+        --- PASS: TestRenderedCorpusSubscriptionBootstrapDNS/en/rendered (0.00s)
+        --- PASS: TestRenderedCorpusSubscriptionBootstrapDNS/en/without-subscription-filter (0.00s)
+        --- PASS: TestRenderedCorpusSubscriptionBootstrapDNS/en/without-subscription-policy (0.00s)
+=== RUN   TestDNSFlushHTTPConsumerRetainsStreamAndReadsNewAnswer
+    subscription_dns_refresh_consumer_test.go:55: owned short socket directory: /tmp/yl-dns-1290424416 (removed on return)
+time="2026-11-04T05:33:39.718026470Z" level=info msg="RESTful API unix listening at: /tmp/yl-dns-1290424416/ctl.sock"
+--- PASS: TestDNSFlushHTTPConsumerRetainsStreamAndReadsNewAnswer (0.01s)
+=== RUN   TestRenderedCorpusPinnedCoreParser
+=== RUN   TestRenderedCorpusPinnedCoreParser/zh-CN
+time="2026-11-04T05:33:39.734521095Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.771900095Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.771915137Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.775499970Z" level=warning msg="[CacheFile] can't open cache file: open /root/.config/mihomo/cache.db: no such file or directory"
+time="2026-11-04T05:33:39.775999720Z" level=info msg="Initial configuration complete, total time: 41ms"
+    subscription_rendered_corpus_test.go:43: full core parse: rules=553 proxies=61 providers=44 (offline only)
+=== RUN   TestRenderedCorpusPinnedCoreParser/en
+time="2026-11-04T05:33:39.780696929Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.782750554Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.782762095Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.784259429Z" level=info msg="Initial configuration complete, total time: 3ms"
+    subscription_rendered_corpus_test.go:43: full core parse: rules=553 proxies=61 providers=44 (offline only)
+--- PASS: TestRenderedCorpusPinnedCoreParser (0.05s)
+    --- PASS: TestRenderedCorpusPinnedCoreParser/zh-CN (0.05s)
+    --- PASS: TestRenderedCorpusPinnedCoreParser/en (0.01s)
+=== RUN   TestRenderedCorpusNodeBootstrap
+=== RUN   TestRenderedCorpusNodeBootstrap/zh-CN
+time="2026-11-04T05:33:39.788162429Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.790659220Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.790802887Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.792414720Z" level=info msg="Initial configuration complete, total time: 4ms"
+=== RUN   TestRenderedCorpusNodeBootstrap/en
+time="2026-11-04T05:33:39.796537595Z" level=info msg="Start initial configuration in progress"
+time="2026-11-04T05:33:39.798401387Z" level=info msg="Geodata Loader mode: memconservative"
+time="2026-11-04T05:33:39.798408970Z" level=info msg="Geosite Matcher implementation: succinct"
+time="2026-11-04T05:33:39.799950470Z" level=info msg="Initial configuration complete, total time: 3ms"
+--- PASS: TestRenderedCorpusNodeBootstrap (0.02s)
+    --- PASS: TestRenderedCorpusNodeBootstrap/zh-CN (0.01s)
+    --- PASS: TestRenderedCorpusNodeBootstrap/en (0.01s)
+PASS
+ok  	github.com/user/yuelink/core	0.230s
+=== RUN   TestSubscriptionRoutingMatrixSR01
+    subscription_routing_matrix_test.go:114: providers without a client seed (empty): []
+    subscription_routing_matrix_test.go:192: pass=218 fail=0
+--- PASS: TestSubscriptionRoutingMatrixSR01 (0.19s)
+PASS
+ok  	github.com/user/yuelink/core	0.365s
+=== RUN   TestSubscriptionRoutingMatrixSR01
+    subscription_routing_matrix_test.go:114: providers without a client seed (empty): []
+    subscription_routing_matrix_test.go:192: pass=218 fail=0
+--- PASS: TestSubscriptionRoutingMatrixSR01 (0.17s)
+PASS
+ok  	github.com/user/yuelink/core	0.332s

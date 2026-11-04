@@ -2,22 +2,22 @@
   "schema": 1,
   "repo": "yueto-ci",
   "pr": 255,
-  "head": "361c7b1669ae136af9178b814344197c5daa52ad",
+  "head": "6407488db38bbc94f0fa58ef5dc1330d5fc40252",
   "backfilled": false,
   "review": {
     "tool": "codex",
     "verdict": "approve",
-    "reviewed_head": "361c7b1669ae136af9178b814344197c5daa52ad",
+    "reviewed_head": "6407488db38bbc94f0fa58ef5dc1330d5fc40252",
     "artifact": "reviews/merge-receipts-20261104/yueto-ci-255.md",
     "reviewer": "codex",
-    "reviewed_at": "2026-11-04T05:22:43.378265+00:00"
+    "reviewed_at": "2026-11-04T05:48:12.172511+00:00"
   },
   "parity": {
     "result": "pass",
-    "head": "361c7b1669ae136af9178b814344197c5daa52ad",
+    "head": "6407488db38bbc94f0fa58ef5dc1330d5fc40252",
     "command": "python3 -m unittest discover -s tests -p 'test_*.py' -v",
-    "log_sha256": "0294935dde2f74031a385403a1808579c923812aa17a47e0611f9e051a785434",
-    "ran_at": "2026-11-04T05:20:36.651653+00:00",
+    "log_sha256": "74d4002b107bb59b474e519279eefdef684b74b3beff16bc3791118afc3efd02",
+    "ran_at": "2026-11-04T05:52:09.061824+00:00",
     "runner": "mac-5f08d00f"
   }
 }

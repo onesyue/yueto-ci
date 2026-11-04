@@ -1,11 +1,63 @@
 Cloning into '/out/work/ci'...
 done.
-HEAD is now at 05c6b56 Merge pull request #252 from onesyue/cx/final-reviewed-pin-1104
+HEAD is now at 361c7b1 Bind final reviewed Ops source to native input admission
 Cloning into '/out/work/ci/yueops-src'...
 done.
-HEAD is now at 0fcf40c70 test(native): align required coverage and preserve signed fixture roots
+HEAD is now at 557588e6c fix(release): pin pruner to reviewed nonblocking materializer
 {'pytest': '9.1.1', 'PyYAML': '6.0.3', 'iniconfig': '2.3.0', 'packaging': '26.3', 'pluggy': '1.6.0', 'pygments': '2.21.0'}
 ADMISSION_ACCEPTED: shared-input tree accepted by the build admission policy
+test_all_52_obligations_require_actual_same_run_case_calls (test_ops_first_native_successors.ExactFirstNativePolicy.test_all_52_obligations_require_actual_same_run_case_calls) ... ok
+test_helper_admits_only_reviewed_mode_blob_source_and_retains_other_inputs (test_ops_first_native_successors.ExactFirstNativePolicy.test_helper_admits_only_reviewed_mode_blob_source_and_retains_other_inputs) ... ok
+test_missing_or_changed_module_blob_refuses_inheritance (test_ops_first_native_successors.ExactFirstNativePolicy.test_missing_or_changed_module_blob_refuses_inheritance) ... ok
+test_policy_has_no_historical_backup_or_disposition_downgrade (test_ops_first_native_successors.ExactFirstNativePolicy.test_policy_has_no_historical_backup_or_disposition_downgrade) ... ok
+test_backup_missing_changed_or_new_reason_cannot_be_grandfathered (test_ops_first_native_successors.FirstNativeSuccessors.test_backup_missing_changed_or_new_reason_cannot_be_grandfathered) ... ok
+test_board_historical_reason_blob_disposition_or_identity_cannot_change (test_ops_first_native_successors.FirstNativeSuccessors.test_board_historical_reason_blob_disposition_or_identity_cannot_change) ... ok
+test_board_missing_extra_or_duplicate_native_call_is_rejected (test_ops_first_native_successors.FirstNativeSuccessors.test_board_missing_extra_or_duplicate_native_call_is_rejected) ... ok
+test_board_successor_requires_seven_calls_without_editing_historical_baseline (test_ops_first_native_successors.FirstNativeSuccessors.test_board_successor_requires_seven_calls_without_editing_historical_baseline) ... ok
+test_canceled_backup_keeps_exact_23_skips_unexecuted (test_ops_first_native_successors.FirstNativeSuccessors.test_canceled_backup_keeps_exact_23_skips_unexecuted) ... ok
+test_unknown_board_blob_receives_no_inheritance (test_ops_first_native_successors.FirstNativeSuccessors.test_unknown_board_blob_receives_no_inheritance) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.129s
+
+OK
+test_annotation_summary_single_line_and_escape (test_admission_precheck.AdmissionPrecheck.test_annotation_summary_single_line_and_escape) ... ok
+test_available_nonancestor_remains_policy_rejection (test_admission_precheck.AdmissionPrecheck.test_available_nonancestor_remains_policy_rejection) ... ok
+test_cli_rejection_exit_and_marker (test_admission_precheck.AdmissionPrecheck.test_cli_rejection_exit_and_marker) ... ok
+test_dependency_helper_and_deletion_rejected (test_admission_precheck.AdmissionPrecheck.test_dependency_helper_and_deletion_rejected) ... ok
+test_invalid_sha_and_missing_object_are_input_errors (test_admission_precheck.AdmissionPrecheck.test_invalid_sha_and_missing_object_are_input_errors) ... ok
+test_ordinary_source_change_accepted (test_admission_precheck.AdmissionPrecheck.test_ordinary_source_change_accepted) ... ok
+test_present_commits_missing_sealed_predecessor_are_input_error (test_admission_precheck.AdmissionPrecheck.test_present_commits_missing_sealed_predecessor_are_input_error) ... ok
+test_real_expand_failure_emits_marker_and_summary (test_admission_precheck.AdmissionPrecheck.test_real_expand_failure_emits_marker_and_summary) ... ok
+test_unchanged_tree_accepted_and_worktree_ignored (test_admission_precheck.AdmissionPrecheck.test_unchanged_tree_accepted_and_worktree_ignored) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.191s
+
+OK
+test_evidence_and_sequential_predecessors (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_evidence_and_sequential_predecessors) ... ok
+test_outermost_first_and_historical_inputs_unchanged (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_outermost_first_and_historical_inputs_unchanged) ... ok
+test_partial_bundle_mode_and_pin_refused (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_partial_bundle_mode_and_pin_refused) ... ok
+test_pending_pr256_bundle_is_not_admitted (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_pending_pr256_bundle_is_not_admitted) ... ok
+test_real_git_ancestry_and_parent_trees (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_real_git_ancestry_and_parent_trees) ... ok
+test_seal_chain_tampering_refused (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_seal_chain_tampering_refused) ... ok
+test_shared_input_source_objects_exist_when_source_available (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_shared_input_source_objects_exist_when_source_available) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.227s
+
+OK
+test_full_admission_preserves_history (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_full_admission_preserves_history) ... ok
+test_partial_bundles_and_mutations_rejected (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_partial_bundles_and_mutations_rejected) ... ok
+test_real_git_ancestry (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_real_git_ancestry) ... ok
+test_review_artifacts (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_review_artifacts) ... ok
+test_seal_tampering_rejected (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_seal_tampering_rejected) ... ok
+test_unrelated_historical_inputs (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_unrelated_historical_inputs) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 2.592s
+
+OK
 test_annotation_summary_single_line_and_escape (test_admission_precheck.AdmissionPrecheck.test_annotation_summary_single_line_and_escape) ... ok
 test_available_nonancestor_remains_policy_rejection (test_admission_precheck.AdmissionPrecheck.test_available_nonancestor_remains_policy_rejection) ... ok
 test_cli_rejection_exit_and_marker (test_admission_precheck.AdmissionPrecheck.test_cli_rejection_exit_and_marker) ... ok
@@ -775,6 +827,6 @@ test_validate_job_keeps_the_utc_lens (test_yueops_node_tests_20261017.YueOpsNode
 test_validate_yueops_runs_all_three_node_suites (test_yueops_node_tests_20261017.YueOpsNodeTestPolicy.test_validate_yueops_runs_all_three_node_suites) ... ok
 
 ----------------------------------------------------------------------
-Ran 696 tests in 438.230s
+Ran 696 tests in 330.974s
 
 OK

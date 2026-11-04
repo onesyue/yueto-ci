@@ -1,8 +1,8 @@
-# yueto PR101 exact-head acceptance evidence
+# yueto PR101 final exact-head evidence
 
-Head `3434b7422a9c9598b04ac9ce627b467a449dc50b`. Original raw log: `.claude/state/takeover/20261104/resume-1039/root101-diff-check.log`. Copied bytes and SHA-256 are unchanged; run time is the original log modification time.
+Current head `e4bacb48e982935b56dcf45119c18dcee0cc4e25`. Current copied log is byte-identical to `.claude/state/takeover/20261104/resume-1039/root101-integrated-diff-check.log`. Prior candidate logs and reviews remain in predecessor commits; the current receipt binds only this head.
 
-Documentation-only sole-plan update. Exact committed diff integrity passed; independent review confirms pending and UNKNOWN work remains distinguished. No source behavior or production acceptance is claimed.
+Exact reviewed plan bytes are unchanged from3434b742; the signed merge integrates the already delivered master prefix. Only the candidate plan diff against actual master was checked. This is documentation and source-custody evidence, not runtime or production acceptance.
 
 Independent review:
 
@@ -24,6 +24,17 @@ Independent review:
     "Finite successor queue references bounded existing contracts, preserves financial/authentication invariants and release/readback/rollback obligations, and withdraws unavailable inputs rather than creating indefinite waits."
   ],
   "validation": "Read-only exact diff review and targeted contract cross-reference. Existing diff-check reused; no tests run.",
-  "limitations": "Approval covers accuracy of status distinctions and scope, not fresh production measurement or completion of pending items."
+  "limitations": "Approval covers accuracy of status distinctions and scope, not fresh production measurement or completion of pending items.",
+  "integration_binding": {
+    "head": "e4bacb48e982935b56dcf45119c18dcee0cc4e25",
+    "signature": "G",
+    "parents": [
+      "3434b7422a9c9598b04ac9ce627b467a449dc50b",
+      "f5ab339a986de1ca7d4469c37f6207530fd29058"
+    ],
+    "plan_blob": "8abbb1757d7099ebdb6949318cb8e17146aec832",
+    "bound_at": "2026-11-04T05:39:15.566217+00:00",
+    "finding": "Plan blob identical to approved343. Only other changes versus343 are AGENTS.md and maintenance log, byte-identical to independently reviewed merged f5ab. No new semantic diff; original approval retained. Fresh native candidate gate remains coordinator-owned."
+  }
 }
 ```
