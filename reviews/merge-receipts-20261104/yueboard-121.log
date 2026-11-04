@@ -1,0 +1,162 @@
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/clash/direct
+    group_transport_companion_test.go:220: paired clash template rendered 67706 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/clash/held
+    group_transport_companion_test.go:220: paired clash template rendered 67580 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/clashmeta/direct
+    group_transport_companion_test.go:220: paired clashmeta template rendered 78103 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/clashmeta/held
+    group_transport_companion_test.go:220: paired clashmeta template rendered 77977 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/stash/direct
+    group_transport_companion_test.go:220: paired stash template rendered 68079 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/stash/held
+    group_transport_companion_test.go:220: paired stash template rendered 67953 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/singbox/direct
+    group_transport_companion_test.go:220: paired singbox template rendered 37076 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/singbox/held
+    group_transport_companion_test.go:220: paired singbox template rendered 37055 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/surge/direct
+    group_transport_companion_test.go:220: paired surge template rendered 37952 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/surge/held
+    group_transport_companion_test.go:220: paired surge template rendered 38004 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/surfboard/direct
+    group_transport_companion_test.go:220: paired surfboard template rendered 36491 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/surfboard/held
+    group_transport_companion_test.go:220: paired surfboard template rendered 36543 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/clash/direct
+    group_transport_companion_test.go:220: paired clash template rendered 65384 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/clash/held
+    group_transport_companion_test.go:220: paired clash template rendered 65258 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/clashmeta/direct
+    group_transport_companion_test.go:220: paired clashmeta template rendered 75017 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/clashmeta/held
+    group_transport_companion_test.go:220: paired clashmeta template rendered 74891 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/stash/direct
+    group_transport_companion_test.go:220: paired stash template rendered 65210 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/stash/held
+    group_transport_companion_test.go:220: paired stash template rendered 65084 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/singbox/direct
+    group_transport_companion_test.go:220: paired singbox template rendered 35574 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/singbox/held
+    group_transport_companion_test.go:220: paired singbox template rendered 35553 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/surge/direct
+    group_transport_companion_test.go:220: paired surge template rendered 33631 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/surge/held
+    group_transport_companion_test.go:220: paired surge template rendered 33707 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/surfboard/direct
+    group_transport_companion_test.go:220: paired surfboard template rendered 33591 bytes
+=== RUN   TestPairedOpsTemplatesEnforceDefaultMembership/en/surfboard/held
+    group_transport_companion_test.go:220: paired surfboard template rendered 33667 bytes
+--- PASS: TestPairedOpsTemplatesEnforceDefaultMembership (0.11s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/clash/direct (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/clash/held (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/clashmeta/direct (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/clashmeta/held (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/stash/direct (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/stash/held (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/singbox/direct (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/singbox/held (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/surge/direct (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/surge/held (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/surfboard/direct (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/zh-CN/surfboard/held (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/clash/direct (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/clash/held (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/clashmeta/direct (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/clashmeta/held (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/stash/direct (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/stash/held (0.01s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/singbox/direct (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/singbox/held (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/surge/direct (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/surge/held (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/surfboard/direct (0.00s)
+    --- PASS: TestPairedOpsTemplatesEnforceDefaultMembership/en/surfboard/held (0.00s)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.11.15/declared/subscribe_templates-1-zh-CN.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.11.15 check ok (35188 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.11.15/declared/subscribe_templates-1-zh-CN.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.11.15 check ok (35878 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.11.15/declared/subscribe_templates-9-en.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.11.15 check ok (33772 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.11.15/declared/subscribe_templates-9-en.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.11.15 check ok (34462 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/declared/subscribe_templates-1-zh-CN.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.12.4 check ok (35173 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/declared/subscribe_templates-1-zh-CN.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.12.4 check ok (35863 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/declared/subscribe_templates-9-en.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.12.4 check ok (33757 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/declared/subscribe_templates-9-en.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.12.4 check ok (34447 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/undeclared/subscribe_templates-1-zh-CN.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.12.4 check ok (35173 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/undeclared/subscribe_templates-1-zh-CN.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.12.4 check ok (35863 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/undeclared/subscribe_templates-9-en.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.12.4 check ok (33757 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/undeclared/subscribe_templates-9-en.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.12.4 check ok (34447 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/declared/subscribe_templates-1-zh-CN.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.13.21 check ok (35173 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/declared/subscribe_templates-1-zh-CN.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.13.21 check ok (35863 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/declared/subscribe_templates-9-en.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.13.21 check ok (33757 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/declared/subscribe_templates-9-en.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.13.21 check ok (34447 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/undeclared/subscribe_templates-1-zh-CN.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.13.21 check ok (35173 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/undeclared/subscribe_templates-1-zh-CN.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.13.21 check ok (35863 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/undeclared/subscribe_templates-9-en.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.13.21 check ok (33757 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/undeclared/subscribe_templates-9-en.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.13.21 check ok (34447 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/declared/subscribe_templates-1-zh-CN.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.14.3 check ok (35642 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/declared/subscribe_templates-1-zh-CN.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.14.3 check ok (36332 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/declared/subscribe_templates-9-en.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.14.3 check ok (34226 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/declared/subscribe_templates-9-en.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.14.3 check ok (34916 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/undeclared/subscribe_templates-1-zh-CN.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.14.3 check ok (35173 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/undeclared/subscribe_templates-1-zh-CN.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.14.3 check ok (35863 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/undeclared/subscribe_templates-9-en.json/recommend=0
+    singbox_cross_version_check_test.go:142: sing-box 1.14.3 check ok (33757 bytes)
+=== RUN   TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/undeclared/subscribe_templates-9-en.json/recommend=1
+    singbox_cross_version_check_test.go:142: sing-box 1.14.3 check ok (34447 bytes)
+--- PASS: TestSingBoxProductionTemplatesPassOfficialCheck (0.58s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.11.15/declared/subscribe_templates-1-zh-CN.json/recommend=0 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.11.15/declared/subscribe_templates-1-zh-CN.json/recommend=1 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.11.15/declared/subscribe_templates-9-en.json/recommend=0 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.11.15/declared/subscribe_templates-9-en.json/recommend=1 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/declared/subscribe_templates-1-zh-CN.json/recommend=0 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/declared/subscribe_templates-1-zh-CN.json/recommend=1 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/declared/subscribe_templates-9-en.json/recommend=0 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/declared/subscribe_templates-9-en.json/recommend=1 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/undeclared/subscribe_templates-1-zh-CN.json/recommend=0 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/undeclared/subscribe_templates-1-zh-CN.json/recommend=1 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/undeclared/subscribe_templates-9-en.json/recommend=0 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.12.4/undeclared/subscribe_templates-9-en.json/recommend=1 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/declared/subscribe_templates-1-zh-CN.json/recommend=0 (0.02s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/declared/subscribe_templates-1-zh-CN.json/recommend=1 (0.02s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/declared/subscribe_templates-9-en.json/recommend=0 (0.02s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/declared/subscribe_templates-9-en.json/recommend=1 (0.02s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/undeclared/subscribe_templates-1-zh-CN.json/recommend=0 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/undeclared/subscribe_templates-1-zh-CN.json/recommend=1 (0.02s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/undeclared/subscribe_templates-9-en.json/recommend=0 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.13.21/undeclared/subscribe_templates-9-en.json/recommend=1 (0.01s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/declared/subscribe_templates-1-zh-CN.json/recommend=0 (0.03s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/declared/subscribe_templates-1-zh-CN.json/recommend=1 (0.03s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/declared/subscribe_templates-9-en.json/recommend=0 (0.03s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/declared/subscribe_templates-9-en.json/recommend=1 (0.03s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/undeclared/subscribe_templates-1-zh-CN.json/recommend=0 (0.03s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/undeclared/subscribe_templates-1-zh-CN.json/recommend=1 (0.03s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/undeclared/subscribe_templates-9-en.json/recommend=0 (0.03s)
+    --- PASS: TestSingBoxProductionTemplatesPassOfficialCheck/1.14.3/undeclared/subscribe_templates-9-en.json/recommend=1 (0.03s)
+PASS
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	0.696s
