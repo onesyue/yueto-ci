@@ -164,7 +164,8 @@ class OpsPackagingTransition(unittest.TestCase):
                     common[path] = change["after_blob"]
         for path, change in self.tornado["changes"].items():
             common[path] = change["after_blob"]
-        common.update(SHARDS.NATIVE_INPUTS)
+        # Match this peeled historical baseline, not the current native epoch.
+        common.update(SHARDS.required_native_inputs(self.below)[1])
         self.assertNotIn(ADDED, common)
         return common
 
