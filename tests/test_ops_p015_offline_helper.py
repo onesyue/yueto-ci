@@ -1,4 +1,4 @@
-"""P015 admission is bound to exactly one reviewed path, blob, mode and source."""
+"""P015 admission is bound to exactly one reviewed path, blob, mode and the signed release pin."""
 import copy
 import importlib.util
 import json
@@ -20,7 +20,7 @@ class P015OfflineHelper(unittest.TestCase):
         self.common = self.freeze['common_inputs']
         self.files = {p: (self.freeze['input_modes'][p], b) for p, b in self.common.items()}
         self.path = self.policy['shared_input']['path']
-        self.revision = self.policy['source_revision']
+        self.revision = M.first_native_policy()['source_revision']
 
     def admit(self, common, files):
         baseline = M.skip_baseline()

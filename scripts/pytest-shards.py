@@ -1913,9 +1913,10 @@ def admit_p015_offline_helper(common, files, source_revision):
     path = item["path"]
     if path not in common:
         return common, files
-    require(source_revision == policy["source_revision"]
+    # Bound to the signed release pin (miniapp precedent); path/blob/mode stay exact.
+    require(source_revision == first_native_policy()["source_revision"]
             and common.get(path) == item["blob"],
-            "p015 offline helper requires exact reviewed source and blob")
+            "p015 offline helper requires the signed release pin and exact blob")
     if files is not None:
         require(files.get(path) == (item["mode"], item["blob"]),
                 "p015 offline helper mode or tree changed")
