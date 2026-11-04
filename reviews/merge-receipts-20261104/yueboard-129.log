@@ -1,0 +1,44 @@
+WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
+go version go1.27.3 linux/amd64
+=== RUN   TestFrozenTemplateCorpusIdentityFailures
+=== RUN   TestFrozenTemplateCorpusIdentityFailures/missing-row
+=== RUN   TestFrozenTemplateCorpusIdentityFailures/duplicate
+=== RUN   TestFrozenTemplateCorpusIdentityFailures/unknown-format
+=== RUN   TestFrozenTemplateCorpusIdentityFailures/unknown-locale
+=== RUN   TestFrozenTemplateCorpusIdentityFailures/missing-file
+=== RUN   TestFrozenTemplateCorpusIdentityFailures/changed-bytes
+--- PASS: TestFrozenTemplateCorpusIdentityFailures (0.01s)
+    --- PASS: TestFrozenTemplateCorpusIdentityFailures/missing-row (0.00s)
+    --- PASS: TestFrozenTemplateCorpusIdentityFailures/duplicate (0.00s)
+    --- PASS: TestFrozenTemplateCorpusIdentityFailures/unknown-format (0.00s)
+    --- PASS: TestFrozenTemplateCorpusIdentityFailures/unknown-locale (0.00s)
+    --- PASS: TestFrozenTemplateCorpusIdentityFailures/missing-file (0.00s)
+    --- PASS: TestFrozenTemplateCorpusIdentityFailures/changed-bytes (0.00s)
+=== RUN   TestFrozenTemplateCorpusRender
+=== RUN   TestFrozenTemplateCorpusRender/clash/en
+=== RUN   TestFrozenTemplateCorpusRender/clash/zh-CN
+=== RUN   TestFrozenTemplateCorpusRender/clashmeta/en
+=== RUN   TestFrozenTemplateCorpusRender/clashmeta/zh-CN
+=== RUN   TestFrozenTemplateCorpusRender/singbox/en
+=== RUN   TestFrozenTemplateCorpusRender/singbox/zh-CN
+=== RUN   TestFrozenTemplateCorpusRender/stash/en
+=== RUN   TestFrozenTemplateCorpusRender/stash/zh-CN
+=== RUN   TestFrozenTemplateCorpusRender/surfboard/en
+=== RUN   TestFrozenTemplateCorpusRender/surfboard/zh-CN
+=== RUN   TestFrozenTemplateCorpusRender/surge/en
+=== RUN   TestFrozenTemplateCorpusRender/surge/zh-CN
+--- PASS: TestFrozenTemplateCorpusRender (0.19s)
+    --- PASS: TestFrozenTemplateCorpusRender/clash/en (0.04s)
+    --- PASS: TestFrozenTemplateCorpusRender/clash/zh-CN (0.02s)
+    --- PASS: TestFrozenTemplateCorpusRender/clashmeta/en (0.02s)
+    --- PASS: TestFrozenTemplateCorpusRender/clashmeta/zh-CN (0.02s)
+    --- PASS: TestFrozenTemplateCorpusRender/singbox/en (0.01s)
+    --- PASS: TestFrozenTemplateCorpusRender/singbox/zh-CN (0.01s)
+    --- PASS: TestFrozenTemplateCorpusRender/stash/en (0.02s)
+    --- PASS: TestFrozenTemplateCorpusRender/stash/zh-CN (0.02s)
+    --- PASS: TestFrozenTemplateCorpusRender/surfboard/en (0.01s)
+    --- PASS: TestFrozenTemplateCorpusRender/surfboard/zh-CN (0.00s)
+    --- PASS: TestFrozenTemplateCorpusRender/surge/en (0.01s)
+    --- PASS: TestFrozenTemplateCorpusRender/surge/zh-CN (0.01s)
+PASS
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	0.265s

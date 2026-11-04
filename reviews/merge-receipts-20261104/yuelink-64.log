@@ -1,0 +1,184 @@
+Flutter 3.47.8 • channel stable • https://github.com/flutter/flutter.git
+Framework • revision 737ba8f885 (12 days ago) • 2026-10-22 21:37:31 -0700
+Engine • hash dfd2e6cb7d319db05e3bf1503f3e2ac60f6288a2 (revision cf636b1dfb) (12 days ago) • 2026-10-23 02:13:38.000Z
+Tools • Dart 3.13.7 • DevTools 2.60.0
+Resolving dependencies...
+Downloading packages...
+! hotkey_manager_macos 0.2.0 from path third_party/hotkey_manager_macos (overridden)
+! media_kit_libs_android_video 1.3.8 from path third_party/media_kit_libs_android_video (overridden)
+! media_kit_libs_ios_video 1.1.4 from path third_party/media_kit_libs_ios_video (overridden)
+! media_kit_libs_linux 1.2.1 from path third_party/media_kit_libs_linux (overridden)
+! media_kit_libs_macos_video 1.1.4 from path third_party/media_kit_libs_macos_video (overridden)
+! media_kit_libs_windows_video 1.0.11 from path third_party/media_kit_libs_windows_video (overridden)
+! media_kit_video 2.0.1 from path third_party/media_kit_video (overridden)
+Got dependencies!
+00:00 +0: loading /src/test/services/desktop_tun_diagnostics_test.dart
+00:00 +0: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics tri-state probes a route tool that times out reports unknown, not "no route"
+00:00 +1: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics tri-state probes a route tool missing from PATH reports unknown
+00:00 +2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics tri-state probes a readable table with no TUN route is a definite false
+00:00 +3: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics tri-state probes an interface enumeration that throws reports unknown
+00:00 +4: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics tri-state probes an interface enumeration that answers empty is a definite false
+00:00 +5: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics tri-state probes unknown probes are recorded in detail, not laundered away
+00:00 +6: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics tri-state probes an unreadable routing table cannot certify teardown as clean
+00:00 +7: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics tri-state probes a readable table with our route gone still certifies clean
+00:00 +8: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics.inspect with unanswerable probes never self-heals on a probe that could not answer
+00:00 +9: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics.inspect with unanswerable probes records the uncertainty instead of laundering it
+00:00 +10: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics.inspect with unanswerable probes unanswerable probes never certify a running TUN
+00:00 +11: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics interface and route sampling rechecks an earlier missing interface after its route appears
+00:00 +12: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics interface and route sampling a route alone never certifies a still-missing interface
+00:00 +13: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics interface and route sampling an unreadable recheck records uncertainty without restarting
+00:00 +14: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics any-system-proxy probe a foreign proxy is a TUN conflict even on a different port
+00:00 +15: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics any-system-proxy probe unreadable system proxy stays pending (throws=false)
+00:00 +16: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics any-system-proxy probe unreadable system proxy stays pending (throws=true)
+00:00 +17: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics any-system-proxy probe unreadable system proxy never certifies clean teardown
+00:00 +18: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics privilege probe reports privileged when helper service is installed (no UAC needed)
+00:00 +19: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics privilege probe falls back to net session on Windows when helper not installed
+  Skip: Windows-only diagnostic
+00:00 +19 ~1: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics privilege probe non-desktop platforms always report false
+  Skip: mobile-only contract; runs on Android/iOS CI
+00:00 +19 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Windows TUN matching recognizes YueLink and upstream Meta Tunnel adapters
+00:00 +20 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Windows TUN matching does not treat ordinary Windows adapters as TUN
+00:00 +21 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Windows TUN matching recognizes default route owned by the mihomo TUN address
+00:00 +22 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Windows TUN matching recognizes 0/1 + 128.0.0.0/1 split halves on the TUN
+00:00 +23 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Windows TUN matching adapter present in Interface List but NOT owning the default route is not treated as routed (rival hijack false positive)
+00:00 +24 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Windows TUN matching does not treat WLAN-only route output as TUN
+00:00 +25 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics macOS route matching returns the utun carrying mihomo split-default routes
+00:00 +26 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics macOS route matching returns the utun for WireGuard-style 0/1 + 128.0/1 pair
+00:00 +27 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics macOS route matching returns null when no utun owns the default route
+00:00 +28 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics macOS route matching ignores default route owned by physical interface
+00:00 +29 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics fake-IP detection recognizes 198.19.x.x fake-IP (current injected range)
+00:00 +30 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics fake-IP detection recognizes 198.18.x.x fake-IP from mihomo default range
+00:00 +31 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics fake-IP detection recognizes 198.19.x.x as fake-IP (range future-proofing)
+00:00 +32 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics fake-IP detection rejects ordinary public IPv4 addresses
+00:00 +33 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics fake-IP detection rejects IPv4 outside the 198.18/15 fake-IP range
+00:00 +34 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics fake-IP detection rejects IPv6 addresses regardless of value
+00:00 +35 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics DNS hijack probe reports hijack OK when system lookup returns a fake-IP
+00:00 +36 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics DNS hijack probe falls through to second probe host when first answers DIRECT
+00:00 +37 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics DNS hijack probe reports hijack failed when no probe returns a fake-IP
+00:00 +38 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics DNS hijack probe treats resolver errors as "not hijacked" but keeps probing
+00:00 +39 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics DNS hijack probe all-error path returns false without raising
+00:00 +40 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Linux route matching matches YueLink-named TUN device on the default route
+00:00 +41 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Linux route matching matches mihomo-named TUN device on the default route
+00:00 +42 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Linux route matching matches the 0.0.0.0/1 + 128.0.0.0/1 split-default pair
+00:00 +43 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Linux route matching does not match generic tun0 from another VPN
+00:00 +44 ~2: /src/test/services/desktop_tun_diagnostics_test.dart: DesktopTunDiagnostics Linux route matching device present on subnet rows but NOT on the default route is not treated as routed (rival hijack false positive)
+00:00 +45 ~2: loading /src/test/services/desktop_tun_egress_consumer_test.dart
+00:00 +45 ~2: /src/test/services/desktop_tun_egress_consumer_test.dart: diagnostic target outages preserve useful traffic and the selected session
+[DesktopTunDiagnostics] proxy-path https://www.gstatic.com/generate_204 failed: HttpException: Proxy failed to establish tunnel (503 Service Unavailable), uri = //www.gstatic.com:443
+[DesktopTunDiagnostics] proxy-path https://www.gstatic.com/generate_204 failed: HttpException: Proxy failed to establish tunnel (503 Service Unavailable), uri = //www.gstatic.com:443
+[DesktopTunDiagnostics] proxy-path https://cp.cloudflare.com/generate_204 failed: HttpException: Proxy failed to establish tunnel (503 Service Unavailable), uri = //cp.cloudflare.com:443
+[DesktopTunDiagnostics] proxy-path https://www.gstatic.com/generate_204 failed: HttpException: Proxy failed to establish tunnel (503 Service Unavailable), uri = //www.gstatic.com:443
+[DesktopTunDiagnostics] proxy-path https://cp.cloudflare.com/generate_204 failed: HttpException: Proxy failed to establish tunnel (503 Service Unavailable), uri = //cp.cloudflare.com:443
+[DesktopTunDiagnostics] proxy-path https://www.gstatic.com/generate_204 failed: HttpException: Proxy failed to establish tunnel (503 Service Unavailable), uri = //www.gstatic.com:443
+[DesktopTunDiagnostics] proxy-path https://cp.cloudflare.com/generate_204 failed: HttpException: Proxy failed to establish tunnel (503 Service Unavailable), uri = //cp.cloudflare.com:443
+[DesktopTunDiagnostics] proxy-path https://www.gstatic.com/generate_204 failed: HttpException: Proxy failed to establish tunnel (503 Service Unavailable), uri = //www.gstatic.com:443
+00:01 +46 ~2: loading /src/test/services/desktop_tun_reprobe_unknown_test.dart
+00:02 +46 ~2: /src/test/services/desktop_tun_reprobe_unknown_test.dart: unreadable plumbing cannot expire a reprobe into a restart
+00:02 +47 ~2: /src/test/services/desktop_tun_reprobe_unknown_test.dart: an unknown sample breaks the consecutive verified streak
+00:02 +48 ~2: /src/test/services/desktop_tun_reprobe_unknown_test.dart: skipped egress samples also break the verified streak
+00:02 +49 ~2: loading /src/test/services/desktop_tun_route_repair_no_flush_20260926_test.dart
+00:02 +49 ~2: /src/test/services/desktop_tun_route_repair_no_flush_20260926_test.dart: mark_route_degraded returns without clearing or closing
+00:02 +50 ~2: /src/test/services/desktop_tun_route_repair_no_flush_20260926_test.dart: reapply_route no longer routes into the flush branch
+00:02 +51 ~2: loading /src/test/services/desktop_tun_state_machine_test.dart
+00:03 +51 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine unknown plumbing is pending and cannot authorize a repair
+00:03 +52 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine unreadable route cannot trigger a mixed-stack restart
+00:03 +53 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine unknown route does not hide a measured controller failure
+00:03 +54 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine unknown interface does not hide a measured foreign proxy
+00:03 +55 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine route failure is degraded, never running
+00:03 +56 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine DNS probe failure alone does not degrade when transport works
+00:03 +57 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine DNS failure plus transport failure escalates to dns_hijack_failed
+00:03 +58 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine controller failure is not node failure
+00:03 +59 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine dead node with healthy plumbing is node_timeout, not a restart
+00:03 +60 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine mixed stack blocked (proxy path OK) → fallback_gvisor_restart
+00:03 +61 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine system stack blocked (proxy path OK) also falls back to gvisor
+00:03 +62 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine gvisor with proxy path OK stays node_timeout (no further fallback)
+00:03 +63 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine mixed stack with proxy path ALSO dead is node_timeout, not stack
+00:03 +64 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine direct routing mode (egress probes skipped) never lands on node_timeout / dns_hijack from dead probes
+00:03 +65 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine direct routing mode still surfaces plumbing failures
+00:03 +66 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine helper registered but IPC dead → helper_unreachable, not a blind restart
+00:03 +67 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine no privileged path shows missing_permission
+00:03 +68 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine fully working TUN on Windows is running, even without UAC elevation
+00:03 +69 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine Windows missing Wintun shows missing_driver
+00:03 +70 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine Linux missing /dev/net/tun maps to missing_driver
+00:03 +71 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine system proxy conflict is explicit
+00:03 +72 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine AI/reality errors are not classified as TUN local failures
+00:03 +73 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunStateMachine cleanup failed is represented explicitly
+00:03 +74 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunRepairService repair does not loop level2 within 30 seconds
+00:03 +75 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunRepairService persistent level2 failures back off instead of restarting every supervisor tick
+00:03 +76 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunRepairService runThrottled reports whether the action actually executed
+00:03 +77 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunRepairService helper_unreachable plans a manual service reinstall, never an automatic repair
+00:03 +78 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunRepairService node_timeout never escalates to a core restart
+00:03 +79 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunRepairService route_not_applied only marks degraded — never a flush (2026-09-26: v1.3.80 Windows cut connections every 45 s)
+00:03 +80 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunRepairService level1 refresh is throttled to 15 s against focus flap
+00:03 +81 ~2: /src/test/services/desktop_tun_state_machine_test.dart: DesktopTunRepairService tun_stack_blocked → level2 fallback_gvisor_restart, 30 s throttle
+00:03 +82 ~2: /src/test/services/desktop_tun_state_machine_test.dart: connectShouldDegrade a healthy tunnel and a cold egress miss stay connected
+00:03 +83 ~2: /src/test/services/desktop_tun_state_machine_test.dart: connectShouldDegrade a missing adapter, route, or helper is a real connect fault
+00:03 +84 ~2: loading /src/test/services/desktop_tun_supervisor_egress_test.dart
+00:04 +84 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.egressHealthStep threshold is 2 (one transient miss must not degrade)
+00:04 +85 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.egressHealthStep egress OK while healthy resets counter, no restore/degrade
+00:04 +86 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.egressHealthStep first failure does NOT degrade (below threshold)
+00:04 +87 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.egressHealthStep second consecutive failure degrades exactly once
+00:04 +88 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.egressHealthStep further failures while already marked do NOT re-degrade (no repeated warning)
+00:04 +89 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.egressHealthStep egress OK while marked restores running exactly once
+00:04 +90 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.egressHealthStep recovery after restore does not restore again (idempotent)
+00:04 +91 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.shouldAttemptStackReprobe never reprobes unless the persisted stack is the gvisor fallback
+00:04 +92 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.shouldAttemptStackReprobe never reprobes without a recorded fallback moment
+00:04 +93 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.shouldAttemptStackReprobe first fallback → due after 7 days, not before
+00:04 +94 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.shouldAttemptStackReprobe backoff doubles per fallback: count=3 → 28 days
+00:04 +95 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: DesktopTunSupervisor.shouldAttemptStackReprobe backoff caps at 90 days regardless of count
+00:04 +96 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: egressNodeTypeFromProxies rule mode: resolves conventional selector chain to node type
+00:04 +97 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: egressNodeTypeFromProxies rule mode: falls back to first Selector group when unnamed
+00:04 +98 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: egressNodeTypeFromProxies global mode: walks GLOBAL through nested group
+00:04 +99 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: egressNodeTypeFromProxies cycle in now pointers returns null instead of hanging
+00:04 +100 ~2: /src/test/services/desktop_tun_supervisor_egress_test.dart: egressNodeTypeFromProxies dangling now pointer or malformed shape returns null
+00:04 +101 ~2: loading /src/test/services/desktop_tun_supervisor_status_guard_test.dart
+00:05 +101 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: a probe that returns after the core stopped never writes degraded
+00:05 +102 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: a probe that returns mid-restart does not stomp starting
+00:05 +103 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: unknown egress preserves local TUN checks, controllerFailed=false
+00:05 +104 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: unknown egress preserves local TUN checks, controllerFailed=true
+00:05 +105 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure preserves controller_failed, read=2
+00:05 +106 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure preserves tun_interface_missing, read=2
+00:05 +107 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure preserves dns_hijack_failed, read=2
+00:05 +108 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure preserves controller_failed, read=3
+00:05 +109 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure preserves tun_interface_missing, read=3
+00:05 +110 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure preserves dns_hijack_failed, read=3
+00:05 +111 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure rejects egress conclusion ok
+00:05 +112 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure rejects egress conclusion node_timeout
+00:05 +113 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure rejects egress conclusion tun_stack_blocked
+00:05 +114 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure breaks stack reprobe streak, read=2
+00:05 +115 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: post-inspect graph failure breaks stack reprobe streak, read=3
+00:05 +116 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: stop during final live TUN check cannot restore degraded, userStopped=false
+00:05 +117 ~2: /src/test/services/desktop_tun_supervisor_status_guard_test.dart: stop during final live TUN check cannot restore degraded, userStopped=true
+00:05 +118 ~2: loading /src/test/modules/ios_tun_egress_probe_test.dart
+00:06 +118 ~2: /src/test/modules/ios_tun_egress_probe_test.dart: iOS target probe checks a real HTTP 204 response
+00:06 +119 ~2: /src/test/modules/ios_tun_egress_probe_test.dart: iOS target probe checks a real HTTP 200 response
+00:06 +120 ~2: /src/test/modules/ios_tun_egress_probe_test.dart: iOS target probe checks a real HTTP 302 response
+00:06 +121 ~2: /src/test/modules/ios_tun_egress_probe_test.dart: iOS target probe checks a real HTTP 404 response
+00:06 +122 ~2: /src/test/modules/ios_tun_egress_probe_test.dart: iOS target probe checks a real HTTP 503 response
+00:06 +123 ~2: loading /src/test/modules/network_diagnostics_baseline_probe_test.dart
+00:07 +123 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: Google baseline checks its real HTTP 204 response
+00:07 +124 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: Google baseline checks its real HTTP 200 response
+00:07 +125 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: Google baseline checks its real HTTP 302 response
+00:07 +126 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: Google baseline checks its real HTTP 404 response
+00:07 +127 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: Google baseline checks its real HTTP 503 response
+00:07 +128 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: Cloudflare baseline checks its real HTTP 204 response
+00:07 +129 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: Cloudflare baseline checks its real HTTP 200 response
+00:07 +130 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: Cloudflare baseline checks its real HTTP 302 response
+00:07 +131 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: Cloudflare baseline checks its real HTTP 404 response
+00:07 +132 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: Cloudflare baseline checks its real HTTP 503 response
+00:07 +133 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: an ordinary application 404 remains a reachable response
+00:07 +134 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: AI HTTP 403 remains limited, rather than a broken baseline
+00:07 +135 ~2: /src/test/modules/network_diagnostics_baseline_probe_test.dart: AI HTTP 429 remains limited, rather than a broken baseline
+00:07 +136 ~2: loading /src/test/modules/network_diagnostics_proxy_test.dart
+00:08 +136 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: ConnectionDiagnosticsService.diagnosticProxyFor desktop systemProxy + running core probes through the mixed port
+00:08 +137 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: ConnectionDiagnosticsService.diagnosticProxyFor TUN mode stays DIRECT — the probe must traverse the TUN stack
+00:08 +138 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: ConnectionDiagnosticsService.diagnosticProxyFor mobile is DIRECT (always TUN, never a mixed-port client)
+00:08 +139 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: ConnectionDiagnosticsService.diagnosticProxyFor core not running is DIRECT — nothing is listening to proxy to
+00:08 +140 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: ConnectionDiagnosticsService.diagnosticProxyFor direct routing mode is DIRECT (no node in the path)
+00:08 +141 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: ConnectionDiagnosticsService.diagnosticProxyFor systemProxy disengaged by the user is DIRECT
+00:08 +142 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: ConnectionDiagnosticsService.diagnosticProxyFor unusable port is DIRECT, never PROXY 127.0.0.1:0
+00:08 +143 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: NetworkDiagnostics probe routing (wiring) systemProxy mode sends probes through mihomo
+00:09 +144 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: NetworkDiagnostics probe routing (wiring) TUN mode leaves probes DIRECT
+00:09 +145 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: NetworkDiagnostics probe routing (wiring) stopped core leaves probes DIRECT
+00:09 +146 ~2: /src/test/modules/network_diagnostics_proxy_test.dart: NetworkDiagnostics probe routing (wiring) direct routing mode leaves probes DIRECT
+00:09 +147 ~2: All tests passed!
