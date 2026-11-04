@@ -2,8 +2,8 @@
   "schema": 1,
   "repo": "yueops",
   "pr": 370,
-  "head": "95d9cbfa66ceb2726f01cdeaac1e5acfdd99c742",
+  "head": "4f349124fc4964d6222a449b86e86533fde12ad0",
   "backfilled": false,
-  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "95d9cbfa66ceb2726f01cdeaac1e5acfdd99c742", "artifact": "reviews/merge-receipts-20261105/yueops-370.md", "reviewer": "codex", "reviewed_at": "2026-11-04T20:16:05Z"},
-  "parity": {"result": "pass", "head": "95d9cbfa66ceb2726f01cdeaac1e5acfdd99c742", "command": "pytest -q -n 4 tests (full suite; 0 new failures vs base fd8f334ab; pre-existing checkin grant gap from master)", "log_sha256": "65a7cda87a9e69563b60aefa79f64d6c2974a1c5b7395a7a6fe06d28298c3f3d", "ran_at": "2026-11-04T20:35:23Z", "runner": "mac-5f08d00f"}
+  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "4f349124fc4964d6222a449b86e86533fde12ad0", "artifact": "reviews/merge-receipts-20261105/yueops-370.md", "reviewer": "codex", "reviewed_at": "2026-11-04T21:01:44Z"},
+  "parity": {"result": "pass", "head": "4f349124fc4964d6222a449b86e86533fde12ad0", "command": "pytest -n 4 tests (full suite, junit compare vs master 7bc341567)", "log_sha256": "8a9694527b30bdaee60bd3665eee6b5f401544ebf4df17d0f92912736a2d7bfc", "ran_at": "2026-11-04T22:00:13Z", "runner": "mac-5f08d00f"}
 }
