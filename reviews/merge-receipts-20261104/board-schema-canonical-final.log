@@ -1,0 +1,52 @@
+=== RUN   TestCanonicalBuilderCompletion
+=== RUN   TestCanonicalBuilderCompletion/internal/modules/order/auto_renew.go
+=== RUN   TestCanonicalBuilderCompletion/internal/modules/order/auto_renew.go#01
+=== RUN   TestCanonicalBuilderCompletion/internal/modules/order/save.go
+=== RUN   TestCanonicalBuilderCompletion/internal/modules/order/save.go#01
+=== RUN   TestCanonicalBuilderCompletion/internal/modules/order/save.go#02
+=== RUN   TestCanonicalBuilderCompletion/internal/platform/deviceidentity/identity.go
+--- PASS: TestCanonicalBuilderCompletion (0.21s)
+    --- PASS: TestCanonicalBuilderCompletion/internal/modules/order/auto_renew.go (0.05s)
+    --- PASS: TestCanonicalBuilderCompletion/internal/modules/order/auto_renew.go#01 (0.04s)
+    --- PASS: TestCanonicalBuilderCompletion/internal/modules/order/save.go (0.04s)
+    --- PASS: TestCanonicalBuilderCompletion/internal/modules/order/save.go#01 (0.04s)
+    --- PASS: TestCanonicalBuilderCompletion/internal/modules/order/save.go#02 (0.04s)
+    --- PASS: TestCanonicalBuilderCompletion/internal/platform/deviceidentity/identity.go (0.01s)
+=== RUN   TestMigrationReferenceFailureIsLimited
+--- PASS: TestMigrationReferenceFailureIsLimited (0.00s)
+=== RUN   TestSQLExtraction
+--- PASS: TestSQLExtraction (0.00s)
+=== RUN   TestDynamicSQLDiagnostic
+=== RUN   TestDynamicSQLDiagnostic/update_concatenation
+=== RUN   TestDynamicSQLDiagnostic/insert_concatenation
+=== RUN   TestDynamicSQLDiagnostic/select_helper
+=== RUN   TestDynamicSQLDiagnostic/predicate_concatenation
+=== RUN   TestDynamicSQLDiagnostic/dynamic_format
+=== RUN   TestDynamicSQLDiagnostic/dynamic_join
+=== RUN   TestDynamicSQLDiagnostic/static_invalid_literal
+=== RUN   TestDynamicSQLDiagnostic/static_invalid_concatenation
+=== RUN   TestDynamicSQLDiagnostic/constant_concatenation
+=== RUN   TestDynamicSQLDiagnostic/constant_format
+=== RUN   TestDynamicSQLDiagnostic/constant_join
+=== RUN   TestDynamicSQLDiagnostic/query_argument
+=== RUN   TestDynamicSQLDiagnostic/nested_query
+=== RUN   TestDynamicSQLDiagnostic/query_inside_closure
+=== RUN   TestDynamicSQLDiagnostic/query_argument_concatenation
+--- PASS: TestDynamicSQLDiagnostic (0.03s)
+    --- PASS: TestDynamicSQLDiagnostic/update_concatenation (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/insert_concatenation (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/select_helper (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/predicate_concatenation (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/dynamic_format (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/dynamic_join (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/static_invalid_literal (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/static_invalid_concatenation (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/constant_concatenation (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/constant_format (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/constant_join (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/query_argument (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/nested_query (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/query_inside_closure (0.00s)
+    --- PASS: TestDynamicSQLDiagnostic/query_argument_concatenation (0.00s)
+PASS
+ok  	github.com/onesyue/yueboard/internal/platform/schemagate	0.263s
