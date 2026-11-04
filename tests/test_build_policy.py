@@ -990,8 +990,8 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
         # Service mapping + integration DSNs + isolated clean-PG DSNs +
         # the disposable E2E admin/app DSNs.
-        # Both integration phases independently receive all four DSNs.
-        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 13)
+        # Both integration phases independently receive all five DSNs, including template CAS.
+        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 15)
 
     def test_source_poller_is_unconditional(self) -> None:
         """poller 不许有路径过滤——「每个提交都被中央验证」靠的就是这一点。
@@ -2193,7 +2193,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(self.native_contract["schema_floor"], 153)
         self.assertEqual(
             self.native_contract["yueboard_contract_pin"],
-            "84ebf5421a502536f46fd7021453a331720da3d2",
+            "6e3454932469f81ded1bc96ec764ef8c21839be9",
         )
         self.assertEqual(
             self.native_contract["presence"],
