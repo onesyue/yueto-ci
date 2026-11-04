@@ -1,0 +1,372 @@
+{
+  "baseline": "frozen CI74e02",
+  "candidate": "native pin84eb",
+  "identical": true,
+  "existing_diagnostics": 11,
+  "before": {
+    "tests/test_build_policy.py": {
+      "Error": {
+        "NativeFragmentWhitespaceTest/setUpClass": [
+          {
+            "message": "\"loader\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 188,
+                "character": 13
+              },
+              "end": {
+                "line": 188,
+                "character": 19
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          },
+          {
+            "message": "\"exec_module\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 188,
+                "character": 20
+              },
+              "end": {
+                "line": 188,
+                "character": 31
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          },
+          {
+            "message": "Argument of type \"ModuleSpec | None\" cannot be assigned to parameter \"spec\" of type \"ModuleSpec\" in function \"module_from_spec\"\n  Type \"ModuleSpec | None\" is not assignable to type \"ModuleSpec\"\n    \"None\" is not assignable to \"ModuleSpec\"",
+            "range": {
+              "start": {
+                "line": 187,
+                "character": 52
+              },
+              "end": {
+                "line": 187,
+                "character": 56
+              }
+            },
+            "code": "reportArgumentType",
+            "source": "Pyright"
+          }
+        ],
+        "PublishedWidgetContractTest/setUpClass": [
+          {
+            "message": "\"loader\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 222,
+                "character": 13
+              },
+              "end": {
+                "line": 222,
+                "character": 19
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          },
+          {
+            "message": "\"exec_module\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 222,
+                "character": 20
+              },
+              "end": {
+                "line": 222,
+                "character": 31
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          },
+          {
+            "message": "Argument of type \"ModuleSpec | None\" cannot be assigned to parameter \"spec\" of type \"ModuleSpec\" in function \"module_from_spec\"\n  Type \"ModuleSpec | None\" is not assignable to type \"ModuleSpec\"\n    \"None\" is not assignable to \"ModuleSpec\"",
+            "range": {
+              "start": {
+                "line": 221,
+                "character": 52
+              },
+              "end": {
+                "line": 221,
+                "character": 56
+              }
+            },
+            "code": "reportArgumentType",
+            "source": "Pyright"
+          }
+        ],
+        "LockedPythonDualAuditTest/test_both_provider_results_are_required_without_skips": [
+          {
+            "message": "\"group\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 327,
+                "character": 100
+              },
+              "end": {
+                "line": 327,
+                "character": 105
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          }
+        ],
+        "LockedPythonAuditRetentionTest/step": [
+          {
+            "message": "\"group\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 342,
+                "character": 21
+              },
+              "end": {
+                "line": 342,
+                "character": 26
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          }
+        ],
+        "LockedPythonAuditRetentionTest/test_diagnostic_upload_is_bound_and_cannot_supply_native_evidence": [
+          {
+            "message": "\"group\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 475,
+                "character": 72
+              },
+              "end": {
+                "line": 475,
+                "character": 77
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          },
+          {
+            "message": "\"group\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 476,
+                "character": 72
+              },
+              "end": {
+                "line": 476,
+                "character": 77
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          }
+        ],
+        "VerifiedBuildxTest/setUp": [
+          {
+            "message": "Argument of type \"str | None\" cannot be assigned to parameter \"target\" of type \"StrOrBytesPath\" in function \"symlink_to\"\n  Type \"str | None\" is not assignable to type \"StrOrBytesPath\"\n    Type \"None\" is not assignable to type \"StrOrBytesPath\"\n      \"None\" is not assignable to \"str\"\n      \"None\" is not assignable to \"bytes\"\n      \"None\" is incompatible with protocol \"PathLike[str]\"\n        \"__fspath__\" is not present\n      \"None\" is incompatible with protocol \"PathLike[bytes]\"\n        \"__fspath__\" is not present",
+            "range": {
+              "start": {
+                "line": 612,
+                "character": 48
+              },
+              "end": {
+                "line": 612,
+                "character": 74
+              }
+            },
+            "code": "reportArgumentType",
+            "source": "Pyright"
+          }
+        ]
+      }
+    }
+  },
+  "after": {
+    "tests/test_build_policy.py": {
+      "Error": {
+        "NativeFragmentWhitespaceTest/setUpClass": [
+          {
+            "message": "\"loader\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 188,
+                "character": 13
+              },
+              "end": {
+                "line": 188,
+                "character": 19
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          },
+          {
+            "message": "\"exec_module\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 188,
+                "character": 20
+              },
+              "end": {
+                "line": 188,
+                "character": 31
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          },
+          {
+            "message": "Argument of type \"ModuleSpec | None\" cannot be assigned to parameter \"spec\" of type \"ModuleSpec\" in function \"module_from_spec\"\n  Type \"ModuleSpec | None\" is not assignable to type \"ModuleSpec\"\n    \"None\" is not assignable to \"ModuleSpec\"",
+            "range": {
+              "start": {
+                "line": 187,
+                "character": 52
+              },
+              "end": {
+                "line": 187,
+                "character": 56
+              }
+            },
+            "code": "reportArgumentType",
+            "source": "Pyright"
+          }
+        ],
+        "PublishedWidgetContractTest/setUpClass": [
+          {
+            "message": "\"loader\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 222,
+                "character": 13
+              },
+              "end": {
+                "line": 222,
+                "character": 19
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          },
+          {
+            "message": "\"exec_module\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 222,
+                "character": 20
+              },
+              "end": {
+                "line": 222,
+                "character": 31
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          },
+          {
+            "message": "Argument of type \"ModuleSpec | None\" cannot be assigned to parameter \"spec\" of type \"ModuleSpec\" in function \"module_from_spec\"\n  Type \"ModuleSpec | None\" is not assignable to type \"ModuleSpec\"\n    \"None\" is not assignable to \"ModuleSpec\"",
+            "range": {
+              "start": {
+                "line": 221,
+                "character": 52
+              },
+              "end": {
+                "line": 221,
+                "character": 56
+              }
+            },
+            "code": "reportArgumentType",
+            "source": "Pyright"
+          }
+        ],
+        "LockedPythonDualAuditTest/test_both_provider_results_are_required_without_skips": [
+          {
+            "message": "\"group\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 327,
+                "character": 100
+              },
+              "end": {
+                "line": 327,
+                "character": 105
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          }
+        ],
+        "LockedPythonAuditRetentionTest/step": [
+          {
+            "message": "\"group\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 342,
+                "character": 21
+              },
+              "end": {
+                "line": 342,
+                "character": 26
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          }
+        ],
+        "LockedPythonAuditRetentionTest/test_diagnostic_upload_is_bound_and_cannot_supply_native_evidence": [
+          {
+            "message": "\"group\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 475,
+                "character": 72
+              },
+              "end": {
+                "line": 475,
+                "character": 77
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          },
+          {
+            "message": "\"group\" is not a known attribute of \"None\"",
+            "range": {
+              "start": {
+                "line": 476,
+                "character": 72
+              },
+              "end": {
+                "line": 476,
+                "character": 77
+              }
+            },
+            "code": "reportOptionalMemberAccess",
+            "source": "Pyright"
+          }
+        ],
+        "VerifiedBuildxTest/setUp": [
+          {
+            "message": "Argument of type \"str | None\" cannot be assigned to parameter \"target\" of type \"StrOrBytesPath\" in function \"symlink_to\"\n  Type \"str | None\" is not assignable to type \"StrOrBytesPath\"\n    Type \"None\" is not assignable to type \"StrOrBytesPath\"\n      \"None\" is not assignable to \"str\"\n      \"None\" is not assignable to \"bytes\"\n      \"None\" is incompatible with protocol \"PathLike[str]\"\n        \"__fspath__\" is not present\n      \"None\" is incompatible with protocol \"PathLike[bytes]\"\n        \"__fspath__\" is not present",
+            "range": {
+              "start": {
+                "line": 612,
+                "character": 48
+              },
+              "end": {
+                "line": 612,
+                "character": 74
+              }
+            },
+            "code": "reportArgumentType",
+            "source": "Pyright"
+          }
+        ]
+      }
+    }
+  }
+}

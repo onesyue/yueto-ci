@@ -1,0 +1,4 @@
+Board 当前生产=f7102350a149d4dbcb72ea212596a86f12ddca21；Node 当前生产=未提供（只作祖先事实校验，不投影）
+已收敛到 revision=84ebf5421a50 schema_floor=153
+  更新 native-node-contract.json
+  更新 test_build_policy.py
