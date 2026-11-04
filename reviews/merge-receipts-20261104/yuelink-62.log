@@ -1,0 +1,28 @@
+00:00 +0: loading /Users/j/Projects/lane-nym/yl-ui-a-profiles/test/widgets/profiles_real_page_snapshot_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: real profiles phone_360 light loading
+00:00 +1: real profiles phone_360 light error
+00:01 +2: real profiles phone_360 light empty
+00:01 +3: real profiles phone_360 light long_name
+00:01 +4: real profiles phone_360 dark loading
+00:01 +5: real profiles phone_360 dark error
+00:01 +6: real profiles phone_360 dark empty
+00:01 +7: real profiles phone_360 dark long_name
+00:01 +8: real profiles tablet_768 light loading
+00:01 +9: real profiles tablet_768 light error
+00:01 +10: real profiles tablet_768 light empty
+00:01 +11: real profiles tablet_768 light long_name
+00:01 +12: real profiles tablet_768 dark loading
+00:01 +13: real profiles tablet_768 dark error
+00:02 +14: real profiles tablet_768 dark empty
+00:02 +15: real profiles tablet_768 dark long_name
+00:02 +16: real profiles desktop_1440 light loading
+00:02 +17: real profiles desktop_1440 light error
+00:02 +18: real profiles desktop_1440 light empty
+00:02 +19: real profiles desktop_1440 light long_name
+00:02 +20: real profiles desktop_1440 dark loading
+00:02 +21: real profiles desktop_1440 dark error
+00:02 +22: real profiles desktop_1440 dark empty
+00:02 +23: real profiles desktop_1440 dark long_name
+00:02 +24: (tearDownAll)
+00:02 +24: All tests passed!

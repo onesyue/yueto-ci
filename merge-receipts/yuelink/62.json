@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yuelink",
+  "pr": 62,
+  "head": "5fd82f2c0c512ccad5268fdcfe2521fb4a84f6d5",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "5fd82f2c0c512ccad5268fdcfe2521fb4a84f6d5",
+    "artifact": "reviews/merge-receipts-20261104/yuelink-62.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-04T03:55:07.548515+00:00"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "5fd82f2c0c512ccad5268fdcfe2521fb4a84f6d5",
+    "command": "YUELINK_PROFILES_SCREENSHOTS=/Users/j/Projects/yueto/.claude/state/link-takeover/20261104/ui-a/screens-r2 /Users/j/Projects/yueto/scripts/with-release-sdk.sh /Users/j/Projects/yueto/scripts/heavy-run.sh --wait-seconds 30 flutter test --no-pub test/widgets/profiles_real_page_snapshot_test.dart > /Users/j/Projects/yueto/.claude/state/link-takeover/20261104/ui-a/profiles-screens-r2.log 2>&1",
+    "log_sha256": "69dd6eaf726a6ca3f34a97f08979928c8afbeaa5ced43a50746c152af3e9a22a",
+    "ran_at": "2026-11-04T03:47:29.199339+00:00",
+    "runner": "mac-5f08d00f"
+  }
+}
