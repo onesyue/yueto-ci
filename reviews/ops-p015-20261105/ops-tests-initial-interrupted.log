@@ -1,0 +1,170 @@
+test_damaged_records_are_refused (test_ops_audit_lock_transition.AuditLockTransition.test_damaged_records_are_refused) ... ok
+test_sealed_record_is_exact_and_chained_on_the_audit_seal (test_ops_audit_lock_transition.AuditLockTransition.test_sealed_record_is_exact_and_chained_on_the_audit_seal) ... ok
+test_successor_blob_only_through_a_proven_estate_successor (test_ops_audit_lock_transition.AuditLockTransition.test_successor_blob_only_through_a_proven_estate_successor) ... ok
+test_successor_proof_requires_ancestry_from_the_reviewed_lock_commit (test_ops_audit_lock_transition.AuditLockTransition.test_successor_proof_requires_ancestry_from_the_reviewed_lock_commit) ... ok
+test_damaged_records_are_refused (test_ops_bot_packaging_transition.BotPackagingTransition.test_damaged_records_are_refused) ... ok
+test_sealed_record_is_exact_and_chained_on_the_estate_seal (test_ops_bot_packaging_transition.BotPackagingTransition.test_sealed_record_is_exact_and_chained_on_the_estate_seal) ... ok
+test_successor_blob_only_through_a_proven_estate_successor (test_ops_bot_packaging_transition.BotPackagingTransition.test_successor_blob_only_through_a_proven_estate_successor) ... ok
+test_consumer_accepts_reviewed_blobs_and_the_previous_relay_blob (test_ops_case_file_transition.CaseFileTransition.test_consumer_accepts_reviewed_blobs_and_the_previous_relay_blob) ... ok
+test_consumer_rejects_unknown_blob_reason_outcome_and_new_case (test_ops_case_file_transition.CaseFileTransition.test_consumer_rejects_unknown_blob_reason_outcome_and_new_case) ... ok
+test_record_is_pinned_to_the_independent_review_and_historical_bytes (test_ops_case_file_transition.CaseFileTransition.test_record_is_pinned_to_the_independent_review_and_historical_bytes) ... ok
+test_reviewed_module_must_be_a_regular_file_and_the_record_cannot_drift (test_ops_case_file_transition.CaseFileTransition.test_reviewed_module_must_be_a_regular_file_and_the_record_cannot_drift) ... ok
+test_updates_keep_the_admitted_skip_and_additions_are_new_cases (test_ops_case_file_transition.CaseFileTransition.test_updates_keep_the_admitted_skip_and_additions_are_new_cases) ... ok
+test_current_shared_inputs_pass_full_old_admission_after_exact_peel (test_ops_collection_shuffle_transition.CollectionShuffleTransition.test_current_shared_inputs_pass_full_old_admission_after_exact_peel) ... ok
+test_each_sealed_identity_and_historical_byte_remains_immutable (test_ops_collection_shuffle_transition.CollectionShuffleTransition.test_each_sealed_identity_and_historical_byte_remains_immutable) ... ok
+test_real_git_descendant_deletion_cannot_reenter_historical_admission (test_ops_collection_shuffle_transition.CollectionShuffleTransition.test_real_git_descendant_deletion_cannot_reenter_historical_admission) ... ok
+test_real_git_proof_rejects_foreign_history_or_rewritten_hook (test_ops_collection_shuffle_transition.CollectionShuffleTransition.test_real_git_proof_rejects_foreign_history_or_rewritten_hook) ... ok
+test_seal_preserves_exact_old_baseline_and_binds_real_evidence (test_ops_collection_shuffle_transition.CollectionShuffleTransition.test_seal_preserves_exact_old_baseline_and_binds_real_evidence) ... ok
+test_wrong_blob_mode_proof_and_other_shared_changes_are_refused (test_ops_collection_shuffle_transition.CollectionShuffleTransition.test_wrong_blob_mode_proof_and_other_shared_changes_are_refused) ... ok
+test_activated_baseline_reaches_all_three_admission_consumers (test_ops_estate_input_transition.EstateInputTransition.test_activated_baseline_reaches_all_three_admission_consumers) ... ok
+test_every_successor_blob_and_mode_is_bound (test_ops_estate_input_transition.EstateInputTransition.test_every_successor_blob_and_mode_is_bound) ... ok
+test_extra_helper_and_unchanged_input_drift_refuse (test_ops_estate_input_transition.EstateInputTransition.test_extra_helper_and_unchanged_input_drift_refuse) ... ok
+test_historical_and_successor_admission (test_ops_estate_input_transition.EstateInputTransition.test_historical_and_successor_admission) ... ok
+test_later_revision_requires_sealed_ancestry_proof (test_ops_estate_input_transition.EstateInputTransition.test_later_revision_requires_sealed_ancestry_proof) ... ok
+test_planner_proves_ancestry_from_real_history (test_ops_estate_input_transition.EstateInputTransition.test_planner_proves_ancestry_from_real_history) ... ok
+test_review_history_preimages_and_scope_cannot_be_relaxed (test_ops_estate_input_transition.EstateInputTransition.test_review_history_preimages_and_scope_cannot_be_relaxed) ... ok
+test_unsealed_or_wrong_source_refuses (test_ops_estate_input_transition.EstateInputTransition.test_unsealed_or_wrong_source_refuses) ... ok
+test_all_52_obligations_require_actual_same_run_case_calls (test_ops_first_native_successors.ExactFirstNativePolicy.test_all_52_obligations_require_actual_same_run_case_calls) ... ok
+test_helper_admits_only_reviewed_mode_blob_source_and_retains_other_inputs (test_ops_first_native_successors.ExactFirstNativePolicy.test_helper_admits_only_reviewed_mode_blob_source_and_retains_other_inputs) ... ok
+test_missing_or_changed_module_blob_refuses_inheritance (test_ops_first_native_successors.ExactFirstNativePolicy.test_missing_or_changed_module_blob_refuses_inheritance) ... ok
+test_policy_has_no_historical_backup_or_disposition_downgrade (test_ops_first_native_successors.ExactFirstNativePolicy.test_policy_has_no_historical_backup_or_disposition_downgrade) ... ok
+test_backup_missing_changed_or_new_reason_cannot_be_grandfathered (test_ops_first_native_successors.FirstNativeSuccessors.test_backup_missing_changed_or_new_reason_cannot_be_grandfathered) ... ok
+test_board_historical_reason_blob_disposition_or_identity_cannot_change (test_ops_first_native_successors.FirstNativeSuccessors.test_board_historical_reason_blob_disposition_or_identity_cannot_change) ... ok
+test_board_missing_extra_or_duplicate_native_call_is_rejected (test_ops_first_native_successors.FirstNativeSuccessors.test_board_missing_extra_or_duplicate_native_call_is_rejected) ... ok
+test_board_successor_requires_seven_calls_without_editing_historical_baseline (test_ops_first_native_successors.FirstNativeSuccessors.test_board_successor_requires_seven_calls_without_editing_historical_baseline) ... ok
+test_canceled_backup_keeps_exact_23_skips_unexecuted (test_ops_first_native_successors.FirstNativeSuccessors.test_canceled_backup_keeps_exact_23_skips_unexecuted) ... ok
+test_unknown_board_blob_receives_no_inheritance (test_ops_first_native_successors.FirstNativeSuccessors.test_unknown_board_blob_receives_no_inheritance) ... ok
+test_damaged_records_are_refused (test_ops_hang_guard_input_transition.HangGuardInputTransition.test_damaged_records_are_refused) ... ok
+test_helper_is_refused_outside_a_proven_estate_successor (test_ops_hang_guard_input_transition.HangGuardInputTransition.test_helper_is_refused_outside_a_proven_estate_successor) ... ok
+test_record_is_exact_pinned_and_under_the_release_seal (test_ops_hang_guard_input_transition.HangGuardInputTransition.test_record_is_exact_pinned_and_under_the_release_seal) ... ok
+test_successor_proof_refuses_helper_on_history_unrelated_to_the_fix (test_ops_hang_guard_input_transition.HangGuardInputTransition.test_successor_proof_refuses_helper_on_history_unrelated_to_the_fix)
+The helper may only appear in a revision that descends from the reviewed fix. ... ok
+test_hang_record_binds_committed_receipt_and_source_freeze (test_ops_hang_guard_review_receipts.ReviewReceiptBinding.test_hang_record_binds_committed_receipt_and_source_freeze) ... ok
+test_no_placeholder_digest_survives_in_the_new_seals (test_ops_hang_guard_review_receipts.ReviewReceiptBinding.test_no_placeholder_digest_survives_in_the_new_seals) ... ok
+test_receipt_verification_covers_exactly_the_reviewed_cases (test_ops_hang_guard_review_receipts.ReviewReceiptBinding.test_receipt_verification_covers_exactly_the_reviewed_cases) ... ok
+test_release_record_binds_committed_review_document_and_receipt (test_ops_hang_guard_review_receipts.ReviewReceiptBinding.test_release_record_binds_committed_review_document_and_receipt) ... ok
+test_exact_outer_seal_and_source_review (test_ops_i10_skip_blob_successor_transition.I10SkipBlobSuccessorTransition.test_exact_outer_seal_and_source_review) ... ok
+test_other_hosted_case_retains_blob_variant_context_and_native_gates (test_ops_i10_skip_blob_successor_transition.I10SkipBlobSuccessorTransition.test_other_hosted_case_retains_blob_variant_context_and_native_gates) ... ok
+test_predecessor_must_be_ordinary_admitted_skip (test_ops_i10_skip_blob_successor_transition.I10SkipBlobSuccessorTransition.test_predecessor_must_be_ordinary_admitted_skip) ... ok
+test_record_mutations_and_historical_changes_rejected (test_ops_i10_skip_blob_successor_transition.I10SkipBlobSuccessorTransition.test_record_mutations_and_historical_changes_rejected) ... ok
+test_red_before_green_after_and_historical_blobs (test_ops_i10_skip_blob_successor_transition.I10SkipBlobSuccessorTransition.test_red_before_green_after_and_historical_blobs) ... ok
+test_unknown_blob_reason_outcome_and_new_case_rejected (test_ops_i10_skip_blob_successor_transition.I10SkipBlobSuccessorTransition.test_unknown_blob_reason_outcome_and_new_case_rejected) ... ok
+test_admits_after_blob_only_at_signed_pin (test_ops_miniapp_membership_transition.MiniappMembershipTransitionTest.test_admits_after_blob_only_at_signed_pin) ... ok
+test_other_blobs_and_modes_untouched_or_refused (test_ops_miniapp_membership_transition.MiniappMembershipTransitionTest.test_other_blobs_and_modes_untouched_or_refused) ... ok
+test_record_binds_real_review_artifacts (test_ops_miniapp_membership_transition.MiniappMembershipTransitionTest.test_record_binds_real_review_artifacts) ... ok
+test_tampered_record_rejected (test_ops_miniapp_membership_transition.MiniappMembershipTransitionTest.test_tampered_record_rejected) ... ok
+test_exact_deletion_preserves_format_order_and_historical_hashes (test_ops_nezha_retirement.NezhaRetirement.test_exact_deletion_preserves_format_order_and_historical_hashes) ... ok
+test_extra_deletion_or_restored_case_is_rejected (test_ops_nezha_retirement.NezhaRetirement.test_extra_deletion_or_restored_case_is_rejected) ... ok
+test_missing_or_altered_retirement_record_is_rejected (test_ops_nezha_retirement.NezhaRetirement.test_missing_or_altered_retirement_record_is_rejected) ... ok
+test_retired_skips_fail_admission_and_unrelated_skips_still_work (test_ops_nezha_retirement.NezhaRetirement.test_retired_skips_fail_admission_and_unrelated_skips_still_work) ... ok
+test_sidecar_history_rejects_changed_or_missing_baseline (test_ops_nezha_retirement.NezhaRetirement.test_sidecar_history_rejects_changed_or_missing_baseline) ... ok
+test_current_and_historical_admit_and_mutations_fail (test_ops_npm_security_transition.SecurityTransition.test_current_and_historical_admit_and_mutations_fail) ... ok
+test_evidence_and_historical_baseline_are_exact (test_ops_npm_security_transition.SecurityTransition.test_evidence_and_historical_baseline_are_exact) ... ok
+test_real_git_descendant_deletion_replacement_and_mode_fail_closed (test_ops_npm_security_transition.SecurityTransition.test_real_git_descendant_deletion_replacement_and_mode_fail_closed) ... ok
+test_added_helper_alone_is_refused (test_ops_ops_packaging_transition.OpsPackagingTransition.test_added_helper_alone_is_refused) ... ok
+test_damaged_records_are_refused (test_ops_ops_packaging_transition.OpsPackagingTransition.test_damaged_records_are_refused) ... ok
+test_planner_requires_each_source_to_introduce_its_exact_transition (test_ops_ops_packaging_transition.OpsPackagingTransition.test_planner_requires_each_source_to_introduce_its_exact_transition) ... ok
+test_sealed_record_is_exact_outermost_and_chained_on_tornado (test_ops_ops_packaging_transition.OpsPackagingTransition.test_sealed_record_is_exact_outermost_and_chained_on_tornado) ... ok
+test_successor_blobs_only_as_a_complete_bundle_through_a_proven_estate_successor (test_ops_ops_packaging_transition.OpsPackagingTransition.test_successor_blobs_only_as_a_complete_bundle_through_a_proven_estate_successor) ... ok
+test_absent_helper_keeps_historical_inputs_unchanged (test_ops_p015_offline_helper.P015OfflineHelper.test_absent_helper_keeps_historical_inputs_unchanged) ... ok
+test_changed_blob_mode_tree_and_revision_rejected (test_ops_p015_offline_helper.P015OfflineHelper.test_changed_blob_mode_tree_and_revision_rejected) ... ok
+test_exact_helper_full_chain_and_inputs_unchanged (test_ops_p015_offline_helper.P015OfflineHelper.test_exact_helper_full_chain_and_inputs_unchanged) ... ok
+test_other_new_helpers_reach_unchanged_mode_rejection (test_ops_p015_offline_helper.P015OfflineHelper.test_other_new_helpers_reach_unchanged_mode_rejection) ... ok
+test_evidence_and_sequential_predecessors (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_evidence_and_sequential_predecessors) ... ok
+test_final_pr256_preserves_pending_evidence (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_final_pr256_preserves_pending_evidence) ... ok
+test_outermost_first_and_historical_inputs_unchanged (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_outermost_first_and_historical_inputs_unchanged) ... ok
+test_partial_bundle_mode_and_pin_refused (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_partial_bundle_mode_and_pin_refused) ... ok
+test_real_git_ancestry_and_parent_trees (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_real_git_ancestry_and_parent_trees) ... ok
+test_seal_chain_tampering_refused (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_seal_chain_tampering_refused) ... ok
+test_shared_input_source_objects_exist_when_source_available (test_ops_pr_shared_input_transitions.PRSharedInputTransitions.test_shared_input_source_objects_exist_when_source_available) ... ok
+test_consumer_admits_reviewed_blobs_and_still_admits_the_historical_blobs (test_ops_release_skip_blob_successor_transition.ReleaseSkipBlobSuccessorTransition.test_consumer_admits_reviewed_blobs_and_still_admits_the_historical_blobs) ... ok
+test_consumer_refuses_other_blobs_reasons_outcomes_and_cases (test_ops_release_skip_blob_successor_transition.ReleaseSkipBlobSuccessorTransition.test_consumer_refuses_other_blobs_reasons_outcomes_and_cases) ... ok
+test_damaged_records_are_refused (test_ops_release_skip_blob_successor_transition.ReleaseSkipBlobSuccessorTransition.test_damaged_records_are_refused) ... ok
+test_record_is_outermost_exact_and_pinned_to_the_review (test_ops_release_skip_blob_successor_transition.ReleaseSkipBlobSuccessorTransition.test_record_is_outermost_exact_and_pinned_to_the_review) ... ok
+test_swapped_nodeid_with_recomputed_review_is_refused_by_the_pin (test_ops_release_skip_blob_successor_transition.ReleaseSkipBlobSuccessorTransition.test_swapped_nodeid_with_recomputed_review_is_refused_by_the_pin) ... ok
+test_update_must_succeed_an_admitted_skip (test_ops_release_skip_blob_successor_transition.ReleaseSkipBlobSuccessorTransition.test_update_must_succeed_an_admitted_skip) ... ok
+test_exact_predecessor_and_existing_seals (test_ops_retired_host_transition.RetiredHostTransition.test_exact_predecessor_and_existing_seals) ... ok
+test_extra_removed_id_rejected (test_ops_retired_host_transition.RetiredHostTransition.test_extra_removed_id_rejected) ... ok
+test_generator_reproducible_and_rejects_wrong_inputs (test_ops_retired_host_transition.RetiredHostTransition.test_generator_reproducible_and_rejects_wrong_inputs) ... ok
+test_hosted_matching_accepts_all_survivors_only_at_new_blob (test_ops_retired_host_transition.RetiredHostTransition.test_hosted_matching_accepts_all_survivors_only_at_new_blob) ... ok
+test_missing_removed_id_rejected (test_ops_retired_host_transition.RetiredHostTransition.test_missing_removed_id_rejected) ... ok
+test_retirement_layer_stripped_rejected (test_ops_retired_host_transition.RetiredHostTransition.test_retirement_layer_stripped_rejected) ... ok
+test_unrelated_mutation_rejected (test_ops_retired_host_transition.RetiredHostTransition.test_unrelated_mutation_rejected) ... ok
+test_wrong_blob_rejected (test_ops_retired_host_transition.RetiredHostTransition.test_wrong_blob_rejected) ... ok
+test_wrong_predecessor_digest_rejected (test_ops_retired_host_transition.RetiredHostTransition.test_wrong_predecessor_digest_rejected) ... ok
+test_full_admission_preserves_history (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_full_admission_preserves_history) ... ok
+test_partial_bundles_and_mutations_rejected (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_partial_bundles_and_mutations_rejected) ... ok
+test_real_git_ancestry (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_real_git_ancestry) ... ok
+test_review_artifacts (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_review_artifacts) ... ok
+test_seal_tampering_rejected (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_seal_tampering_rejected) ... ok
+test_unrelated_historical_inputs (test_ops_reviewed_pr_input_transitions.ReviewedPrInputTransitions.test_unrelated_historical_inputs) ... ok
+test_damaged_records_are_refused (test_ops_runtime_dependency_transition.RuntimeDependencyTransition.test_damaged_records_are_refused) ... ok
+test_sealed_record_is_exact_and_chained_on_each_reviewing_seal (test_ops_runtime_dependency_transition.RuntimeDependencyTransition.test_sealed_record_is_exact_and_chained_on_each_reviewing_seal) ... ok
+test_successor_blobs_only_together_through_a_proven_estate_successor (test_ops_runtime_dependency_transition.RuntimeDependencyTransition.test_successor_blobs_only_together_through_a_proven_estate_successor) ... ok
+test_successor_proof_requires_ancestry_from_the_reviewed_commit (test_ops_runtime_dependency_transition.RuntimeDependencyTransition.test_successor_proof_requires_ancestry_from_the_reviewed_commit) ... ok
+test_reviewed_navigation_cases_remain_unexecuted_and_exact (test_ops_shard_workflow.CurrentNavigationSkipPolicy.test_reviewed_navigation_cases_remain_unexecuted_and_exact) ... ok
+test_exact_relay_native_cases_remain_ordinary_skips (test_ops_shard_workflow.CurrentRelaySkipPolicy.test_exact_relay_native_cases_remain_ordinary_skips) ... ok
+test_actual_failure_is_not_retried_as_legacy (test_ops_shard_workflow.OpsShardWorkflow.test_actual_failure_is_not_retried_as_legacy) ... ERROR
+test_actual_mixed_runner_allocations_reach_source_native_and_complete_join (test_ops_shard_workflow.OpsShardWorkflow.test_actual_mixed_runner_allocations_reach_source_native_and_complete_join) ... ERROR
+test_actual_plan_yaml_expands_all_targets_before_collection (test_ops_shard_workflow.OpsShardWorkflow.test_actual_plan_yaml_expands_all_targets_before_collection) ... ERROR
+test_actual_precollection_rejection_is_retained_without_a_test_terminal (test_ops_shard_workflow.OpsShardWorkflow.test_actual_precollection_rejection_is_retained_without_a_test_terminal) ... Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/__main__.py", line 18, in <module>
+    main(module=None)
+    ~~~~^^^^^^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/main.py", line 104, in __init__
+    self.runTests()
+    ~~~~~~~~~~~~~^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/main.py", line 270, in runTests
+    self.result = testRunner.run(self.test)
+                  ~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/runner.py", line 240, in run
+    test(result)
+    ~~~~^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+           ~~~~~~~~^^^^^^^^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/suite.py", line 122, in run
+    test(result)
+    ~~~~^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+           ~~~~~~~~^^^^^^^^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/suite.py", line 122, in run
+    test(result)
+    ~~~~^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+           ~~~~~~~~^^^^^^^^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/suite.py", line 122, in run
+    test(result)
+    ~~~~^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/case.py", line 707, in __call__
+    return self.run(*args, **kwds)
+           ~~~~~~~~^^^^^^^^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/case.py", line 647, in run
+    self._callSetUp()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/unittest/case.py", line 603, in _callSetUp
+    self.setUp()
+    ~~~~~~~~~~^^
+  File "/Users/j/codex-runs/1104c/w-seal256/tests/test_ops_shard_workflow.py", line 99, in setUp
+    baseline, ran = self.fixture.run_session(
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^
+        {"id": "ordinary-000", "modules": list(self.fixture.plan["modules"])})
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/j/codex-runs/1104c/w-seal256/tests/test_pytest_shards.py", line 126, in run_session
+    result = subprocess.run(argv, cwd=self.source, env=env, capture_output=True,
+                            text=True, timeout=25, check=False)
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/subprocess.py", line 556, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/subprocess.py", line 1222, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/subprocess.py", line 2154, in _communicate
+    ready = selector.select(timeout)
+  File "/Users/j/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/selectors.py", line 398, in select
+    fd_event_list = self._selector.poll(timeout)
+KeyboardInterrupt

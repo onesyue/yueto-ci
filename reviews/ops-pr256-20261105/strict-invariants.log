@@ -1,0 +1,2 @@
+PASS: all planner function/class ASTs equal HEAD; pin-only change; historical successor records equal HEAD; historical baseline and review directories unchanged.
+PASS: py_compile and git diff --check.

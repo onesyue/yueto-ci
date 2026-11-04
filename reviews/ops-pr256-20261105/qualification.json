@@ -1,0 +1,16 @@
+{
+  "status": "PASS_STATIC_SHARED_INPUT_QUALIFICATION_ONLY",
+  "source_before": "56a7e0412e9bd1d297ba4a5dd3d363147fac463c",
+  "source_after": "4b64bf9a9b26a24aecdc551bbe7eaa7a840558cd",
+  "source_tree": "7ebda900251d6db0d7950ef3bb2faf3a0f59397b",
+  "changed_lock_records": [
+    "sqlglot",
+    "yueops"
+  ],
+  "exact_paths": [
+    "pyproject.toml",
+    "uv.lock"
+  ],
+  "regular_file_modes": true,
+  "full_execution_gate": "NOT_RUN; admission is not runtime qualification"
+}

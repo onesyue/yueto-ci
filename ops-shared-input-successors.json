@@ -96,5 +96,30 @@
         "source": "56a7e0412e9bd1d297ba4a5dd3d363147fac463c"
       }
     }
+  },
+  "reviewed_pr256_shared_input_transition": {
+    "schema": 1,
+    "reviewer": "Codex (source-diff review; same session)",
+    "prior_baseline_sha256": "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d",
+    "prior_successors_sha256": "37ac83b9e85817c6cdf662f9c710da338183628b77c63cf7d663b140fae6dd55",
+    "source_before": "56a7e0412e9bd1d297ba4a5dd3d363147fac463c",
+    "source_after": "4b64bf9a9b26a24aecdc551bbe7eaa7a840558cd",
+    "independent_review_sha256": "73f74ecde8fbf554b79ef4195e8f5f475cff0ce37b6f7d0d4835846a2cfe0720",
+    "source_freeze_sha256": "66a8b02badf2b5201c16793c0afa69c15d6015cb7b0e39057f79bd06d2be36af",
+    "qualification_receipt_sha256": "6e1159ce6f7b8baeb39a3d4809d9c42442593b53470a5de2e1735bdf055e9c8f",
+    "changes": {
+      "pyproject.toml": {
+        "before_blob": "ba32ad966dc0d67280ba04c03c1f911c8839780a",
+        "after_blob": "1d861dc9e1da3fbe876ded02f454a3fd26f2cd27",
+        "mode": "100644",
+        "source": "4b64bf9a9b26a24aecdc551bbe7eaa7a840558cd"
+      },
+      "uv.lock": {
+        "before_blob": "18d0dc71583fcd55ae726dd6c533e0f2111539f2",
+        "after_blob": "a432bb987a9b6f8f7871647680e9078c6a56b6a3",
+        "mode": "100644",
+        "source": "4b64bf9a9b26a24aecdc551bbe7eaa7a840558cd"
+      }
+    }
   }
 }

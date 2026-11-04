@@ -1,0 +1,8 @@
+{
+  "source_revision": "d91a87f73b3aa20a0320b92252b8ee9be1f01743",
+  "runner": "ubuntu-24.04",
+  "status": "ADMITTED",
+  "cli_exit_code": 0,
+  "policy_override": false,
+  "execution": "Local CLI admission; not Linux runtime tests"
+}

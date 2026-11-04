@@ -1,0 +1,15 @@
+{
+  "source_revision": "72bf60474359d831f0cee70a6246ebf50952ea26",
+  "runner": "ubuntu-24.04",
+  "status": "REJECTED",
+  "cli_exit_code": 1,
+  "policy_override": false,
+  "execution": "Local CLI admission; not Linux runtime tests",
+  "effective_mode_differences": {
+    "tests/p015_offline_plugin.py": {
+      "baseline": null,
+      "effective": "100644"
+    }
+  },
+  "reason": "shared collection/dependency input modes changed"
+}

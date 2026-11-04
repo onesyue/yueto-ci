@@ -34,7 +34,8 @@ class PRSharedInputTransitions(unittest.TestCase):
         assert tuple(r["source_after"] for r in records) == M.PR_SHARED_INPUT_SOURCE_REVISIONS
         assert {(p, c["after_blob"]) for r in records for p, c in r["changes"].items()} == M.PR_SHARED_INPUT_AFTER_BLOBS
         for number, record in zip((seal[0] for seal in M.PR_SHARED_INPUT_SEALS), records):
-            review = ROOT / f'reviews/ops-pr{number}-20261103'
+            date = '20261105' if number == 256 else '20261103'
+            review = ROOT / f'reviews/ops-pr{number}-{date}'
             for field, name in [('independent_review_sha256', 'independent-review.md'),
                                 ('source_freeze_sha256', 'source-freeze.json'),
                                 ('qualification_receipt_sha256', 'qualification.json')]:
@@ -82,15 +83,16 @@ class PRSharedInputTransitions(unittest.TestCase):
                         M.admit_pr_shared_inputs(common, tree, pin)
 
 
-    def test_pending_pr256_bundle_is_not_admitted(self):
-        policy = json.loads((ROOT / 'ops-shared-input-successors.json').read_text())
-        assert 'reviewed_pr256_shared_input_transition' not in policy
-        review = ROOT / 'reviews/ops-pr256-20261103'
-        assert json.loads((review / 'qualification.json').read_text())['status'] == 'PENDING_FINAL_HEAD_REVIEW'
-        pending = json.loads((review / 'source-freeze.json').read_text())
-        common = states()[-1] | {p: c['after_blob'] for p, c in pending['changes'].items()}
-        with self.assertRaisesRegex(ValueError, 'bundle missing or changed'):
-            M.admit_pr_shared_inputs(common, files(common), M.first_native_policy()['source_revision'])
+    def test_final_pr256_preserves_pending_evidence(self):
+        record = M.reviewed_pr_shared_input_transitions()[0]
+        assert record['source_after'] == '4b64bf9a9b26a24aecdc551bbe7eaa7a840558cd'
+        assert record['source_before'] == '56a7e0412e9bd1d297ba4a5dd3d363147fac463c'
+        historical = ROOT / 'reviews/ops-pr256-20261103'
+        assert json.loads((historical / 'qualification.json').read_text())['status'] == 'PENDING_FINAL_HEAD_REVIEW'
+        pending = json.loads((historical / 'source-freeze.json').read_text())
+        assert pending['source_after'] not in M.PR_SHARED_INPUT_SOURCE_REVISIONS
+        with self.assertRaisesRegex(ValueError, 'signed release pin'):
+            M.admit_pr_shared_inputs(states()[-1], files(states()[-1]), pending['source_after'])
 
 
     def test_seal_chain_tampering_refused(self):
@@ -182,7 +184,7 @@ class PRSharedInputTransitions(unittest.TestCase):
                         capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
         record = M.reviewed_pr_shared_input_transitions()[0]
-        review = ROOT / 'reviews/ops-pr122-20261103'
+        review = ROOT / 'reviews/ops-pr256-20261105'
         freeze = json.loads((review / 'source-freeze.json').read_text())
         tree = subprocess.check_output(
             ['git', '-C', str(source), 'rev-parse', record['source_after'] + '^{tree}'],
