@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 386,
+  "head": "3034465a1e80419099c7c4bb198d1bf7620c2810",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "3034465a1e80419099c7c4bb198d1bf7620c2810",
+    "artifact": "reviews/merge-receipts-20261105/yueops-386-r1105.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-05T01:32:34Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "3034465a1e80419099c7c4bb198d1bf7620c2810",
+    "command": "cd yueops@3034465a && TZ=UTC /workspace/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_agent_secret_boundary_20260730.py tests/test_alert_actionability_20260903.py tests/test_alert_delivery_goes_through_spool_20260827.py tests/test_c21_retired_timer_activation_20261105.py tests/test_c22_relay_inventory.py tests/test_c33_retention_backup_coverage_20261105.py tests/test_dev_null_integrity_guard.py tests/test_every_repo_unit_is_installed_somewhere.py tests/test_host_service_contracts_20261013.py tests/test_host_timer_ownership_fence_20261030.py tests/test_loadshed_dropin_manifest_20261028.py tests/test_recurring_writer_boundary_20260731.py tests/test_retention_dry_run_20260928.py tests/test_retention_never_prunes_commission_ledger_20261005.py tests/test_rollout_hosts_20261105.py tests/test_rollout_skip_policy_20261105.py tests/test_stale_failure_receipts_20261013.py tests/test_timer_restart_successor_20260914.py tests/test_v4_pool_sentinel_membership_20260907.py ",
+    "log_sha256": "b779e01d3a995be27ef3159742e14c9aed2c34ce973eb9c1a3b06c365bf3811b",
+    "ran_at": "2026-11-05T01:23:14Z",
+    "runner": "box"
+  }
+}

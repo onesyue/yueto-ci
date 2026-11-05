@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 390,
+  "head": "9323e0fa434a18341df1b3e4838a6ca044fcfa51",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "9323e0fa434a18341df1b3e4838a6ca044fcfa51",
+    "artifact": "reviews/merge-receipts-20261105/yueops-390-r1105.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-05T01:32:34Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "9323e0fa434a18341df1b3e4838a6ca044fcfa51",
+    "command": "cd yueops@9323e0fa && TZ=UTC /workspace/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_schedule_receipts_20261013.py",
+    "log_sha256": "d2d919b5babedeb231135c7f9628f81fc94064c8129f7c5167f724cda6315bef",
+    "ran_at": "2026-11-05T01:21:19Z",
+    "runner": "box"
+  }
+}
