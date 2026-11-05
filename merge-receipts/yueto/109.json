@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto",
+  "pr": 109,
+  "head": "e26b58600120ebb24a162f3f71fcf3ff2c25d4ff",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "e26b58600120ebb24a162f3f71fcf3ff2c25d4ff",
+    "artifact": "reviews/merge-receipts-20261105/yueto-109.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-05T03:06:16Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "e26b58600120ebb24a162f3f71fcf3ff2c25d4ff",
+    "command": "git diff --check 72de4d87e9a06feff9de8e97e52f27fe19d47880 HEAD && /workspace/yo-venv/bin/python -m pytest -q scripts/test-selfrun-dispatch.py scripts/test-ship-errexit-and-lock.py",
+    "log_sha256": "960a9bb39dd085dfd47bb0a53da8e1890e1bb5c2935fd73a6b492f0d2c370e28",
+    "ran_at": "2026-11-05T03:02:08Z",
+    "runner": "box"
+  }
+}
