@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 406,
+  "head": "7e83f700e5ee833e22564bf4100673f4a6cd9082",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "7e83f700e5ee833e22564bf4100673f4a6cd9082",
+    "artifact": "reviews/merge-receipts-20261105/yueops-406-r1105.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-05T06:54:01Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "7e83f700e5ee833e22564bf4100673f4a6cd9082",
+    "command": "TZ=UTC pytest -q -n 4 tests -k \"topology or reality or sni or relay_alias or nginx\"; see reviews/merge-receipts-20261105/yueops-406-r1105-head-parity.log (baseline-note: pre-existing/env-only failures)",
+    "log_sha256": "280378c22200d65e9b0f82c409a9dccc9f3abc07476bace1bcb469195d441cc2",
+    "ran_at": "2026-11-05T06:57:54Z",
+    "runner": "box"
+  }
+}

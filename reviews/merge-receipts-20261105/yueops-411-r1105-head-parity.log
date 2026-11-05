@@ -1,0 +1,6 @@
+=== parity yueops @2b99b7d2682aefb1a8d4b6aee71df358e0b03c02 runner=box started=2026-11-05T06:49:32Z
+cmd: TZ=UTC pytest -q -p no:cacheprovider tests/test_native_postgres_short_socket.py tests/test_checkin_membership_grants_pg_20261102.py
+.s                                                                       [100%]
+1 passed, 1 skipped in 0.49s
+rc=0
+finished=2026-11-05T06:49:33Z

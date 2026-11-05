@@ -1,0 +1,6 @@
+=== parity yueops @acec9fc2843d7d5bb107fc23c1d9e401971719f3 runner=box started=2026-11-05T06:57:54Z
+cmd: TZ=UTC pytest -q -p no:cacheprovider tests/test_qhalt_retirement_20261105.py
+.............                                                            [100%]
+13 passed in 2.45s
+rc=0
+finished=2026-11-05T06:57:57Z

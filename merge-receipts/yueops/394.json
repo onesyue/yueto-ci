@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 394,
+  "head": "e0750f8e83b4e33e1752d390a70ccc2eb5dd987d",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "e0750f8e83b4e33e1752d390a70ccc2eb5dd987d",
+    "artifact": "reviews/merge-receipts-20261105/yueops-394-r1105.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-05T05:10:54Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "e0750f8e83b4e33e1752d390a70ccc2eb5dd987d",
+    "command": "TZ=UTC pytest -q -n 3 tests -k \"kingdee or managed or stagea\"; see reviews/merge-receipts-20261105/yueops-394-r1105-head-parity.log (baseline-note: pre-existing/env-only failures)",
+    "log_sha256": "32f367a3da321f9ed74a85785af63ffc1d30f48f72b34341f56aa6de9f9c55a1",
+    "ran_at": "2026-11-05T07:02:14Z",
+    "runner": "box"
+  }
+}
