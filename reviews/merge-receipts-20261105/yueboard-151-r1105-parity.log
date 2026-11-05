@@ -1,0 +1,15 @@
+$ cd yueboard@27b87d99897a99784e0aad5e0ea1de191f2fe03e/web && node --test src/lib/*.test.ts && pnpm exec tsc --noEmit -p .
+✔ unknown names and non-finite or negative values are dropped (1.51574ms)
+✔ rounding keeps CLS precision and integer milliseconds (0.151699ms)
+✔ the SPA starts the sampler with a lazily imported library (0.354026ms)
+✔ coarse language is sent once and script overrides region (0.627386ms)
+ℹ tests 497
+ℹ suites 0
+ℹ pass 497
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2296.084656
+node-test rc=0
+tsc rc=0
