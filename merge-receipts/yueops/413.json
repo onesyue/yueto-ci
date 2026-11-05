@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 413,
+  "head": "8a4b80cf97438d4b6c60002874902569b5a735e3",
+  "backfilled": false,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "8a4b80cf97438d4b6c60002874902569b5a735e3",
+    "artifact": "reviews/merge-receipts-20261105/yueops-413.md",
+    "reviewer": "codex+speedup-lane",
+    "reviewed_at": "2026-11-05T07:50:36Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "8a4b80cf97438d4b6c60002874902569b5a735e3",
+    "command": "HEAD: cd /workspace/lane/pr1105/yo-c23 && TMPDIR=/tmp/yo-pytest PYTHONPATH=. /workspace/lane/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_ops_daily_digest.py tests/test_ops_alert_pg_w1.py \u2192 53 passed, 10 skipped\nBASE: same suite at 9db397401 (see yueops-413-base.log)",
+    "log_sha256": "faa33c8f52b82729f8b4705437c468bd0b82b8c7ab3907b5b6af03903e05dddb",
+    "ran_at": "2026-11-05T07:50:36.940116+00:00",
+    "runner": "box-speedup"
+  },
+  "url": "https://github.com/onesyue/yueops/pull/413",
+  "owner_rule_conformance": {
+    "conforms": [
+      "R-48",
+      "R-41"
+    ],
+    "conflicts": [],
+    "no_rule": [
+      "C2-3 digest routing change (ops-internal; no user-facing/pricing)"
+    ]
+  }
+}
