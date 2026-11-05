@@ -47,10 +47,8 @@ class FailFastPolicyTest(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", block)
 
     def test_abort_jobs_cancel_the_run_with_minimal_privilege(self) -> None:
-        # B1 (2026-10-30): a red validation no longer cancels the run (that
-        # could interrupt publish mid-retag); only a failed build still does.
-        self.assertNotIn("abort-on-validate-failure", self.jobs)
-        for gate in ("build",):
+        # Validation and candidate builds overlap, so each needs its own abort job.
+        for gate in ("validate", "build"):
             job = self.jobs[f"abort-on-{gate}-failure"]
             self.assertIn(f"    needs: [plan, {gate}]\n", job)
             self.assertIn("    if: failure()\n", job)
@@ -64,6 +62,49 @@ class FailFastPolicyTest(unittest.TestCase):
         for needs in re.findall(r"(?m)^    needs: (.+)$", self.text):
             self.assertNotIn("abort-", needs)
             self.assertNotIn("validation-alert", needs)
+
+    def test_validate_abort_preserves_possible_publish(self) -> None:
+        job = self.jobs["abort-on-validate-failure"]
+        script = job.split("        run: |\n", 1)[1]
+        self.assertIn('gh api --paginate "repos/$GH_REPO/actions/runs/$RUN_ID/jobs"', script)
+        self.assertIn('select(.name | startswith("candidate-"))', script)
+        self.assertIn('select(.status != "completed")', script)
+        self.assertNotIn('startswith("publish")', script)
+        self.assertIn("jq -s 'length'", script)
+        self.assertLess(script.index("gh api"), script.index("gh run cancel"))
+        self.assertIn("name: candidate-" + "${{ matrix.service }}", self.jobs["build"])
+        self.assertTrue(self.jobs["publish"].startswith("\n    needs: [build, plan]\n"))
+        cases = [
+            ([{"jobs": []}], 0, False),
+            ([{"jobs": [{"id": 1, "name": "candidate-web", "status": "completed"},
+                        {"id": 2, "name": "web", "status": "in_progress"}]}], 0, False),
+            ([{"jobs": []}], 1, False),
+        ]
+        for status in ("queued", "waiting", "pending", "in_progress"):
+            # An unfinished candidate on a later page must still prevent publication.
+            cases.append(([{"jobs": [{"id": 1, "name": "candidate-web", "status": "completed"}]},
+                           {"jobs": [{"id": 2, "name": "candidate-bot", "status": status}]}], 0, True))
+        for pages, api_status, cancel in cases:
+            with self.subTest(pages=pages, api_status=api_status):
+                # Stub transport only; apply the actual query to every API page.
+                stub = '''gh() {
+                  if [ "$1" = api ]; then
+                    if [ "$API_STATUS" -ne 0 ]; then return "$API_STATUS"; fi
+                    printf '%s' "$PAGES" | jq -r "$5"
+                    return
+                  fi
+                  echo "CANCELLED"
+                }
+                '''
+                result = subprocess.run(
+                    ["bash", "-c", stub + script], capture_output=True, text=True,
+                    env=dict(os.environ, GH_REPO="example/repo", RUN_ID="123",
+                             PAGES="\n".join(json.dumps(page) for page in pages),
+                             API_STATUS=str(api_status)),
+                )
+                self.assertEqual(result.returncode, api_status, result.stderr)
+                self.assertEqual("CANCELLED" in result.stdout, cancel)
+                self.assertEqual("::warning::" in result.stdout, not cancel and api_status == 0)
 
     def test_async_validation_alerts_without_blocking_publish(self) -> None:
         job = self.jobs["validation-alert"]
