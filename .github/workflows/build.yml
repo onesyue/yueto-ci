@@ -1901,8 +1901,6 @@ jobs:
       - name: Preflight build and promotion dependencies
         run: |
           set -euo pipefail
-          # sigstore/cosign-installer expands its install path with envsubst;
-          # Debian provides it in gettext-base rather than the base image.
           for tool in bash curl docker envsubst git jq; do
             command -v "$tool" >/dev/null 2>&1 || {
               echo "::error::runner is missing required build tool: $tool"
@@ -2030,23 +2028,21 @@ jobs:
           trivyignores: .ci-policy/.trivyignore
           skip-setup-trivy: true
 
+      # v3 writes Sigstore bundles as OCI 1.1 referrers.  This keeps our
+      # CycloneDX attestations discoverable beside GitHub provenance.
+      #
+      # >= v3.1.3 (2026-08-06) for GHSA-fx35-mq7g-6g98 (High, 7.4): a legacy
+      # JSON bundle carrying a bare public key in its `cert` field made
+      # `verify-blob*` skip CheckCertificatePolicy outright — it printed
+      # "Verified OK" while ignoring --certificate-identity entirely. Image
+      # `verify` / `verify-attestation` (all this pipeline and
+      # yueops/scripts/verify-image-signature.sh use) are unaffected, so for
+      # us this is defence in depth, not an active hole. Bumped anyway: the
+      # whole supply chain is anchored on cosign's identity checks actually
+      # being performed, and a version whose verifier can be talked out of
+      # checking identity has no business signing our production digests.
       - name: Install cosign
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        with:
-          # v3 writes Sigstore bundles as OCI 1.1 referrers.  This keeps our
-          # CycloneDX attestations discoverable beside GitHub provenance.
-          #
-          # >= v3.1.3 (2026-08-06) for GHSA-fx35-mq7g-6g98 (High, 7.4): a legacy
-          # JSON bundle carrying a bare public key in its `cert` field made
-          # `verify-blob*` skip CheckCertificatePolicy outright — it printed
-          # "Verified OK" while ignoring --certificate-identity entirely. Image
-          # `verify` / `verify-attestation` (all this pipeline and
-          # yueops/scripts/verify-image-signature.sh use) are unaffected, so for
-          # us this is defence in depth, not an active hole. Bumped anyway: the
-          # whole supply chain is anchored on cosign's identity checks actually
-          # being performed, and a version whose verifier can be talked out of
-          # checking identity has no business signing our production digests.
-          cosign-release: v3.1.3
+        run: bash .ci-policy/scripts/install-cosign.sh
 
       - name: Generate SBOM (CycloneDX, linux/amd64)
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
@@ -2355,8 +2351,6 @@ jobs:
       - name: Preflight build and promotion dependencies
         run: |
           set -euo pipefail
-          # sigstore/cosign-installer expands its install path with envsubst;
-          # Debian provides it in gettext-base rather than the base image.
           for tool in bash curl docker envsubst git jq; do
             command -v "$tool" >/dev/null 2>&1 || {
               echo "::error::runner is missing required build tool: $tool"
@@ -2366,23 +2360,21 @@ jobs:
           docker info >/dev/null
           docker buildx version >/dev/null
 
+      # v3 writes Sigstore bundles as OCI 1.1 referrers.  This keeps our
+      # CycloneDX attestations discoverable beside GitHub provenance.
+      #
+      # >= v3.1.3 (2026-08-06) for GHSA-fx35-mq7g-6g98 (High, 7.4): a legacy
+      # JSON bundle carrying a bare public key in its `cert` field made
+      # `verify-blob*` skip CheckCertificatePolicy outright — it printed
+      # "Verified OK" while ignoring --certificate-identity entirely. Image
+      # `verify` / `verify-attestation` (all this pipeline and
+      # yueops/scripts/verify-image-signature.sh use) are unaffected, so for
+      # us this is defence in depth, not an active hole. Bumped anyway: the
+      # whole supply chain is anchored on cosign's identity checks actually
+      # being performed, and a version whose verifier can be talked out of
+      # checking identity has no business signing our production digests.
       - name: Install cosign
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        with:
-          # v3 writes Sigstore bundles as OCI 1.1 referrers.  This keeps our
-          # CycloneDX attestations discoverable beside GitHub provenance.
-          #
-          # >= v3.1.3 (2026-08-06) for GHSA-fx35-mq7g-6g98 (High, 7.4): a legacy
-          # JSON bundle carrying a bare public key in its `cert` field made
-          # `verify-blob*` skip CheckCertificatePolicy outright — it printed
-          # "Verified OK" while ignoring --certificate-identity entirely. Image
-          # `verify` / `verify-attestation` (all this pipeline and
-          # yueops/scripts/verify-image-signature.sh use) are unaffected, so for
-          # us this is defence in depth, not an active hole. Bumped anyway: the
-          # whole supply chain is anchored on cosign's identity checks actually
-          # being performed, and a version whose verifier can be talked out of
-          # checking identity has no business signing our production digests.
-          cosign-release: v3.1.3
+        run: bash .ci-policy/scripts/install-cosign.sh
 
       - name: Resolve source identity
         id: meta

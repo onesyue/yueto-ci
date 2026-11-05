@@ -304,7 +304,6 @@ The exact external closure is:
 - `docker/login-action@*`
 - `docker/setup-buildx-action@*`
 - `docker/setup-qemu-action@*`
-- `sigstore/cosign-installer@*`
 
 Retain `github_owned_allowed=true` and `verified_allowed=false`. Source references
 must still use full 40-character SHAs; `@*` permissions never authorize mutable

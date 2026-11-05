@@ -1,5 +1,6 @@
 """I32-E R4/R7: execute real retry helpers with failing external commands."""
 
+import hashlib
 import os
 from pathlib import Path
 import subprocess
@@ -141,12 +142,12 @@ exit 22
                 self.assertEqual(self.lines("sleeps"), [])
 
     def test_download_limits_and_eventual_success(self):
-        for attempts in (4, 5):
+        for attempts in (4, 5, 10):
             for succeeds in (False, True):
                 with self.subTest(attempts=attempts, succeeds=succeeds):
                     result = self.run_helper(
                         f"ci_download {attempts} --fail https://fixture.invalid",
-                        ERROR="curl: (22) The requested URL returned error: 503",
+                        ERROR="curl: (22) The requested URL returned error: 504",
                         SUCCEED_AT=str(attempts if succeeds else 99),
                     )
                     self.assertEqual(result.returncode, 0 if succeeds else 22)
@@ -166,6 +167,68 @@ exit 22
         self.assertIn("ci_download 5 --fail", policy)
         self.assertIn("sha256sum --check --strict", policy)
         self.assertNotIn("--retry-all-errors", policy)
+
+    def test_cosign_verified_install_and_version_gate(self):
+        # Replace only the reviewed digest in a private fixture copy so real
+        # sha256sum, install and PATH handoff can run without a network fetch.
+        source = (ROOT / "scripts/install-cosign.sh").read_text()
+        reviewed = "4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71"
+        self.assertIn(reviewed, source)
+        self.assertIn("readonly COSIGN_VERSION='v3.1.3'", source)
+        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        self.assertEqual(workflow.count("run: bash .ci-policy/scripts/install-cosign.sh"), 2)
+        self.assertNotIn("sigstore/cosign-installer@", workflow)
+        (self.base / "ci-retry.sh").write_text(HELPER.read_text())
+        fixture = self.base / "artifact"
+        installer = self.base / "installer.sh"
+        github_path = self.base / "github_path"
+        self.shim("curl", """
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = -o ]; then cp "$ARTIFACT" "$2"; exit 0; fi
+  shift
+done
+exit 97
+""")
+        for version in ("v3.1.3", "v3.1.30"):
+            with self.subTest(version=version):
+                github_path.unlink(missing_ok=True)
+                fixture.write_text(f"#!/bin/sh\necho 'GitVersion: {version}'\n")
+                digest = hashlib.sha256(fixture.read_bytes()).hexdigest()
+                installer.write_text(source.replace(reviewed, digest))
+                result = subprocess.run(
+                    ["bash", str(installer)],
+                    env={**self.env, "RUNNER_TEMP": str(self.base),
+                         "GITHUB_PATH": str(github_path), "ARTIFACT": str(fixture)},
+                    capture_output=True, text=True, timeout=15,
+                )
+                if version == "v3.1.3":
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(github_path.read_text(), f"{self.base}/cosign-bin\n")
+                    self.assertEqual((self.base / "cosign-bin/cosign").stat().st_mode & 0o777, 0o755)
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(github_path.exists())
+
+    def test_cosign_bad_digest_stops_before_install_or_execution(self):
+        self.shim("curl", """
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = -o ]; then echo corrupt > "$2"; exit 0; fi
+  shift
+done
+exit 97
+""")
+        self.shim("install", 'echo unexpected-install >> "$CALLS"; exit 97\n')
+        github_path = self.base / "github_path"
+        result = subprocess.run(
+            ["bash", str(ROOT / "scripts/install-cosign.sh")],
+            env={**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)},
+            capture_output=True, text=True, timeout=15,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("FAILED", result.stdout)
+        self.assertEqual(self.lines("calls"), [])
+        self.assertFalse(github_path.exists())
+        self.assertEqual(list(self.base.glob("yueto-cosign.*")), [])
 
     def test_actionlint_bad_digest_stops_before_extraction(self):
         policy = (ROOT / ".github/workflows/policy-ci.yml").read_text()
