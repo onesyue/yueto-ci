@@ -831,7 +831,6 @@ class BuildPolicyTest(unittest.TestCase):
             "docker/login-action@*",
             "docker/setup-buildx-action@*",
             "docker/setup-qemu-action@*",
-            "sigstore/cosign-installer@*",
         )
         section = self.readme.split("## Actions allowlist closure", 1)[1].split(
             "\n## ", 1
@@ -1728,14 +1727,14 @@ class BuildPolicyTest(unittest.TestCase):
             "708d77899e2b43e0d21cb811023dbbcfb3b8220b0c0b7e71c6e73568be7716e5",
             'test "$("$squawk_bin" --version)" = \'squawk 2.60.0\'',
             "aquasecurity/trivy-action@",
-            "sigstore/cosign-installer@",
+            "run: bash .ci-policy/scripts/install-cosign.sh",
             # >= v3.1.3: GHSA-fx35-mq7g-6g98 (2026-08-06, High 7.4) — a legacy
             # JSON bundle with a bare public key in `cert` made verify-blob*
             # skip CheckCertificatePolicy and print "Verified OK" while
             # ignoring --certificate-identity. Image verify/verify-attestation
             # (what this pipeline uses) are unaffected; pinned forward anyway
             # because the whole chain rests on cosign really checking identity.
-            "cosign-release: v3.1.3",
+            "# >= v3.1.3",
             "source .ci-policy/scripts/ci-retry.sh",
             'keyless_cosign sign "${IMAGE}@${DIGEST}"',
             "keyless_cosign attest",
