@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "prs": [411, 415],
+  "base": "db5cadabfb67d0b40f0d1e2a04d9c14a72b53b23",
+  "head": "7082487d947e8bf029b33481efd2c91fb99e34d9",
+  "source_revision_pin": "7082487d947e8bf029b33481efd2c91fb99e34d9",
+  "before": {"exit_code": 1, "result": "ADMISSION_REJECTED", "changed_shared_inputs": ["pytest.ini", "tests/_native_postgres.py"], "ci_run": 41992278081},
+  "after": {"exit_code": 0, "result": "ADMISSION_ACCEPTED"},
+  "command": "python3 scripts/admission-precheck.py --repo yueops --source <yueops> --base <base> --head <head>",
+  "scope": "Shared-input admission only; full execution and build not claimed."
+}

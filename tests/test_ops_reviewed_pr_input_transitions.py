@@ -14,10 +14,13 @@ SPEC = importlib.util.spec_from_file_location('pr_input_shards', ROOT / 'scripts
 M = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(M)
 NAMES = tuple(M.REVIEWED_PR_INPUTS)
+CURRENT_GENERATION = frozenset({'test_inputs_1105'})
+EVIDENCE_DATES = {'test_inputs_1105': '20261105'}
 
 
 def evidence(name):
-    directory = ROOT / ('reviews/ops-' + name.replace('_', '-') + '-20261103')
+    date = EVIDENCE_DATES.get(name, '20261103')
+    directory = ROOT / ('reviews/ops-' + name.replace('_', '-') + '-' + date)
     return directory, json.loads((directory / 'source-freeze.json').read_text())
 
 
@@ -39,6 +42,9 @@ def check_review_and_qualification_bound_to_exact_source(name):
     if name == 'deploy_ai_exit':
         assert q['exact_single_path_addition'] and q['scan_membership_equal']
         assert q['scan_lines'] >= q['minimum_lines'] == 2800
+    elif name == 'test_inputs_1105':
+        assert q['test_only_inputs'] and q['collection_membership_equal']
+        assert q['no_skip_or_import_side_effect_change']
     else:
         assert q['manifest_only_expected_devdependency_pins']
         assert q['importer_specifiers_match'] and q['all_snapshot_edges_resolve']
@@ -48,7 +54,9 @@ def check_review_and_qualification_bound_to_exact_source(name):
 def check_full_admission_exact_successor_and_predecessor_preserve_history(name):
     _, freeze = evidence(name)
     record = M.reviewed_pr_input_transition(name)
-    baseline, _ = M.reviewed_native_input_successor(M.skip_baseline())
+    # Seals frozen after the loadshed native successor see the current baseline.
+    baseline = (M.skip_baseline() if name in CURRENT_GENERATION
+                else M.reviewed_native_input_successor(M.skip_baseline())[0])
     historical = copy.deepcopy(baseline)
     pin = M.first_native_policy() | {'source_revision': freeze['merge_revision']}
     common = freeze['common_inputs']
@@ -96,7 +104,8 @@ def check_full_admission_rejects_partial_bundles_unknown_bytes_modes_and_wrong_p
             files[path] = ('100644', change['before_blob'])
         else:
             revision = 'f' * 40
-        baseline, _ = M.reviewed_native_input_successor(M.skip_baseline())
+        baseline = (M.skip_baseline() if name in CURRENT_GENERATION
+                    else M.reviewed_native_input_successor(M.skip_baseline())[0])
         with patch.object(M, 'first_native_policy', return_value={
                 **M.first_native_policy(), 'source_revision': freeze['merge_revision']}):
             with unittest.TestCase().assertRaises(ValueError):
@@ -105,7 +114,7 @@ def check_full_admission_rejects_partial_bundles_unknown_bytes_modes_and_wrong_p
 
 
 def check_seal_tampering_fails_closed(name, field):
-    policy = M.read_json(ROOT / 'ops-shared-input-successors.json')
+    policy = M.read_json(ROOT / M.REVIEWED_PR_INPUT_FILES.get(name, 'ops-shared-input-successors.json'))
     record = policy['reviewed_' + name + '_transition']
     record[field] = {} if field == 'changes' else 'unreviewed'
     with patch.object(M, 'read_json', return_value=policy), unittest.TestCase().assertRaises(ValueError):
@@ -140,6 +149,7 @@ def check_real_git_ancestry_and_source_identity(tmp_path, name):
     git('commit', '-q', '--allow-empty', '-m', 'descendant')
     descendant = git('rev-parse', 'HEAD')
     with patch.object(M, 'REVIEWED_PR_INPUTS', {name: M.REVIEWED_PR_INPUTS[name]}), \
+         patch.object(M, 'REVIEWED_PR_INPUT_ACTIVATION', {}), \
          patch.object(M, 'reviewed_pr_input_transition', return_value=record):
         for rev in (record['source_before'], record['source_after'], descendant):
             M.reviewed_pr_input_proof(tmp_path, rev)
@@ -157,6 +167,12 @@ def check_real_git_ancestry_and_source_identity(tmp_path, name):
         git('commit', '-qm', 'unrelated copy')
         with unittest.TestCase().assertRaisesRegex(ValueError, 'source ancestry differs'):
             M.reviewed_pr_input_proof(tmp_path, git('rev-parse', 'HEAD'))
+
+
+def check_activation_requires_exact_after_blob():
+    record = M.reviewed_pr_input_transition('test_inputs_1105')
+    assert M.REVIEWED_PR_INPUT_ACTIVATION['test_inputs_1105'] == frozenset(
+        (p, c['after_blob']) for p, c in record['changes'].items())
 
 
 def check_unrelated_historical_inputs_do_not_activate_new_seals():
@@ -197,6 +213,9 @@ class ReviewedPrInputTransitions(unittest.TestCase):
         for name in NAMES:
             with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
                 check_real_git_ancestry_and_source_identity(Path(directory), name)
+
+    def test_activation_bound_to_record(self):
+        check_activation_requires_exact_after_blob()
 
     def test_unrelated_historical_inputs(self):
         check_unrelated_historical_inputs_do_not_activate_new_seals()

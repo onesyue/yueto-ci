@@ -2124,13 +2124,31 @@ REVIEWED_PR_INPUTS = {
         "b9fc088633186556e350eee3c090748d7dc18655e3aea6bbd83bd5bd92fe9de0",
         frozenset({"site/package.json", "site/pnpm-lock.yaml"}),
     ),
+    # yueops #411 (short PG socket dir) + #415 (pytest tmp retention), pin 3beb7b8c.
+    "test_inputs_1105": (
+        "2113cfed645784355f1cbd250def65e000076f5b71f6a4d9e65772a3003d3510",
+        frozenset({"pytest.ini", "tests/_native_postgres.py"}),
+    ),
 }
+
+# Later sidecars live in their own file so earlier outer seals' hashes stay exact.
+REVIEWED_PR_INPUT_FILES = {"test_inputs_1105": "ops-shared-input-successors-1105.json"}
+# Activate these sidecars only for their exact after-blobs (historical trees need no evidence).
+REVIEWED_PR_INPUT_ACTIVATION = {"test_inputs_1105": frozenset({
+    ("pytest.ini", "9599c104c7dcfcfa3718c9be2335362731d4758f"),
+    ("tests/_native_postgres.py", "5ac0ed066b88979b123bb0dab037ca497e41e23c"),
+})}
+
+
+def reviewed_pr_input_active(name, blob_of):
+    blobs = REVIEWED_PR_INPUT_ACTIVATION.get(name)
+    return blobs is None or any(blob_of(path) == blob for path, blob in blobs)
 
 
 def reviewed_pr_input_transition(name):
     """Validate an exact reviewed sidecar seal without rewriting inner seals."""
     identity, paths = REVIEWED_PR_INPUTS[name]
-    value = read_json(ROOT / "ops-shared-input-successors.json")
+    value = read_json(ROOT / REVIEWED_PR_INPUT_FILES.get(name, "ops-shared-input-successors.json"))
     record = value.get("reviewed_" + name + "_transition")
     require(value.get("schema") == 1 and isinstance(record, dict) and set(record) == {
         "schema", "reviewer", "prior_baseline_sha256", "source_before", "source_after",
@@ -2170,7 +2188,8 @@ def reviewed_pr_input_proof(source, revision):
     """The planner proves source ancestry for each selected exact input bundle."""
     files = tree_inputs(source, revision)
     for name, (_, paths) in REVIEWED_PR_INPUTS.items():
-        if not paths.intersection(files):
+        if not paths.intersection(files) or not reviewed_pr_input_active(
+                name, lambda p: files.get(p, (None, None))[1]):
             continue
         record = reviewed_pr_input_transition(name)
         if not any(files.get(p, (None, None))[1] == c["after_blob"]
@@ -2195,7 +2214,7 @@ def admit_reviewed_pr_inputs(common, files, source_revision):
     if not isinstance(common, dict):
         return common, files
     for name, (_, paths) in REVIEWED_PR_INPUTS.items():
-        if not paths.intersection(common):
+        if not paths.intersection(common) or not reviewed_pr_input_active(name, common.get):
             continue
         record = reviewed_pr_input_transition(name)
         changes = record["changes"]
