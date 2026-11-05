@@ -393,6 +393,9 @@ class FrozenAcceptedHistoryExtension(unittest.TestCase):
              "2026-11-03T05:03:46Z", no_review),
             ("yueto-ci", 212, "2b4db0f396cf234a35f83f1912b8ad6d8cfc9c48",
              "2026-11-03T12:24:14Z", no_review),
+            # Owner instruction t658s4004: Codex P2 already fixed by yueboard #144.
+            ("yueboard", 142, "2b2acde3ad635c627ddfef68ec51bf29a5c48c42",
+             "2026-11-04T19:38:41Z", no_checks),
         ]
         self.rows = [{"repo": repo, "pr": pr, "head": head, "merged_at": merged_at,
                       "url": f"https://github.com/onesyue/{repo}/pull/{pr}",
@@ -414,8 +417,8 @@ class FrozenAcceptedHistoryExtension(unittest.TestCase):
         frozen_at, accepted = AUDIT.baseline(path)
         self.assertEqual(frozen_at, max(AUDIT.timestamp(row["merged_at"]) for row in self.rows))
         self.assertEqual(json.loads(path.read_text())["approver"],
-                         "coordinator (owner mandate t497u) 2026-11-03")
-        self.assertEqual(len(accepted), 31)
+                         "coordinator (owner mandate t497u) 2026-11-03; owner instruction t658s4004 2026-11-05 (yueboard #142)")
+        self.assertEqual(len(accepted), 32)
         for row in self.rows:
             with self.subTest(repo=row["repo"], pr=row["pr"]):
                 entry = accepted[(row["repo"], row["pr"], row["head"])]
@@ -425,7 +428,7 @@ class FrozenAcceptedHistoryExtension(unittest.TestCase):
         rc, result = self.run_cli(self.rows)
         self.assertEqual(rc, 0)
         self.assertTrue(result["complete"])
-        self.assertEqual(result["accepted_history"], 11)
+        self.assertEqual(result["accepted_history"], 12)
         self.assertEqual(result["unregistered"], 0)
         for row in result["findings"]:
             with self.subTest(repo=row["repo"], pr=row["pr"]):
@@ -434,12 +437,12 @@ class FrozenAcceptedHistoryExtension(unittest.TestCase):
     def test_identical_findings_after_cutoff_are_rejected(self):
         # Keep the same repo, PR, head and findings; move only the timestamp
         # one second past the independently recorded latest historical merge.
-        rows = [row | {"merged_at": "2026-11-03T14:10:44Z"} for row in self.rows]
+        rows = [row | {"merged_at": "2026-11-04T19:38:42Z"} for row in self.rows]
         rc, result = self.run_cli(rows)
         self.assertEqual(rc, 1)
         self.assertTrue(result["complete"])
         self.assertEqual(result["accepted_history"], 0)
-        self.assertEqual(result["unregistered"], 11)
+        self.assertEqual(result["unregistered"], 12)
         for row in result["findings"]:
             self.assertNotIn("accepted_history", row)
 
