@@ -1,0 +1,4 @@
+head 343eb40f47c9b19e49fe16bb6663087cd728b22a
+ok  	github.com/onesyue/yueboard/internal/modules/nodesync	10.883s
+?   	github.com/onesyue/yueboard/internal/modules/nodesync/store	[no test files]
+EXIT=0
