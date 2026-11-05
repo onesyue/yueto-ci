@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueto",
+  "pr": 114,
+  "head": "c8e8134ca4e80bdf815a561e44a1bc6d368ac786",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "c8e8134ca4e80bdf815a561e44a1bc6d368ac786",
+    "artifact": "reviews/merge-receipts-20261105/yueto-114.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-05T03:45:37Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "c8e8134ca4e80bdf815a561e44a1bc6d368ac786",
+    "command": "git diff --check 28c7e9b2e91d2574617d56a2f82d8e1f1d3e1330 HEAD && /workspace/yo-venv/bin/python -m pytest -q scripts/i18n/test-gen-node-names.py",
+    "log_sha256": "6c3bc7cb579508825ea9d6f3739bf640572eb1e5fc76ad972b9058abbbd6f2e8",
+    "ran_at": "2026-11-05T03:36:53Z",
+    "runner": "box"
+  }
+}
