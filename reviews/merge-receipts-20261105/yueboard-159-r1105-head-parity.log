@@ -1,0 +1,4 @@
+head 80fc75a93484e8d24bbf07d7f5603537408f1a70
+cmd go test -count=1 ./internal/modules/user/...
+2026-11-05T07:34:43Z
+ok  	github.com/onesyue/yueboard/internal/modules/user	0.220s
