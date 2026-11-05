@@ -1,0 +1,4 @@
+head eeb0e3cc62ac57d948e12b6da5cc617f19dacab5
+cmd /workspace/lane/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_telemetry_probe_daily_a6.py tests/test_telemetry_probe_daily_pg_a6.py
+2026-11-05T07:34:01Z
+20 passed, 2 warnings in 3.12s

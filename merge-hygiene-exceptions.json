@@ -1044,6 +1044,12 @@
       "pr": 105,
       "reason": "Landed by direct signed fast-forward 668fd7fad2ad391962e9847c6ac24e2ccf2fc3cf instead of through PR #105's head. Review approve, documentation scope (reviews/merge-receipts-20261104/yueto-668fd7fa.md); real-workspace pytest 99 passed (parity-logs/20261104/yueto-668fd7fa.log). CRLF diff-check finding fixed afterwards by PR #106 (3bda428b). Missing evidence: merged-PR binding.",
       "approver": "xiaoming su 2026-11-04 20:57 SGT approved exception for direct pushes"
+    },
+    {
+      "repo": "yueops",
+      "pr": 414,
+      "reason": "Exact-head Codex review of cb0746e1 returned REQUEST_CHANGES (P2: client network_type persisted in 30-day aggregates; reviews/merge-receipts-20261105/yueops-414-r1105.md). Fixed by #416 (codex APPROVE, receipt 416.json), shipped in the same yueops batch 9db39740. Parity 20 passed at head. No APPROVE is claimed for #414.",
+      "approver": "负责人 owner directive t687u 2026-11-05 15:32 SGT (ship A6 in this batch; #416 as honest fix)"
     }
   ]
 }
