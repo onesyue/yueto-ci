@@ -1,0 +1,4 @@
+$ cd yueops@9323e0fa && TZ=UTC /workspace/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_schedule_receipts_20261013.py
+..............                                                           [100%]
+14 passed in 1.31s
+rc=0

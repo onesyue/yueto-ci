@@ -1,0 +1,4 @@
+$ cd yueops@850b839 && TZ=UTC /workspace/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_alert_actionability_20260903.py tests/test_c22_relay_inventory.py tests/test_v4_pool_sentinel_membership_20260907.py 
+..........................................................               [100%]
+58 passed in 2.17s
+rc=0
