@@ -14,10 +14,10 @@
   },
   "parity": {
     "result": "pass",
-    "head": "7eb6fb7d263824730f9dd547d3c1bebd2530ee28",
-    "command": "cd yueops@7eb6fb7d (full history) && TZ=UTC /workspace/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_installed_checker_bytes_20261014.py tests/test_direct_ip_rotate_safety.py tests/test_harvest_sid_pinned_ssh.py tests/test_yueops_shield_20260828.py tests/test_relay_topology.py tests/test_active_topology_ledger_20260805.py tests/test_relay_retirement_20261103.py",
-    "log_sha256": "2dfd1e4156b546858b4303737090f9e16ce220fe71bef306e78d5c565fed120d",
-    "ran_at": "2026-11-05T03:23:54Z",
+    "head": "7d32828de6e394c4d84deba2554e1e7e3e9e9241",
+    "command": "cd yueops@7d32828de (full history) && TZ=UTC pytest -q -p no:cacheprovider <ship-path suites + site/telegram/language suites>; see reviews/merge-receipts-20261105/yueops-tip-7d32828de-r1105-parity.log (2 site test files excluded: fail identically at 7eb6fb7d, pre-existing)",
+    "log_sha256": "95c0c461afe60ec4e01214ae8bcd33e9794b74415e65276744bfa5e99d23c847",
+    "ran_at": "2026-11-05T03:34:33Z",
     "runner": "box"
   }
 }
