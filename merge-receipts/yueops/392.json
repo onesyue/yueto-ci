@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 392,
+  "head": "d62818db0563c51d738e09cad99eefbb8909a7f6",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "d62818db0563c51d738e09cad99eefbb8909a7f6",
+    "artifact": "reviews/merge-receipts-20261105/yueops-tip-remainder-r1105.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-05T02:10:00Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "d62818db0563c51d738e09cad99eefbb8909a7f6",
+    "command": "TZ=UTC pytest bastion+site astro at merged head",
+    "log_sha256": "c01e85b4039f8cc2e28deff01169749a8e6cd7232aab12235dfb568d9df19331",
+    "ran_at": "2026-11-05T02:07:00Z",
+    "runner": "box"
+  }
+}
