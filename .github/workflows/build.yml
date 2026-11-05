@@ -2753,6 +2753,38 @@ jobs:
               || echo "::warning::could not close alert issue #${n}"
           done
 
+  abort-on-validate-failure:
+    # build (candidate-*) deliberately overlaps validate (needs only plan).
+    # abort-on-build-failure needs build, so it cannot fire until builds finish.
+    # validate still does not gate publish (B1); this only stops pre-publish
+    # candidate builds burning runner/GHCR time once validation is already red.
+    # run 41957249510: candidate-yueops-web ran 20+ min after validate-yueops-native failed.
+    needs: [plan, validate]
+    if: failure()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Cancel this run after a failed required job
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # Publish needs all of build and uses service names, not a publish prefix.
+          # Any unfinished candidate blocks publish; otherwise it may already be running.
+          pending_builds=$(gh api --paginate "repos/$GH_REPO/actions/runs/$RUN_ID/jobs" \
+            --jq '.jobs[] | select(.name | startswith("candidate-")) | select(.status != "completed") | .id' \
+            | jq -s 'length')
+          if [ "$pending_builds" -eq 0 ]; then
+            echo "::warning::no candidate builds remain unfinished; publish may start or be running; leaving run $RUN_ID running (B1: never interrupt publish)"
+            exit 0
+          fi
+          echo "::error::a required job failed; cancelling run $RUN_ID so nothing keeps running on a failed release"
+          gh run cancel "$RUN_ID"
+
   abort-on-build-failure:
     # Fail fast across jobs: as soon as any candidate image build fails, cancel the
     # whole run (other matrix rows, candidate builds, evidence) instead of
