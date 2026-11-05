@@ -1,0 +1,6 @@
+# repo=yt pr=103 head=b0a8074755b53a602d946f5eecb5fb7b9e99d969 base=3bda428bea51db9d8423f485ec3f5f5ec92a8862
+# command: git diff --check 3bda428bea51db9d8423f485ec3f5f5ec92a8862 HEAD && /workspace/yo-venv/bin/python -m pytest -q scripts/test-first-contract-transaction.py
+# started: 2026-11-05T02:59:59Z runner=box
+...........................................                              [100%]
+43 passed in 127.86s (0:02:07)
+# finished: 2026-11-05T03:02:08Z exit=0
