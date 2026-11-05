@@ -1,0 +1,5 @@
+head 6f0bc6f052925a91d481ace31bee95846d1f455a
+cmd python3 -m pytest -q -p no:cacheprovider tests/test_direct_dns_legacy_pool_20261014.py tests/test_endpoint_salt_withdrawal_20261103.py --collect-only
+2026-11-05T07:19:19Z
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+146 tests collected in 0.41s

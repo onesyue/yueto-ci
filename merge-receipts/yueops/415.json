@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 415,
+  "head": "6f0bc6f052925a91d481ace31bee95846d1f455a",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "6f0bc6f052925a91d481ace31bee95846d1f455a",
+    "artifact": "reviews/merge-receipts-20261105/yueops-415-r1105.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-05T07:22:29Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "6f0bc6f052925a91d481ace31bee95846d1f455a",
+    "command": "python3 -m pytest -q -p no:cacheprovider tests/test_direct_dns_legacy_pool_20261014.py tests/test_endpoint_salt_withdrawal_20261103.py --collect-only",
+    "log_sha256": "9e8754578fecc8cdcdebae34b15223a3f1125ef6948d5e0ee09c501e3d9e2a09",
+    "ran_at": "2026-11-05T07:19:19Z",
+    "runner": "box"
+  }
+}
