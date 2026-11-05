@@ -1,0 +1,4 @@
+=== parity 391 at d4282443540244df2793701a313eccd19f47e5be ===
+DIFF_CHECK_OK
+no pytest targets (presentational CSS/TSX only)
+PARITY_EXIT=0
