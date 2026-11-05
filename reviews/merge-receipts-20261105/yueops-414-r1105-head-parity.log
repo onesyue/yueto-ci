@@ -1,0 +1,7 @@
+head cb0746e12bf7f0630b551666280d14d3a460f193
+cmd /workspace/lane/yo-venv/bin/python -m pytest -q -p no:cacheprovider tests/test_telemetry_probe_daily_a6.py tests/test_telemetry_probe_daily_pg_a6.py
+2026-11-05T07:20:39Z
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+20 passed, 2 warnings in 3.07s
