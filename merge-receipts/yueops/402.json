@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 402,
+  "head": "77d579ee9cfb1be267a6ef5df8e0bd73c7d28014",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "77d579ee9cfb1be267a6ef5df8e0bd73c7d28014",
+    "artifact": "reviews/merge-receipts-20261105/yueops-tip-77d579ee9-r1105.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-05T03:19:26Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "7d32828de6e394c4d84deba2554e1e7e3e9e9241",
+    "command": "cd yueops@7d32828de (full history) && TZ=UTC pytest -q -p no:cacheprovider <ship-path suites + site/telegram/language suites>; see reviews/merge-receipts-20261105/yueops-tip-7d32828de-r1105-parity.log (2 site test files excluded: fail identically at 7eb6fb7d, pre-existing)",
+    "log_sha256": "95c0c461afe60ec4e01214ae8bcd33e9794b74415e65276744bfa5e99d23c847",
+    "ran_at": "2026-11-05T03:34:33Z",
+    "runner": "box"
+  }
+}
