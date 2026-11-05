@@ -1,0 +1,5 @@
+head a46b34bef8735c2d4b23c1a6266cd33cd9de2413
+cmd go test -count=1 ./internal/modules/admin/... ./internal/modules/memories/...
+2026-11-05T07:34:43Z
+ok  	github.com/onesyue/yueboard/internal/modules/admin	0.700s
+?   	github.com/onesyue/yueboard/internal/modules/memories	[no test files]
