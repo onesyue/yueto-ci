@@ -1,0 +1,6 @@
+head a64dc376bc5e7fcf02698657f1113114356d81b8
+ok  	github.com/onesyue/yueboard/internal/platform/deviceidentity	0.017s
+ok  	github.com/onesyue/yueboard/internal/modules/user	1.234s
+ok  	github.com/onesyue/yueboard/internal/modules/subscribe	4.234s
+ok  	github.com/onesyue/yueboard/internal/platform/i18n	0.008s
+EXIT=0
