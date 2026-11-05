@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "repo": "yueops",
+  "pr": 410,
+  "head": "05250cce14a7c72e5fd38db143630fd493adb756",
+  "backfilled": true,
+  "review": {
+    "tool": "codex",
+    "verdict": "approve",
+    "reviewed_head": "05250cce14a7c72e5fd38db143630fd493adb756",
+    "artifact": "reviews/merge-receipts-20261105/yueops-410-r1105.md",
+    "reviewer": "codex",
+    "reviewed_at": "2026-11-05T07:22:28Z"
+  },
+  "parity": {
+    "result": "pass",
+    "head": "05250cce14a7c72e5fd38db143630fd493adb756",
+    "command": "python3 -m pytest -q -p no:cacheprovider tests/test_direct_dns_legacy_pool_20261014.py tests/test_direct_dns_member_isolation_20261026.py tests/test_endpoint_salt_exact_refresh_20261027.py tests/test_endpoint_salt_host_failure_20261104.py tests/test_endpoint_salt_withdrawal_20261103.py",
+    "log_sha256": "9cbfa168f980b60ed4ea33150ec7a8ebe5094b1c32b89be61dc973f1720d1065",
+    "ran_at": "2026-11-05T07:19:15Z",
+    "runner": "box"
+  }
+}

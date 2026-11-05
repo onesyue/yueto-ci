@@ -1,0 +1,51 @@
+=== parity yueops @80adb99babba0209d6f461360390dacab4fdef47 runner=box started=2026-11-05T07:02:14Z
+cmd: TZ=UTC pytest -q -p no:cacheprovider tests/test_infra_backup_observability_20260814.py tests/test_alert_chain_deploy_window.py
+...................F.                                                    [100%]
+=================================== FAILURES ===================================
+_________ test_installer_declares_window_before_stopping_timers[False] _________
+
+tmp_path = PosixPath('/tmp/pytest-of-box/pytest-27/test_installer_declares_window0')
+write_fails = False
+
+    @pytest.mark.parametrize('write_fails', [False, True])
+    def test_installer_declares_window_before_stopping_timers(tmp_path, write_fails):
+        source = INSTALLER.read_text()
+        begin = source.index('CDN_UPGRADE_FENCE_ARMED=1\n')
+        end = source.index('\necho "=== 安装 systemd unit ==="', begin)
+        marker = tmp_path / 'deploy.started'
+        if write_fails:
+            marker = tmp_path / 'missing-parent' / 'deploy.started'
+        # Execute the real fence, asserting the marker exists on every stop call.
+        harness = f'''set -euo pipefail
+    CDN_DEPLOY_MARKER={marker}
+    CDN_HMAC_TIMERS=(collect-cdn-entry-observations.timer cdn-entry-collector-freshness.timer)
+    CDN_HMAC_SERVICES=(collect-cdn-entry-observations.service cdn-entry-collector-freshness.service)
+    systemctl() {{
+        case "$1" in
+            cat) return 0;;
+            stop) test -s "$CDN_DEPLOY_MARKER"; echo "stopped $2";;
+            is-active) return 3;;
+            *) return 97;;
+        esac
+    }}
+    '''
+        result = subprocess.run(['bash', '-c', harness + source[begin:end]],
+                                capture_output=True, text=True)
+        if write_fails:
+            assert result.returncode != 0
+            assert 'stopped ' not in result.stdout
+            assert not marker.exists()
+            return
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: environment: line 42: ROOT_SCRIPT_DIR: unbound variable
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['bash', '-c', 'set -euo pipefail\nCDN_DEPLOY_MARKER=/tmp/pytest-of-box/pytest-27/test_installer...\nstopped cdn-entry-collector-freshness.service\n', stderr='environment: line 42: ROOT_SCRIPT_DIR: unbound variable\n').returncode
+
+tests/test_alert_chain_deploy_window.py:106: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_alert_chain_deploy_window.py::test_installer_declares_window_before_stopping_timers[False]
+1 failed, 20 passed in 0.83s
+rc=1
+finished=2026-11-05T07:02:16Z
+baseline-note: test_alert_chain_deploy_window.py::test_installer_declares_window_before_stopping_timers[False] fails identically (1 failed, 20 passed) on base db5cadab — pre-existing, not introduced by #399.

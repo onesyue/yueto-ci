@@ -1,0 +1,48 @@
+=== parity yueops @b0b4d616d8ff70ae2b08e9e331d3e481c862ec91 runner=box started=2026-11-05T06:57:54Z
+cmd: TZ=UTC pytest -q -p no:cacheprovider -n 2 tests -k points or reconcile or economy
+bringing up nodes...
+bringing up nodes...
+
+...........................sssss.............ss......................... [  7%]
+............................................................sssssss....s [ 15%]
+ssss..............sssssssss............................................. [ 22%]
+.........sss..sss..ssssssssssss.ss...................................... [ 30%]
+.........................ssssssssssss.......................s........... [ 37%]
+........................................................................ [ 45%]
+........................................................................ [ 53%]
+...................................sssssssssssssss................sss... [ 60%]
+...............sssssssssssss...................s........................ [ 68%]
+ssssssssssss.....sssssssssssssssssssssssssssssssssssss..ssssssss........ [ 75%]
+..........................................s.............ssssss.......... [ 83%]
+........................................................................ [ 91%]
+.........ssssssssssssssss.......ssss.......ssss......................... [ 98%]
+.ss..........                                                            [100%]
+==================================== ERRORS ====================================
+_____ ERROR collecting tests/test_sql_columns_exist_in_schema_20261102.py ______
+ImportError while importing test module '/workspace/wt/yo-r-b0b4d616/tests/test_sql_columns_exist_in_schema_20261102.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/home/box/.local/share/uv/python/cpython-3.13.18-linux-x86_64-gnu/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_sql_columns_exist_in_schema_20261102.py:13: in <module>
+    import sqlglot
+E   ModuleNotFoundError: No module named 'sqlglot'
+=============================== warnings summary ===============================
+../../yo-venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+../../yo-venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /workspace/yo-venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../yo-venv/lib/python3.13/site-packages/starlette/testclient.py:53
+../../yo-venv/lib/python3.13/site-packages/starlette/testclient.py:53
+  /workspace/yo-venv/lib/python3.13/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/test_sql_columns_exist_in_schema_20261102.py - ImportError while ...
+766 passed, 184 skipped, 4 warnings, 1 error in 126.94s (0:02:06)
+rc=1
+finished=2026-11-05T07:00:01Z
+baseline-note: only failure is test_sql_columns_exist_in_schema_20261102.py box-venv ImportError at collection (file untouched by this PR; same on every head/base). 0 test failures.

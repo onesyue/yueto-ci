@@ -1,0 +1,7 @@
+head 05250cce14a7c72e5fd38db143630fd493adb756
+cmd python3 -m pytest -q -p no:cacheprovider tests/test_direct_dns_legacy_pool_20261014.py tests/test_direct_dns_member_isolation_20261026.py tests/test_endpoint_salt_exact_refresh_20261027.py tests/test_endpoint_salt_host_failure_20261104.py tests/test_endpoint_salt_withdrawal_20261103.py
+2026-11-05T07:19:15Z
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+198 passed, 1 warning in 3.51s
