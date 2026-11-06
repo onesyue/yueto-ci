@@ -8,6 +8,7 @@ import subprocess
 import textwrap
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -134,7 +135,7 @@ def test_public_deadman_transport_is_dedicated_pinned_and_bounded() -> None:
     assert ": > receipt.json" in fetch
 
 
-def test_public_deadman_failure_reporting(tmp_path) -> None:
+def test_public_deadman_failure_reporting() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "--max-age-seconds 2700" in text
     report = text.split("Report deadman failure", 1)[1]
@@ -142,16 +143,19 @@ def test_public_deadman_failure_reporting(tmp_path) -> None:
     assert "gh issue" not in text and "permission-issues" not in text
     assert "continue-on-error" not in report
     script = textwrap.dedent(report.split("run: |\n", 1)[1])
-    for drill in ("true", "false"):
-        summary = tmp_path / drill
-        result = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
-                                env={**os.environ, "DRILL_MISSING": drill,
-                                     "RUN_URL": "https://example.invalid/run/1",
-                                     "GITHUB_STEP_SUMMARY": str(summary)}, timeout=10)
-        assert result.returncode == 1
-        assert "::error::" in result.stdout
-        assert "https://example.invalid/run/1" in summary.read_text()
-        assert ("Intentional" in summary.read_text()) == (drill == "true")
+    # The central runner calls these functions with no arguments.
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        for drill in ("true", "false"):
+            summary = root / drill
+            result = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                                    env={**os.environ, "DRILL_MISSING": drill,
+                                         "RUN_URL": "https://example.invalid/run/1",
+                                         "GITHUB_STEP_SUMMARY": str(summary)}, timeout=10)
+            assert result.returncode == 1
+            assert "::error::" in result.stdout
+            assert "https://example.invalid/run/1" in summary.read_text()
+            assert ("Intentional" in summary.read_text()) == (drill == "true")
 
 
 def _receipt(**overrides: object) -> str:
