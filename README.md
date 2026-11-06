@@ -10,7 +10,13 @@ UI units `ui-*` are retired and must not be re-registered.
 [validation-targets.json](validation-targets.json) defines source-only targets
 (YueLink and `yue-node-validation`, which never enter the image matrix).
 The only release workflow is [build.yml](.github/workflows/build.yml): validate,
-build, sign, attest, then explicitly promote.
+build, sign, attest, then explicitly promote. Candidate builds may overlap
+validation, but publication requires both the complete validation matrix and its
+current-run evidence to succeed. Failed, skipped or cancelled prerequisites
+cannot write built/source/latest tags. Publication is never interrupted to react
+to an already-failed validation; that failure prevents it from starting.
+Board release E2E compares committed Linux snapshots and refuses missing baselines;
+use the separate `board-visual-capture.yml` workflow to author reviewed baselines.
 
 ## Recover interrupted server delivery
 

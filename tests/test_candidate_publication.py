@@ -144,9 +144,8 @@ class PublicationWiringTest(unittest.TestCase):
     def assert_handoff(self, workflow):
         build, publish = workflow.split("\n  build:\n", 1)[1].split("\n  publish:\n", 1)
         self.assertTrue(build.startswith("    needs: [plan]\n"))
-        # B1 (2026-10-30): publish waits only for the verified candidate;
-        # validation runs asynchronously and alerts through validation-alert.
-        self.assertTrue(publish.startswith("    needs: [build, plan]\n"))
+        # Publication joins verified candidates with complete validation evidence.
+        self.assertTrue(publish.startswith("    needs: [build, plan, validate, validation-evidence]\n"))
         self.assertIn("if: needs.plan.outputs.has_builds == 'true'", publish)
         self.assertNotIn("always()", publish)
         self.assertNotIn("continue-on-error", build + publish)
@@ -177,7 +176,9 @@ class PublicationWiringTest(unittest.TestCase):
     def test_mutations_cannot_bypass_join_or_immutable_handoff(self):
         workflow = WORKFLOW.read_text()
         for old, new in (
-            ("    needs: [build, plan]\n    # 2026-10-30", "    needs: [plan]\n    # 2026-10-30"),
+            ("    needs: [build, plan, validate, validation-evidence]\n", "    needs: [build, plan]\n"),
+            ("    needs: [build, plan, validate, validation-evidence]\n", "    needs: [build, plan, validate]\n"),
+            ("    needs: [build, plan, validate, validation-evidence]\n", "    needs: [plan, validate, validation-evidence]\n"),
             ("candidate-receipt.py read", "candidate-receipt.py write"),
             ("CANDIDATE_DIGEST: ${{ steps.build.outputs.digest }}", "CANDIDATE_DIGEST: latest"),
             ("digest-mismatch: error", "digest-mismatch: warn"),

@@ -498,14 +498,14 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
 
 
 class VisualBaselineDiscoveryTest(unittest.TestCase):
-    """Run the real CI branch; SIGPIPE must not turn comparison into bootstrap."""
+    """Execute the release branch: missing baselines fail, existing ones compare."""
 
     def branch(self) -> str:
-        found = re.findall(r"(?ms)^          if find \"\$shots\" .*?^          fi\n", WORKFLOW.read_text())
-        self.assertEqual(len(found), 1, "exactly one native baseline branch must be exercised")
-        return textwrap.dedent(found[0])
+        step = WORKFLOW.read_text().split("      - name: Validate YueBoard end-to-end suite\n", 1)[1].split("\n      - name:", 1)[0]
+        branch = step[step.index("          shots=test/e2e/specs/__screenshots__"):]
+        return textwrap.dedent(branch)
 
-    def run_branch(self, scenario: str) -> tuple[str, str]:
+    def run_branch(self, scenario: str, *, playwright_status: int = 0, find_status: int = 0) -> tuple[subprocess.CompletedProcess, str]:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             shots = root / "test/e2e/specs/__screenshots__"
@@ -513,34 +513,46 @@ class VisualBaselineDiscoveryTest(unittest.TestCase):
                 shots.mkdir(parents=True)
             if scenario == "large":
                 for index in range(6000):
-                    (shots / f"journey-{index:05d}-purchase-commission-usage-policy-light-chromium-linux.png").touch()
+                    (shots / f"journey-{index:05d}-purchase-light-chromium-linux.png").touch()
+            elif scenario == "darwin-only":
+                (shots / "login-darwin.png").touch()
             output = root / "output"
-            summary = root / "summary"
             output.touch()
-            summary.touch()
-            env = dict(os.environ, GITHUB_OUTPUT=str(output), GITHUB_STEP_SUMMARY=str(summary))
-            script = 'shots=test/e2e/specs/__screenshots__\npnpm() { printf "INVOKED:%s\\n" "$*"; }\n' + self.branch()
-            result = subprocess.run(["bash", "-euo", "pipefail", "-c", script], cwd=root,
+            env = dict(os.environ, GITHUB_OUTPUT=str(output))
+            script = f'pnpm() {{ printf "INVOKED:%s\\n" "$*"; return {playwright_status}; }}\n'
+            if find_status:
+                script += f'find() {{ return {find_status}; }}\n'
+            result = subprocess.run(["bash", "-euo", "pipefail", "-c", script + self.branch()], cwd=root,
                                     env=env, capture_output=True, text=True, timeout=10)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout.count("INVOKED:"), 1)
-            return output.read_text(), result.stdout
+            return result, output.read_text()
 
     def test_large_existing_baselines_compare_without_rewriting(self) -> None:
-        output, calls = self.run_branch("large")
+        result, output = self.run_branch("large")
+        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(output, "visual=compared\n")
-        self.assertIn("INVOKED:--dir test/e2e test\n", calls)
-        self.assertNotIn("--update-snapshots", calls)
+        self.assertEqual(result.stdout, "INVOKED:--dir test/e2e test --update-snapshots=none\n")
+        self.assertNotIn("--update-snapshots=changed", self.branch())
 
-    def test_empty_baselines_still_report_bootstrap(self) -> None:
-        output, calls = self.run_branch("empty")
-        self.assertEqual(output, "visual=bootstrapped\n")
-        self.assertIn("INVOKED:--dir test/e2e exec playwright test --update-snapshots=changed\n", calls)
+    def test_missing_empty_or_wrong_platform_baselines_refuse_execution(self) -> None:
+        for scenario in ("missing", "empty", "darwin-only"):
+            with self.subTest(scenario=scenario):
+                result, output = self.run_branch(scenario)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("release requires committed Linux visual baselines", result.stdout)
+                self.assertNotIn("INVOKED:", result.stdout)
+                self.assertEqual(output, "")
 
-    def test_missing_baselines_still_report_bootstrap(self) -> None:
-        output, calls = self.run_branch("missing")
-        self.assertEqual(output, "visual=bootstrapped\n")
-        self.assertIn("INVOKED:--dir test/e2e exec playwright test --update-snapshots=changed\n", calls)
+    def test_discovery_failure_cannot_authorize_publication(self) -> None:
+        result, output = self.run_branch("large", find_status=7)
+        self.assertEqual(result.returncode, 7)
+        self.assertNotIn("INVOKED:", result.stdout)
+        self.assertEqual(output, "")
+
+    def test_actual_comparison_failure_propagates(self) -> None:
+        result, output = self.run_branch("large", playwright_status=9)
+        self.assertEqual(result.returncode, 9)
+        self.assertEqual(output, "visual=compared\n")
+        self.assertIn("INVOKED:", result.stdout)
 
 
 class PostgresKeyFingerprintTest(unittest.TestCase):
@@ -1838,10 +1850,11 @@ class BuildPolicyTest(unittest.TestCase):
                 for gate in gates:
                     self.assertIn(gate, body)
         e2e = frontend[frontend.index("- name: Validate YueBoard end-to-end suite") :]
-        # Bootstrapping Linux baselines is loud and only happens when none exist.
+        # Release validation must compare existing Linux baselines without updates.
         self.assertIn("-name '*-linux.png'", e2e)
-        self.assertIn("::warning::YueBoard has no committed -linux visual baselines", e2e)
-        self.assertIn("steps.board_e2e.outputs.visual == 'bootstrapped'", e2e)
+        self.assertIn("::error::YueBoard release requires committed Linux visual baselines", e2e)
+        self.assertIn("test --update-snapshots=none", e2e)
+        self.assertNotIn("visual=bootstrapped", e2e)
         self.assertIn("YUEBOARD_E2E_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE", e2e)
         design = self.workflow[design_start:yueops_start]
         for script in (

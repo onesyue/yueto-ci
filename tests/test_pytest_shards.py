@@ -71,6 +71,9 @@ class ShardPrimitives(unittest.TestCase):
             shutil.copyfile(ROOT / "scripts" / name, self.policy / "scripts" / name)
         shutil.copyfile(ROOT / "ops-first-native-successors.json",
                         self.policy / "ops-first-native-successors.json")
+        helper_policy = Path("reviews/ops-native-protocol-helper-20261106/helper-policy.json")
+        (self.policy / helper_policy).parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / helper_policy, self.policy / helper_policy)
         self.env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", TZ="UTC",
                         PYTEST_ADDOPTS="", PYTHONPATH=str(self.site),
                         GITHUB_REPOSITORY="onesyue/yueto-ci", GITHUB_RUN_ID="42",
@@ -443,7 +446,7 @@ class ShardPrimitives(unittest.TestCase):
         self.assertTrue(build_job.startswith("    needs: [plan]\n"))
         self.assertNotIn("Authorize and promote verified default-branch digest", build_job)
         self.assertNotIn("built-${SOURCE_SHA}", build_job)
-        self.assertIn("needs: [build, plan]\n", publish)  # B1 async validation
+        self.assertIn("needs: [build, plan, validate, validation-evidence]\n", publish)
         self.assertIn("Authorize and promote verified default-branch digest", publish)
         self.assertIn("built-${SOURCE_SHA}", publish)
         self.assertEqual(workflow.count("Authorize and promote verified default-branch digest"), 1)

@@ -1,21 +1,17 @@
-"""Fail-fast contract for build.yml: a failed release must stop, not keep running.
-
-Standard library only: policy CI runs without third-party YAML parsers.
-"""
+"""Publication waits for complete validation; failed candidate work stops early."""
 
 from __future__ import annotations
 
 import itertools
-import json
 import os
 import re
 import subprocess
-import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
+REQUIRED = {"plan", "build", "validate", "validation-evidence"}
 
 
 def _jobs(text: str) -> dict[str, str]:
@@ -30,7 +26,7 @@ class FailFastPolicyTest(unittest.TestCase):
         self.jobs = _jobs(self.text)
 
     def test_every_job_has_a_timeout(self) -> None:
-        self.assertGreaterEqual(len(self.jobs), 8)
+        self.assertTrue(REQUIRED | {"publish", "abort-on-validate-failure", "abort-on-build-failure"} <= self.jobs.keys())
         for name, job in self.jobs.items():
             self.assertRegex(job, r"(?m)^    timeout-minutes: \d+", name)
 
@@ -46,8 +42,43 @@ class FailFastPolicyTest(unittest.TestCase):
         self.assertIn("github.event.inputs.ref", block)
         self.assertIn("cancel-in-progress: false", block)
 
-    def test_abort_jobs_cancel_the_run_with_minimal_privilege(self) -> None:
-        # Validation and candidate builds overlap, so each needs its own abort job.
+    def assert_publication_gate(self, text: str) -> set[str]:
+        publish = _jobs(text)["publish"]
+        match = re.search(r"(?m)^    needs: \[([^\]]+)\]$", publish)
+        self.assertIsNotNone(match)
+        assert match is not None
+        needs = {name.strip() for name in match.group(1).split(",")}
+        self.assertEqual(needs, REQUIRED)
+        # No status override: Actions applies its default success() to this if.
+        self.assertRegex(publish, r"(?m)^    if: needs.plan.outputs.has_builds == 'true'$")
+        self.assertNotIn("always()", publish)
+        self.assertNotIn("continue-on-error:", publish)
+        return needs
+
+    def test_publication_requires_success_for_every_prerequisite(self) -> None:
+        needs = self.assert_publication_gate(self.text)
+        names = sorted(REQUIRED)
+        for states in itertools.product(("success", "failure", "skipped", "cancelled", "in_progress"), repeat=4):
+            results = dict(zip(names, states))
+            with self.subTest(results=results):
+                # Exercise the actual declared dependency set with Actions' success rule.
+                admitted = all(results[name] == "success" for name in needs)
+                self.assertEqual(admitted, states == ("success",) * 4)
+
+    def test_old_async_graph_and_status_overrides_are_rejected(self) -> None:
+        original = "needs: [build, plan, validate, validation-evidence]"
+        for replacement in (
+            "needs: [build, plan]", "needs: [build, plan, validate]",
+            "needs: [build, plan, validation-evidence]", "needs: [plan, validate, validation-evidence]",
+        ):
+            with self.subTest(replacement=replacement), self.assertRaises(AssertionError):
+                self.assert_publication_gate(self.text.replace(original, replacement))
+        for status in ("always()", "failure()", "!cancelled()"):
+            changed = self.text.replace("    if: needs.plan.outputs.has_builds == 'true'\n", f"    if: {status}\n")
+            with self.subTest(status=status), self.assertRaises(AssertionError):
+                self.assert_publication_gate(changed)
+
+    def test_abort_jobs_cancel_only_this_failed_run_with_minimal_privilege(self) -> None:
         for gate in ("validate", "build"):
             job = self.jobs[f"abort-on-{gate}-failure"]
             self.assertIn(f"    needs: [plan, {gate}]\n", job)
@@ -56,181 +87,42 @@ class FailFastPolicyTest(unittest.TestCase):
             self.assertRegex(job, r"(?m)^    timeout-minutes: [1-5]$")
             self.assertEqual(job.count("      - name:"), 1)
             self.assertNotIn("uses:", job)
-            self.assertIn('gh run cancel "$RUN_ID"', job)
             self.assertIn("RUN_ID: ${{ github.run_id }}", job)
-        # Nothing may wait on an abort job.
+            self.assertNotIn("gh api", job)
+            script = job.split("        run: |\n", 1)[1]
+            for status in (0, 7):
+                with self.subTest(gate=gate, cancel_status=status):
+                    result = subprocess.run(
+                        ["bash", "-c", f'gh() {{ printf "GH:%s %s %s\\n" "$1" "$2" "$3"; return {status}; }}\n' + script],
+                        capture_output=True, text=True,
+                        env=dict(os.environ, RUN_ID="123", GH_REPO="example/repo"),
+                    )
+                    self.assertEqual(result.returncode, status, result.stderr)
+                    self.assertIn("GH:run cancel 123", result.stdout)
         for needs in re.findall(r"(?m)^    needs: (.+)$", self.text):
             self.assertNotIn("abort-", needs)
-            self.assertNotIn("validation-alert", needs)
 
-    def test_validate_abort_preserves_possible_publish(self) -> None:
-        job = self.jobs["abort-on-validate-failure"]
-        script = job.split("        run: |\n", 1)[1]
-        self.assertIn('gh api --paginate "repos/$GH_REPO/actions/runs/$RUN_ID/jobs"', script)
-        self.assertIn('select(.name | startswith("candidate-"))', script)
-        self.assertIn('select(.status != "completed")', script)
-        self.assertNotIn('startswith("publish")', script)
-        self.assertIn("jq -s 'length'", script)
-        self.assertLess(script.index("gh api"), script.index("gh run cancel"))
-        self.assertIn("name: candidate-" + "${{ matrix.service }}", self.jobs["build"])
-        self.assertTrue(self.jobs["publish"].startswith("\n    needs: [build, plan]\n"))
-        cases = [
-            ([{"jobs": []}], 0, False),
-            ([{"jobs": [{"id": 1, "name": "candidate-web", "status": "completed"},
-                        {"id": 2, "name": "web", "status": "in_progress"}]}], 0, False),
-            ([{"jobs": []}], 1, False),
-        ]
-        for status in ("queued", "waiting", "pending", "in_progress"):
-            # An unfinished candidate on a later page must still prevent publication.
-            cases.append(([{"jobs": [{"id": 1, "name": "candidate-web", "status": "completed"}]},
-                           {"jobs": [{"id": 2, "name": "candidate-bot", "status": status}]}], 0, True))
-        for pages, api_status, cancel in cases:
-            with self.subTest(pages=pages, api_status=api_status):
-                # Stub transport only; apply the actual query to every API page.
-                stub = '''gh() {
-                  if [ "$1" = api ]; then
-                    if [ "$API_STATUS" -ne 0 ]; then return "$API_STATUS"; fi
-                    printf '%s' "$PAGES" | jq -r "$5"
-                    return
-                  fi
-                  echo "CANCELLED"
-                }
-                '''
-                result = subprocess.run(
-                    ["bash", "-c", stub + script], capture_output=True, text=True,
-                    env=dict(os.environ, GH_REPO="example/repo", RUN_ID="123",
-                             PAGES="\n".join(json.dumps(page) for page in pages),
-                             API_STATUS=str(api_status)),
-                )
-                self.assertEqual(result.returncode, api_status, result.stderr)
-                self.assertEqual("CANCELLED" in result.stdout, cancel)
-                self.assertEqual("::warning::" in result.stdout, not cancel and api_status == 0)
+    def test_async_alert_and_marker_plumbing_is_removed(self) -> None:
+        self.assertNotIn("validation-alert", self.jobs)
+        self.assertNotIn("validation-recovered", self.jobs)
+        self.assertNotIn("tag-written", self.text)
+        self.assertNotIn("steps.published.outputs", self.text)
+        self.assertNotIn("issues: write", self.text)
 
-    def test_async_validation_alerts_without_blocking_publish(self) -> None:
-        job = self.jobs["validation-alert"]
-        self.assertIn("    needs: [plan, validate, validation-evidence, publish]\n", job)
-        self.assertIn("    if: failure()\n", job)
-        self.assertIn("    permissions:\n      issues: write\n    steps:\n", job)
-        self.assertNotIn("actions: write", job)
-        self.assertNotIn("gh run cancel", job)
-        self.assertNotIn("uses:", job)
-        self.assertRegex(job, r"(?m)^    timeout-minutes: [1-5]$")
-        self.assertTrue(self.jobs["publish"].startswith("\n    needs: [build, plan]\n"))
-
-    def test_async_alert_requires_any_tag_written_and_red_validation(self) -> None:
-        job = self.jobs["validation-alert"]
-        notice, issue = job.split(
-            "      - name: Open or update the single async validation alert\n", 1
-        )
-        issue_condition = re.search(r"(?m)^        if: (.+)$", issue).group(1)
-        notice_condition = re.search(r"(?m)^        if: (.+)$", notice).group(1)
-        names = ("plan", "publish", "validate", "validation-evidence")
-        states = ("success", "failure", "skipped", "cancelled")
-
-        def evaluate(condition, results, tag_written, admission_rejected):
-            condition = condition.removeprefix("${{").removesuffix("}}").strip()
-            condition = condition.replace(
-                "!contains(toJSON(needs.publish.outputs), '\"tag-written\"')", str(not tag_written)
-            ).replace(
-                "contains(toJSON(needs.publish.outputs), '\"tag-written\"')", str(tag_written)
-            )
-            condition = condition.replace(
-                "needs.plan.outputs.admission_rejected", repr(str(admission_rejected).lower())
-            )
-            expression = re.sub(
-                r"needs\.([a-z-]+)\.result",
-                lambda match: repr(results[match.group(1)]),
-                condition,
-            ).replace("&&", " and ").replace("||", " or ")
-            return eval(expression, {"__builtins__": {}}, {})
-
-        for values in itertools.product(states, repeat=len(names)):
-            results = dict(zip(names, values))
-            for tag_written, admission_rejected in itertools.product((False, True), repeat=2):
-                with self.subTest(**results, tag_written=tag_written, admission_rejected=admission_rejected):
-                    red = "failure" in (results["validate"], results["validation-evidence"])
-                    self.assertEqual(evaluate(issue_condition, results, tag_written, admission_rejected), tag_written and red)
-                    self.assertEqual(evaluate(notice_condition, results, tag_written, admission_rejected),
-                                     (results["plan"] == "failure" or admission_rejected) and not tag_written)
-
-        # A successful matrix row leaves its marker when another row fails.
-        # Either validation job failing must still open the rollback issue.
-        for failed_validation in ("validate", "validation-evidence"):
-            for outputs in (
-                {"yue-node": "tag-written", "yue-bot": ""},
-                {"yue-node": "", "yue-bot": "tag-written"},
-            ):
-                with self.subTest(partial_publish=outputs, failed_validation=failed_validation):
-                    results = dict.fromkeys(names, "success")
-                    results.update({"publish": "failure", failed_validation: "failure"})
-                    tag_written = '"tag-written"' in json.dumps(outputs)
-                    self.assertTrue(evaluate(issue_condition, results, tag_written, False))
-                    self.assertFalse(evaluate(notice_condition, results, tag_written, False))
-
-        # This is the real matrix publisher, including its unconditional tag write.
-        publisher = self.jobs["publish"]
-        self.assertIn("name: ${{ matrix.service }}", publisher)
-        self.assertIn("include: ${{ fromJSON(needs.plan.outputs.matrix) }}", publisher)
-        self.assertIn('--tag "${IMAGE}:built-${SOURCE_SHA}"', publisher)
-        services = json.loads((ROOT / "services.json").read_text())
-        for service in services:
-            name = service["service"]
-            self.assertIn(f"      {name}: ${{{{ steps.published.outputs.{name} }}}}", publisher)
-        record = publisher.split("      - name: Mark this source revision as built\n", 1)[1].split("      - name:", 1)[0]
-        self.assertIn("        id: published\n", record)
-        self.assertIn("SERVICE: ${{ matrix.service }}", record)
-        self.assertIn('echo "${SERVICE}=tag-written" >> "$GITHUB_OUTPUT"', record)
-        self.assertNotIn("if:", record)
-        self.assertNotIn("continue-on-error:", publisher)
-        self.assertNotIn("gh issue", notice)
-        self.assertIn("admission_rejected: ${{ steps.ops_plan.outputs.admission_rejected }}", self.jobs["plan"])
-        command = notice.split("        run: |\n", 1)[1]
-        with tempfile.TemporaryDirectory() as tmp:
-            summary = Path(tmp) / "summary"
-            result = subprocess.run(
-                ["bash", "-c", command], check=True, capture_output=True, text=True,
-                env=dict(os.environ, GITHUB_STEP_SUMMARY=str(summary)),
-            )
-            self.assertEqual(result.stdout, "::notice::admission rejected\n")
-            self.assertEqual(summary.read_text(), "admission rejected\n")
-
-
-    def test_tag_write_marker_survives_promotion_failure(self) -> None:
-        publisher = self.jobs["publish"]
-        step = publisher.split("      - name: Mark this source revision as built\n", 1)[1].split("      - name:", 1)[0]
+    def test_built_marker_still_fails_closed_on_registry_failure(self) -> None:
+        step = self.jobs["publish"].split("      - name: Mark this source revision as built\n", 1)[1].split("      - name:", 1)[0]
         script = step.split("        run: |\n", 1)[1]
         script = "\n".join(line[10:] for line in script.splitlines() if line.startswith("          "))
-        # No registry calls: run the real tag-writing script with a stub, then
-        # model a later promotion step failing. A failed tag write emits nothing.
-        for write_status in (0, 1):
-            with self.subTest(write_status=write_status), tempfile.TemporaryDirectory() as tmp:
-                output = Path(tmp) / "output"
-                output.touch()
-                env = dict(os.environ, GITHUB_OUTPUT=str(output), SERVICE="yue-node",
-                           IMAGE="example/image", DIGEST="sha256:test", SOURCE_SHA="a" * 40)
+        for status in (0, 7):
+            with self.subTest(write_status=status):
                 result = subprocess.run(
-                    ["bash", "-c", f"docker() {{ return {write_status}; }}\n" + script],
-                    env=env, capture_output=True, text=True,
+                    ["bash", "-c", f'docker() {{ printf "DOCKER:%s\\n" "$*"; return {status}; }}\n' + script],
+                    capture_output=True, text=True,
+                    env=dict(os.environ, IMAGE="example/image", DIGEST="sha256:test", SOURCE_SHA="a" * 40),
                 )
-                self.assertEqual(result.returncode, write_status)
-                promotion = subprocess.run(["bash", "-c", "exit 1"], check=False)
-                self.assertEqual(promotion.returncode, 1)
-                self.assertEqual(output.read_text(), "yue-node=tag-written\n" if write_status == 0 else "")
-                # The truth-table test above verifies these exact marker states
-                # with publish=failure: a written tag still opens a rollback issue
-                # when validation fails; an absent marker does not.
-
-    def test_async_validation_alert_is_one_rolling_issue(self) -> None:
-        alert = self.jobs["validation-alert"]
-        # Reuse the oldest open alert; only open a new one when none exists.
-        self.assertIn('in:title "async validation red" sort:created-asc', alert)
-        self.assertIn('gh issue comment "$existing"', alert)
-        self.assertNotIn("run ${RUN_ID}\"", alert.split("gh issue create", 1)[1].split("\n", 1)[0])
-        recovered = self.jobs["validation-recovered"]
-        self.assertIn("    needs: [plan, validate, validation-evidence]\n", recovered)
-        self.assertIn("    if: success() && needs.plan.outputs.has_builds == 'true'\n", recovered)
-        self.assertIn("gh issue close", recovered)
-        self.assertNotIn("uses:", recovered)
+                self.assertEqual(result.returncode, status, result.stderr)
+                self.assertIn("--tag example/image:built-" + "a" * 40 + " example/image@sha256:test", result.stdout)
+                self.assertEqual("marked example/image:" in result.stdout, status == 0)
 
 
 if __name__ == "__main__":
