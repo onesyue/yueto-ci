@@ -244,6 +244,42 @@ class EstateInputTransition(unittest.TestCase):
                                   files | {path: ("100644", blob)},
                                   source_revision=self.record["source_after"])
 
+    def test_frozen_source_entry_requires_exact_retirement_proof(self):
+        spec = importlib.util.spec_from_file_location(
+            "frozen_source_entry", ROOT / "scripts/check-first-native-source.py")
+        assert spec and spec.loader
+        entry = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(entry)
+        path = SHARDS.ESTATE_ADDED_INPUT
+        self.record["changes"][path]["after_blob"] = SHARDS.TEMPLATE_WRITER_BEFORE_BLOB
+        common = {p: b for p, b in self.successor.items() if p != path}
+        files = {p: v for p, v in self.successor_files.items() if p != path}
+        item = SHARDS.first_native_policy()["shared_input"]
+        common[item["path"]] = item["blob"]
+        files[item["path"]] = (item["mode"], item["blob"])
+        policy = {"source_revision": "c" * 40, "module_blobs": {}, "cases": {},
+                  "shared_input": item}
+        with (patch.object(entry, "CONSUMER", SHARDS),
+              patch.object(SHARDS, "first_native_policy", return_value=policy),
+              patch.object(SHARDS, "tree_inputs", return_value=files),
+              patch.object(SHARDS, "shared_inputs", return_value=common),
+              patch.object(SHARDS, "skip_baseline", return_value=self.sealed),
+              patch.object(SHARDS, "estate_successor_proof", return_value=self.record["source_after"]),
+              patch.object(SHARDS, "template_writer_retirement_proof") as proof):
+            proof.return_value = SHARDS.TEMPLATE_WRITER_RETIREMENT
+            result = entry.check(Path("source"))
+            proof.assert_called_once_with(Path("source"), "c" * 40)
+            self.assertEqual(result["status"], "FROZEN_SOURCE_CONTRACT_VALID")
+            self.assertFalse(result["execution_evaluated"])
+            self.assertFalse(result["release_acceptance"])
+            for marker in (None, "d" * 40):
+                proof.return_value = marker
+                with self.subTest(marker=marker), self.assertRaises(ValueError):
+                    entry.check(Path("source"))
+            proof.side_effect = ValueError("invalid actual retirement ancestry")
+            with self.assertRaisesRegex(ValueError, "actual retirement ancestry"):
+                entry.check(Path("source"))
+
     def test_retirement_proof_binds_actual_deletion_and_rejects_reintroduction(self):
         import subprocess
         with tempfile.TemporaryDirectory() as tmp:

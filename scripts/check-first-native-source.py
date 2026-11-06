@@ -20,8 +20,10 @@ def check(source):
     baseline = CONSUMER.skip_baseline()
     common = CONSUMER.shared_inputs(source, revision)
     predecessor = CONSUMER.estate_successor_proof(baseline, source, revision)
+    retired_at = CONSUMER.template_writer_retirement_proof(source, revision)
     CONSUMER.admit_shared_inputs(baseline, common, files, source_revision=revision,
-                                estate_successor_of=predecessor)
+                                estate_successor_of=predecessor,
+                                template_writer_retired_at=retired_at)
     return {"status": "FROZEN_SOURCE_CONTRACT_VALID", "source_revision": revision,
             "modules": len(policy["module_blobs"]), "native_case_obligations": len(policy["cases"]),
             "execution_evaluated": False, "release_acceptance": False}
