@@ -1706,6 +1706,7 @@ def estate_successor_proof(baseline, source, revision):
     predecessor inside the sealed admission; validators and the join re-admit
     against that sealed value and still compare every estate input blob.
     """
+    native_protocol_helper_proof(source, revision)
     pr_shared_input_successor_proof(source, revision)
     reviewed_pr_input_proof(source, revision)
     _, security = reviewed_npm_security_transition(baseline)
@@ -1902,6 +1903,42 @@ def admit_first_native_helper(common, files, source_revision):
     return {p: v for p, v in common.items() if p != path}, files
 
 
+def native_protocol_helper_policy():
+    payload = (ROOT / "reviews/ops-native-protocol-helper-20261106/helper-policy.json").read_bytes()
+    require(sha(payload) == "1ee4183d8f902df6839936adfc6ec8bfcb995892352cf2fcdf44d51f993383ee", "unreviewed native protocol helper policy")
+    return json.loads(payload)
+
+
+def native_protocol_helper_proof(source, revision):
+    policy = native_protocol_helper_policy()
+    item = policy["shared_input"]
+    files = tree_inputs(source, revision)
+    if item["path"] not in files:
+        return
+    try:
+        git(source, "merge-base", "--is-ancestor", policy["source_revision"], revision)
+        introduced = tree_inputs(source, policy["source_revision"])
+    except subprocess.CalledProcessError:
+        raise ValueError("native protocol helper source ancestry differs") from None
+    require(files[item["path"]] == introduced.get(item["path"])
+            == (item["mode"], item["blob"]), "native protocol helper blob or mode differs")
+
+
+def admit_native_protocol_helper(common, files, source_revision):
+    path = "tests/native_protocol_fixture.py"
+    if path not in common:
+        return common, files
+    item = native_protocol_helper_policy()["shared_input"]
+    require(source_revision == first_native_policy()["source_revision"]
+            and common.get(path) == item["blob"],
+            "native protocol helper requires the signed release pin and exact blob")
+    if files is not None:
+        require(files.get(path) == (item["mode"], item["blob"]),
+                "native protocol helper mode or tree changed")
+        files = {p: v for p, v in files.items() if p != path}
+    return {p: v for p, v in common.items() if p != path}, files
+
+
 def admit_p015_offline_helper(common, files, source_revision):
     if "tests/p015_offline_plugin.py" not in common:
         return common, files
@@ -2025,6 +2062,11 @@ def admit_pr_shared_inputs(common, files, source_revision):
 def pr_shared_input_successor_proof(source, revision):
     """Bind bundles to reviewed source ancestry and exact before/after trees."""
     files = tree_inputs(source, revision)
+    # Exact outer Ruff successor must be proved and peeled before PR256/122.
+    reviewed_pr_input_proof(source, revision, names=("ruff_retired_video",))
+    _, files = admit_reviewed_pr_inputs(
+        {p: value[1] for p, value in files.items()}, files, revision,
+        names=("ruff_retired_video",))
     successors = set()
     for after in PR_SHARED_INPUT_SOURCE_REVISIONS:
         try:
@@ -2116,6 +2158,7 @@ def admit_miniapp_membership(common, files, source_revision):
 # New shared-input seals are outermost, as with the MiniApp membership seal.
 # Keep the historical baseline and every prior_baseline_sha256 byte-identical.
 REVIEWED_PR_INPUTS = {
+    "ruff_retired_video": ("7c952fe87ad22cce6bcadd7408c727afe31075d5a11650e9a714fa2cb0d6f88e", frozenset({"pyproject.toml"})),
     "deploy_ai_exit": (
         "e2c2ccc85646e12c1172fc83b1da76efa9e8c4e30884ddfc4abe7ce006ec6f81",
         frozenset({"tests/_deploy_source.py"}),
@@ -2132,9 +2175,11 @@ REVIEWED_PR_INPUTS = {
 }
 
 # Later sidecars live in their own file so earlier outer seals' hashes stay exact.
-REVIEWED_PR_INPUT_FILES = {"test_inputs_1105": "ops-shared-input-successors-1105.json"}
+REVIEWED_PR_INPUT_FILES = {"ruff_retired_video": "ops-shared-input-successors-1106.json", "test_inputs_1105": "ops-shared-input-successors-1105.json"}
 # Activate these sidecars only for their exact after-blobs (historical trees need no evidence).
-REVIEWED_PR_INPUT_ACTIVATION = {"test_inputs_1105": frozenset({
+REVIEWED_PR_INPUT_ACTIVATION = {"ruff_retired_video": frozenset({
+    ("pyproject.toml", "fbedf7789a78aaa402835eb3747e8be2e24772d2"),
+}), "test_inputs_1105": frozenset({
     ("pytest.ini", "9599c104c7dcfcfa3718c9be2335362731d4758f"),
     ("tests/_native_postgres.py", "5ac0ed066b88979b123bb0dab037ca497e41e23c"),
 })}
@@ -2184,10 +2229,12 @@ def reviewed_pr_input_transition(name):
     return record
 
 
-def reviewed_pr_input_proof(source, revision):
+def reviewed_pr_input_proof(source, revision, *, names=None):
     """The planner proves source ancestry for each selected exact input bundle."""
     files = tree_inputs(source, revision)
     for name, (_, paths) in REVIEWED_PR_INPUTS.items():
+        if names is not None and name not in names:
+            continue
         if not paths.intersection(files) or not reviewed_pr_input_active(
                 name, lambda p: files.get(p, (None, None))[1]):
             continue
@@ -2209,11 +2256,13 @@ def reviewed_pr_input_proof(source, revision):
                     "reviewed PR input successor blob or mode differs: " + path)
 
 
-def admit_reviewed_pr_inputs(common, files, source_revision):
+def admit_reviewed_pr_inputs(common, files, source_revision, *, names=None):
     """Peel exact bundles at the release pin before all historical validators."""
     if not isinstance(common, dict):
         return common, files
     for name, (_, paths) in REVIEWED_PR_INPUTS.items():
+        if names is not None and name not in names:
+            continue
         if not paths.intersection(common) or not reviewed_pr_input_active(name, common.get):
             continue
         record = reviewed_pr_input_transition(name)
@@ -2243,8 +2292,9 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
     # Historical transition validators may receive an already-peeled baseline.
     # All production entry points first use skip_baseline(), which requires the
     # current successor; its effective inputs still reject the predecessor blob.
-    common, files = admit_pr_shared_inputs(common, files, source_revision)
     common, files = admit_reviewed_pr_inputs(common, files, source_revision)
+    common, files = admit_pr_shared_inputs(common, files, source_revision)
+    common, files = admit_native_protocol_helper(common, files, source_revision)
     common, files = admit_p015_offline_helper(common, files, source_revision)
     common, files = admit_first_native_helper(common, files, source_revision)
     common, files = admit_miniapp_membership(common, files, source_revision)

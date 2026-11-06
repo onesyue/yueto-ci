@@ -1,0 +1,27 @@
+{
+  "status": "EXISTING_EXACT_BLOB_QUALIFICATION_REUSED",
+  "source_revision": "d4880f37a7a9a3dbc9b6d32a16125745691fb88e",
+  "evidence_path": ".claude/state/hy2-diagnose/20261106/code-0733/ops/final-results.json",
+  "evidence_sha256": "8829fc2dd41090152ca3653cd39f84dc9fecfaeacc659e14be1504cc11fdf425",
+  "results": {
+    "linux-review-fix/pytest.xml": {
+      "tests": 1121,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 55
+    },
+    "linux-review-fix/linux-native.xml": {
+      "tests": 51,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "linux-native-buffer.xml": {
+      "tests": 52,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "full_execution_gate": "NOT_RUN; same-run native and consumer obligations remain required"
+}

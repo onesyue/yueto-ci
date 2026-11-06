@@ -14,8 +14,8 @@ SPEC = importlib.util.spec_from_file_location('pr_input_shards', ROOT / 'scripts
 M = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(M)
 NAMES = tuple(M.REVIEWED_PR_INPUTS)
-CURRENT_GENERATION = frozenset({'test_inputs_1105'})
-EVIDENCE_DATES = {'test_inputs_1105': '20261105'}
+CURRENT_GENERATION = frozenset({'test_inputs_1105', 'ruff_retired_video'})
+EVIDENCE_DATES = {'ruff_retired_video': '20261106', 'test_inputs_1105': '20261105'}
 
 
 def evidence(name):
@@ -42,6 +42,9 @@ def check_review_and_qualification_bound_to_exact_source(name):
     if name == 'deploy_ai_exit':
         assert q['exact_single_path_addition'] and q['scan_membership_equal']
         assert q['scan_lines'] >= q['minimum_lines'] == 2800
+    elif name == 'ruff_retired_video':
+        assert q['only_retired_ruff_exclude_removed'] and q['retired_tree_absent']
+        assert q['parsed_other_configuration_equal']
     elif name == 'test_inputs_1105':
         assert q['test_only_inputs'] and q['collection_membership_equal']
         assert q['no_skip_or_import_side_effect_change']
