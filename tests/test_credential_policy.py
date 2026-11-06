@@ -7,9 +7,7 @@ this public repository's jobs hold private-repository credentials":
    Every use must be a *fallback* behind an explicit switch:
      * source reads   -> a GitHub App installation token minted per job by
        ``actions/create-github-app-token`` when ``vars.YUETO_CI_APP_CLIENT_ID``
-       is set, scoped to named repositories and ``contents: read`` only
-       (the deadman incident writer is the single ``issues: write`` exception,
-       scoped to ``yueops``);
+       is set, scoped to named repositories and ``contents: read`` only;
      * GHCR           -> this repository's own ``GITHUB_TOKEN`` when
        ``vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true'`` (GitHub Apps cannot
        authenticate to GHCR).
@@ -81,9 +79,9 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
                         "YUETO_CI_PAT must only appear as the fallback of a switch",
                     )
         # Scan floor: plan, validate x3, build checkout, GHCR, promote,
-        # poll x3, rescan, deadman x2.  A refactor that stops finding them
+        # poll x3, rescan, deadman.  A refactor that stops finding them
         # must not read as "no bare PAT left".
-        self.assertGreaterEqual(uses, 13)
+        self.assertGreaterEqual(uses, 11)
 
     def test_every_app_token_is_switched_pinned_and_least_privilege(self) -> None:
         steps = [
@@ -91,7 +89,7 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
             for name, text in _workflows().items()
             for step in _mint_steps(text)
         ]
-        self.assertGreaterEqual(len(steps), 7)
+        self.assertGreaterEqual(len(steps), 5)
         for name, step in steps:
             with self.subTest(workflow=name, step=step.splitlines()[0]):
                 self.assertIn(APP_ACTION, step)
@@ -106,16 +104,7 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
                 self.assertLessEqual(set(repos.group(1).split(",")), SOURCE_REPOS)
                 permissions = re.findall(r"permission-([a-z-]+): (\w+)", step)
                 self.assertEqual(len(permissions), 1, permissions)
-                self.assertIn(
-                    permissions[0], {("contents", "read"), ("issues", "write")}
-                )
-                if permissions[0] == ("issues", "write"):
-                    # The two incident writers (deadman; image-rescan since
-                    # 2026-09-27 C5), each only on the private YueOps repo.
-                    self.assertIn(
-                        name, {"alert-chain-deadman.yml", "image-rescan.yml"}
-                    )
-                    self.assertEqual(repos.group(1), "yueops")
+                self.assertEqual(permissions[0], ("contents", "read"))
 
     def test_promotion_mints_a_fresh_token_right_before_the_head_recheck(self) -> None:
         workflow = (WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8")

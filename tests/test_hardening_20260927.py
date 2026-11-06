@@ -530,7 +530,7 @@ class RescanPlannerTest(unittest.TestCase):
 
 
 class RescanIncidentTest(unittest.TestCase):
-    """C5: a failed or cancelled rescan opens one deduplicated YueOps incident."""
+    """C5: a failed or cancelled rescan retains a failing workflow report."""
 
     def setUp(self) -> None:
         self.workflow = RESCAN.read_text()
@@ -542,13 +542,20 @@ class RescanIncidentTest(unittest.TestCase):
             "if: ${{ always() && (needs.plan.result != 'success' || needs.scan.result != 'success') }}",
             incident,
         )
-        self.assertIn("repositories: yueops", incident)
-        self.assertIn("permission-issues: write", incident)
-        self.assertIn("--search \"in:title $title\"", incident)
-        self.assertIn('gh issue comment "$existing"', incident)
-        self.assertIn("gh issue create", incident)
-        # The public repository's own token never gains write permission.
+        self.assertNotIn("gh issue", incident)
+        self.assertNotIn("GH_TOKEN", incident)
         self.assertNotRegex(self.workflow, r"(?m)^\s+(?:issues|contents|packages):\s*write\s*$")
+        script = textwrap.dedent(incident.split("run: |\n", 1)[1])
+        with tempfile.TemporaryDirectory() as tmp:
+            summary = Path(tmp) / "summary"
+            result = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                                    env={**os.environ, "PLAN_RESULT": "success",
+                                         "SCAN_RESULT": "cancelled", "RUN_URL": "run/1",
+                                         "GITHUB_STEP_SUMMARY": str(summary)}, timeout=10)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("::error::", result.stdout)
+            self.assertIn("scan=cancelled", summary.read_text())
+            self.assertIn("run/1", summary.read_text())
 
     def test_scan_uses_the_planned_immutable_digest(self) -> None:
         scan = job(self.workflow, "scan")

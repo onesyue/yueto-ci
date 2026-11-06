@@ -130,8 +130,8 @@ Write for push/sign/provenance and at least Read for poll/rescan. App tokens nee
 contents:read only on the source repositories each job consumes. The fork-tag
 verification step also reads quic-go; Node validation itself has no credentials
 and uses vendored dependencies with `GOFLAGS=-mod=vendor`. Promotion obtains a
-fresh token because a build may outlast token expiry. Deadman uses a separate
-YueOps issues:write token for incidents. Poll dispatch uses GITHUB_TOKEN with
+fresh token because a build may outlast token expiry. Failure reports use workflow summaries and error annotations without
+Issue or PR creation. Poll dispatch uses GITHUB_TOKEN with
 actions:write. Configure switches under repository Actions Variables.
 
 After both switches and successful poll/build/promotion/rescan/deadman drills,
@@ -246,8 +246,8 @@ consumes its diagnostic artifacts, so no scheduled probe or artifact upload rema
 ## Observers outside production
 
 [alert-chain-deadman.yml](.github/workflows/alert-chain-deadman.yml) reads the
-bastion heartbeat with the canonical evaluator and opens failures only as private
-YueOps incidents. Its nominal 30-minute GitHub cron is supplementary evidence,
+bastion heartbeat with the canonical evaluator and records failures in the workflow
+summary and error annotations, keeping a failed run. Its nominal 30-minute GitHub cron is supplementary evidence,
 not the alert SLA. The dated 100-run September11–26 sample had 1.72–6.93-hour
 gaps (median3.53h, P90 5.36h); it is not a current measurement. The panel's native
 `panel-alert-chain-deadman.timer`, every ten minutes with direct Telegram and
@@ -261,8 +261,8 @@ not a reason to weaken stale-heartbeat detection. The maintained runbook is
 of each latest image plus the three most recent promoted revision/digest markers.
 Those markers bound current/rollback coverage because this public repository has
 no credential for private `release.yaml`. Enumeration fails closed; scan/plan
-failure or cancellation creates one deduplicated private incident through the
-same App/PAT policy. There is no private checkout, registry write or public artifact.
+failure or cancellation records a workflow summary and error annotation and
+fails the reporting job. There is no private checkout, registry write or public artifact.
 
 [plan-rescan-targets.py](scripts/plan-rescan-targets.py) paginates 100 versions per
 page, at most100 pages, using only the reviewed owner/package. A full page requires

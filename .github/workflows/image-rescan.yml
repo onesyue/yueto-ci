@@ -124,50 +124,23 @@ jobs:
           trivyignores: .trivyignore
           skip-setup-trivy: true
 
-  # The incident writer gets its own token scoped to issues on yueops only;
-  # this public repository's GITHUB_TOKEN never gains write permission.
-  # Same dedupe contract as alert-chain-deadman.yml: one open issue per title,
-  # later failures comment on it instead of opening another.
+  # Preserve a failing workflow and durable report without creating tickets.
   incident:
     needs: [plan, scan]
     if: ${{ always() && (needs.plan.result != 'success' || needs.scan.result != 'success') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Mint YueOps incident token (GitHub App)
-        id: yueops_issue_token
-        if: vars.YUETO_CI_APP_CLIENT_ID != ''
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueops
-          permission-issues: write
-
-      - name: Open or update the private YueOps incident
+      - name: Report rescan failure
         env:
-          GH_TOKEN: ${{ steps.yueops_issue_token.outputs.token || secrets.YUETO_CI_PAT }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           PLAN_RESULT: ${{ needs.plan.result }}
           SCAN_RESULT: ${{ needs.scan.result }}
         run: |
           set -euo pipefail
-          repo='onesyue/yueops'
-          title='🛡️ 已发布镜像复扫失败（image-rescan）'
-          existing="$(gh issue list --repo "$repo" --state open \
-            --search "in:title $title" --limit 1 --json number --jq '.[0].number' || true)"
-          body=$(printf '%s\n' \
-            '@onesyue 已发布镜像（:latest 与最近的 promoted digest）每日复扫未通过：' \
-            "plan=${PLAN_RESULT} scan=${SCAN_RESULT}。" \
-            '可能是新披露的可修复 HIGH/CRITICAL 漏洞（需重建并发版），也可能是扫描链自身故障；' \
-            '两者都意味着今天的生产镜像没有被证明干净。逐个 job 看 Trivy 表格。' \
-            "运行记录：${RUN_URL}")
-          gh label create image-rescan --repo "$repo" --color B60205 \
-            --description 'Promoted image rescan incident' --force >/dev/null
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$repo" --body "$body"
-          else
-            gh issue create --repo "$repo" --title "$title" --label image-rescan \
-              --assignee onesyue --body "$body"
-          fi
+          printf '%s\n' '## Published image rescan failed' \
+            "plan=${PLAN_RESULT} scan=${SCAN_RESULT}" \
+            'Inspect the scan jobs for vulnerabilities or scanner failures.' \
+            "Run: ${RUN_URL}" >> "$GITHUB_STEP_SUMMARY"
+          echo '::error::Published image rescan did not complete successfully.'
+          exit 1

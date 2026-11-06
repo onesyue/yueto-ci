@@ -154,47 +154,20 @@ jobs:
           --receipt receipt.json
           --max-age-seconds 2700
 
-      # The incident writer gets its own token scoped to issues on yueops only;
-      # the public repository's GITHUB_TOKEN never gains write permission.
-      - name: Mint YueOps incident token (GitHub App)
-        id: yueops_issue_token
-        if: ${{ always() && (failure() || cancelled()) && vars.YUETO_CI_APP_CLIENT_ID != '' }}
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueops
-          permission-issues: write
-
-      - name: Open or update the private YueOps incident
+      - name: Report deadman failure
         if: ${{ always() && (failure() || cancelled()) }}
         env:
-          GH_TOKEN: ${{ steps.yueops_issue_token.outputs.token || secrets.YUETO_CI_PAT }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           DRILL_MISSING: ${{ github.event_name == 'workflow_dispatch' && inputs.drill_missing == true }}
         run: |
           set -euo pipefail
-          repo='onesyue/yueops'
           if [ "$DRILL_MISSING" = 'true' ]; then
-            title='🧪 告警链失联演练（public deadman）'
-            headline='@onesyue deliberate missing-receipt drill 按预期触发；请人工确认收到后关闭本演练单。'
+            headline='Intentional missing-receipt drill detected.'
           else
-            title='🫀 告警链失联（public deadman）'
-            headline='@onesyue bastion 心跳凭据过期、读不到，或自报无法告警。'
+            headline='Alert heartbeat is stale, unavailable, or reports an alert failure.'
           fi
-          existing="$(gh issue list --repo "$repo" --state open \
-            --search "in:title $title" --limit 1 --json number --jq '.[0].number' || true)"
-          body=$(printf '%s\n' \
-            "$headline" \
-            '' \
-            '此判定由公共 yueto-ci runner 执行，不经过 bastion systemd 或 Telegram spool。' \
-            "运行记录：${RUN_URL}")
-          gh label create alert-chain --repo "$repo" --color D73A4A \
-            --description 'Production alert-chain incident' --force >/dev/null
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$repo" --body "$body"
-          else
-            gh issue create --repo "$repo" --title "$title" --label alert-chain \
-              --assignee onesyue --body "$body"
-          fi
+          printf '%s\n' '## Alert-chain deadman failed' "$headline" \
+            'Evaluated on the public runner, independently of production alert delivery.' \
+            "Run: ${RUN_URL}" >> "$GITHUB_STEP_SUMMARY"
+          echo '::error::Alert-chain deadman did not complete successfully.'
+          exit 1
