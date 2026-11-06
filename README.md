@@ -228,16 +228,14 @@ its owned Linux gate exists. Every discovered suite must execute, including on
 older sources; these compatibility rules grant no SKIP exemption. Review
 schema-reset behavior before changing execution order.
 
-### Input shadow analysis
+### Input fingerprint and verification helpers
 
-`input-shadow` is read-only and `continue-on-error`; no job depends on it.
 [input-fingerprint.py](scripts/input-fingerprint.py) derives actual COPY/ADD/bind
-inputs using `<Dockerfile>.dockerignore` or context-root `.dockerignore`, not
-arbitrary adjacent ignore files. It compares latest provenance, recipe and inputs
-and reports would-skip/build/unknown. All builds still run. The evidence probe
-checks matching service/source/central/hosted-runner identities within 24 hours,
-but verification reuse remains disabled: vulnerability findings change over
-time. Removing this optional reporting job requires no consumer migration.
+inputs for polling and publication admission. Its optional feedback CLI retains
+complete/unknown reports, with full validation always required. Shared evidence
+identity helpers remain in verification-evidence.py; verification reuse is disabled.
+The former non-gating `input-shadow` reporting job is retired. No release job
+consumes its diagnostic artifacts, so no scheduled probe or artifact upload remains.
 
 ## Observers outside production
 

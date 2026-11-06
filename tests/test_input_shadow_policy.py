@@ -6,8 +6,8 @@ Three things are pinned here:
   are unchanged, changes inside it (content, mode, ignore file, Dockerfile)
   are changed, and anything unprovable is unknown, never unchanged;
 * the evidence probe's identity checks each reject on their own;
-* both are wired into build.yml as a non-gating, read-only side job that no
-  release step can come to depend on by accident.
+* retired diagnostic jobs cannot return as release dependencies or bypasses.
+  Feedback CLI tests still exercise the retained manual diagnostic consumer.
 
 Every positive assertion is paired with a mutation that must turn it red.
 """
@@ -325,46 +325,28 @@ class RecipeTest(unittest.TestCase):
 
 
 class ShadowWiringTest(unittest.TestCase):
-    """The shadow job must stay a side job no release step can depend on."""
+    """Retired diagnostics must not become release prerequisites or bypasses."""
 
-    def setUp(self) -> None:
-        self.text = WORKFLOW.read_text(encoding="utf-8")
-        match = re.search(r"(?ms)^  input-shadow:\n(?P<body>.*?)(?=^  [a-z-]+:\n)", self.text)
-        self.assertIsNotNone(match)
-        self.job = match.group("body")
+    def assert_release_wiring(self, text):
+        for retired in ("input-shadow", "affected-feedback", "reuse_verification",
+                        "scripts/verification-evidence.py probe", "shadow-ci"):
+            self.assertNotIn(retired, text)
+        self.assertNotIn("needs.validate.result == 'skipped'", text)
+        self.assertIn("    needs: [plan, validate]\n", text)
 
-    def test_non_gating_read_only_and_bounded(self) -> None:
-        self.assertIn("    continue-on-error: true\n", self.job)
-        self.assertRegex(self.job, r"(?m)^    timeout-minutes: [1-9]$")
-        perms = re.findall(r"(?m)^      ([a-z-]+): (read|write)$", self.job)
-        self.assertEqual(perms, [("contents", "read"), ("packages", "read"),
-                                 ("actions", "read"), ("attestations", "read")])
-        for forbidden in ("imagetools create", "cosign", "build-push-action", "gh workflow run",
-                          "GITHUB_OUTPUT", "outputs:"):
-            with self.subTest(forbidden=forbidden):
-                self.assertNotIn(forbidden, self.job)
+    def test_diagnostics_retired_and_full_validation_required(self):
+        self.assert_release_wiring(WORKFLOW.read_text())
 
-    def test_nothing_depends_on_it(self) -> None:
-        self.assertNotIn("needs.input-shadow", self.text)
-        needs = re.findall(r"(?m)^    needs: (.+)$", self.text)
-        self.assertTrue(needs)
-        self.assertFalse(any("input-shadow" in n for n in needs))
-        self.assertIn("    needs: [plan, validate]\n", self.text)
-
-    def test_placed_before_build_and_never_named_like_a_service(self) -> None:
-        self.assertLess(self.text.index("\n  input-shadow:\n"), self.text.index("\n  build:\n"))
-        # ship.sh picks digests by `^<service>\t` job-name prefix in run logs.
-        services = [e["service"] for e in json.loads((ROOT / "services.json").read_text())]
-        self.assertFalse(any("input-shadow".startswith(s) for s in services))
-
-    def test_evidence_probe_is_measurement_only(self) -> None:
-        self.assertIn("scripts/verification-evidence.py probe", self.job)
-        self.assertIn("if: needs.plan.outputs.promote == 'true'", self.job)
-        self.assertNotIn("reuse_verification", self.text)
-        self.assertNotIn("needs.validate.result == 'skipped'", self.text)
-        source = (ROOT / "scripts" / "verification-evidence.py").read_text()
-        self.assertIn('"enabled": False', source)
-        self.assertNotIn('"enabled": True', source)
+    def test_reintroduced_diagnostic_dependency_or_skip_is_rejected(self):
+        text = WORKFLOW.read_text()
+        for injected in ("    needs: input-shadow", "    env: {SKIP: affected-feedback}",
+                         "    env: {reuse_verification: true}",
+                         "    if: needs.validate.result == 'skipped'"):
+            with self.subTest(injected=injected):
+                changed = text.replace("  validate:\n", "  validate:\n" + injected + "\n")
+                self.assertNotEqual(changed, text)
+                with self.assertRaises(AssertionError):
+                    self.assert_release_wiring(changed)
 
 
 class AffectedFeedbackTest(unittest.TestCase):
@@ -594,80 +576,6 @@ class AffectedFeedbackTest(unittest.TestCase):
                 with self.assertRaises(FP.Unknown):
                     FP.validate_feedback_manifest(bad)
 
-
-class AffectedFeedbackWiringTest(unittest.TestCase):
-    """Execute the workflow's actual folded command with a local object source."""
-
-    setUp = AffectedFeedbackTest.setUp
-
-    def wiring(self, text):
-        job = re.search(r"(?ms)^  input-shadow:\n(.*?)(?=^  validate:\n)", text).group(1)
-        feedback = re.search(r"(?ms)^      - name: Affected Ops source feedback.*?\n"
-                             r"(.*?)(?=^      - name:)", job).group(1)
-        upload = job[job.index("      - name: Retain preliminary affected-change manifest"):]
-        self.assertIn("        if: always()\n", feedback)
-        self.assertIn("        if: always()\n", upload)
-        self.assertIn("if-no-files-found: error", upload)
-        self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", upload)
-        self.assertIn("path: ${{ runner.temp }}/affected-feedback.json", upload)
-        self.assertIn("name: affected-feedback-${{ github.run_id }}-${{ github.run_attempt }}", upload)
-        self.assertIn("MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}", feedback)
-        self.assertIn("VALIDATION_MATRIX: ${{ needs.plan.outputs.validation_matrix }}", feedback)
-        self.assertIn("BUILD_MATRIX: ${{ needs.plan.outputs.matrix }}", feedback)
-        command = " ".join(re.search(r"(?ms)^        run: >-\n(.*)", feedback).group(1).split())
-        self.assertIn("python3 scripts/input-fingerprint.py feedback", command)
-        self.assertNotIn("needs.input-shadow", text)
-        self.assertFalse(any("input-shadow" in x for x in re.findall(r"(?m)^    needs: (.+)$", text)))
-        self.assertNotIn("affected-feedback", text.replace(job, ""))
-        self.assertNotIn("reuse_verification", text)
-        self.assertNotIn('needs.validate.result == \'skipped\'', text)
-        return command
-
-    def test_actual_command_and_always_retained_unknown_after_other_shadow_failure(self):
-        command = self.wiring(WORKFLOW.read_text())
-        # Only transport is substituted: all actual workflow CLI arguments remain.
-        import shlex
-        command = command.replace("python3 scripts/input-fingerprint.py feedback",
-                                  f"{shlex.quote(sys.executable)} scripts/input-fingerprint.py feedback"
-                                  f" --repo {shlex.quote(str(self.repo.path))}")
-        env = {**os.environ, "MIGRATION_BASE": self.base, "BUILD_MATRIX": json.dumps(self.matrix),
-               "VALIDATION_MATRIX": json.dumps(self.validators), "RUNNER_TEMP": str(self.repo.path),
-               "GITHUB_SHA": "a" * 40, "GITHUB_RUN_ID": "123", "GITHUB_RUN_ATTEMPT": "1"}
-        for base, code, status in ((self.base, 0, "COMPLETE"), ("", 3, "UNKNOWN")):
-            with self.subTest(status=status):
-                # The prior image step failed; always() still selects this step.
-                prior = subprocess.run(["bash", "-c", "exit 7"], capture_output=True, check=False)
-                self.assertEqual(prior.returncode, 7)
-                result = subprocess.run(["bash", "-e", "-c", command], cwd=ROOT,
-                                        env={**env, "MIGRATION_BASE": base},
-                                        capture_output=True, text=True, check=False)
-                self.assertEqual(result.returncode, code, result.stderr)
-                output = self.repo.path / "affected-feedback.json"
-                value = json.loads(output.read_text())
-                self.assertEqual(value["status"], status)
-                FP.validate_feedback_manifest(value)
-                output.unlink()
-
-    def test_actual_wiring_mutations_reject(self):
-        text = WORKFLOW.read_text()
-        mutations = [
-            text.replace("scripts/input-fingerprint.py feedback", "scripts/input-fingerprint.py compute"),
-            text.replace("Retain preliminary affected-change manifest", "No retained manifest"),
-            text.replace("path: ${{ runner.temp }}/affected-feedback.json", "path: /missing"),
-            text.replace("if-no-files-found: error", "if-no-files-found: ignore"),
-            text.replace("    needs: [plan, validate]", "    needs: [plan, validate, input-shadow]"),
-            text.replace("  validate:\n", "  validate:\n    if: needs.input-shadow.result == 'success'\n"),
-            text.replace("  validate:\n", "  validate:\n    env: {reuse_verification: true}\n"),
-            text.replace("  validate:\n", "  validate:\n    env: {SKIP: affected-feedback}\n"),
-            text.replace("        if: always()\n        continue-on-error: true\n",
-                         "        if: success()\n        continue-on-error: true\n"),
-        ]
-        self.wiring(text)
-        for changed in mutations:
-            with self.subTest(mutation=mutations.index(changed)):
-                self.assertNotEqual(changed, text)
-                with self.assertRaises((AssertionError, ValueError, AttributeError)):
-                    self.wiring(changed)
 
 
 def _job(name: str, conclusion: str = "success", labels=None, group="GitHub Actions") -> dict:
