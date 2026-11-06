@@ -102,6 +102,39 @@ class EstateInputTransition(unittest.TestCase):
                                       ROOT, board, "ubuntu-24.04", 3, 1)
                 SHARDS.envelope(value)
                 self.assertEqual(SHARDS.admit_skips(value, result, {})["status"], "NO_NEW_SKIPS")
+                # Exercise planner -> sealed validator -> join for the retired
+                # input, while the real receipt continues to record its absence.
+                retired_source = "c" * 40
+                retired_plan = dict(planned, source_revision=retired_source)
+                retired_plan.pop("plan_sha256")
+                SHARDS.seal(retired_plan, "plan_sha256")
+                retired_target = target | {"ref": retired_source}
+                retired_common = {p: b for p, b in self.successor.items()
+                                  if p != SHARDS.ESTATE_ADDED_INPUT}
+                retired_files = {p: v for p, v in self.successor_files.items()
+                                 if p != SHARDS.ESTATE_ADDED_INPUT}
+                with (patch.object(SHARDS, "TEMPLATE_WRITER_BEFORE_BLOB",
+                                   self.successor[SHARDS.ESTATE_ADDED_INPUT]),
+                      patch.object(SHARDS, "plan", return_value=retired_plan),
+                      patch.object(SHARDS, "shared_inputs", return_value=retired_common),
+                      patch.object(SHARDS, "tree_inputs", return_value=retired_files | {
+                          "tests/test_control.py": ("100644", "e" * 40)}),
+                      patch.object(SHARDS, "estate_successor_proof", return_value=source),
+                      patch.object(SHARDS, "template_writer_retirement_proof",
+                                   return_value=SHARDS.TEMPLATE_WRITER_RETIREMENT)):
+                    retired_value = SHARDS.expand(
+                        {"matrix": [retired_target], "validation_matrix": [retired_target]},
+                        ROOT, board, "ubuntu-24.04", 3, 1)
+                    self.assertNotIn(SHARDS.ESTATE_ADDED_INPUT, retired_value["common_inputs"])
+                    SHARDS.envelope(retired_value)
+                    self.assertEqual(SHARDS.admit_skips(retired_value, result, {})["status"], "NO_NEW_SKIPS")
+                    retired_value["template_writer_retired_at"] = "f" * 40
+                    retired_value.pop("admission_sha256")
+                    SHARDS.seal(retired_value, "admission_sha256")
+                    with self.assertRaises(ValueError):
+                        SHARDS.envelope(retired_value)
+                    with self.assertRaises(ValueError):
+                        SHARDS.admit_skips(retired_value, result, {})
                 for mutation in ("source", "blob"):
                     changed = copy.deepcopy(value)
                     if mutation == "source":
@@ -179,6 +212,73 @@ class EstateInputTransition(unittest.TestCase):
         with self.assertRaises(ValueError):
             SHARDS.admit_shared_inputs(self.sealed, changed, source_revision=later,
                                        estate_successor_of="b" * 40)
+
+    def test_retired_writer_admission_keeps_actual_map_absent(self):
+        path = SHARDS.ESTATE_ADDED_INPUT
+        blob = SHARDS.TEMPLATE_WRITER_BEFORE_BLOB
+        self.record["changes"][path]["after_blob"] = blob
+        common = {p: b for p, b in self.successor.items() if p != path}
+        files = {p: v for p, v in self.successor_files.items() if p != path}
+        args = {"source_revision": "c" * 40,
+                "estate_successor_of": self.record["source_after"],
+                "template_writer_retired_at": SHARDS.TEMPLATE_WRITER_RETIREMENT}
+        SHARDS.admit_shared_inputs(self.sealed, common, files, **args)
+        SHARDS.admit_shared_inputs(self.sealed, common, **args)
+        self.assertNotIn(path, common)
+        self.assertNotIn(path, files)
+        for mutation in ({"template_writer_retired_at": None},
+                         {"template_writer_retired_at": "d" * 40},
+                         {"estate_successor_of": None},
+                         {"source_revision": self.record["source_after"]}):
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                SHARDS.admit_shared_inputs(self.sealed, common, files, **(args | mutation))
+        for key in ("qa/package.json", "pytest.ini"):
+            with self.subTest(drift=key), self.assertRaises(ValueError):
+                SHARDS.admit_shared_inputs(self.sealed, common | {key: "e" * 40}, files, **args)
+        with self.assertRaises(ValueError):
+            SHARDS.admit_shared_inputs(self.sealed, common | {path: blob}, files, **args)
+        with self.assertRaises(ValueError):
+            SHARDS.admit_shared_inputs(self.sealed, common, files | {path: ("100644", blob)}, **args)
+        # The old exact estate successor is still admitted with its real helper.
+        SHARDS.admit_shared_inputs(self.sealed, common | {path: blob},
+                                  files | {path: ("100644", blob)},
+                                  source_revision=self.record["source_after"])
+
+    def test_retirement_proof_binds_actual_deletion_and_rejects_reintroduction(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
+                   "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@e", "GIT_COMMITTER_NAME": "t",
+                   "GIT_COMMITTER_EMAIL": "t@e"}
+            def run(*args):
+                return subprocess.check_output(["git", "-C", tmp, *args], env=env).decode().strip()
+            run("init", "-q")
+            path = Path(tmp) / SHARDS.ESTATE_ADDED_INPUT
+            path.parent.mkdir(parents=True)
+            path.write_text("historical probe")
+            run("add", ".")
+            run("commit", "-q", "-m", "before")
+            before = run("rev-parse", "HEAD")
+            blob = run("rev-parse", f"HEAD:{SHARDS.ESTATE_ADDED_INPUT}")
+            run("rm", SHARDS.ESTATE_ADDED_INPUT)
+            run("commit", "-q", "-m", "retired")
+            retired = run("rev-parse", "HEAD")
+            run("commit", "-q", "--allow-empty", "-m", "later")
+            later = run("rev-parse", "HEAD")
+            with (patch.object(SHARDS, "TEMPLATE_WRITER_RETIREMENT", retired),
+                  patch.object(SHARDS, "TEMPLATE_WRITER_BEFORE_BLOB", blob)):
+                self.assertIsNone(SHARDS.template_writer_retirement_proof(tmp, before))
+                self.assertEqual(SHARDS.template_writer_retirement_proof(tmp, retired), retired)
+                self.assertEqual(SHARDS.template_writer_retirement_proof(tmp, later), retired)
+                with patch.object(SHARDS, "TEMPLATE_WRITER_BEFORE_BLOB", "f" * 40):
+                    with self.assertRaises(ValueError):
+                        SHARDS.template_writer_retirement_proof(tmp, later)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("reintroduced")
+                run("add", ".")
+                run("commit", "-q", "-m", "reintroduced")
+                with self.assertRaises(ValueError):
+                    SHARDS.template_writer_retirement_proof(tmp, run("rev-parse", "HEAD"))
 
     def test_planner_proves_ancestry_from_real_history(self):
         import subprocess

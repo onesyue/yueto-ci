@@ -713,6 +713,51 @@ ESTATE_INPUT_PATHS = {
 }
 ESTATE_ADDED_INPUT = "tests/native/subscribe_template_baseline_cas_pg.py"
 
+# Preserve the historical estate seal, but retire its source-copy writer probe
+# only after the exact reviewed deletion. No historical execution is credited.
+TEMPLATE_WRITER_RETIREMENT = "6f7a1f635c94c9c5a0aeeb993c7893d7efe48dfc"
+TEMPLATE_WRITER_BEFORE_BLOB = "1933467673713272e85f47a5732692d1c285a858"
+
+
+def template_writer_retirement_proof(source, revision):
+    """Prove the one retired helper disappeared in the reviewed source history."""
+    try:
+        git(source, "cat-file", "-e", TEMPLATE_WRITER_RETIREMENT + "^{commit}")
+    except subprocess.CalledProcessError:
+        return None  # Old checkouts need not contain a future retirement commit.
+    try:
+        git(source, "merge-base", "--is-ancestor", TEMPLATE_WRITER_RETIREMENT, revision)
+    except subprocess.CalledProcessError as exc:
+        require(exc.returncode == 1, "template writer retirement ancestry unavailable")
+        return None
+    parent = git(source, "rev-parse", TEMPLATE_WRITER_RETIREMENT + "^1").decode().strip()
+    before = tree_inputs(source, parent)
+    retired = tree_inputs(source, TEMPLATE_WRITER_RETIREMENT)
+    current = tree_inputs(source, revision)
+    require(before.get(ESTATE_ADDED_INPUT) == ("100644", TEMPLATE_WRITER_BEFORE_BLOB)
+            and ESTATE_ADDED_INPUT not in retired and ESTATE_ADDED_INPUT not in current,
+            "template writer retirement tree differs")
+    return TEMPLATE_WRITER_RETIREMENT
+
+
+def admit_retired_template_writer(baseline, common, files, source_revision,
+                                  estate_successor_of, template_writer_retired_at):
+    if template_writer_retired_at is None:
+        return common, files
+    _, estate = reviewed_estate_input_transition(baseline)
+    require(template_writer_retired_at == TEMPLATE_WRITER_RETIREMENT
+            and isinstance(source_revision, str) and SHA.fullmatch(source_revision)
+            and estate is not None and source_revision != estate["source_after"]
+            and estate_successor_of == estate["source_after"]
+            and estate["changes"][ESTATE_ADDED_INPUT]["after_blob"] == TEMPLATE_WRITER_BEFORE_BLOB
+            and isinstance(common, dict) and ESTATE_ADDED_INPUT not in common,
+            "invalid template writer retirement admission")
+    if files is not None:
+        require(ESTATE_ADDED_INPUT not in files, "retired template writer is present")
+        files = dict(files) | {ESTATE_ADDED_INPUT: ("100644", TEMPLATE_WRITER_BEFORE_BLOB)}
+    # Comparison-only copy: the sealed current source map still records absence.
+    return dict(common) | {ESTATE_ADDED_INPUT: TEMPLATE_WRITER_BEFORE_BLOB}, files
+
 
 SITE_LOCK_INPUT = "site/pnpm-lock.yaml"
 BOT_PACKAGING_INPUT = "telegram-bot/yue/pyproject.toml"
@@ -2286,8 +2331,11 @@ def admit_reviewed_pr_inputs(common, files, source_revision, *, names=None):
 
 
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
-                        estate_successor_of=None):
+                        estate_successor_of=None, template_writer_retired_at=None):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
+    common, files = admit_retired_template_writer(
+        baseline, common, files, source_revision, estate_successor_of,
+        template_writer_retired_at)
     _, active_required = required_native_inputs(baseline)
     # Historical transition validators may receive an already-peeled baseline.
     # All production entry points first use skip_baseline(), which requires the
@@ -2326,7 +2374,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
             change = shuffle["changes"][COLLECTION_SHUFFLE_INPUT]
             estate = baseline.get("reviewed_estate_input_transition", {})
             require(common[COLLECTION_SHUFFLE_INPUT] == change["after_blob"]
-                    and isinstance(source_revision, str)
+                    and ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
                     and source_revision != estate.get("source_after")
                     and estate_successor_of == estate.get("source_after"),
                     "collection shuffle requires the reviewed blob in a proven estate successor")
@@ -2363,7 +2411,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # proven estate successor (planner proved ancestry from the helper's source).
         change = hang["changes"][HANG_GUARD_INPUT]
         require(common[HANG_GUARD_INPUT] == change["after_blob"]
-                and isinstance(source_revision, str)
+                and ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"],
                 "hang guard input requires the reviewed blob in a proven estate successor")
@@ -2376,7 +2424,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # Only an estate successor (ancestry proven by the planner) may carry the
         # reviewed site lock; the exact predecessor blob is then re-admitted below.
         change = site["changes"][SITE_LOCK_INPUT]
-        require(isinstance(source_revision, str)
+        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"],
                 "site lock successor requires a proven estate successor")
@@ -2389,7 +2437,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # Same rule as the site lock: only a proven estate successor may carry the
         # reviewed bot packaging blob; its exact estate after-blob is re-admitted below.
         change = bot["changes"][BOT_PACKAGING_INPUT]
-        require(isinstance(source_revision, str)
+        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"],
                 "bot packaging successor requires a proven estate successor")
@@ -2405,7 +2453,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # the reviewed inputs, and only all four together. Each exact predecessor is
         # then re-admitted below (the added helper is removed), so the complete
         # Tornado bundle and every historical input are still required underneath.
-        require(isinstance(source_revision, str)
+        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"]
                 and all(common.get(path) == change["after_blob"]
@@ -2431,7 +2479,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                                    for path, change in tornado["changes"].items()):
         # Admit only the complete reviewed bundle, then restore the exact runtime
         # predecessor for every existing seal and historical skip consumer.
-        require(isinstance(source_revision, str)
+        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"]
                 and all(common.get(path) == change["after_blob"]
@@ -2450,7 +2498,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # Only a proven estate successor may carry the reviewed runtime dependency
         # blobs, and only all three together; each predecessor after-blob is then
         # re-admitted below by the seal that reviewed it.
-        require(isinstance(source_revision, str)
+        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"]
                 and all(common.get(path) == change["after_blob"]
@@ -2468,7 +2516,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # Same rule as the site lock and bot packaging: only a proven estate successor
         # may carry the reviewed lock blob; the audit seal's after-blob is re-admitted below.
         change = lock["changes"][AUDIT_LOCK_INPUT]
-        require(isinstance(source_revision, str)
+        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"],
                 "audit lock successor requires a proven estate successor")
@@ -2477,10 +2525,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                     "audit lock successor mode or tree changed")
             files = dict(files) | {AUDIT_LOCK_INPUT: (change["mode"], change["before_blob"])}
         common = dict(common) | {AUDIT_LOCK_INPUT: change["before_blob"]}
-    # The subscription-template baseline test is no longer an Ops input.
-    # A proven estate successor may omit it. Any other shared input stays exact.
-    # Predecessors that never had the file still use the historical map.
-    if ESTATE_ADDED_INPUT not in common and estate_successor_of != record["source_after"]:
+    if ESTATE_ADDED_INPUT not in common:
         return _admit_existing_shared_inputs(original, common, files)
     # The exact sealed revision, or a later revision whose ancestry from it was
     # proven by the planner. Either way every estate input below must still be
@@ -2492,8 +2537,6 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
     predecessor = dict(common)
     predecessor_files = dict(files) if files is not None else None
     for path, change in changes.items():
-        if path == ESTATE_ADDED_INPUT and path not in common:
-            continue
         require(common.get(path) == change["after_blob"],
                 "estate successor input blob changed: " + path)
         if files is not None:
@@ -3243,7 +3286,8 @@ def envelope(value):
                     "skip baseline or shared collection inputs differ")
             admit_shared_inputs(baseline, value.get("common_inputs"),
                                 source_revision=value["source_revision"],
-                                estate_successor_of=value.get("estate_successor_of"))
+                                estate_successor_of=value.get("estate_successor_of"),
+                                template_writer_retired_at=value.get("template_writer_retired_at"))
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -3299,8 +3343,11 @@ def expand(targets, source, board, runner, capacity, shards):
             common = shared_inputs(source, ops["ref"])
             files = tree_inputs(source, ops["ref"])
             successor_of = estate_successor_proof(baseline, source, ops["ref"])
+            retired_at = template_writer_retirement_proof(source, ops["ref"])
             admit_shared_inputs(baseline, common, files, source_revision=ops["ref"],
-                                estate_successor_of=successor_of)
+                                estate_successor_of=successor_of, template_writer_retired_at=retired_at)
+            if retired_at is not None:
+                value["template_writer_retired_at"] = retired_at
             if successor_of is not None:
                 value["estate_successor_of"] = successor_of
             value.update(mode="sharded", ops_plan=expected, common_inputs=common,
@@ -3563,7 +3610,8 @@ def admit_skips(value, result, native):
     if estate is not None:
         admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
                             source_revision=value.get("source_revision"),
-                            estate_successor_of=value.get("estate_successor_of"))
+                            estate_successor_of=value.get("estate_successor_of"),
+                                template_writer_retired_at=value.get("template_writer_retired_at"))
     baseline, preservation_successors = reviewed_relay_preservation_module_transition(baseline)
     baseline, meter_successors = reviewed_relay_meter_module_transition(baseline)
     baseline, metrics_successors = reviewed_relay_metrics_module_transition(baseline)
