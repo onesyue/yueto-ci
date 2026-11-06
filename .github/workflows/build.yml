@@ -691,6 +691,7 @@ jobs:
             "${apt[@]}" install -y --no-install-recommends ca-certificates curl gnupg
             pg_key="$apt_dir/pgdg.asc"
             curl --fail --silent --show-error --location \
+              --retry 5 --retry-all-errors --retry-delay 2 \
               --proto '=https' --proto-redir '=https' --tlsv1.2 \
               https://www.postgresql.org/media/keys/ACCC4CF8.asc --output "$pg_key"
             fingerprint=$(gpg --batch --show-keys --with-colons "$pg_key" | awk -F: '$1 == "fpr" && !seen {print $10; seen=1}')
