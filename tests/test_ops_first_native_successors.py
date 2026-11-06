@@ -172,6 +172,51 @@ class ExactFirstNativePolicy(unittest.TestCase):
             self.assertEqual(row["outcome"], "skipped")
             self.assertTrue(row["variants"])
 
+    def test_ordinary_skip_evidence_is_exact_and_does_not_inherit_a_new_blob(self):
+        evidence = ROOT / "reviews/ops-ordinary-skip-evidence-20261107.json"
+        baseline_bytes = (ROOT / "ops-pytest-skip-baseline.json").read_bytes()
+        raw = evidence.read_bytes()
+        self.assertEqual(SHARDS.sha(raw), SHARDS.ORDINARY_SKIP_EVIDENCE_SHA256)
+        record = json.loads(raw)
+        sealed = SHARDS.skip_baseline()
+        _, blob_record = SHARDS.reviewed_skip_blob_successor_transition(sealed)
+        _, release_blob = SHARDS.reviewed_release_skip_blob_successor_transition(sealed)
+        _, case_successors = SHARDS.reviewed_case_file_transition(sealed)
+        baseline, _estate = SHARDS.reviewed_estate_input_transition(sealed)
+        baseline, preservation = SHARDS.reviewed_relay_preservation_module_transition(baseline)
+        baseline, meter = SHARDS.reviewed_relay_meter_module_transition(baseline)
+        baseline, metrics = SHARDS.reviewed_relay_metrics_module_transition(baseline)
+        baseline, relay = SHARDS.reviewed_relay_skip_module_transition(baseline)
+        baseline, extra = SHARDS.reviewed_current_skip_transition(baseline)
+        _, successors = SHARDS.reviewed_skip_module_transition(baseline)
+        successors = dict(successors)
+        successors.update(extra)
+        admitted = {nodeid: dict(case) for nodeid, case in baseline["cases"].items()}
+        for mapping in (successors, relay, metrics, meter, preservation, case_successors):
+            admitted.update(mapping)
+        hosted = baseline.get("reviewed_hosted", {}).get("cases", {})
+        admitted.update(SHARDS.skip_blob_successors(blob_record, admitted, hosted))
+        admitted.update(SHARDS.skip_blob_successors(release_blob, admitted, hosted))
+        blobs = {}
+        for nodeid, change in record["updates"].items():
+            blobs[nodeid.split("::", 1)[0]] = change["after_blob"]
+        for nodeid, case in record["additions"].items():
+            blobs[nodeid.split("::", 1)[0]] = case["module_blob"]
+        got = SHARDS.ordinary_skip_evidence_successors(admitted, {"skip_module_blobs": blobs})
+        self.assertEqual(set(got), set(record["updates"]) | set(record["additions"]))
+        self.assertEqual(len(got), 306)
+        sample = next(iter(record["updates"]))
+        module = sample.split("::", 1)[0]
+        narrowed = dict(blobs)
+        narrowed[module] = "f" * 40
+        self.assertNotIn(sample, SHARDS.ordinary_skip_evidence_successors(
+            admitted, {"skip_module_blobs": narrowed}))
+        broken = dict(admitted)
+        broken[sample] = dict(admitted[sample], module_blob="e" * 40)
+        with self.assertRaisesRegex(ValueError, "does not succeed"):
+            SHARDS.ordinary_skip_evidence_successors(broken, {"skip_module_blobs": blobs})
+        self.assertEqual((ROOT / "ops-pytest-skip-baseline.json").read_bytes(), baseline_bytes)
+
 
 if __name__ == "__main__":
     unittest.main()

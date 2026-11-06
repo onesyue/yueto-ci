@@ -3626,6 +3626,57 @@ def reviewed_first_native_successor(baseline, value, native):
     return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": cases}}
 
 
+ORDINARY_SKIP_EVIDENCE_SHA256 = "75f015e04bbf38fcfb71ccf6008293322e44208e824ab47fe53fc1887c7cd4cb"
+
+
+def ordinary_skip_evidence_successors(admitted, value):
+    """Admit one reviewed ordinary-skip evidence set, and no later blob.
+
+    Run 42307825077 passed the selected matrix. Its ordinary shards skipped
+    these cases for unchanged environmental reasons, or moved an already
+    admitted skip to a new test-module blob. The dynamic service-grant xfails
+    are not in this set. A different current blob is omitted, not inherited.
+    """
+    path = ROOT / "reviews/ops-ordinary-skip-evidence-20261107.json"
+    raw = path.read_bytes()
+    require(sha(raw) == ORDINARY_SKIP_EVIDENCE_SHA256, "unreviewed ordinary skip evidence")
+    record = json.loads(raw)
+    require(isinstance(record, dict) and record.get("schema") == 1
+            and isinstance(record.get("updates"), dict) and isinstance(record.get("additions"), dict)
+            and record["updates"] and record["additions"],
+            "invalid ordinary skip evidence")
+    blobs = value.get("skip_module_blobs") if isinstance(value, dict) else None
+    blobs = blobs if isinstance(blobs, dict) else {}
+    successors = {}
+    for nodeid, change in record["updates"].items():
+        module = nodeid.split("::", 1)[0] if isinstance(nodeid, str) and "::" in nodeid else ""
+        historical = admitted.get(nodeid)
+        require(isinstance(nodeid, str) and safe_module(module)
+                and isinstance(change, dict) and set(change) == {"before_blob", "after_blob"}
+                and isinstance(historical, dict) and historical.get("outcome") == "skipped"
+                and isinstance(historical.get("reason"), str) and historical["reason"]
+                and historical.get("module_blob") == change["before_blob"]
+                and change["before_blob"] != change["after_blob"]
+                and SHA.fullmatch(change["after_blob"]),
+                "ordinary skip evidence does not succeed an admitted skip: " + str(nodeid))
+        if blobs.get(module) != change["after_blob"]:
+            continue
+        successors[nodeid] = {"outcome": "skipped", "reason": historical["reason"],
+                              "module_blob": change["after_blob"]}
+    for nodeid, case in record["additions"].items():
+        module = nodeid.split("::", 1)[0] if isinstance(nodeid, str) and "::" in nodeid else ""
+        require(isinstance(nodeid, str) and safe_module(module) and nodeid not in admitted
+                and isinstance(case, dict) and set(case) == {"outcome", "reason", "module_blob"}
+                and case["outcome"] == "skipped" and isinstance(case["reason"], str) and case["reason"]
+                and SHA.fullmatch(case["module_blob"]),
+                "ordinary skip evidence addition is not a new skip: " + str(nodeid))
+        if blobs.get(module) != case["module_blob"]:
+            continue
+        successors[nodeid] = {"outcome": "skipped", "reason": case["reason"],
+                              "module_blob": case["module_blob"]}
+    return successors
+
+
 def admit_skips(value, result, native):
     sealed_baseline = skip_baseline()
     _, i10_blob_record = reviewed_i10_skip_blob_successor_transition(sealed_baseline)
@@ -3658,6 +3709,7 @@ def admit_skips(value, result, native):
     admitted.update(release_blob_successors)
     i10_blob_successors = skip_blob_successors(
         i10_blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
+    ordinary_skips = ordinary_skip_evidence_successors(admitted, value)
     unknown = []
     observed_collection = {}
     baseline = reviewed_canceled_backup_blob_successor(baseline, value)
@@ -3695,7 +3747,8 @@ def admit_skips(value, result, native):
                                     meter_successors.get(nodeid), preservation_successors.get(nodeid),
                                     case_successors.get(nodeid), blob_successors.get(nodeid),
                                     release_blob_successors.get(nodeid),
-                                    i10_blob_successors.get(nodeid)):
+                                    i10_blob_successors.get(nodeid),
+                                    ordinary_skips.get(nodeid)):
                     unknown.append(nodeid)
                     continue
                 disposition = "HISTORICAL_UNEXECUTED"
