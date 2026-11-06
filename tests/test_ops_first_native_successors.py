@@ -56,6 +56,40 @@ class FirstNativeSuccessors(unittest.TestCase):
         self.assertIs(SHARDS.reviewed_board139_native_successor(
             self.baseline, {"skip_module_blobs": {BOARD: "f" * 40}}, self.native), self.baseline)
 
+    def test_renewal_blob_requires_the_twenty_two_native_calls(self):
+        renewal = "0509528f81cd39c6e308e130650670a874b1b3df"
+        names = (
+            "test_actual_renewal_audit_rejects_extra_callers[PUBLIC-function-exchange_points_renewal(bigint, bigint, text)-]",
+            "test_actual_renewal_audit_rejects_extra_callers[PUBLIC-function-renewal_credit_month(timestamp with time zone)-]",
+            "test_actual_renewal_audit_rejects_extra_callers[PUBLIC-function-renewal_credit_state(bigint)-yueboard_runtime:EXECUTE:false]",
+            "test_actual_renewal_audit_rejects_extra_callers[PUBLIC-function-reserve_order_renewal_credit()-]",
+            "test_actual_renewal_audit_rejects_extra_callers[PUBLIC-sequence-renewal_credit_exchanges_id_seq-]",
+            "test_actual_renewal_audit_rejects_extra_callers[app_yue_bot-function-exchange_points_renewal(bigint, bigint, text)-]",
+            "test_actual_renewal_audit_rejects_extra_callers[app_yue_bot-function-renewal_credit_month(timestamp with time zone)-]",
+            "test_actual_renewal_audit_rejects_extra_callers[app_yue_bot-function-renewal_credit_state(bigint)-yueboard_runtime:EXECUTE:false]",
+            "test_actual_renewal_audit_rejects_extra_callers[app_yue_bot-function-reserve_order_renewal_credit()-]",
+            "test_actual_renewal_audit_rejects_extra_callers[app_yue_bot-sequence-renewal_credit_exchanges_id_seq-]",
+            "test_actual_renewal_exact_acl_matches_reviewed_floor[function-exchange_points_renewal(bigint, bigint, text)-]",
+            "test_actual_renewal_exact_acl_matches_reviewed_floor[function-renewal_credit_month(timestamp with time zone)-]",
+            "test_actual_renewal_exact_acl_matches_reviewed_floor[function-renewal_credit_state(bigint)-yueboard_runtime:EXECUTE:false]",
+            "test_actual_renewal_exact_acl_matches_reviewed_floor[function-reserve_order_renewal_credit()-]",
+            "test_actual_renewal_exact_acl_matches_reviewed_floor[sequence-renewal_credit_exchanges_id_seq-]",
+        )
+        calls = self.previous + [self.added] + [BOARD + "::" + name for name in names]
+        value = {"skip_module_blobs": {BOARD: renewal}}
+        result = SHARDS.reviewed_board139_native_successor(
+            self.baseline, value, {"obligations": {BOARD: {"passed": calls}}})
+        rows = {k: v for k, v in result["reviewed_hosted"]["cases"].items() if k.startswith(BOARD + "::")}
+        self.assertEqual(set(rows), set(calls))
+        self.assertEqual(len(rows), 22)
+        self.assertTrue(all(row["module_blob"] == renewal and row["outcome"] == "skipped"
+                            and row["disposition"] == "SAME_RUN_NATIVE_REQUIRED" for row in rows.values()))
+        self.assertEqual((ROOT / "ops-pytest-skip-baseline.json").read_bytes(), self.raw)
+        for dropped in (calls[:-1], calls + [BOARD + "::unreviewed"]):
+            with self.subTest(count=len(dropped)), self.assertRaisesRegex(ValueError, "twenty-two exact"):
+                SHARDS.reviewed_board139_native_successor(
+                    self.baseline, value, {"obligations": {BOARD: {"passed": dropped}}})
+
     def test_canceled_backup_keeps_exact_23_skips_unexecuted(self):
         result = SHARDS.reviewed_canceled_backup_blob_successor(self.baseline, self.backup_value)
         before = {k: v for k, v in self.baseline["cases"].items() if k.startswith(BACKUP + "::")}

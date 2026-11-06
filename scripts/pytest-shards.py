@@ -3536,17 +3536,23 @@ def reviewed_canceled_backup_blob_successor(baseline, value):
 
 
 def reviewed_board139_native_successor(baseline, value, native):
-    """Keep the historical skip seal; qualify the exact archive-fixture successor.
+    """Keep the historical skip seal; qualify two exact Board139 successors.
 
     Ops 6a894a36 adds the production-shaped orders_archive fixture and a seventh
     negative ACL case. It changes neither the fixture skip nor the native gate.
     Original run 41186871728 passed all seven native calls; its ordinary skips
     must still require those exact same-run calls, never become historical PASS.
+    Ops 26f7abe1b and bc4ab688f add the renewal ACL cases at blob 0509528f.
+    Run 42300780238 job 128177818905 passed all twenty-two native calls.
+    Ordinary shards still skip without the frozen fixture. That skip stays
+    bound to those twenty-two same-run calls.
     """
     module = "tests/test_board139_schema_acl_native_20261018.py"
     before = "7031c88d7b25d3b61ff40429cc8e54f3e7248466"
     after = "2d510c6a2e765ae7eb0379ab7671ba64d6770ef4"
-    if value.get("skip_module_blobs", {}).get(module) != after:
+    renewal = "0509528f81cd39c6e308e130650670a874b1b3df"
+    blob = value.get("skip_module_blobs", {}).get(module)
+    if blob not in (after, renewal):
         return baseline
     names = (
         "test_actual_bootstrap_adopts_139_trigger_owner_and_empty_acl",
@@ -3570,12 +3576,33 @@ def reviewed_board139_native_successor(baseline, value, native):
                 and cases[key]["disposition"] == "SAME_RUN_NATIVE_REQUIRED"
                 and cases[key]["native_target"] == module,
                 "Board139 historical native skip binding differs")
+    renewal_names = (
+        "test_actual_renewal_audit_rejects_extra_callers[PUBLIC-function-exchange_points_renewal(bigint, bigint, text)-]",
+        "test_actual_renewal_audit_rejects_extra_callers[PUBLIC-function-renewal_credit_month(timestamp with time zone)-]",
+        "test_actual_renewal_audit_rejects_extra_callers[PUBLIC-function-renewal_credit_state(bigint)-yueboard_runtime:EXECUTE:false]",
+        "test_actual_renewal_audit_rejects_extra_callers[PUBLIC-function-reserve_order_renewal_credit()-]",
+        "test_actual_renewal_audit_rejects_extra_callers[PUBLIC-sequence-renewal_credit_exchanges_id_seq-]",
+        "test_actual_renewal_audit_rejects_extra_callers[app_yue_bot-function-exchange_points_renewal(bigint, bigint, text)-]",
+        "test_actual_renewal_audit_rejects_extra_callers[app_yue_bot-function-renewal_credit_month(timestamp with time zone)-]",
+        "test_actual_renewal_audit_rejects_extra_callers[app_yue_bot-function-renewal_credit_state(bigint)-yueboard_runtime:EXECUTE:false]",
+        "test_actual_renewal_audit_rejects_extra_callers[app_yue_bot-function-reserve_order_renewal_credit()-]",
+        "test_actual_renewal_audit_rejects_extra_callers[app_yue_bot-sequence-renewal_credit_exchanges_id_seq-]",
+        "test_actual_renewal_exact_acl_matches_reviewed_floor[function-exchange_points_renewal(bigint, bigint, text)-]",
+        "test_actual_renewal_exact_acl_matches_reviewed_floor[function-renewal_credit_month(timestamp with time zone)-]",
+        "test_actual_renewal_exact_acl_matches_reviewed_floor[function-renewal_credit_state(bigint)-yueboard_runtime:EXECUTE:false]",
+        "test_actual_renewal_exact_acl_matches_reviewed_floor[function-reserve_order_renewal_credit()-]",
+        "test_actual_renewal_exact_acl_matches_reviewed_floor[sequence-renewal_credit_exchanges_id_seq-]",
+    )
+    expected = previous | {added}
+    message = "Board139 successor requires seven exact same-run native calls"
+    if blob == renewal:
+        expected |= {module + "::" + name for name in renewal_names}
+        message = "Board139 renewal successor requires twenty-two exact same-run native calls"
     passed = native["obligations"].get(module, {}).get("passed", [])
-    require(set(passed) == previous | {added} and len(passed) == 7,
-            "Board139 successor requires seven exact same-run native calls")
+    require(set(passed) == expected and len(passed) == len(expected), message)
     updated = dict(cases)
-    for key in previous | {added}:
-        updated[key] = {"module_blob": after, "outcome": "skipped",
+    for key in expected:
+        updated[key] = {"module_blob": blob, "outcome": "skipped",
                         "variants": variant, "disposition": "SAME_RUN_NATIVE_REQUIRED",
                         "native_target": module}
     return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": updated}}
