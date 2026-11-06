@@ -2326,7 +2326,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
             change = shuffle["changes"][COLLECTION_SHUFFLE_INPUT]
             estate = baseline.get("reviewed_estate_input_transition", {})
             require(common[COLLECTION_SHUFFLE_INPUT] == change["after_blob"]
-                    and ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+                    and isinstance(source_revision, str)
                     and source_revision != estate.get("source_after")
                     and estate_successor_of == estate.get("source_after"),
                     "collection shuffle requires the reviewed blob in a proven estate successor")
@@ -2363,7 +2363,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # proven estate successor (planner proved ancestry from the helper's source).
         change = hang["changes"][HANG_GUARD_INPUT]
         require(common[HANG_GUARD_INPUT] == change["after_blob"]
-                and ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+                and isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"],
                 "hang guard input requires the reviewed blob in a proven estate successor")
@@ -2376,7 +2376,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # Only an estate successor (ancestry proven by the planner) may carry the
         # reviewed site lock; the exact predecessor blob is then re-admitted below.
         change = site["changes"][SITE_LOCK_INPUT]
-        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+        require(isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"],
                 "site lock successor requires a proven estate successor")
@@ -2389,7 +2389,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # Same rule as the site lock: only a proven estate successor may carry the
         # reviewed bot packaging blob; its exact estate after-blob is re-admitted below.
         change = bot["changes"][BOT_PACKAGING_INPUT]
-        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+        require(isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"],
                 "bot packaging successor requires a proven estate successor")
@@ -2405,7 +2405,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # the reviewed inputs, and only all four together. Each exact predecessor is
         # then re-admitted below (the added helper is removed), so the complete
         # Tornado bundle and every historical input are still required underneath.
-        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+        require(isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"]
                 and all(common.get(path) == change["after_blob"]
@@ -2431,7 +2431,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                                    for path, change in tornado["changes"].items()):
         # Admit only the complete reviewed bundle, then restore the exact runtime
         # predecessor for every existing seal and historical skip consumer.
-        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+        require(isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"]
                 and all(common.get(path) == change["after_blob"]
@@ -2450,7 +2450,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # Only a proven estate successor may carry the reviewed runtime dependency
         # blobs, and only all three together; each predecessor after-blob is then
         # re-admitted below by the seal that reviewed it.
-        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+        require(isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"]
                 and all(common.get(path) == change["after_blob"]
@@ -2468,7 +2468,7 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
         # Same rule as the site lock and bot packaging: only a proven estate successor
         # may carry the reviewed lock blob; the audit seal's after-blob is re-admitted below.
         change = lock["changes"][AUDIT_LOCK_INPUT]
-        require(ESTATE_ADDED_INPUT in common and isinstance(source_revision, str)
+        require(isinstance(source_revision, str)
                 and source_revision != record["source_after"]
                 and estate_successor_of == record["source_after"],
                 "audit lock successor requires a proven estate successor")
@@ -2477,7 +2477,10 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
                     "audit lock successor mode or tree changed")
             files = dict(files) | {AUDIT_LOCK_INPUT: (change["mode"], change["before_blob"])}
         common = dict(common) | {AUDIT_LOCK_INPUT: change["before_blob"]}
-    if ESTATE_ADDED_INPUT not in common:
+    # The subscription-template baseline test is no longer an Ops input.
+    # A proven estate successor may omit it. Any other shared input stays exact.
+    # Predecessors that never had the file still use the historical map.
+    if ESTATE_ADDED_INPUT not in common and estate_successor_of != record["source_after"]:
         return _admit_existing_shared_inputs(original, common, files)
     # The exact sealed revision, or a later revision whose ancestry from it was
     # proven by the planner. Either way every estate input below must still be
@@ -2489,6 +2492,8 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
     predecessor = dict(common)
     predecessor_files = dict(files) if files is not None else None
     for path, change in changes.items():
+        if path == ESTATE_ADDED_INPUT and path not in common:
+            continue
         require(common.get(path) == change["after_blob"],
                 "estate successor input blob changed: " + path)
         if files is not None:
