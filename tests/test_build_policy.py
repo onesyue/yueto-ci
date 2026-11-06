@@ -2181,19 +2181,12 @@ class BuildPolicyTest(unittest.TestCase):
         self,
     ) -> None:
         self.assertEqual(self.native_contract["version"], 6)
-        # 58 is the binary-required floor: the pinned YueBoard tree's irreversible
-        # hot-path-index and runtime-role migration. The floor-57 authority
-        # retirement ceremony has also landed, so neither the old decoupled-at-55
-        # value nor the superseded floor 57 is deployable. Keep the
-        # central policy and pinned YueBoard tree on this exact reviewed value (the
-        # YueOps three-stage deployer is retired/frozen since P2 §4 A3; the
-        # validator requires its RETIRED marker instead of a live floor).
+        # Current reviewed values live only in native-node-contract.json.
+        # Promotion binds the source to that exact pin; the native validator
+        # checks the pinned tree's floor rather than a second current literal.
         self.assertIsInstance(self.native_contract["schema_floor"], int)
-        self.assertEqual(self.native_contract["schema_floor"], 155)
-        self.assertEqual(
-            self.native_contract["yueboard_contract_pin"],
-            "e5420162bfad0e97c95b3ec223fb8cde3fb0910f",
-        )
+        self.assertGreater(self.native_contract["schema_floor"], 0)
+        self.assertRegex(self.native_contract["yueboard_contract_pin"], r"^[0-9a-f]{40}$")
         self.assertEqual(
             self.native_contract["presence"],
             {
