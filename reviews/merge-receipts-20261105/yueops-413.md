@@ -23,3 +23,32 @@ Focused rendering, long-message sender, and timer/install checks passed. Databas
 
 VERDICT approve head 8a4b80cf97438d4b6c60002874902569b5a735e3
 
+
+## Receipt format repair (2026-11-06)
+
+The original receipt stored supplemental metadata as additional schema fields
+and used `box-speedup` for the runner. Schema 1 is closed and classifies that
+Linux Box lane as `box`; the original lane label is retained here. The exact
+command, original log hash, reviewed source and evidence timestamps are unchanged.
+This retrospective repair is marked `backfilled: true`; it is not a new code
+review or a claim that later checks passed before merge. The original parity
+log records 53 passed and 10 skipped; the original independent reviewer could
+not run database tests because SQLAlchemy was unavailable. Those limits remain.
+
+Supplemental metadata moved out of the receipt without discarding its contents:
+
+```json
+{
+  "url": "https://github.com/onesyue/yueops/pull/413",
+  "owner_rule_conformance": {
+    "conforms": [
+      "R-48",
+      "R-41"
+    ],
+    "conflicts": [],
+    "no_rule": [
+      "C2-3 digest routing change (ops-internal; no user-facing/pricing)"
+    ]
+  }
+}
+```
