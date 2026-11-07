@@ -316,22 +316,22 @@
       "reason": "Skipped: real root installer and GNU filesystem tools"
     },
     "tests/test_service_grant_dependencies_20261102.py::test_other_service_gap_ratchet[app_exporter]": {
-      "module_blob": "4faa6b5e592860cc7bd94aa1881206982a10e452",
+      "module_blob": "7d51b5de69f785877027ca2418b00c11d32e1039",
       "outcome": "skipped",
       "reason": "Skipped: External/function consumer: external exporter; pg_monitor and extension-dependent views"
     },
     "tests/test_service_grant_dependencies_20261102.py::test_other_service_gap_ratchet[app_yueboard]": {
-      "module_blob": "4faa6b5e592860cc7bd94aa1881206982a10e452",
+      "module_blob": "7d51b5de69f785877027ca2418b00c11d32e1039",
       "outcome": "skipped",
       "reason": "Skipped: External/function consumer: external Go consumer; manifest only"
     },
     "tests/test_service_grant_dependencies_20261102.py::test_other_service_gap_ratchet[app_yueboard_migrator]": {
-      "module_blob": "4faa6b5e592860cc7bd94aa1881206982a10e452",
+      "module_blob": "7d51b5de69f785877027ca2418b00c11d32e1039",
       "outcome": "skipped",
       "reason": "Skipped: External/function consumer: owner membership and DDL, external migration runner"
     },
     "tests/test_service_grant_dependencies_20261102.py::test_other_service_gap_ratchet[yueops_support_maintenance]": {
-      "module_blob": "4faa6b5e592860cc7bd94aa1881206982a10e452",
+      "module_blob": "7d51b5de69f785877027ca2418b00c11d32e1039",
       "outcome": "skipped",
       "reason": "Skipped: External/function consumer: SECURITY DEFINER function, no direct table access"
     },
