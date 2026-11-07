@@ -43,11 +43,30 @@ ci_fetch_token() {
 }
 
 ci_keyless_once() {
-  local command="$1" token
+  local command="$1" token rc scratch
   shift
   token=$(ci_fetch_token) || return "$?"
   [[ -n "$token" ]] || return 1
-  cosign "$command" --yes --identity-token "$token" "$@"
+  scratch=$(mktemp -d)
+  if cosign "$command" --yes --identity-token "$token" "$@" >"$scratch/out" 2>"$scratch/err"; then
+    cat "$scratch/err" >&2
+    cat "$scratch/out"
+    rm -rf -- "$scratch"
+    return 0
+  else
+    rc=$?
+  fi
+  cat "$scratch/err" >&2
+  # Rebuilding an input-identical image signs the same digest. Rekor 409
+  # means that entry is already there; verification still has to accept it.
+  if [[ "$command" == sign || "$command" == attest ]] &&
+     grep -F 'equivalent entry already exists' "$scratch/err" >/dev/null; then
+    rm -rf -- "$scratch"
+    echo "rekor already has an equivalent entry for this digest; keeping the existing signature" >&2
+    return 0
+  fi
+  rm -rf -- "$scratch"
+  return "$rc"
 }
 
 keyless_cosign() { ci_retry 6 3 7 ci_keyless_once "$@"; }

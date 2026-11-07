@@ -131,6 +131,27 @@ exit 22
                 self.assertEqual(len(self.lines("sleeps")), count - 1)
                 self.assertEqual(self.lines("calls"), [])
 
+    def test_rekor_equivalent_entry_keeps_the_existing_signature(self):
+        error = (
+            "[409] createLogEntryConflict "
+            "an equivalent entry already exists in the transparency log"
+        )
+        for command in ("keyless_cosign sign image", "keyless_cosign attest image"):
+            with self.subTest(command=command):
+                result = self.run_helper(command, ERROR=error)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(len(self.lines("calls")), 1)
+                self.assertEqual(self.lines("sleeps"), [])
+                self.assertIn("keeping the existing signature", result.stderr)
+
+    def test_other_rekor_conflicts_still_fail_once(self):
+        result = self.run_helper(
+            "keyless_cosign sign image",
+            ERROR="[409] createLogEntryConflict a different payload was uploaded",
+        )
+        self.assertEqual(result.returncode, 23, result.stderr)
+        self.assertEqual(len(self.lines("calls")), 1)
+        self.assertEqual(self.lines("sleeps"), [])
     def test_download_4xx_including_curl_transient_defaults_never_retry(self):
         for status in (400, 401, 403, 404, 408, 429):
             with self.subTest(status=status):
