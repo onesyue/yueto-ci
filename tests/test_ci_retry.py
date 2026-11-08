@@ -193,6 +193,12 @@ exit 22
         self.assertEqual(digest, pin)
         self.assertIn("third_party/buildx-", script)
 
+    def test_buildx_download_uses_a_runner_temp_directory(self):
+        script = (ROOT / "scripts/install-verified-buildx.sh").read_text()
+        assignment = 'download_dir=$(mktemp -d "$RUNNER_TEMP/yueto-buildx.XXXXXXXX")'
+        self.assertIn(assignment, script)
+        self.assertLess(script.index(assignment), script.index('cp "$vendor"'))
+
     def test_download_callers_use_helper_and_retain_checksum_gates(self):
         for name in ("install-verified-buildx.sh", "install-verified-trivy.sh", "freeze-build-plan.sh"):
             source = (ROOT / "scripts" / name).read_text()

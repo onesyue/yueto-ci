@@ -48,6 +48,7 @@ trap cleanup EXIT
 # those bytes are reviewed before the action can create a privileged builder.
 if [[ ! -f "$plugin" || ! -x "$plugin" ]] ||
    ! printf '%s  %s\n' "$BUILDX_SHA256" "$plugin" | sha256sum --check --status; then
+  download_dir=$(mktemp -d "$RUNNER_TEMP/yueto-buildx.XXXXXXXX")
   vendor="$(dirname "${BASH_SOURCE[0]}")/../third_party/buildx-${BUILDX_VERSION}.linux-amd64"
   if [[ -f "$vendor" ]] && printf '%s  %s\n' "$BUILDX_SHA256" "$vendor" | sha256sum --check --status; then
     cp "$vendor" "$download_dir/docker-buildx"
