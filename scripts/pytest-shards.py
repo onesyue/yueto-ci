@@ -1939,12 +1939,17 @@ def release_pin():
 def release_pin_is_ancestor(source, revision):
     """True when revision is the release pin or a descendant of it.
 
-    A missing local history raises EvidenceUnavailable. A proven non-ancestor
-    is False. Callers still have to check every sealed blob.
+    A repository that does not contain the pin commit is not a descendant.
+    That keeps fixture repositories on the exact-pin rule. A present pin with
+    unreadable history still raises EvidenceUnavailable. Sealed blobs stay exact.
     """
     pin = release_pin()
     if revision == pin:
         return True
+    try:
+        git(source, "cat-file", "-e", pin + "^{commit}")
+    except subprocess.CalledProcessError:
+        return False
     try:
         git(source, "merge-base", "--is-ancestor", pin, revision)
     except subprocess.CalledProcessError as exc:
