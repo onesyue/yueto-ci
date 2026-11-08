@@ -175,6 +175,15 @@ exit 22
                     self.assertEqual(len(self.lines("calls")), attempts)
                     self.assertEqual(len(self.lines("sleeps")), attempts - 1)
 
+    def test_aborted_release_body_is_retried(self):
+        result = self.run_helper(
+            "ci_download 4 --fail https://fixture.invalid",
+            ERROR="curl: (23) Failure writing output to destination",
+            SUCCEED_AT="2")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.lines("calls")), 2)
+        self.assertEqual(len(self.lines("sleeps")), 1)
+
     def test_download_callers_use_helper_and_retain_checksum_gates(self):
         for name in ("install-verified-buildx.sh", "install-verified-trivy.sh", "freeze-build-plan.sh"):
             source = (ROOT / "scripts" / name).read_text()
