@@ -147,6 +147,13 @@ class ExactFirstNativePolicy(unittest.TestCase):
         value = self.value | {"source_revision": "f" * 40}
         self.assertIs(SHARDS.reviewed_first_native_successor(self.baseline, value, self.native), self.baseline)
 
+    def test_descendant_with_the_same_native_blobs_keeps_the_binding(self):
+        value = self.value | {"source_revision": "a" * 40, "pin_is_ancestor": True}
+        result = SHARDS.reviewed_first_native_successor(self.baseline, value, self.native)
+        for name in self.policy["cases"]:
+            self.assertEqual(result["reviewed_hosted"]["cases"][name]["disposition"],
+                             "SAME_RUN_NATIVE_REQUIRED")
+
     def test_helper_admits_only_reviewed_mode_blob_source_and_retains_other_inputs(self):
         item = self.policy["shared_input"]
         path, blob, revision = item["path"], item["blob"], self.policy["source_revision"]

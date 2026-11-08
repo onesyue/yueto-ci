@@ -3655,7 +3655,10 @@ def reviewed_board139_native_successor(baseline, value, native):
 
 def reviewed_first_native_successor(baseline, value, native):
     policy = first_native_policy()
-    if value.get("source_revision") != policy["source_revision"]:
+    # Identical native-test blobs on a descendant keep the same skip binding.
+    # The native job in this run still has to pass every bound case.
+    if not holds_release_pin(value.get("source_revision"),
+                             pin_is_ancestor=value.get("pin_is_ancestor") is True):
         return baseline
     require(all(value["skip_module_blobs"].get(module) == blob
                 for module, blob in policy["module_blobs"].items()),
