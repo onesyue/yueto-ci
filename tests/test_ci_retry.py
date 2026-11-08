@@ -207,6 +207,9 @@ case "$*" in
     printf '%s\n' '{"assets":[{"name":"tool","url":"https://api.github.com/repos/docker/buildx/releases/assets/557511570"}]}'
     exit 0;;
   *"/releases/assets/557511570"*)
+    printf '%s\n' 'HTTP/2 302' 'location: https://release-assets.githubusercontent.com/blob'
+    exit 0;;
+  *release-assets.githubusercontent.com/blob*)
     prev=
     for arg in "$@"; do
       if [ "$prev" = "--output" ]; then printf 'payload' > "$arg"; exit 0; fi
@@ -220,13 +223,14 @@ exit 97
         result = self.run_helper(
             'ci_release_asset_api 4 "' + str(dest) + '" '
             '"https://github.com/docker/buildx/releases/download/v0.37.1/tool"',
-            GITHUB_TOKEN="")
+            GITHUB_TOKEN="fixture-token")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(dest.read_text(), "payload")
-        calls = "\n".join(self.lines("calls"))
-        self.assertIn("/releases/tags/v0.37.1", calls)
-        self.assertIn("Accept: application/octet-stream", calls)
-        self.assertNotIn("bearer", calls.lower())
+        calls = self.lines("calls")
+        blob = [line for line in calls if "release-assets.githubusercontent.com/blob" in line]
+        self.assertEqual(len(blob), 1)
+        self.assertNotIn("fixture-token", blob[0])
+        self.assertIn("fixture-token", "\n".join(calls))
         self.shim("curl", """
 printf '%s\n' '{"assets":[{"name":"tool","url":"https://evil.example/tool"}]}'
 exit 0

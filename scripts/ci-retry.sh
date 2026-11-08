@@ -117,10 +117,20 @@ if (len(matches) != 1 or not isinstance(matches[0], str)
     raise SystemExit("release asset URL missing")
 print(matches[0])
 ' "$name")
+  # Follow the asset redirect ourselves. A token on the blob host makes curl
+  # fail while writing the body.
+  headers=$(ci_download "$attempts" --fail --silent --show-error --dump-header - --output /dev/null \
+    --proto '=https' --proto-redir '=https' --tlsv1.2 \
+    --header "Accept: application/octet-stream" \
+    "${auth[@]}" \
+    "$asset_api")
+  location=$(printf '%s\n' "$headers" | awk 'tolower($1)=="location:" {print $2}' | tr -d '\r' | tail -n 1)
+  case "$location" in
+    https://release-assets.githubusercontent.com/*|https://objects.githubusercontent.com/*) ;;
+    *) return 22 ;;
+  esac
   ci_download "$attempts" --fail --location --silent --show-error \
     --proto '=https' --proto-redir '=https' --tlsv1.2 \
     --connect-timeout 10 --max-time 180 \
-    --header "Accept: application/octet-stream" \
-    "${auth[@]}" \
-    "$asset_api" --output "$dest"
+    "$location" --output "$dest"
 }
