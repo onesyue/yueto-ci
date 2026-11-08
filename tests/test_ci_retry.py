@@ -184,6 +184,26 @@ exit 22
         self.assertEqual(len(self.lines("calls")), 2)
         self.assertEqual(len(self.lines("sleeps")), 1)
 
+    def test_connection_died_is_retried(self):
+        result = self.run_helper(
+            "ci_download 4 --fail https://fixture.invalid",
+            ERROR="curl: (56) Connection died, tried 5 times before giving up",
+            SUCCEED_AT="2")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.lines("calls")), 2)
+
+    def test_vendored_cosign_and_gitleaks_match_the_reviewed_pins(self):
+        import gzip
+        root = ROOT / "third_party"
+        gitleaks = (root / "gitleaks_8.30.1_linux_x64.tar.gz").read_bytes()
+        self.assertEqual(
+            hashlib.sha256(gitleaks).hexdigest(),
+            "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb")
+        raw = gzip.decompress((root / "cosign-v3.1.3-linux-amd64.gz").read_bytes())
+        self.assertEqual(
+            hashlib.sha256(raw).hexdigest(),
+            "4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71")
+
     def test_vendored_buildx_matches_the_reviewed_pin(self):
         script = (ROOT / "scripts/install-verified-buildx.sh").read_text()
         pin = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"

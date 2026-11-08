@@ -7,7 +7,7 @@ ci_retryable_stderr() {
   if grep -Eiq '(^|[^0-9])4[0-9]{2}([^0-9]|$)|unauthorized|forbidden|access denied|permission denied|invalid (signature|identity|certificate|attestation)|verification failed|signature.*(invalid|mismatch|failed|reject|denied)|identity.*(mismatch|not match|not expected|reject|denied)|certificate.*(not match|not expected|expired|unknown authority)|attestation.*(reject|invalid|denied|failed)|none of the expected identities|failed to verify|failed to validate|x509:|SSL certificate problem|no matching signatures|no matching attestations' "$error_file"; then
     return 1
   fi
-  grep -Eiq 'TLS handshake timeout|TLS handshake failed|i/o timeout|context deadline exceeded|connection (reset|refused)|connection timed out|operation timed out|timeout was reached|temporary failure in name resolution|could not resolve host|could not connect to server|unexpected EOF|Failure writing output to destination|HTTP[^[:cntrl:]]*5[0-9]{2}|status( code)?[ :]+5[0-9]{2}|requested URL returned error: 5[0-9]{2}|rekor[^[:cntrl:]]*(unreachable|unavailable)|MANIFEST_UNKNOWN|manifest unknown' "$error_file"
+  grep -Eiq 'TLS handshake timeout|TLS handshake failed|i/o timeout|context deadline exceeded|connection (reset|refused|died)|connection timed out|operation timed out|timeout was reached|temporary failure in name resolution|could not resolve host|could not connect to server|unexpected EOF|Failure writing output to destination|HTTP[^[:cntrl:]]*5[0-9]{2}|status( code)?[ :]+5[0-9]{2}|requested URL returned error: 5[0-9]{2}|rekor[^[:cntrl:]]*(unreachable|unavailable)|MANIFEST_UNKNOWN|manifest unknown' "$error_file"
 }
 
 # A subshell owns temporary files/traps; failed stdout never contaminates the
