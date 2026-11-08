@@ -199,6 +199,17 @@ exit 22
         self.assertIn(assignment, script)
         self.assertLess(script.index(assignment), script.index('cp "$vendor"'))
 
+    def test_syft_installer_keeps_the_reviewed_archive(self):
+        script = (ROOT / "scripts/install-verified-syft.sh").read_text()
+        pin = "8fcb33017a0dc1058298c923c436d19dfa68ae93968e0b423248542e3afb9fc3"
+        self.assertIn(f"SYFT_ARCHIVE_SHA256='{pin}'", script)
+        self.assertIn("SYFT_VERSION='1.51.1'", script)
+        self.assertIn("ci_release_asset_api 4", script)
+        self.assertIn("sha256sum --check --strict", script)
+        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        self.assertIn("install-verified-syft.sh", workflow)
+        self.assertNotIn("anchore/sbom-action@", workflow)
+
     def test_download_callers_use_helper_and_retain_checksum_gates(self):
         for name in ("install-verified-buildx.sh", "install-verified-trivy.sh", "freeze-build-plan.sh"):
             source = (ROOT / "scripts" / name).read_text()

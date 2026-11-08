@@ -1962,51 +1962,28 @@ jobs:
       - name: Install cosign
         run: bash .ci-policy/scripts/install-cosign.sh
 
-      - name: Generate SBOM (CycloneDX, linux/amd64)
-        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
-        env:
-          SYFT_PLATFORM: linux/amd64
-        with:
-          image: ${{ steps.meta.outputs.image }}@${{ steps.platform_manifests.outputs.amd64_digest }}
-          format: cyclonedx-json
-          output-file: sbom-linux-amd64.cdx.json
-          upload-artifact: false
-          upload-release-assets: false
+      - name: Install Syft
+        run: bash .ci-policy/scripts/install-verified-syft.sh
 
-      - name: Generate SBOM (CycloneDX, linux/arm64)
-        if: contains(matrix.platforms, 'arm64')
-        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+      - name: Generate platform SBOMs
         env:
-          SYFT_PLATFORM: linux/arm64
-        with:
-          image: ${{ steps.meta.outputs.image }}@${{ steps.platform_manifests.outputs.arm64_digest }}
-          format: cyclonedx-json
-          output-file: sbom-linux-arm64.cdx.json
-          upload-artifact: false
-          upload-release-assets: false
-
-      - name: Generate SBOM (SPDX, linux/amd64)
-        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
-        env:
-          SYFT_PLATFORM: linux/amd64
-        with:
-          image: ${{ steps.meta.outputs.image }}@${{ steps.platform_manifests.outputs.amd64_digest }}
-          format: spdx-json
-          output-file: sbom-linux-amd64.spdx.json
-          upload-artifact: false
-          upload-release-assets: false
-
-      - name: Generate SBOM (SPDX, linux/arm64)
-        if: contains(matrix.platforms, 'arm64')
-        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
-        env:
-          SYFT_PLATFORM: linux/arm64
-        with:
-          image: ${{ steps.meta.outputs.image }}@${{ steps.platform_manifests.outputs.arm64_digest }}
-          format: spdx-json
-          output-file: sbom-linux-arm64.spdx.json
-          upload-artifact: false
-          upload-release-assets: false
+          IMAGE: ${{ steps.meta.outputs.image }}
+          AMD64_DIGEST: ${{ steps.platform_manifests.outputs.amd64_digest }}
+          ARM64_DIGEST: ${{ steps.platform_manifests.outputs.arm64_digest }}
+          HAS_ARM64: ${{ contains(matrix.platforms, 'arm64') }}
+        run: |
+          set -euo pipefail
+          generate() {
+            local arch="$1" digest="$2"
+            SYFT_PLATFORM="linux/${arch}" syft \
+              "registry:${IMAGE}@${digest}" \
+              -o "cyclonedx-json=sbom-linux-${arch}.cdx.json" \
+              -o "spdx-json=sbom-linux-${arch}.spdx.json"
+          }
+          generate amd64 "$AMD64_DIGEST"
+          if [[ "$HAS_ARM64" == true ]]; then
+            generate arm64 "$ARM64_DIGEST"
+          fi
 
       - name: Validate complete platform SBOM set
         env:
