@@ -2143,7 +2143,8 @@ def pr_shared_input_successor_proof(source, revision):
     reviewed_pr_input_proof(source, revision, names=("ruff_retired_video",))
     _, files = admit_reviewed_pr_inputs(
         {p: value[1] for p, value in files.items()}, files, revision,
-        names=("ruff_retired_video",))
+        names=("ruff_retired_video",),
+        pin_is_ancestor=release_pin_is_ancestor(source, revision))
     successors = set()
     for after in PR_SHARED_INPUT_SOURCE_REVISIONS:
         try:

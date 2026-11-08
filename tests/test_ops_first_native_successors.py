@@ -4,6 +4,7 @@ import copy
 import importlib.util
 import json
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -187,6 +188,16 @@ class ExactFirstNativePolicy(unittest.TestCase):
         self.assertFalse(SHARDS.release_pin_is_ancestor(source, parent))
         self.assertFalse(SHARDS.holds_release_pin(parent, pin_is_ancestor=False))
         self.assertTrue(SHARDS.holds_release_pin(parent, pin_is_ancestor=True))
+
+    def test_descendant_ruff_bundle_uses_release_pin_ancestry(self):
+        source = ROOT.parent / "yueops"
+        revision = SHARDS.git(source, "rev-parse", "HEAD").decode().strip()
+        self.assertNotEqual(revision, SHARDS.release_pin())
+        self.assertTrue(SHARDS.release_pin_is_ancestor(source, revision))
+        SHARDS.pr_shared_input_successor_proof(source, revision)
+        with mock.patch.object(SHARDS, "release_pin_is_ancestor", return_value=False):
+            with self.assertRaisesRegex(ValueError, "ruff_retired_video"):
+                SHARDS.pr_shared_input_successor_proof(source, revision)
     def test_policy_has_no_historical_backup_or_disposition_downgrade(self):
         self.assertEqual(len(self.policy["cases"]), 52)
         for name, row in self.policy["cases"].items():
