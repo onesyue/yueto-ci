@@ -164,6 +164,29 @@ class ExactFirstNativePolicy(unittest.TestCase):
             with self.subTest(changed=changed, source=source), self.assertRaises(ValueError):
                 SHARDS.admit_first_native_helper(changed, modes, source)
 
+
+    def test_descendant_keeps_the_exact_helper_blob(self):
+        item = self.policy["shared_input"]
+        path, blob = item["path"], item["blob"]
+        common = {path: blob, "other.py": "a" * 40}
+        files = {name: ("100644", value) for name, value in common.items()}
+        later = "b" * 40
+        remaining, tree = SHARDS.admit_first_native_helper(
+            common, files, later, pin_is_ancestor=True)
+        self.assertEqual(remaining, {"other.py": "a" * 40})
+        self.assertEqual(tree, {"other.py": ("100644", "a" * 40)})
+        with self.assertRaises(ValueError):
+            SHARDS.admit_first_native_helper(
+                common | {path: "f" * 40}, files, later, pin_is_ancestor=True)
+
+    def test_release_pin_ancestry_follows_yueops_history(self):
+        source = ROOT.parent / "yueops"
+        pin = SHARDS.release_pin()
+        self.assertTrue(SHARDS.release_pin_is_ancestor(source, pin))
+        parent = SHARDS.git(source, "rev-parse", pin + "^").decode().strip()
+        self.assertFalse(SHARDS.release_pin_is_ancestor(source, parent))
+        self.assertFalse(SHARDS.holds_release_pin(parent, pin_is_ancestor=False))
+        self.assertTrue(SHARDS.holds_release_pin(parent, pin_is_ancestor=True))
     def test_policy_has_no_historical_backup_or_disposition_downgrade(self):
         self.assertEqual(len(self.policy["cases"]), 52)
         for name, row in self.policy["cases"].items():

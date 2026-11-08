@@ -1932,15 +1932,42 @@ def first_native_policy():
     return policy
 
 
-def admit_first_native_helper(common, files, source_revision):
+def release_pin():
+    return first_native_policy()["source_revision"]
+
+
+def release_pin_is_ancestor(source, revision):
+    """True when revision is the release pin or a descendant of it.
+
+    A missing local history raises EvidenceUnavailable. A proven non-ancestor
+    is False. Callers still have to check every sealed blob.
+    """
+    pin = release_pin()
+    if revision == pin:
+        return True
+    try:
+        git(source, "merge-base", "--is-ancestor", pin, revision)
+    except subprocess.CalledProcessError as exc:
+        require(exc.returncode == 1, "release pin ancestry unavailable")
+        return False
+    return True
+
+
+def holds_release_pin(source_revision, *, pin_is_ancestor):
+    """Exact pin, or a caller-proved descendant. The blob checks stay exact."""
+    return source_revision == release_pin() or pin_is_ancestor is True
+
+
+def admit_first_native_helper(common, files, source_revision, *, pin_is_ancestor=False):
     policy = first_native_policy()
     item = policy["shared_input"]
     path = item["path"]
-    if path not in common and source_revision != policy["source_revision"]:
+    if path not in common and not holds_release_pin(
+            source_revision, pin_is_ancestor=pin_is_ancestor):
         return common, files
-    require(source_revision == policy["source_revision"]
+    require(holds_release_pin(source_revision, pin_is_ancestor=pin_is_ancestor)
             and common.get(path) == item["blob"],
-            "first native helper requires exact reviewed source and blob")
+            "first native helper requires the signed release pin or its descendant, and the exact blob")
     if files is not None:
         require(files.get(path) == (item["mode"], item["blob"]),
                 "first native helper mode or tree changed")
@@ -1969,14 +1996,14 @@ def native_protocol_helper_proof(source, revision):
             == (item["mode"], item["blob"]), "native protocol helper blob or mode differs")
 
 
-def admit_native_protocol_helper(common, files, source_revision):
+def admit_native_protocol_helper(common, files, source_revision, *, pin_is_ancestor=False):
     path = "tests/native_protocol_fixture.py"
     if path not in common:
         return common, files
     item = native_protocol_helper_policy()["shared_input"]
-    require(source_revision == first_native_policy()["source_revision"]
+    require(holds_release_pin(source_revision, pin_is_ancestor=pin_is_ancestor)
             and common.get(path) == item["blob"],
-            "native protocol helper requires the signed release pin and exact blob")
+            "native protocol helper requires the signed release pin or its descendant, and the exact blob")
     if files is not None:
         require(files.get(path) == (item["mode"], item["blob"]),
                 "native protocol helper mode or tree changed")
@@ -1984,7 +2011,7 @@ def admit_native_protocol_helper(common, files, source_revision):
     return {p: v for p, v in common.items() if p != path}, files
 
 
-def admit_p015_offline_helper(common, files, source_revision):
+def admit_p015_offline_helper(common, files, source_revision, *, pin_is_ancestor=False):
     if "tests/p015_offline_plugin.py" not in common:
         return common, files
     payload = (ROOT / "reviews/ops-p015-20261105/helper-policy.json").read_bytes()
@@ -1995,10 +2022,10 @@ def admit_p015_offline_helper(common, files, source_revision):
     path = item["path"]
     if path not in common:
         return common, files
-    # Bound to the signed release pin (miniapp precedent); path/blob/mode stay exact.
-    require(source_revision == first_native_policy()["source_revision"]
+    # Blob and mode stay exact. A descendant of the pin is enough when they match.
+    require(holds_release_pin(source_revision, pin_is_ancestor=pin_is_ancestor)
             and common.get(path) == item["blob"],
-            "p015 offline helper requires the signed release pin and exact blob")
+            "p015 offline helper requires the signed release pin or its descendant, and the exact blob")
     if files is not None:
         require(files.get(path) == (item["mode"], item["blob"]),
                 "p015 offline helper mode or tree changed")
@@ -2078,7 +2105,7 @@ def reviewed_pr_shared_input_transitions():
     return records
 
 
-def admit_pr_shared_inputs(common, files, source_revision):
+def admit_pr_shared_inputs(common, files, source_revision, *, pin_is_ancestor=False):
     """Undo reviewed PR bundles before any inner seal sees the shared map."""
     if source_revision not in PR_SHARED_INPUT_SOURCE_REVISIONS and not any(
             common.get(path) == blob for path, blob in PR_SHARED_INPUT_AFTER_BLOBS):
@@ -2088,8 +2115,8 @@ def admit_pr_shared_inputs(common, files, source_revision):
         if source_revision != record["source_after"] and not any(
                 common.get(path) == item["after_blob"] for path, item in changes.items()):
             continue
-        require(source_revision == first_native_policy()["source_revision"],
-                "PR shared-input successor requires the signed release pin")
+        require(holds_release_pin(source_revision, pin_is_ancestor=pin_is_ancestor),
+                "PR shared-input successor requires the signed release pin or its descendant")
         common = dict(common)
         if files is not None:
             files = dict(files)
@@ -2183,15 +2210,15 @@ def reviewed_miniapp_membership_transition():
     return record
 
 
-def admit_miniapp_membership(common, files, source_revision):
-    """Swap the reviewed after-blob back to its predecessor, only at the signed release pin."""
+def admit_miniapp_membership(common, files, source_revision, *, pin_is_ancestor=False):
+    """Swap the reviewed after-blob back to its predecessor at the pin or a descendant."""
     if not isinstance(common, dict) or MINIAPP_MEMBERSHIP_INPUT not in common:
         return common, files
     change = reviewed_miniapp_membership_transition()["changes"][MINIAPP_MEMBERSHIP_INPUT]
     if common[MINIAPP_MEMBERSHIP_INPUT] != change["after_blob"]:
         return common, files
-    require(source_revision == first_native_policy()["source_revision"],
-            "miniapp membership successor requires the signed release pin")
+    require(holds_release_pin(source_revision, pin_is_ancestor=pin_is_ancestor),
+            "miniapp membership successor requires the signed release pin or its descendant")
     common = dict(common) | {MINIAPP_MEMBERSHIP_INPUT: change["before_blob"]}
     if files is not None:
         require(files.get(MINIAPP_MEMBERSHIP_INPUT) == (change["mode"], change["after_blob"]),
@@ -2301,8 +2328,8 @@ def reviewed_pr_input_proof(source, revision, *, names=None):
                     "reviewed PR input successor blob or mode differs: " + path)
 
 
-def admit_reviewed_pr_inputs(common, files, source_revision, *, names=None):
-    """Peel exact bundles at the release pin before all historical validators."""
+def admit_reviewed_pr_inputs(common, files, source_revision, *, names=None, pin_is_ancestor=False):
+    """Peel exact bundles at the release pin, or a descendant, before historical validators."""
     if not isinstance(common, dict):
         return common, files
     for name, (_, paths) in REVIEWED_PR_INPUTS.items():
@@ -2314,8 +2341,8 @@ def admit_reviewed_pr_inputs(common, files, source_revision, *, names=None):
         changes = record["changes"]
         if not any(common.get(p) == c["after_blob"] for p, c in changes.items()):
             continue
-        require(source_revision == first_native_policy()["source_revision"],
-                "reviewed PR input successor requires the signed release pin: " + name)
+        require(holds_release_pin(source_revision, pin_is_ancestor=pin_is_ancestor),
+                "reviewed PR input successor requires the signed release pin or its descendant: " + name)
         common = dict(common)
         if files is not None:
             files = dict(files)
@@ -2331,7 +2358,8 @@ def admit_reviewed_pr_inputs(common, files, source_revision, *, names=None):
 
 
 def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
-                        estate_successor_of=None, template_writer_retired_at=None):
+                        estate_successor_of=None, template_writer_retired_at=None,
+                        pin_is_ancestor=False):
     """Admit a sealed estate successor without rewriting historical skip evidence."""
     common, files = admit_retired_template_writer(
         baseline, common, files, source_revision, estate_successor_of,
@@ -2340,12 +2368,18 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
     # Historical transition validators may receive an already-peeled baseline.
     # All production entry points first use skip_baseline(), which requires the
     # current successor; its effective inputs still reject the predecessor blob.
-    common, files = admit_reviewed_pr_inputs(common, files, source_revision)
-    common, files = admit_pr_shared_inputs(common, files, source_revision)
-    common, files = admit_native_protocol_helper(common, files, source_revision)
-    common, files = admit_p015_offline_helper(common, files, source_revision)
-    common, files = admit_first_native_helper(common, files, source_revision)
-    common, files = admit_miniapp_membership(common, files, source_revision)
+    common, files = admit_reviewed_pr_inputs(
+        common, files, source_revision, pin_is_ancestor=pin_is_ancestor)
+    common, files = admit_pr_shared_inputs(
+        common, files, source_revision, pin_is_ancestor=pin_is_ancestor)
+    common, files = admit_native_protocol_helper(
+        common, files, source_revision, pin_is_ancestor=pin_is_ancestor)
+    common, files = admit_p015_offline_helper(
+        common, files, source_revision, pin_is_ancestor=pin_is_ancestor)
+    common, files = admit_first_native_helper(
+        common, files, source_revision, pin_is_ancestor=pin_is_ancestor)
+    common, files = admit_miniapp_membership(
+        common, files, source_revision, pin_is_ancestor=pin_is_ancestor)
     baseline, security = reviewed_npm_security_transition(baseline)
     if security is not None:
         require(isinstance(common, dict), "npm security inputs must be a mapping")
@@ -3287,7 +3321,8 @@ def envelope(value):
             admit_shared_inputs(baseline, value.get("common_inputs"),
                                 source_revision=value["source_revision"],
                                 estate_successor_of=value.get("estate_successor_of"),
-                                template_writer_retired_at=value.get("template_writer_retired_at"))
+                                template_writer_retired_at=value.get("template_writer_retired_at"),
+                                pin_is_ancestor=value.get("pin_is_ancestor") is True)
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -3344,8 +3379,12 @@ def expand(targets, source, board, runner, capacity, shards):
             files = tree_inputs(source, ops["ref"])
             successor_of = estate_successor_proof(baseline, source, ops["ref"])
             retired_at = template_writer_retirement_proof(source, ops["ref"])
+            ancestor = release_pin_is_ancestor(source, ops["ref"])
             admit_shared_inputs(baseline, common, files, source_revision=ops["ref"],
-                                estate_successor_of=successor_of, template_writer_retired_at=retired_at)
+                                estate_successor_of=successor_of, template_writer_retired_at=retired_at,
+                                pin_is_ancestor=ancestor)
+            if ancestor and ops["ref"] != release_pin():
+                value["pin_is_ancestor"] = True
             if retired_at is not None:
                 value["template_writer_retired_at"] = retired_at
             if successor_of is not None:
@@ -3689,7 +3728,8 @@ def admit_skips(value, result, native):
         admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
                             source_revision=value.get("source_revision"),
                             estate_successor_of=value.get("estate_successor_of"),
-                                template_writer_retired_at=value.get("template_writer_retired_at"))
+                            template_writer_retired_at=value.get("template_writer_retired_at"),
+                            pin_is_ancestor=value.get("pin_is_ancestor") is True)
     baseline, preservation_successors = reviewed_relay_preservation_module_transition(baseline)
     baseline, meter_successors = reviewed_relay_meter_module_transition(baseline)
     baseline, metrics_successors = reviewed_relay_metrics_module_transition(baseline)

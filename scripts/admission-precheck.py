@@ -33,8 +33,10 @@ def precheck(source, base, head):
         common = POLICY.shared_inputs(source, head)
         baseline = POLICY.skip_baseline()
         successor = POLICY.estate_successor_proof(baseline, source, head)
+        ancestor = POLICY.release_pin_is_ancestor(source, head)
         POLICY.admit_shared_inputs(baseline, common, after, source_revision=head,
-                                   estate_successor_of=successor)
+                                   estate_successor_of=successor,
+                                   pin_is_ancestor=ancestor)
     except POLICY.EvidenceUnavailable:
         raise
     except ValueError as error:
