@@ -48,12 +48,16 @@ trap cleanup EXIT
 # those bytes are reviewed before the action can create a privileged builder.
 if [[ ! -f "$plugin" || ! -x "$plugin" ]] ||
    ! printf '%s  %s\n' "$BUILDX_SHA256" "$plugin" | sha256sum --check --status; then
-  download_dir=$(mktemp -d "$RUNNER_TEMP/yueto-buildx.XXXXXXXX")
-  ci_download 4 --fail --location --silent --show-error \
+  release_url="https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-amd64"
+  if ! ci_download 4 --fail --location --silent --show-error \
     --proto '=https' --proto-redir '=https' --tlsv1.2 \
     --connect-timeout 10 --max-time 120 \
-    "https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-amd64" \
-    --output "$download_dir/docker-buildx"
+    "$release_url" \
+    --output "$download_dir/docker-buildx"; then
+    echo "GitHub release front failed; using the asset API" >&2
+    rm -f -- "$download_dir/docker-buildx"
+    ci_release_asset_api 4 "$download_dir/docker-buildx" "$release_url"
+  fi
   printf '%s  %s\n' "$BUILDX_SHA256" "$download_dir/docker-buildx" |
     sha256sum --check --strict
   staged=$(mktemp "$plugin_dir/.docker-buildx.XXXXXXXX")

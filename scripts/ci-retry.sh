@@ -79,3 +79,48 @@ ci_download() {
   shift
   ci_retry "$attempts" 2 1 curl --retry 0 "$@"
 }
+
+# The releases/download front can return 504 while the tag API still redirects
+# to the blob. Callers keep their own checksum. The asset URL must stay on the API.
+ci_release_asset_api() {
+  local attempts="$1" dest="$2" url="$3"
+  local path owner repo tag name meta asset_api auth=()
+  path="${url#https://github.com/}"
+  [[ "$path" != "$url" ]] || return 22
+  owner="${path%%/*}"
+  path="${path#*/}"
+  repo="${path%%/*}"
+  path="${path#*/releases/download/}"
+  [[ "$path" == */* ]] || return 22
+  tag="${path%%/*}"
+  name="${path#*/}"
+  [[ -n "$owner" && -n "$repo" && -n "$tag" && -n "$name" && "$name" != */* ]] || return 22
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    auth=(--header "Authorization: bearer ${GITHUB_TOKEN}")
+  fi
+  meta=$(ci_download "$attempts" --fail --silent --show-error \
+    --proto '=https' --proto-redir '=https' --tlsv1.2 \
+    --header "Accept: application/vnd.github+json" \
+    "${auth[@]}" \
+    "https://api.github.com/repos/${owner}/${repo}/releases/tags/${tag}")
+  asset_api=$(printf '%s' "$meta" | python3 -c '
+import json, sys
+name = sys.argv[1]
+payload = json.load(sys.stdin)
+assets = payload.get("assets") if isinstance(payload, dict) else None
+if not isinstance(assets, list):
+    raise SystemExit("release assets missing")
+matches = [item.get("url") for item in assets
+           if isinstance(item, dict) and item.get("name") == name]
+if (len(matches) != 1 or not isinstance(matches[0], str)
+        or not matches[0].startswith("https://api.github.com/")):
+    raise SystemExit("release asset URL missing")
+print(matches[0])
+' "$name")
+  ci_download "$attempts" --fail --location --silent --show-error \
+    --proto '=https' --proto-redir '=https' --tlsv1.2 \
+    --connect-timeout 10 --max-time 180 \
+    --header "Accept: application/octet-stream" \
+    "${auth[@]}" \
+    "$asset_api" --output "$dest"
+}

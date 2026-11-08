@@ -20,8 +20,13 @@ fail() { echo "::error::$*" >&2; exit 1; }
 scratch=$(mktemp -d "$RUNNER_TEMP/yueto-cosign.XXXXXXXX")
 trap 'rm -rf -- "$scratch"' EXIT
 binary="$scratch/cosign-linux-amd64"
-ci_download 10 -fsSL --connect-timeout 20 --max-time 120 -o "$binary" \
-  "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
+release_url="https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
+if ! ci_download 10 -fsSL --connect-timeout 20 --max-time 120 -o "$binary" \
+  "$release_url"; then
+  echo "GitHub release front failed; using the asset API" >&2
+  rm -f -- "$binary"
+  ci_release_asset_api 4 "$binary" "$release_url"
+fi
 printf '%s  %s\n' "$COSIGN_SHA256" "$binary" | sha256sum --check --strict
 install_dir="$RUNNER_TEMP/cosign-bin"
 install -d -m 0755 "$install_dir"

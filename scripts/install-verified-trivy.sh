@@ -30,11 +30,16 @@ fail() { echo "::error::$*" >&2; exit 1; }
 
 install_dir=$(mktemp -d "$RUNNER_TEMP/yueto-trivy.XXXXXXXX")
 archive="$install_dir/trivy.tar.gz"
-ci_download 4 --fail --location --silent --show-error \
+release_url="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+if ! ci_download 4 --fail --location --silent --show-error \
   --proto '=https' --proto-redir '=https' --tlsv1.2 \
   --connect-timeout 10 --max-time 180 \
-  "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
-  --output "$archive"
+  "$release_url" \
+  --output "$archive"; then
+  echo "GitHub release front failed; using the asset API" >&2
+  rm -f -- "$archive"
+  ci_release_asset_api 4 "$archive" "$release_url"
+fi
 printf '%s  %s\n' "$TRIVY_ARCHIVE_SHA256" "$archive" | sha256sum --check --strict
 mkdir -m 0700 "$install_dir/bin"
 tar --extract --gzip --file "$archive" --directory "$install_dir/bin" --no-same-owner trivy

@@ -189,6 +189,49 @@ exit 22
         self.assertIn("sha256sum --check --strict", policy)
         self.assertNotIn("--retry-all-errors", policy)
 
+    def test_release_asset_api_uses_tag_metadata_after_the_front_fails(self):
+        dest = self.base / "tool"
+        self.shim("curl", """
+echo "$*" >> "$CALLS"
+case "$*" in
+  *"/releases/tags/"*)
+    printf '%s\n' '{"assets":[{"name":"tool","url":"https://api.github.com/repos/docker/buildx/releases/assets/557511570"}]}'
+    exit 0;;
+  *"/releases/assets/557511570"*)
+    prev=
+    for arg in "$@"; do
+      if [ "$prev" = "--output" ]; then printf 'payload' > "$arg"; exit 0; fi
+      prev=$arg
+    done
+    exit 97;;
+esac
+echo "unexpected curl $*" >&2
+exit 97
+""")
+        result = self.run_helper(
+            'ci_release_asset_api 4 "' + str(dest) + '" '
+            '"https://github.com/docker/buildx/releases/download/v0.37.1/tool"',
+            GITHUB_TOKEN="")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(dest.read_text(), "payload")
+        calls = "\n".join(self.lines("calls"))
+        self.assertIn("/releases/tags/v0.37.1", calls)
+        self.assertIn("Accept: application/octet-stream", calls)
+        self.assertNotIn("bearer", calls.lower())
+        self.shim("curl", """
+printf '%s\n' '{"assets":[{"name":"tool","url":"https://evil.example/tool"}]}'
+exit 0
+""")
+        rejected = self.base / "rejected"
+        result = self.run_helper(
+            'ci_release_asset_api 4 "' + str(rejected) + '" '
+            '"https://github.com/docker/buildx/releases/download/v0.37.1/tool"',
+            GITHUB_TOKEN="")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(rejected.exists())
+        for name in ("install-verified-buildx.sh", "install-verified-trivy.sh", "install-cosign.sh"):
+            self.assertIn("ci_release_asset_api", (ROOT / "scripts" / name).read_text())
+
     def test_cosign_verified_install_and_version_gate(self):
         # Replace only the reviewed digest in a private fixture copy so real
         # sha256sum, install and PATH handoff can run without a network fetch.
