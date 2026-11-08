@@ -184,6 +184,15 @@ exit 22
         self.assertEqual(len(self.lines("calls")), 2)
         self.assertEqual(len(self.lines("sleeps")), 1)
 
+    def test_vendored_buildx_matches_the_reviewed_pin(self):
+        script = (ROOT / "scripts/install-verified-buildx.sh").read_text()
+        pin = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"
+        self.assertIn(f"BUILDX_SHA256='{pin}'", script)
+        binary = ROOT / "third_party/buildx-v0.37.1.linux-amd64"
+        digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+        self.assertEqual(digest, pin)
+        self.assertIn("third_party/buildx-", script)
+
     def test_download_callers_use_helper_and_retain_checksum_gates(self):
         for name in ("install-verified-buildx.sh", "install-verified-trivy.sh", "freeze-build-plan.sh"):
             source = (ROOT / "scripts" / name).read_text()
