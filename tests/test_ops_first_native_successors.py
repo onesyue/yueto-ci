@@ -360,6 +360,30 @@ class Successors20261110(unittest.TestCase):
             SHARDS._ordinary_skip_evidence_record(
                 ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261110, "0" * 64, admitted, {"skip_module_blobs": blobs})
 
+    def test_20261110b_drill_evidence_moves_only_admitted_skips(self):
+        raw = (ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261110B).read_bytes()
+        self.assertEqual(SHARDS.sha(raw), SHARDS.ORDINARY_SKIP_EVIDENCE_20261110B_SHA256)
+        record = json.loads(raw)
+        self.assertEqual((len(record["updates"]), len(record["additions"])), (7, 0))
+        module = "tests/test_yueops_pg_restore_drill_20260924.py"
+        self.assertEqual({n.split("::", 1)[0] for n in record["updates"]}, {module})
+        before = "2f57ec05cab6f9af631f66650feaaf76a7770222"
+        after = "3cca4792fbd3319411901ad3588a879e7b52193f"
+        admitted = {n: {"outcome": "skipped", "reason": "Skipped: docker", "module_blob": before}
+                    for n in record["updates"]}
+        path = ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261110B
+        digest = SHARDS.ORDINARY_SKIP_EVIDENCE_20261110B_SHA256
+        got = SHARDS._ordinary_skip_evidence_record(path, digest, admitted, {"skip_module_blobs": {module: after}})
+        self.assertEqual(set(got), set(record["updates"]))
+        self.assertTrue(all(c["module_blob"] == after and c["reason"] == "Skipped: docker" for c in got.values()))
+        self.assertEqual(SHARDS._ordinary_skip_evidence_record(
+            path, digest, admitted, {"skip_module_blobs": {module: before}}), {})
+        wrong = {n: dict(c, module_blob="e" * 40) for n, c in admitted.items()}
+        with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
+            SHARDS._ordinary_skip_evidence_record(path, digest, wrong, {"skip_module_blobs": {module: after}})
+        with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
+            SHARDS._ordinary_skip_evidence_record(path, digest, {}, {"skip_module_blobs": {module: after}})
+
 
 if __name__ == "__main__":
     unittest.main()

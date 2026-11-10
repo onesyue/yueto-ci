@@ -3750,9 +3750,15 @@ ORDINARY_SKIP_EVIDENCE = Path("reviews/ops-ordinary-skip-evidence-20261107.json"
 # and admits only its own exact after_blob, never a later one.
 ORDINARY_SKIP_EVIDENCE_20261110_SHA256 = "b1163b8acd2f71ac6f16d5e17815befc817bade11f4547df72c187b1084063c6"
 ORDINARY_SKIP_EVIDENCE_20261110 = Path("reviews/ops-ordinary-skip-evidence-20261110.json")
+# Owner t935u (2026-11-10): the yueops backup includes cdn_entry_observations.
+# The restore-drill module changed; its seven Docker e2e skips (same reason as
+# run 42817758699) move to the reviewed successor blob. No case is added.
+ORDINARY_SKIP_EVIDENCE_20261110B_SHA256 = "2f1cfa9a2d32de58b4b19f013989e29c5858905932114e7dbce34147ff099388"
+ORDINARY_SKIP_EVIDENCE_20261110B = Path("reviews/ops-ordinary-skip-evidence-20261110b.json")
 ORDINARY_SKIP_EVIDENCE_FILES = (
     (ORDINARY_SKIP_EVIDENCE, ORDINARY_SKIP_EVIDENCE_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261110, ORDINARY_SKIP_EVIDENCE_20261110_SHA256),
+    (ORDINARY_SKIP_EVIDENCE_20261110B, ORDINARY_SKIP_EVIDENCE_20261110B_SHA256),
 )
 
 
@@ -3799,7 +3805,7 @@ def _ordinary_skip_evidence_record(path, digest, admitted, value):
     record = json.loads(raw)
     require(isinstance(record, dict) and record.get("schema") == 1
             and isinstance(record.get("updates"), dict) and isinstance(record.get("additions"), dict)
-            and record["updates"] and record["additions"],
+            and (record["updates"] or record["additions"]),
             "invalid ordinary skip evidence")
     blobs = value.get("skip_module_blobs") if isinstance(value, dict) else None
     blobs = blobs if isinstance(blobs, dict) else {}
