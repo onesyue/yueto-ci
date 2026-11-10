@@ -40,7 +40,7 @@
     "module_blobs": {
         "tests/test_frozen_manifest_reader_20261015.py": "086246934ab623ad6df49be9225bc7ee04f4fee5",
         "tests/test_panel_subscribe_delivery_alert_20261012.py": "0d382f25ff22113ff54968d233555739da6da0d9",
-        "tests/test_status_tls_installer_20261027.py": "39c99459df135a7b5463930ce626c9f9d6b848ca"
+        "tests/test_status_tls_installer_20261027.py": "88a1065c4fae3cb7b05a6531eccced3da13768bb"
     },
     "schema": 1,
     "shared_input": {
