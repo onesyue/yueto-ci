@@ -2250,16 +2250,28 @@ REVIEWED_PR_INPUTS = {
         "2113cfed645784355f1cbd250def65e000076f5b71f6a4d9e65772a3003d3510",
         frozenset({"pytest.ini", "tests/_native_postgres.py"}),
     ),
+    # yueops 00f1063f0 (t823u): drop site npm script refresh-plans; lockfile unchanged.
+    "site_refresh_plans": (
+        "9e2912667e20acb474d995fffe67bbfae47a79d3e2842207fa900e49b80f3568",
+        frozenset({"site/package.json"}),
+    ),
 }
 
 # Later sidecars live in their own file so earlier outer seals' hashes stay exact.
-REVIEWED_PR_INPUT_FILES = {"ruff_retired_video": "ops-shared-input-successors-1106.json", "test_inputs_1105": "ops-shared-input-successors-1105.json"}
+REVIEWED_PR_INPUT_FILES = {"ruff_retired_video": "ops-shared-input-successors-1106.json", "test_inputs_1105": "ops-shared-input-successors-1105.json", "site_refresh_plans": "ops-shared-input-successors-1110.json"}
 # Activate these sidecars only for their exact after-blobs (historical trees need no evidence).
 REVIEWED_PR_INPUT_ACTIVATION = {"ruff_retired_video": frozenset({
     ("pyproject.toml", "fbedf7789a78aaa402835eb3747e8be2e24772d2"),
 }), "test_inputs_1105": frozenset({
     ("pytest.ini", "9599c104c7dcfcfa3718c9be2335362731d4758f"),
     ("tests/_native_postgres.py", "5ac0ed066b88979b123bb0dab037ca497e41e23c"),
+}), "site_devdeps": frozenset({
+    # Activate only on the reviewed after package.json. The lockfile after-blob
+    # is unchanged by later site_refresh_plans, so using it here would keep
+    # this bundle live and reject the new package.json successor.
+    ("site/package.json", "09ceb094c9286134cce8e770196ce70159a5bec6"),
+}), "site_refresh_plans": frozenset({
+    ("site/package.json", "2ee14b2010387075336100cd89318730b23c5c06"),
 })}
 
 

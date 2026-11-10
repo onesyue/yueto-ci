@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "reviewed_site_refresh_plans_transition": {
+    "schema": 1,
+    "source_before": "f2c5baa55311536c5cbfdffef172731a41ba8571",
+    "source_after": "00f1063f0ef1011476e7adfdf6894b37b641469e",
+    "changes": {
+      "site/package.json": {
+        "before_blob": "09ceb094c9286134cce8e770196ce70159a5bec6",
+        "after_blob": "2ee14b2010387075336100cd89318730b23c5c06",
+        "mode": "100644",
+        "source": "00f1063f0ef1011476e7adfdf6894b37b641469e"
+      }
+    },
+    "reviewer": "lane D executor (independent read-only source review)",
+    "prior_baseline_sha256": "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d",
+    "independent_review_sha256": "5e20bb9e17257f41dbb20dbb0ef07c112715dcfeaae7f04b50419a888c6fe921",
+    "source_freeze_sha256": "4f597a9d210003716878d51111d150e4b6366c7246c1b8a52f8e28a319988659",
+    "qualification_receipt_sha256": "3083d6b4ff2d396db41b81e4f6915391426a57fca9e64b81aba760a30a2a511c"
+  }
+}
