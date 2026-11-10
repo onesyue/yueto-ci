@@ -69,18 +69,23 @@ def check_full_admission_exact_successor_and_predecessor_preserve_history(name):
     files = {p: (freeze['input_modes'][p], b) for p, b in common.items()}
     original_common, original_files = copy.deepcopy(common), copy.deepcopy(files)
     estate = baseline['reviewed_estate_input_transition']['source_after']
+    retired = (M.TEMPLATE_WRITER_RETIREMENT
+               if M.ESTATE_ADDED_INPUT not in common else None)
     with patch.object(M, 'first_native_policy', return_value=pin):
         M.admit_shared_inputs(baseline, common, files,
-                             source_revision=pin['source_revision'], estate_successor_of=estate)
-        before, before_files = M.admit_reviewed_pr_inputs(common, files, pin['source_revision'])
+                             source_revision=pin['source_revision'], estate_successor_of=estate,
+                             template_writer_retired_at=retired)
+        before, before_files = M.admit_reviewed_pr_inputs(
+            common, files, pin['source_revision'], names={name})
         for path, change in record['changes'].items():
             assert before[path] == change['before_blob']
             assert before_files[path] == (change['mode'], change['before_blob'])
         M.admit_shared_inputs(baseline, before, before_files,
-                             source_revision=pin['source_revision'], estate_successor_of=estate)
+                             source_revision=pin['source_revision'], estate_successor_of=estate,
+                             template_writer_retired_at=retired)
         # The validators also re-admit without a Git tree in the signed envelope.
         M.admit_shared_inputs(baseline, common, source_revision=pin['source_revision'],
-                             estate_successor_of=estate)
+                             estate_successor_of=estate, template_writer_retired_at=retired)
     assert baseline == historical
     assert common == original_common and files == original_files
     assert M.sha(M.historical_skip_baseline_bytes()) == record['prior_baseline_sha256']
@@ -112,11 +117,14 @@ def check_full_admission_rejects_partial_bundles_unknown_bytes_modes_and_wrong_p
             revision = 'f' * 40
         baseline = (M.skip_baseline() if name in CURRENT_GENERATION
                     else M.reviewed_native_input_successor(M.skip_baseline())[0])
+        retired = (M.TEMPLATE_WRITER_RETIREMENT
+                   if M.ESTATE_ADDED_INPUT not in freeze['common_inputs'] else None)
         with patch.object(M, 'first_native_policy', return_value={
                 **M.first_native_policy(), 'source_revision': freeze['merge_revision']}):
             with unittest.TestCase().assertRaises(ValueError):
                 M.admit_shared_inputs(baseline, common, files, source_revision=revision,
-                    estate_successor_of=baseline['reviewed_estate_input_transition']['source_after'])
+                    estate_successor_of=baseline['reviewed_estate_input_transition']['source_after'],
+                    template_writer_retired_at=retired)
 
 
 def check_seal_tampering_fails_closed(name, field):

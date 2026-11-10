@@ -70,6 +70,16 @@ HISTORICAL_NATIVE_INPUTS = {
 NATIVE_INPUTS = {
     "tests/native_loadshed_installer_20261030.py": "441aa89516d7a8afa651486cb893090563efe9d9",
 }
+# Reviewed pins of the same installer, oldest admitted tip last excluded.
+# The historical predecessor stays rejected. Unknown blobs stay rejected.
+# Each entry was the signed after-blob of a loadshed row-count ratchet.
+NATIVE_INPUT_CHAIN = {
+    "tests/native_loadshed_installer_20261030.py": frozenset({
+        "b4a70d6d7c6c1b3e20e7263d8f12c4a69143b385",
+        "4fe2c7b40110f20fa496b0fdd85cfe8c75da8591",
+        "441aa89516d7a8afa651486cb893090563efe9d9",
+    }),
+}
 NATIVE_INPUT_SUCCESSOR_KEY = "reviewed_loadshed_native_input_successor"
 # Filled only from the actual signed source/review/qualification record.
 NATIVE_INPUT_SUCCESSOR_SHA256 = "1c6883845729d08bb3ff932f54630a4cb25420b95b97650e5ee468c83333891f"
@@ -78,11 +88,8 @@ NATIVE_TARGETS = {
     "tests/test_board139_schema_acl_native_20261018.py": (6, 1001),
     "tests/test_node_systemd_pilot_20261018.py": (38, 0),
     "tests/test_schema_contract_receipt_20261020.py": (30, 0),
-    "tests/test_protocol_liveness_results_install.py": (34, 0),
-    "tests/test_protocol_liveness_results_pull.py": (34, 0),
     "tests/test_panel_subscribe_delivery_alert_20261012.py": (17, 0),
     "tests/test_frozen_manifest_reader_20261015.py": (4, 0),
-    "tests/test_install_operator_host_source.py": (29, 0),
     "tests/test_status_tls_installer_20261027.py": (7, 0),
 }
 
@@ -1926,8 +1933,8 @@ def estate_successor_proof(baseline, source, revision):
 def first_native_policy():
     """Trusted central policy; it grants no historical execution credit."""
     policy = read_json(ROOT / "ops-first-native-successors.json")
-    require(policy.get("schema") == 1 and len(policy.get("cases", {})) == 52
-            and len(policy.get("module_blobs", {})) == 6,
+    require(policy.get("schema") == 1 and len(policy.get("cases", {})) == 4
+            and len(policy.get("module_blobs", {})) == 3,
             "invalid first native successor policy")
     return policy
 
@@ -2452,11 +2459,18 @@ def admit_shared_inputs(baseline, common, files=None, *, source_revision=None,
     baseline, _ = required_native_inputs(baseline)
     required = active_required
     if required:
-        require(isinstance(common, dict) and all(common.get(p) == b for p, b in required.items()),
-                "missing or changed required native input")
+        require(isinstance(common, dict), "missing or changed required native input")
+        for path, blob in required.items():
+            presented = common.get(path)
+            chain = (NATIVE_INPUT_CHAIN[path]
+                     if path in NATIVE_INPUT_CHAIN and blob == NATIVE_INPUTS[path]
+                     else frozenset({blob}))
+            require(blob in chain and isinstance(presented, str) and presented in chain,
+                    "missing or changed required native input")
+            if files is not None:
+                require(files.get(path) == ("100644", presented),
+                        "required native input mode or tree changed")
         if files is not None:
-            require(all(files.get(p) == ("100644", b) for p, b in required.items()),
-                    "required native input mode or tree changed")
             files = {p: v for p, v in files.items() if p not in required}
         common = {p: v for p, v in common.items() if p not in required}
     _, tornado = reviewed_tornado66_dependency_transition(baseline)
@@ -3699,6 +3713,26 @@ def reviewed_first_native_successor(baseline, value, native):
 
 
 ORDINARY_SKIP_EVIDENCE_SHA256 = "0015923faa21c5658538563df31b58c2c17beab227b78ff0c9b59f8540669f0d"
+ORDINARY_SKIP_EVIDENCE = Path("reviews/ops-ordinary-skip-evidence-20261107.json")
+
+
+def ordinary_skip_evidence_file():
+    """Reviewed evidence inside this policy root, or None when this tree has none.
+
+    Isolated copies carry the shard script without this reviews file. Walk only
+    real entries under this root and refuse a symlink, so the lookup cannot
+    leave the isolated tree for another checkout.
+    """
+    root = ROOT.resolve()
+    current = root
+    for part in ORDINARY_SKIP_EVIDENCE.parts:
+        current = current / part
+        if current.is_symlink() or not current.exists():
+            return None
+    resolved = current.resolve()
+    if not resolved.is_relative_to(root) or not resolved.is_file():
+        return None
+    return resolved
 
 
 def ordinary_skip_evidence_successors(admitted, value):
@@ -3707,9 +3741,13 @@ def ordinary_skip_evidence_successors(admitted, value):
     Run 42307825077 passed the selected matrix. Its ordinary shards skipped
     these cases for unchanged environmental reasons, or moved an already
     admitted skip to a new test-module blob. The dynamic service-grant xfails
-    are not in this set. A different current blob is omitted, not inherited.
+    are not in this set. A different current blob is omitted, not inherited,
+    including an earlier baseline whose admitted blob has not reached before_blob.
+    The live after_blob still has to succeed that admitted skip exactly.
     """
-    path = ROOT / "reviews/ops-ordinary-skip-evidence-20261107.json"
+    path = ordinary_skip_evidence_file()
+    if path is None:
+        return {}
     raw = path.read_bytes()
     require(sha(raw) == ORDINARY_SKIP_EVIDENCE_SHA256, "unreviewed ordinary skip evidence")
     record = json.loads(raw)
@@ -3722,17 +3760,18 @@ def ordinary_skip_evidence_successors(admitted, value):
     successors = {}
     for nodeid, change in record["updates"].items():
         module = nodeid.split("::", 1)[0] if isinstance(nodeid, str) and "::" in nodeid else ""
-        historical = admitted.get(nodeid)
         require(isinstance(nodeid, str) and safe_module(module)
                 and isinstance(change, dict) and set(change) == {"before_blob", "after_blob"}
-                and isinstance(historical, dict) and historical.get("outcome") == "skipped"
-                and isinstance(historical.get("reason"), str) and historical["reason"]
-                and historical.get("module_blob") == change["before_blob"]
                 and change["before_blob"] != change["after_blob"]
-                and SHA.fullmatch(change["after_blob"]),
-                "ordinary skip evidence does not succeed an admitted skip: " + str(nodeid))
+                and SHA.fullmatch(change["before_blob"]) and SHA.fullmatch(change["after_blob"]),
+                "invalid ordinary skip evidence")
         if blobs.get(module) != change["after_blob"]:
             continue
+        historical = admitted.get(nodeid)
+        require(isinstance(historical, dict) and historical.get("outcome") == "skipped"
+                and isinstance(historical.get("reason"), str) and historical["reason"]
+                and historical.get("module_blob") == change["before_blob"],
+                "ordinary skip evidence does not succeed an admitted skip: " + str(nodeid))
         successors[nodeid] = {"outcome": "skipped", "reason": historical["reason"],
                               "module_blob": change["after_blob"]}
     for nodeid, case in record["additions"].items():

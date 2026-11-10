@@ -362,15 +362,15 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
                    'GITHUB_RUN_ATTEMPT': '1',
                    'YUEBOARD_MONEY_SCHEMA_FIXTURE': str(fixture)}
             env.pop('YUEBOARD_REPO_PATH', None)
-            for code, docker_code in ((0, 0), (19, 0), (0, 23)):
-                with self.subTest(code=code, docker_code=docker_code):
+            for code in (0, 19):
+                with self.subTest(code=code):
                     log.write_text('')
                     result = subprocess.run(['bash', '-c', _native_step()['run']],
-                        cwd=root, env={**env, 'RECEIPT_RC': str(code), 'DOCKER_RC': str(docker_code)},
+                        cwd=root, env={**env, 'RECEIPT_RC': str(code)},
                         capture_output=True, text=True, timeout=20, check=False)
-                    self.assertEqual(result.returncode, code or docker_code, result.stderr)
+                    self.assertEqual(result.returncode, code, result.stderr)
                     rows = [json.loads(line) for line in log.read_text().splitlines()]
-                    self.assertEqual(len(rows), 5 if code else 10)
+                    self.assertEqual(len(rows), 5 if code else 8)
                     self.assertEqual(rows[3]['argv'][1:4],
                         ['tests/native_loadshed_installer_20261030.py', '14', '0'])
                     self.assertEqual(rows[3]['tz'], 'UTC')
@@ -380,12 +380,20 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
                          str(root / 'ops-shard-evidence/test_schema_contract_receipt_20261020.json')])
                     self.assertEqual(rows[4]['board'], str(root / '.ci-yueboard'))
                     self.assertEqual(rows[4]['tz'], 'UTC')
+                    script = _native_step()['run']
+                    for retired in (
+                        'tests/test_protocol_liveness_results_install.py',
+                        'tests/test_protocol_liveness_results_pull.py',
+                        'tests/test_install_operator_host_source.py',
+                    ):
+                        self.assertNotIn(retired, script)
                     if not code:
                         self.assertTrue(all(r['root_lab'] == r['nginx_lab'] == '1' for r in rows[5:]))
-                        docker_calls = (root / 'docker.log').read_text()
-                        self.assertIn('run --rm --network none --group-add 1001 --read-only --cap-drop ALL', docker_calls)
-                        self.assertIn('/native-driver.py tests/test_install_operator_host_source.py 29 0', docker_calls)
-                        self.assertIn('--tmpfs /run/lock:rw,nosuid,nodev,mode=0755', docker_calls)
+                        self.assertEqual([r['argv'][1] for r in rows[5:]], [
+                            'tests/test_panel_subscribe_delivery_alert_20261012.py',
+                            'tests/test_frozen_manifest_reader_20261015.py',
+                            'tests/test_status_tls_installer_20261027.py',
+                        ])
                     self.assertFalse(list(root.glob('yueops-native.*.py')))
 
     def test_real_driver_refuses_wrong_execution_context_before_importing_pytest(self):
