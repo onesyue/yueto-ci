@@ -798,6 +798,35 @@ RETIRED_HOST_IDS = {
     )
 }
 
+# 2026-11-10 (owner t836u, yueops fdf97f87e / 3ed500a0f): the sibling Mini host
+# mini.xn--9kq451mn9g.com was retired too and the fixture certificate moved to
+# app.yue.to.  This is a code-reviewed successor on top of the sealed transition
+# above; it changes no baseline bytes.  With exactly this module blob, the three
+# mini.xn--9kq451mn9g.com cases must be absent and every other survivor keeps its
+# sealed outcome and reason.  Any other blob still has to equal the sealed case.
+RETIRED_HOST_SECOND_AFTER_BLOB = "6c3e8eca2a185a9b89aedbc3abec63c7cc2eb2fd"
+RETIRED_HOST_SECOND_IDS = {
+    RETIRED_HOST_MODULE + "::" + name + "[mini.xn--9kq451mn9g.com]"
+    for name in (
+        "test_native_mini_index_assets_and_telegram_frame_policy",
+        "test_native_auth_is_not_panel_cookie_or_bearer_and_secret_paths_do_not_log",
+        "test_native_alias_upload_method_body_limits_and_cache",
+    )
+}
+
+
+def retired_host_case_admitted(retirement, sealed_cases, nodeid, row, live_blob):
+    if nodeid not in retirement["surviving_ids"]:
+        return False
+    sealed = sealed_cases.get(nodeid)
+    if live_blob == RETIRED_HOST_SECOND_AFTER_BLOB:
+        return (nodeid not in RETIRED_HOST_SECOND_IDS and isinstance(sealed, dict)
+                and sealed.get("module_blob") == RETIRED_HOST_AFTER_BLOB
+                and {"outcome": row["outcome"], "reason": row.get("reason")}
+                == {"outcome": sealed.get("outcome"), "reason": sealed.get("reason")})
+    return {"outcome": row["outcome"], "reason": row.get("reason"),
+            "module_blob": live_blob} == sealed
+
 
 def baseline_bytes(baseline):
     return (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()
@@ -3714,9 +3743,20 @@ def reviewed_first_native_successor(baseline, value, native):
 
 ORDINARY_SKIP_EVIDENCE_SHA256 = "0015923faa21c5658538563df31b58c2c17beab227b78ff0c9b59f8540669f0d"
 ORDINARY_SKIP_EVIDENCE = Path("reviews/ops-ordinary-skip-evidence-20261107.json")
+# 2026-11-10: run 42817758699 (yueops 01aaffe41) passed every selected job; its
+# ordinary shards skipped 134 cases for the same environmental reasons after
+# owner-approved LA retirement / domain cutover edits moved their test modules.
+# Each reviewed file is evaluated independently against the same admitted set
+# and admits only its own exact after_blob, never a later one.
+ORDINARY_SKIP_EVIDENCE_20261110_SHA256 = "b1163b8acd2f71ac6f16d5e17815befc817bade11f4547df72c187b1084063c6"
+ORDINARY_SKIP_EVIDENCE_20261110 = Path("reviews/ops-ordinary-skip-evidence-20261110.json")
+ORDINARY_SKIP_EVIDENCE_FILES = (
+    (ORDINARY_SKIP_EVIDENCE, ORDINARY_SKIP_EVIDENCE_SHA256),
+    (ORDINARY_SKIP_EVIDENCE_20261110, ORDINARY_SKIP_EVIDENCE_20261110_SHA256),
+)
 
 
-def ordinary_skip_evidence_file():
+def ordinary_skip_evidence_file(relative=None):
     """Reviewed evidence inside this policy root, or None when this tree has none.
 
     Isolated copies carry the shard script without this reviews file. Walk only
@@ -3725,7 +3765,7 @@ def ordinary_skip_evidence_file():
     """
     root = ROOT.resolve()
     current = root
-    for part in ORDINARY_SKIP_EVIDENCE.parts:
+    for part in (ORDINARY_SKIP_EVIDENCE if relative is None else relative).parts:
         current = current / part
         if current.is_symlink() or not current.exists():
             return None
@@ -3745,11 +3785,17 @@ def ordinary_skip_evidence_successors(admitted, value):
     including an earlier baseline whose admitted blob has not reached before_blob.
     The live after_blob still has to succeed that admitted skip exactly.
     """
-    path = ordinary_skip_evidence_file()
-    if path is None:
-        return {}
+    successors = {}
+    for relative, digest in ORDINARY_SKIP_EVIDENCE_FILES:
+        path = ordinary_skip_evidence_file(relative)
+        if path is not None:
+            successors.update(_ordinary_skip_evidence_record(path, digest, admitted, value))
+    return successors
+
+
+def _ordinary_skip_evidence_record(path, digest, admitted, value):
     raw = path.read_bytes()
-    require(sha(raw) == ORDINARY_SKIP_EVIDENCE_SHA256, "unreviewed ordinary skip evidence")
+    require(sha(raw) == digest, "unreviewed ordinary skip evidence")
     record = json.loads(raw)
     require(isinstance(record, dict) and record.get("schema") == 1
             and isinstance(record.get("updates"), dict) and isinstance(record.get("additions"), dict)
@@ -3841,10 +3887,9 @@ def admit_skips(value, result, native):
             require(NEZHA_RETIREMENT_KEY not in sealed_baseline or module != NEZHA_RETIRED_MODULE,
                     "retired Nezha test cannot inherit a historical skip: " + nodeid)
             if retirement is not None and module == RETIRED_HOST_MODULE:
-                require(nodeid in retirement["surviving_ids"]
-                        and {"outcome": row["outcome"], "reason": row.get("reason"),
-                             "module_blob": value["skip_module_blobs"].get(module)}
-                        == sealed_baseline["cases"].get(nodeid),
+                require(retired_host_case_admitted(
+                            retirement, sealed_baseline["cases"], nodeid, row,
+                            value["skip_module_blobs"].get(module)),
                         "retired host case or successor blob differs: " + nodeid)
                 counts["HISTORICAL_UNEXECUTED"] += 1
                 continue

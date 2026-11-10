@@ -303,5 +303,60 @@ class ExactFirstNativePolicy(unittest.TestCase):
         self.assertEqual((ROOT / "ops-pytest-skip-baseline.json").read_bytes(), baseline_bytes)
 
 
+class Successors20261110(unittest.TestCase):
+    def test_status_tls_blob_is_the_reviewed_la_retirement_blob(self):
+        policy = json.loads((ROOT / "ops-first-native-successors.json").read_text())
+        self.assertEqual(policy["module_blobs"]["tests/test_status_tls_installer_20261027.py"],
+                         "88a1065c4fae3cb7b05a6531eccced3da13768bb")
+        self.assertEqual(len(policy["module_blobs"]), 3)
+        self.assertEqual(len(policy["cases"]), 4)
+
+    def test_second_retired_host_successor_is_exact(self):
+        sealed = SHARDS.skip_baseline()
+        _, retirement = SHARDS.reviewed_retired_host_transition(sealed)
+        cases = sealed["cases"]
+        survivors = retirement["surviving_ids"]
+        second = SHARDS.RETIRED_HOST_SECOND_IDS
+        self.assertTrue(second <= set(survivors))
+        keep = next(n for n in survivors if n not in second)
+        row = {"outcome": cases[keep]["outcome"], "reason": cases[keep]["reason"]}
+        new_blob = SHARDS.RETIRED_HOST_SECOND_AFTER_BLOB
+        self.assertTrue(SHARDS.retired_host_case_admitted(retirement, cases, keep, row, new_blob))
+        self.assertTrue(SHARDS.retired_host_case_admitted(
+            retirement, cases, keep, row, SHARDS.RETIRED_HOST_AFTER_BLOB))
+        for nodeid in second:
+            self.assertFalse(SHARDS.retired_host_case_admitted(retirement, cases, nodeid, row, new_blob))
+        self.assertFalse(SHARDS.retired_host_case_admitted(retirement, cases, keep, row, "f" * 40))
+        self.assertFalse(SHARDS.retired_host_case_admitted(
+            retirement, cases, keep, dict(row, reason="other"), new_blob))
+        self.assertFalse(SHARDS.retired_host_case_admitted(
+            retirement, cases, keep, dict(row, outcome="failed"), new_blob))
+        removed = next(iter(SHARDS.RETIRED_HOST_IDS))
+        self.assertFalse(SHARDS.retired_host_case_admitted(retirement, cases, removed, row, new_blob))
+
+    def test_20261110_evidence_is_pinned_and_admits_only_its_after_blob(self):
+        raw = (ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261110).read_bytes()
+        self.assertEqual(SHARDS.sha(raw), SHARDS.ORDINARY_SKIP_EVIDENCE_20261110_SHA256)
+        record = json.loads(raw)
+        self.assertEqual((len(record["updates"]), len(record["additions"])), (102, 32))
+        self.assertEqual(record["evidence_run"], "42817758699")
+        for case in record["additions"].values():
+            self.assertEqual(case["outcome"], "skipped")
+            self.assertTrue(case["reason"].startswith("Skipped: "))
+        blobs = {n.split("::", 1)[0]: c["module_blob"] for n, c in record["additions"].items()}
+        admitted = {}
+        got = SHARDS._ordinary_skip_evidence_record(
+            ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261110, SHARDS.ORDINARY_SKIP_EVIDENCE_20261110_SHA256,
+            admitted, {"skip_module_blobs": blobs})
+        self.assertEqual(set(got), set(record["additions"]))
+        moved = {m: "f" * 40 for m in blobs}
+        self.assertEqual(SHARDS._ordinary_skip_evidence_record(
+            ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261110, SHARDS.ORDINARY_SKIP_EVIDENCE_20261110_SHA256,
+            admitted, {"skip_module_blobs": moved}), {})
+        with self.assertRaisesRegex(ValueError, "unreviewed ordinary skip evidence"):
+            SHARDS._ordinary_skip_evidence_record(
+                ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261110, "0" * 64, admitted, {"skip_module_blobs": blobs})
+
+
 if __name__ == "__main__":
     unittest.main()
