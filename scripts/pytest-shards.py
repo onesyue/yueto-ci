@@ -12,13 +12,16 @@ import copy
 import concurrent.futures
 import hashlib
 import importlib.util
+import inspect
 import json
 import os
 import re
 import subprocess
 import sys
 import sysconfig
+import tempfile
 import time
+import types
 import xml.etree.ElementTree as ET
 from pathlib import Path, PurePosixPath
 
@@ -3673,7 +3676,7 @@ def reviewed_restore_drill_blob_successor(baseline, value):
     return baseline | {"reviewed_hosted": hosted | {"cases": cases}}
 
 
-def reviewed_board139_native_successor(baseline, value, native):
+def reviewed_board139_native_successor(baseline, value, native, *, require_native=True):
     """Keep the historical skip seal; qualify two exact Board139 successors.
 
     Ops 6a894a36 adds the production-shaped orders_archive fixture and a seventh
@@ -3736,8 +3739,9 @@ def reviewed_board139_native_successor(baseline, value, native):
     if blob == renewal:
         expected |= {module + "::" + name for name in renewal_names}
         message = "Board139 renewal successor requires twenty-two exact same-run native calls"
-    passed = native["obligations"].get(module, {}).get("passed", [])
-    require(set(passed) == expected and len(passed) == len(expected), message)
+    if require_native:
+        passed = native["obligations"].get(module, {}).get("passed", [])
+        require(set(passed) == expected and len(passed) == len(expected), message)
     updated = dict(cases)
     for key in expected:
         updated[key] = {"module_blob": blob, "outcome": "skipped",
@@ -3746,7 +3750,7 @@ def reviewed_board139_native_successor(baseline, value, native):
     return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": updated}}
 
 
-def reviewed_first_native_successor(baseline, value, native):
+def reviewed_first_native_successor(baseline, value, native, *, require_native=True):
     policy = first_native_policy()
     # Identical native-test blobs on a descendant keep the same skip binding.
     # The native job in this run still has to pass every bound case.
@@ -3759,8 +3763,9 @@ def reviewed_first_native_successor(baseline, value, native):
     cases = dict(baseline["reviewed_hosted"]["cases"])
     for nodeid, row in policy["cases"].items():
         module = nodeid.split("::", 1)[0]
-        require(nodeid in native["obligations"].get(module, {}).get("passed", []),
-                "first native successor lacks exact same-run call: " + nodeid)
+        if require_native:
+            require(nodeid in native["obligations"].get(module, {}).get("passed", []),
+                    "first native successor lacks exact same-run call: " + nodeid)
         cases[nodeid] = row | {"module_blob": policy["module_blobs"][module],
                               "disposition": "SAME_RUN_NATIVE_REQUIRED",
                               "native_target": module}
@@ -3874,7 +3879,67 @@ def _ordinary_skip_evidence_record(path, digest, admitted, value):
     return successors
 
 
-def admit_skips(value, result, native):
+def _invoke_native_successor(fn, baseline, value, native, require_native):
+    """Call one native blob successor, including a historical signature.
+
+    Current policy accepts require_native=False so a precheck can rewrite
+    blobs without a same-run receipt. A historical module still requires the
+    receipt argument list; feed it the case ids from its own source only
+    after the live blob has selected that successor.
+    """
+    if "require_native" in fn.__code__.co_varnames:
+        return fn(baseline, value, native, require_native=require_native)
+    if require_native:
+        return fn(baseline, value, native)
+    return fn(baseline, value, synthetic_native_obligations(value))
+
+
+def synthetic_native_obligations(value):
+    """Native case ids a historical successor checks once its blob matches."""
+    obligations = {}
+    policy = first_native_policy()
+    for nodeid in policy["cases"]:
+        module = nodeid.split("::", 1)[0]
+        obligations.setdefault(module, []).append(nodeid)
+    source = inspect.getsource(reviewed_board139_native_successor)
+    module_name = "tests/test_board139_schema_acl_native_20261018.py"
+    names = [name.split("::")[-1] for name in re.findall(
+        r'"((?:::)?test_actual_[^"]+)"', source)]
+    previous = [name for name in names if not name.startswith("test_actual_renewal_")]
+    renewal_names = [name for name in names if name.startswith("test_actual_renewal_")]
+    after = re.search(r'\bafter = "([0-9a-f]{40})"', source)
+    renewal = re.search(r'\brenewal = "([0-9a-f]{40})"', source)
+    blobs = value.get("skip_module_blobs") if isinstance(value, dict) else None
+    live = blobs.get(module_name) if isinstance(blobs, dict) else None
+    expected = [module_name + "::" + name for name in previous]
+    if renewal and live == renewal.group(1):
+        expected.extend(module_name + "::" + name for name in renewal_names)
+    elif after and live not in (None, after.group(1)):
+        expected = []
+    if expected:
+        obligations[module_name] = expected
+    return {"obligations": {module: {"passed": ids} for module, ids in obligations.items()}}
+
+
+def apply_reviewed_skip_blob_successors(baseline, value, native, *, require_native=True):
+    """Apply the same reviewed blob seals join applies before it compares cases."""
+    baseline = reviewed_canceled_backup_blob_successor(baseline, value)
+    restore = globals().get("reviewed_restore_drill_blob_successor")
+    if restore is not None:
+        baseline = restore(baseline, value)
+    baseline = _invoke_native_successor(
+        reviewed_board139_native_successor, baseline, value, native, require_native)
+    baseline = _invoke_native_successor(
+        reviewed_first_native_successor, baseline, value, native, require_native)
+    return baseline
+
+
+def prepare_skip_bindings(value, native, *, require_native=True, check_shared_inputs=True):
+    """Bind every admitted skip to the module blob join will require.
+
+    admit_skips and skip-blob-precheck both call this. A later copy of the
+    successor order would let a reviewed blob drift out of the precheck.
+    """
     sealed_baseline = skip_baseline()
     _, i10_blob_record = reviewed_i10_skip_blob_successor_transition(sealed_baseline)
     _, retirement = reviewed_retired_host_transition(sealed_baseline)
@@ -3882,7 +3947,7 @@ def admit_skips(value, result, native):
     _, release_blob_record = reviewed_release_skip_blob_successor_transition(sealed_baseline)
     _, case_successors = reviewed_case_file_transition(sealed_baseline)
     baseline, estate = reviewed_estate_input_transition(sealed_baseline)
-    if estate is not None:
+    if check_shared_inputs and estate is not None:
         admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
                             source_revision=value.get("source_revision"),
                             estate_successor_of=value.get("estate_successor_of"),
@@ -3899,22 +3964,51 @@ def admit_skips(value, result, native):
     for mapping in (successors, relay_successors, metrics_successors, meter_successors,
                     preservation_successors, case_successors):
         admitted.update(mapping)
-    blob_successors = skip_blob_successors(
-        blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
+    hosted = baseline.get("reviewed_hosted", {}).get("cases", {})
+    blob_successors = skip_blob_successors(blob_record, admitted, hosted)
     admitted.update(blob_successors)
-    release_blob_successors = skip_blob_successors(
-        release_blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
+    release_blob_successors = skip_blob_successors(release_blob_record, admitted, hosted)
     admitted.update(release_blob_successors)
-    i10_blob_successors = skip_blob_successors(
-        i10_blob_record, admitted, baseline.get("reviewed_hosted", {}).get("cases", {}))
+    i10_blob_successors = skip_blob_successors(i10_blob_record, admitted, hosted)
     ordinary_skips = ordinary_skip_evidence_successors(admitted, value)
+    baseline = apply_reviewed_skip_blob_successors(
+        baseline, value, native, require_native=require_native)
+    return {
+        "sealed_baseline": sealed_baseline,
+        "retirement": retirement,
+        "successors": successors,
+        "relay_successors": relay_successors,
+        "metrics_successors": metrics_successors,
+        "meter_successors": meter_successors,
+        "preservation_successors": preservation_successors,
+        "case_successors": case_successors,
+        "blob_successors": blob_successors,
+        "release_blob_successors": release_blob_successors,
+        "i10_blob_successors": i10_blob_successors,
+        "ordinary_skips": ordinary_skips,
+        "baseline": baseline,
+        "reviewed": baseline.get("reviewed_hosted", {}),
+    }
+
+
+def admit_skips(value, result, native):
+    bound = prepare_skip_bindings(value, native)
+    sealed_baseline = bound["sealed_baseline"]
+    retirement = bound["retirement"]
+    successors = bound["successors"]
+    relay_successors = bound["relay_successors"]
+    metrics_successors = bound["metrics_successors"]
+    meter_successors = bound["meter_successors"]
+    preservation_successors = bound["preservation_successors"]
+    case_successors = bound["case_successors"]
+    blob_successors = bound["blob_successors"]
+    release_blob_successors = bound["release_blob_successors"]
+    i10_blob_successors = bound["i10_blob_successors"]
+    ordinary_skips = bound["ordinary_skips"]
+    baseline = bound["baseline"]
+    reviewed = bound["reviewed"]
     unknown = []
     observed_collection = {}
-    baseline = reviewed_canceled_backup_blob_successor(baseline, value)
-    baseline = reviewed_restore_drill_blob_successor(baseline, value)
-    baseline = reviewed_board139_native_successor(baseline, value, native)
-    baseline = reviewed_first_native_successor(baseline, value, native)
-    reviewed = baseline.get("reviewed_hosted", {})
     counts = {"HISTORICAL_UNEXECUTED": 0, "OWNER_CANCELED": 0,
               "SAME_RUN_NATIVE_REQUIRED": 0}
     for session in [result["reference"], *result["shards"]]:
@@ -4046,6 +4140,605 @@ def retain_rejection(args, error):
         handle.write(json.dumps(record) + "\n")
 
 
+_SKIP_UNKNOWN = object()
+ORDINARY_BINDING_KEYS = (
+    "successors", "relay_successors", "metrics_successors", "meter_successors",
+    "preservation_successors", "case_successors", "blob_successors",
+    "release_blob_successors", "i10_blob_successors", "ordinary_skips",
+)
+_POLICY_HELPERS = (
+    "_invoke_native_successor", "synthetic_native_obligations",
+    "apply_reviewed_skip_blob_successors", "prepare_skip_bindings",
+)
+
+
+def _case_blob(case):
+    if not isinstance(case, dict):
+        return None
+    blob = case.get("module_blob")
+    if isinstance(blob, str) and SHA.fullmatch(blob):
+        return blob
+    return None
+
+
+def _dotted(node):
+    parts = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        parts.append(node.id)
+        return ".".join(reversed(parts))
+    return ""
+
+
+def _const_arg(call, index):
+    if index >= len(call.args):
+        return None
+    arg = call.args[index]
+    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+        return arg.value
+    return None
+
+
+def _list_strings(node):
+    if not isinstance(node, ast.List):
+        return None
+    values = []
+    for item in node.elts:
+        if not isinstance(item, ast.Constant) or not isinstance(item.value, str):
+            return None
+        values.append(item.value)
+    return values
+
+
+def _docker_returncode(args):
+    """Return code the central runner produces for one docker invocation.
+
+    Docker and nginx are installed. A pinned image is not already loaded, and
+    this precheck does not pull it: image inspect fails. info, run, and the
+    other provisioning commands succeed.
+    """
+    if not args:
+        return _SKIP_UNKNOWN
+    if args[0] == "info":
+        return 0
+    if args[:2] == ["image", "inspect"]:
+        return 1
+    if args[0] in {"run", "rm", "exec", "build", "network", "cp", "pull"}:
+        return 0
+    return _SKIP_UNKNOWN
+
+
+def _command_prefix(node, count):
+    if not isinstance(node, ast.List) or len(node.elts) < count:
+        return None
+    values = []
+    for item in node.elts[:count]:
+        if not isinstance(item, ast.Constant) or not isinstance(item.value, str):
+            return None
+        values.append(item.value)
+    return values
+
+
+def _positional_docker_code(call):
+    first = _const_arg(call, 0)
+    if first is None:
+        return _SKIP_UNKNOWN
+    second = _const_arg(call, 1)
+    if second is None:
+        return _docker_returncode([first])
+    return _docker_returncode([first, second])
+
+
+def _subprocess_docker_code(call):
+    if not call.args:
+        return _SKIP_UNKNOWN
+    prefix = _command_prefix(call.args[0], 2)
+    if prefix is None or prefix[0] != "docker":
+        return _SKIP_UNKNOWN
+    longer = _command_prefix(call.args[0], 3)
+    return _docker_returncode((longer or prefix)[1:])
+
+
+def _eval_call(node, env):
+    dotted = _dotted(node.func)
+    if dotted == "os.geteuid":
+        return 0
+    if dotted == "shutil.which":
+        name = _const_arg(node, 0)
+        if name in {"docker", "nginx"}:
+            return "/usr/bin/" + name
+        return _SKIP_UNKNOWN
+    if dotted in {"os.environ.get", "os.getenv"}:
+        key = _const_arg(node, 0)
+        if key == "GITHUB_ACTIONS":
+            return "true"
+        if key in {"YUEOPS_RELEASE_ENV", "XRAY_PROBE_TEST_BIN", "TICKET_JOBS_TEST_DSN"}:
+            return None
+        return _SKIP_UNKNOWN
+    if dotted in {"_docker", "docker"}:
+        code = _positional_docker_code(node)
+        return code if code is _SKIP_UNKNOWN else {"returncode": code}
+    if dotted == "subprocess.run":
+        code = _subprocess_docker_code(node)
+        return code if code is _SKIP_UNKNOWN else {"returncode": code}
+    if dotted == "os.uname":
+        return {"sysname": "Linux"}
+    if isinstance(node.func, ast.Attribute) and node.func.attr == "is_file":
+        owner = node.func.value
+        if isinstance(owner, ast.Name) and "SCHEMA" in owner.id:
+            return True
+        return _SKIP_UNKNOWN
+    if isinstance(node.func, ast.Name) and not node.args and not node.keywords:
+        return _call_function_return(node.func.id, env)
+    return _SKIP_UNKNOWN
+
+
+def _call_function_return(name, env):
+    """Evaluate a zero-argument helper whose body is a single return."""
+    if name in env["stack"]:
+        return _SKIP_UNKNOWN
+    function = env["functions"].get(name)
+    if function is None:
+        return _SKIP_UNKNOWN
+    body = [stmt for stmt in function.body
+            if not isinstance(stmt, ast.Expr) or not isinstance(stmt.value, ast.Constant)]
+    if len(body) != 1 or not isinstance(body[0], ast.Return):
+        return _SKIP_UNKNOWN
+    env["stack"].add(name)
+    try:
+        return _eval_skip_expr(body[0].value, env)
+    finally:
+        env["stack"].discard(name)
+
+
+def _eval_skip_expr(node, env):
+    """True/False when the central runner decides the expression, else unknown."""
+    if node is None:
+        return _SKIP_UNKNOWN
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.Name):
+        if node.id not in env["values"]:
+            return _SKIP_UNKNOWN
+        value = env["values"][node.id]
+        if isinstance(value, ast.AST):
+            return _eval_skip_expr(value, env)
+        return value
+    if isinstance(node, ast.Attribute):
+        if _dotted(node) == "sys.platform":
+            return "linux"
+        base = _eval_skip_expr(node.value, env)
+        if isinstance(base, dict) and node.attr in base:
+            return base[node.attr]
+        return _SKIP_UNKNOWN
+    if isinstance(node, ast.Call):
+        return _eval_call(node, env)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        value = _eval_skip_expr(node.operand, env)
+        if value is _SKIP_UNKNOWN:
+            return _SKIP_UNKNOWN
+        return not value
+    if isinstance(node, ast.BoolOp):
+        values = [_eval_skip_expr(item, env) for item in node.values]
+        if isinstance(node.op, ast.And):
+            if any(value is False for value in values):
+                return False
+            if any(value is _SKIP_UNKNOWN for value in values):
+                return _SKIP_UNKNOWN
+            return all(value is True or value not in (False, _SKIP_UNKNOWN) and bool(value)
+                       for value in values)
+        if any(value is True for value in values):
+            return True
+        if any(value is _SKIP_UNKNOWN for value in values):
+            return _SKIP_UNKNOWN
+        return any(bool(value) for value in values)
+    if isinstance(node, ast.Compare) and len(node.ops) == 1 and len(node.comparators) == 1:
+        left = _eval_skip_expr(node.left, env)
+        right = _eval_skip_expr(node.comparators[0], env)
+        if left is _SKIP_UNKNOWN or right is _SKIP_UNKNOWN:
+            return _SKIP_UNKNOWN
+        op = node.ops[0]
+        if isinstance(op, (ast.Eq, ast.Is)):
+            return left == right
+        if isinstance(op, (ast.NotEq, ast.IsNot)):
+            return left != right
+    return _SKIP_UNKNOWN
+
+
+def _remember_assign(stmt, env):
+    if (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1
+            and isinstance(stmt.targets[0], ast.Name)):
+        env["values"][stmt.targets[0].id] = _eval_skip_expr(stmt.value, env)
+
+
+def _contains_direct_fail(stmts):
+    for stmt in stmts:
+        if isinstance(stmt, ast.Raise):
+            return True
+        if (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call)
+                and _dotted(stmt.value.func) == "pytest.fail"):
+            return True
+    return False
+
+
+def _skip_calls(stmts):
+    found = []
+    for stmt in stmts:
+        for node in ast.walk(stmt):
+            if isinstance(node, ast.Call) and _dotted(node.func) in {"pytest.skip", "pytest.xfail"}:
+                found.append(node)
+    return found
+
+
+def _walk_skip_block(stmts, env, *, reached=True):
+    """Record whether each pytest.skip/xfail in this block fires.
+
+    False means the central runner does not reach it. None means the guard
+    could not be decided, which the precheck treats as a skip it must report.
+    """
+    sites = []
+    if not reached:
+        return [False for _ in _skip_calls(stmts)]
+    local = {"values": dict(env["values"]), "functions": env["functions"], "stack": env["stack"]}
+    dominated = False
+    for stmt in stmts:
+        if dominated:
+            sites.extend(False for _ in _skip_calls([stmt]))
+            continue
+        if isinstance(stmt, ast.Assign):
+            _remember_assign(stmt, local)
+            continue
+        if isinstance(stmt, ast.If):
+            sites.extend(_walk_skip_if(stmt, local))
+            if _eval_skip_expr(stmt.test, local) is True and _contains_direct_fail(stmt.body):
+                dominated = True
+            continue
+        if isinstance(stmt, ast.Try):
+            sites.extend(_walk_skip_block(stmt.body, local))
+            # A skip in an exception handler is a failed docker/postgres setup.
+            # The validation runner's ordinary shards complete those fixtures.
+            for handler in stmt.handlers:
+                sites.extend(False for _ in _skip_calls(handler.body))
+            sites.extend(_walk_skip_block(stmt.orelse, local))
+            sites.extend(_walk_skip_block(stmt.finalbody, local))
+            continue
+        if isinstance(stmt, (ast.For, ast.AsyncFor, ast.While, ast.With, ast.AsyncWith)):
+            sites.extend(_walk_skip_block(stmt.body, local))
+            continue
+        if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call) and _dotted(
+                stmt.value.func) in {"pytest.skip", "pytest.xfail"}:
+            sites.append(True)
+    return sites
+
+
+def _walk_skip_if(stmt, env):
+    condition = _eval_skip_expr(stmt.test, env)
+    if condition is True:
+        return _walk_skip_block(stmt.body, env)
+    if condition is False:
+        return _walk_skip_block(stmt.orelse, env)
+    if _skip_calls(stmt.body) or _skip_calls(stmt.orelse):
+        return [None]
+    return []
+
+
+def _decorator_skip_sites(decorators, env):
+    sites = []
+    for decorator in decorators:
+        if not isinstance(decorator, ast.Call):
+            continue
+        name = _dotted(decorator.func)
+        if name == "pytest.mark.skip":
+            sites.append(True)
+        elif name == "pytest.mark.xfail" and not decorator.args:
+            sites.append(True)
+        elif name in {"pytest.mark.skipif", "pytest.mark.xfail"} and decorator.args:
+            condition = _eval_skip_expr(decorator.args[0], env)
+            sites.append(None if condition is _SKIP_UNKNOWN else bool(condition))
+    return sites
+
+
+def _module_mark_sites(tree, env):
+    sites = []
+    for stmt in tree.body:
+        if not isinstance(stmt, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == "pytestmark"
+                   for target in stmt.targets):
+            continue
+        value = stmt.value
+        marks = value.elts if isinstance(value, (ast.List, ast.Tuple)) else [value]
+        sites.extend(_decorator_skip_sites(marks, env))
+    return sites
+
+
+def _fixture_names(function):
+    names = [arg.arg for arg in function.args.args if arg.arg not in {"self", "cls"}]
+    for decorator in function.decorator_list:
+        if isinstance(decorator, ast.Call) and _dotted(decorator.func) == "pytest.mark.usefixtures":
+            names.extend(arg.value for arg in decorator.args
+                         if isinstance(arg, ast.Constant) and isinstance(arg.value, str))
+    return names
+
+
+def _autouse(function):
+    for decorator in function.decorator_list:
+        if not isinstance(decorator, ast.Call) or _dotted(decorator.func) != "pytest.fixture":
+            continue
+        for keyword in decorator.keywords:
+            if (keyword.arg == "autouse" and isinstance(keyword.value, ast.Constant)
+                    and keyword.value.value is True):
+                return True
+    return False
+
+
+def _index_functions(tree):
+    found = {}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name not in found:
+            found[node.name] = node
+    return found
+
+
+def _reachable_functions(seeds, functions):
+    queue = list(seeds)
+    queue.extend(function for function in functions.values() if _autouse(function))
+    seen = set()
+    ordered = []
+    while queue:
+        function = queue.pop()
+        if function.name in seen:
+            continue
+        seen.add(function.name)
+        ordered.append(function)
+        for name in _fixture_names(function):
+            if name in functions:
+                queue.append(functions[name])
+        for node in ast.walk(function):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                callee = functions.get(node.func.id)
+                if callee is not None:
+                    queue.append(callee)
+    return ordered
+
+
+def central_runner_observes_skip(source, nodeid):
+    """Whether the validation runner still skips or xfails this catalog case.
+
+    That runner is Linux, root, and GitHub Actions, with Docker, nginx, and the
+    yueboard schema checkout. XRAY_PROBE_TEST_BIN is unset, so an opt-in native
+    probe still skips. A pinned image that a test only inspects is absent, so
+    that skip still happens. Skips that require a missing docker binary, a
+    non-root user, or a missing schema do not. GitHub Actions turns the locale
+    image guard into a failure rather than a skip. Join never sees the skips
+    this function rejects, so a stale catalog row is not a release blocker.
+    """
+    if not isinstance(source, str) or not source:
+        return True
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return True
+    functions = _index_functions(tree)
+    env = {"values": {}, "functions": functions, "stack": set()}
+    for stmt in tree.body:
+        if isinstance(stmt, ast.Assign):
+            _remember_assign(stmt, env)
+    test_name = nodeid.split("::")[-1].split("[", 1)[0]
+    test = functions.get(test_name)
+    if test is None:
+        return True
+    sites = _module_mark_sites(tree, env)
+    for function in _reachable_functions([test], functions):
+        sites.extend(_decorator_skip_sites(function.decorator_list, env))
+        sites.extend(_walk_skip_block(function.body, env))
+    return any(site is not False for site in sites)
+
+
+def _ordinary_blobs(bound, nodeid):
+    found = set()
+    blob = _case_blob(bound["baseline"]["cases"].get(nodeid))
+    if blob:
+        found.add(blob)
+    for key in ORDINARY_BINDING_KEYS:
+        blob = _case_blob(bound[key].get(nodeid))
+        if blob:
+            found.add(blob)
+    return found
+
+
+def _retired_blob_admitted(bound, nodeid, live):
+    retirement = bound.get("retirement")
+    sealed = bound["sealed_baseline"]["cases"].get(nodeid)
+    if retirement is None or not isinstance(sealed, dict):
+        return False
+    if nodeid not in retirement.get("surviving_ids", []):
+        return False
+    sealed_blob = sealed.get("module_blob")
+    if live == sealed_blob:
+        return True
+    return (live == RETIRED_HOST_SECOND_AFTER_BLOB and nodeid not in RETIRED_HOST_SECOND_IDS
+            and sealed_blob == RETIRED_HOST_AFTER_BLOB)
+
+
+def _source_of(sources, module):
+    if callable(sources):
+        return sources(module)
+    if isinstance(sources, dict):
+        return sources.get(module)
+    return None
+
+
+def skip_blob_mismatch_lines(bound, live_blobs, sources):
+    """Lines for catalog skips whose live module blob join would reject.
+
+    Reviewed cases and collection skips are exact: the evidence join compares
+    those blobs whenever the file is still in the tree. Ordinary and retired-host
+    rows are reported only when the central runner still emits that skip.
+    """
+    live_blobs = live_blobs if isinstance(live_blobs, dict) else {}
+    grouped = {}
+
+    def add(module, old, new, nodeid):
+        row = grouped.setdefault(module, {"olds": set(), "new": new, "ids": set()})
+        if isinstance(old, str) and old:
+            row["olds"].add(old)
+        row["ids"].add(nodeid)
+
+    for module, row in bound["baseline"].get("collection_skips", {}).items():
+        live = live_blobs.get(module)
+        expected = _case_blob(row)
+        if live is None or expected is None or live == expected:
+            continue
+        add(module, expected, live, module + "::collection")
+    reviewed = bound["reviewed"].get("cases", {})
+    for nodeid, case in reviewed.items():
+        module = nodeid.split("::", 1)[0]
+        live = live_blobs.get(module)
+        expected = _case_blob(case)
+        if live is None or expected is None or live == expected:
+            continue
+        add(module, expected, live, nodeid)
+    ordinary_ids = set(bound["baseline"]["cases"])
+    for key in ORDINARY_BINDING_KEYS:
+        ordinary_ids.update(bound[key])
+    retirement = bound.get("retirement")
+    for nodeid in ordinary_ids:
+        if not isinstance(nodeid, str) or "::" not in nodeid or nodeid in reviewed:
+            continue
+        module = nodeid.split("::", 1)[0]
+        live = live_blobs.get(module)
+        if live is None or module == NEZHA_RETIRED_MODULE:
+            continue
+        if retirement is not None and module == RETIRED_HOST_MODULE:
+            if _retired_blob_admitted(bound, nodeid, live):
+                continue
+            accepted = set()
+            sealed_blob = _case_blob(bound["sealed_baseline"]["cases"].get(nodeid))
+            if sealed_blob:
+                accepted.add(sealed_blob)
+        else:
+            accepted = _ordinary_blobs(bound, nodeid)
+        if live in accepted:
+            continue
+        source = _source_of(sources, module)
+        if source is not None and not central_runner_observes_skip(source, nodeid):
+            continue
+        old = ",".join(sorted(accepted))
+        add(module, old, live, nodeid)
+    lines = []
+    for module in sorted(grouped):
+        row = grouped[module]
+        old = ",".join(sorted(row["olds"])) if row["olds"] else "none"
+        shown = ", ".join(sorted(row["ids"]))
+        lines.append(f"{module}  {old} -> {row['new']}  ({shown})")
+    return lines
+
+
+def skip_blob_report(value, sources, *, policy=None):
+    """Bind skips with join's successor order, then list blob mismatches."""
+    prepare = prepare_skip_bindings if policy is None else policy.prepare_skip_bindings
+    bound = prepare(
+        value, {"obligations": {}}, require_native=False, check_shared_inputs=False)
+    blobs = value.get("skip_module_blobs") if isinstance(value, dict) else {}
+    return skip_blob_mismatch_lines(bound, blobs if isinstance(blobs, dict) else {}, sources)
+
+
+def load_policy_module(ci_revision):
+    """Return this module, or pytest-shards.py as of one historical ci revision.
+
+    The checked-out baseline JSON is what join reads. A historical script is
+    executed with this checkout's file path so those seals stay the current
+    ones, while its successor functions stay the ones that revision shipped.
+    Helper functions that did not exist yet are installed into that module so
+    both paths call one binder.
+    """
+    if ci_revision in (None, ""):
+        return sys.modules[__name__]
+    require(isinstance(ci_revision, str) and SHA.fullmatch(ci_revision),
+            "skip-blob-precheck requires an exact ci revision")
+    source = git(ROOT, "show", f"{ci_revision}:scripts/pytest-shards.py")
+    path = Path(tempfile.mkdtemp(prefix="skip-blob-policy-")) / "pytest-shards.py"
+    path.write_bytes(source)
+    module = types.ModuleType("skip_blob_policy_" + ci_revision[:12])
+    module.__file__ = str(Path(__file__).resolve())
+    module.__dict__["__file__"] = module.__file__
+    try:
+        exec(compile(source, str(path), "exec"), module.__dict__)
+    except SyntaxError as error:
+        raise ValueError("historical pytest-shards policy is unreadable") from error
+    if "prepare_skip_bindings" not in module.__dict__:
+        module.__dict__["inspect"] = inspect
+        for name in _POLICY_HELPERS:
+            exec(inspect.getsource(globals()[name]), module.__dict__)
+    return module
+
+
+def _read_ops_module(checkout, revision, module):
+    if not safe_module(module):
+        return None
+    try:
+        return git(checkout, "show", f"{revision}:{module}").decode()
+    except subprocess.CalledProcessError:
+        return None
+    except UnicodeDecodeError:
+        return None
+
+
+def skip_blob_precheck(checkout, revision, *, ci_revision=None):
+    """Compare one ops tree's test-module blobs with the admitted skip seals."""
+    require(isinstance(revision, str) and SHA.fullmatch(revision),
+            "skip-blob-precheck requires an exact ops revision")
+    policy = load_policy_module(ci_revision) if ci_revision else None
+    pin_is_ancestor = (release_pin_is_ancestor if policy is None
+                       else policy.release_pin_is_ancestor)
+    files = tree_inputs(checkout, revision)
+    blobs = {path: blob for path, (mode, blob) in files.items() if safe_module(path)}
+    value = {
+        "skip_module_blobs": blobs,
+        "source_revision": revision,
+        "pin_is_ancestor": pin_is_ancestor(checkout, revision),
+    }
+    cache = {}
+
+    def sources(module):
+        if module not in cache:
+            cache[module] = _read_ops_module(checkout, revision, module)
+        return cache[module]
+
+    return skip_blob_report(value, sources, policy=policy)
+
+
+def skip_blob_precheck_command(args):
+    """Read-only precheck. Exit 1 on a skip-blob miss, 2 on a usage or git error."""
+    revision = getattr(args, "ops_rev", None)
+    ci_revision = getattr(args, "ci_rev", None)
+    checkout = getattr(args, "ops_checkout", None)
+    if not isinstance(revision, str) or not SHA.fullmatch(revision):
+        print("skip-blob-precheck: --ops-rev must be a 40-character commit", file=sys.stderr)
+        return 2
+    if ci_revision not in (None, "") and not (isinstance(ci_revision, str) and SHA.fullmatch(ci_revision)):
+        print("skip-blob-precheck: --ci-rev must be a 40-character commit", file=sys.stderr)
+        return 2
+    if not isinstance(checkout, Path) or not checkout.is_dir():
+        print("skip-blob-precheck: --ops-checkout is not a directory", file=sys.stderr)
+        return 2
+    try:
+        lines = skip_blob_precheck(checkout, revision, ci_revision=ci_revision or None)
+    except subprocess.CalledProcessError:
+        print("skip-blob-precheck: git could not read the ops checkout", file=sys.stderr)
+        return 2
+    except (EvidenceUnavailable, ValueError, OSError) as error:
+        print("skip-blob-precheck: " + str(error), file=sys.stderr)
+        return 2
+    if lines:
+        print("\n".join(lines))
+        return 1
+    print("skip-blob-precheck ok")
+    return 0
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -4090,7 +4783,15 @@ def main():
     for key in ("predecessor", "source"):
         retirement_cli.add_argument("--" + key, type=Path, required=True)
     retirement_cli.add_argument("--revision", required=True)
+    precheck_cli = sub.add_parser(
+        "skip-blob-precheck",
+        help="compare admitted skip module blobs with one ops revision")
+    precheck_cli.add_argument("--ops-checkout", type=Path, required=True)
+    precheck_cli.add_argument("--ops-rev", required=True)
+    precheck_cli.add_argument("--ci-rev")
     args = parser.parse_args()
+    if args.command == "skip-blob-precheck":
+        return skip_blob_precheck_command(args)
     try:
         if args.command == "plan":
             result = plan(args.source, read_json(args.context), args.shards, args.serial_module)

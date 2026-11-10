@@ -187,6 +187,7 @@ review; the coordinator verifies its signed source and actual artifacts first.
 Historical skips retain their source/run identity. Admission never reuses prior
 successful jobs or replaces same-run native, reference, serial and ordinary
 execution. Host/root skips are not Linux acceptance.
+Before a yueops release, run `python3 scripts/pytest-shards.py skip-blob-precheck --ops-checkout <yueops-checkout> --ops-rev <40-character sha>` and stop if it exits 1: a skip module whose blob changed without a successor seal is what validation-evidence rejects.
 The owner's 2026-11-03 Nezha retirement removes two active skip IDs. Historical
 seal verification reconstructs their exact predecessor bytes; admission rejects
 skips from the retired module, and historical review artifacts stay unchanged.
