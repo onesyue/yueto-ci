@@ -3757,8 +3757,10 @@ ORDINARY_SKIP_EVIDENCE_20261110B_SHA256 = "2f1cfa9a2d32de58b4b19f013989e29c58589
 ORDINARY_SKIP_EVIDENCE_20261110B = Path("reviews/ops-ordinary-skip-evidence-20261110b.json")
 # yueops 0e8c29c02 (#477 R-16): the dead-backed autohide now reads pool owners,
 # so this module gains a per-module owners fixture (a6a629cd -> 57146f4b). Its one
+# before_blob is the admitted baseline blob cbfe9f4b: ordinary evidence files are
+# each checked against the admitted set, not chained (run 42878457376 rejected a6a629cd).
 # native VLESS skip keeps the same XRAY_PROBE_TEST_BIN reason. No case is added.
-ORDINARY_SKIP_EVIDENCE_20261111_SHA256 = "55e385eeac542205b239152961eed1a82a53df9db36b23e2c52bef4fa92c520a"
+ORDINARY_SKIP_EVIDENCE_20261111_SHA256 = "acfcca51c3bb471587816c78f55ef3ce846eba791fe32994c7619f579f3403cd"
 ORDINARY_SKIP_EVIDENCE_20261111 = Path("reviews/ops-ordinary-skip-evidence-20261111.json")
 ORDINARY_SKIP_EVIDENCE_FILES = (
     (ORDINARY_SKIP_EVIDENCE, ORDINARY_SKIP_EVIDENCE_SHA256),

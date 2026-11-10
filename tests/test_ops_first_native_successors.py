@@ -392,8 +392,13 @@ class Successors20261110(unittest.TestCase):
         self.assertEqual((len(record["updates"]), len(record["additions"])), (1, 0))
         module = "tests/test_cdn_vless_autohide_20261006.py"
         self.assertEqual({n.split("::", 1)[0] for n in record["updates"]}, {module})
-        before = "a6a629cd58d751c2f6278d05d46efce8b002ea0f"
+        before = "cbfe9f4b0931c1b12d63f433a4ba854004e617c4"
         after = "57146f4b40337b548cf38783f5930378880f4cda"
+        baseline = json.loads((ROOT / SHARDS.SKIP_BASELINE).read_bytes())
+        # Evidence files are checked against the admitted set, not chained:
+        # before_blob must be the blob the baseline admits (run 42878457376).
+        for nodeid in record["updates"]:
+            self.assertEqual(baseline["cases"][nodeid]["module_blob"], before)
         reason = "Skipped: set XRAY_PROBE_TEST_BIN to run the native VLESS transport regression"
         admitted = {n: {"outcome": "skipped", "reason": reason, "module_blob": before}
                     for n in record["updates"]}
