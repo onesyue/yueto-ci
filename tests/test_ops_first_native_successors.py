@@ -343,12 +343,15 @@ class Successors20261110(unittest.TestCase):
         for case in record["additions"].values():
             self.assertEqual(case["outcome"], "skipped")
             self.assertTrue(case["reason"].startswith("Skipped: "))
-        blobs = {n.split("::", 1)[0]: c["module_blob"] for n, c in record["additions"].items()}
+        updated = {n.split("::", 1)[0] for n in record["updates"]}
+        only_added = {n: c for n, c in record["additions"].items() if n.split("::", 1)[0] not in updated}
+        self.assertTrue(only_added)
+        blobs = {n.split("::", 1)[0]: c["module_blob"] for n, c in only_added.items()}
         admitted = {}
         got = SHARDS._ordinary_skip_evidence_record(
             ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261110, SHARDS.ORDINARY_SKIP_EVIDENCE_20261110_SHA256,
             admitted, {"skip_module_blobs": blobs})
-        self.assertEqual(set(got), set(record["additions"]))
+        self.assertEqual(set(got), set(only_added))
         moved = {m: "f" * 40 for m in blobs}
         self.assertEqual(SHARDS._ordinary_skip_evidence_record(
             ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261110, SHARDS.ORDINARY_SKIP_EVIDENCE_20261110_SHA256,
