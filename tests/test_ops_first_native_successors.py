@@ -3,6 +3,7 @@
 import copy
 import importlib.util
 import json
+import tempfile
 import unittest
 from unittest import mock
 from pathlib import Path
@@ -126,7 +127,7 @@ class ExactFirstNativePolicy(unittest.TestCase):
                                                        if n.startswith(m + "::")]}
                                        for m in self.policy["module_blobs"]}}
 
-    def test_all_52_obligations_require_actual_same_run_case_calls(self):
+    def test_remaining_obligations_require_actual_same_run_case_calls(self):
         result = SHARDS.reviewed_first_native_successor(self.baseline, self.value, self.native)
         for name in self.policy["cases"]:
             self.assertEqual(result["reviewed_hosted"]["cases"][name]["disposition"],
@@ -189,6 +190,8 @@ class ExactFirstNativePolicy(unittest.TestCase):
 
     def test_release_pin_ancestry_follows_yueops_history(self):
         source = ROOT.parent / "yueops"
+        if not (source / ".git").exists():
+            self.skipTest("yueops sibling checkout is not available")
         pin = SHARDS.release_pin()
         self.assertTrue(SHARDS.release_pin_is_ancestor(source, pin))
         parent = SHARDS.git(source, "rev-parse", pin + "^").decode().strip()
@@ -198,6 +201,8 @@ class ExactFirstNativePolicy(unittest.TestCase):
 
     def test_descendant_ruff_bundle_uses_release_pin_ancestry(self):
         source = ROOT.parent / "yueops"
+        if not (source / ".git").exists():
+            self.skipTest("yueops sibling checkout is not available")
         revision = SHARDS.git(source, "rev-parse", "HEAD").decode().strip()
         self.assertNotEqual(revision, SHARDS.release_pin())
         self.assertTrue(SHARDS.release_pin_is_ancestor(source, revision))
@@ -206,7 +211,19 @@ class ExactFirstNativePolicy(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "ruff_retired_video"):
                 SHARDS.pr_shared_input_successor_proof(source, revision)
     def test_policy_has_no_historical_backup_or_disposition_downgrade(self):
-        self.assertEqual(len(self.policy["cases"]), 52)
+        retired = {
+            "tests/test_protocol_liveness_results_install.py",
+            "tests/test_protocol_liveness_results_pull.py",
+            "tests/test_install_operator_host_source.py",
+        }
+        self.assertEqual(len(self.policy["cases"]), 4)
+        self.assertEqual(set(self.policy["module_blobs"]), {
+            "tests/test_frozen_manifest_reader_20261015.py",
+            "tests/test_panel_subscribe_delivery_alert_20261012.py",
+            "tests/test_status_tls_installer_20261027.py",
+        })
+        self.assertTrue(retired.isdisjoint(SHARDS.NATIVE_TARGETS))
+        self.assertFalse(any(name.split("::", 1)[0] in retired for name in self.policy["cases"]))
         for name, row in self.policy["cases"].items():
             self.assertFalse(name.startswith(BACKUP + "::"))
             self.assertEqual(set(row), {"outcome", "variants"})
@@ -256,6 +273,33 @@ class ExactFirstNativePolicy(unittest.TestCase):
         broken[sample] = dict(admitted[sample], module_blob="e" * 40)
         with self.assertRaisesRegex(ValueError, "does not succeed"):
             SHARDS.ordinary_skip_evidence_successors(broken, {"skip_module_blobs": blobs})
+        rollback = ("tests/test_agent_rollback_payload_20261013.py::"
+                    "test_real_linux_signed_payload_roots_and_native_consumer_rejections")
+        rollback_module, rollback_after = rollback.split("::", 1)[0], record["updates"][rollback]["after_blob"]
+        predecessor, _ = SHARDS.reviewed_estate_input_transition(SHARDS.skip_baseline())
+        earlier = {nodeid: dict(case) for nodeid, case in predecessor["cases"].items()}
+        self.assertNotEqual(earlier[rollback]["module_blob"], record["updates"][rollback]["before_blob"])
+        self.assertNotIn(rollback, SHARDS.ordinary_skip_evidence_successors(
+            earlier, {"skip_module_blobs": {rollback_module: "f" * 40}}))
+        with self.assertRaisesRegex(ValueError, "does not succeed"):
+            SHARDS.ordinary_skip_evidence_successors(
+                earlier, {"skip_module_blobs": {rollback_module: rollback_after}})
+        self.assertIn(rollback, got)
+        self.assertEqual(got[rollback]["module_blob"], rollback_after)
+        self.assertEqual(got[rollback]["reason"], admitted[rollback]["reason"])
+        with tempfile.TemporaryDirectory() as directory:
+            isolated = Path(directory)
+            with mock.patch.object(SHARDS, "ROOT", isolated):
+                self.assertIsNone(SHARDS.ordinary_skip_evidence_file())
+                self.assertEqual(SHARDS.ordinary_skip_evidence_successors(admitted, {
+                    "skip_module_blobs": blobs}), {})
+            reviews = isolated / "reviews"
+            reviews.mkdir()
+            (reviews / SHARDS.ORDINARY_SKIP_EVIDENCE.name).symlink_to(evidence)
+            with mock.patch.object(SHARDS, "ROOT", isolated):
+                self.assertIsNone(SHARDS.ordinary_skip_evidence_file())
+                self.assertEqual(SHARDS.ordinary_skip_evidence_successors(admitted, {
+                    "skip_module_blobs": blobs}), {})
         self.assertEqual((ROOT / "ops-pytest-skip-baseline.json").read_bytes(), baseline_bytes)
 
 

@@ -341,9 +341,14 @@ done
 exit 97
 """)
         self.shim("install", 'echo unexpected-install >> "$CALLS"; exit 97\n')
+        scripts = self.base / "scripts"
+        scripts.mkdir()
+        (scripts / "ci-retry.sh").write_text(HELPER.read_text())
+        (scripts / "install-cosign.sh").write_text(
+            (ROOT / "scripts/install-cosign.sh").read_text())
         github_path = self.base / "github_path"
         result = subprocess.run(
-            ["bash", str(ROOT / "scripts/install-cosign.sh")],
+            ["bash", str(scripts / "install-cosign.sh")],
             env={**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)},
             capture_output=True, text=True, timeout=15,
         )

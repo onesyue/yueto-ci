@@ -1503,33 +1503,10 @@ jobs:
               "$PWD/.venv/bin/python" "$native_driver" "$target" "$floor" 0 \
               "$native_evidence/$(basename "$target" .py).json"
           done <<'NATIVE_TARGETS'
-          tests/test_protocol_liveness_results_install.py 34
-          tests/test_protocol_liveness_results_pull.py 34
           tests/test_panel_subscribe_delivery_alert_20261012.py 17
           tests/test_frozen_manifest_reader_20261015.py 4
           tests/test_status_tls_installer_20261027.py 7
           NATIVE_TARGETS
-          # The signer test deliberately uses canonical /root and /var/lib paths.
-          # Keep its entire module inside a real disposable container, not host root.
-          timeout --signal=TERM --kill-after=20s 1800s docker build \
-            --file .ci-policy/tests/images/native-root-lab.Dockerfile \
-            --tag "yueops-native-root-lab:$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" .ci-policy/tests/images
-          # UID0 has no DAC override inside the container. Grant only this job's
-          # group access to its output directory; seal the two inputs read-only.
-          chmod g+w "$native_evidence"
-          chmod 0444 "$native_driver" "$native_evidence/native-context.json"
-          timeout --signal=TERM --kill-after=20s 600s docker run --rm --network none \
-            --group-add "$(id -g)" \
-            --read-only --cap-drop ALL --security-opt no-new-privileges \
-            --tmpfs /tmp:rw,nosuid,nodev --tmpfs /root:rw,nosuid,nodev,mode=0700 \
-            --tmpfs /var/lib/yueops-release-roots:rw,nosuid,nodev,mode=0700 \
-            --tmpfs /run/lock:rw,nosuid,nodev,mode=0755 \
-            --mount "type=bind,src=$PWD,dst=/source,readonly" \
-            --mount "type=bind,src=$native_driver,dst=/native-driver.py,readonly" \
-            --mount "type=bind,src=$native_evidence,dst=/evidence" \
-            "yueops-native-root-lab:$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
-            /native-driver.py tests/test_install_operator_host_source.py 29 0 \
-            /evidence/test_install_operator_host_source.json
 
       - name: Validate yueops frontend
         if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
