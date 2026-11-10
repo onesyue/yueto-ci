@@ -414,3 +414,24 @@ class Successors20261110(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RestoreDrillBlobSuccessor(unittest.TestCase):
+    def test_moves_only_the_seven_owner_canceled_cases(self):
+        baseline = json.loads((ROOT / SHARDS.SKIP_BASELINE).read_bytes())
+        module = "tests/test_yueops_pg_restore_drill_20260924.py"
+        after = "3cca4792fbd3319411901ad3588a879e7b52193f"
+        moved = SHARDS.reviewed_restore_drill_blob_successor(baseline, {"skip_module_blobs": {module: after}})
+        rows = {k: v for k, v in moved["reviewed_hosted"]["cases"].items() if k.startswith(module + "::")}
+        self.assertEqual(len(rows), 7)
+        self.assertTrue(all(v["module_blob"] == after and v["disposition"] == "OWNER_CANCELED" for v in rows.values()))
+        for k, v in rows.items():
+            self.assertEqual(v["variants"], baseline["reviewed_hosted"]["cases"][k]["variants"])
+        other = {k: v for k, v in moved["reviewed_hosted"]["cases"].items() if not k.startswith(module + "::")}
+        self.assertEqual(other, {k: v for k, v in baseline["reviewed_hosted"]["cases"].items() if not k.startswith(module + "::")})
+        self.assertIs(SHARDS.reviewed_restore_drill_blob_successor(baseline, {"skip_module_blobs": {module: "0" * 40}}), baseline)
+        tampered = json.loads(json.dumps(baseline))
+        key = next(iter(rows))
+        tampered["reviewed_hosted"]["cases"][key]["disposition"] = "SAME_RUN_NATIVE_REQUIRED"
+        with self.assertRaisesRegex(ValueError, "restore-drill reviewed case"):
+            SHARDS.reviewed_restore_drill_blob_successor(tampered, {"skip_module_blobs": {module: after}})

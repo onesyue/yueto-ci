@@ -3647,6 +3647,32 @@ def reviewed_canceled_backup_blob_successor(baseline, value):
     return baseline | {"cases": updated}
 
 
+def reviewed_restore_drill_blob_successor(baseline, value):
+    """Move the seven owner-canceled restore-drill cases to the cdn-in-backup blob.
+
+    yueops ed2106b26 (owner t935u) makes the daily dump include
+    cdn_entry_observations data, changing the module 2f57ec05 -> 3cca4792. The
+    seven e2e cases stay OWNER_CANCELED with the same two reviewed setup
+    variants (run 42887205152 skipped them for the base-image reason). Only the
+    module blob moves; identities, dispositions and variants are sealed.
+    """
+    module = "tests/test_yueops_pg_restore_drill_20260924.py"
+    before = "2f57ec05cab6f9af631f66650feaaf76a7770222"
+    after = "3cca4792fbd3319411901ad3588a879e7b52193f"
+    if value.get("skip_module_blobs", {}).get(module) != after:
+        return baseline
+    hosted = baseline.get("reviewed_hosted", {})
+    selected = {key: row for key, row in hosted.get("cases", {}).items()
+                if key.startswith(module + "::")}
+    require(len(selected) == 7
+            and sha(encoded(selected)) == "3fa2693d80385d2531d1d10e17cf6f529be968c2be53d503b0cb432d8a8de32e"
+            and all(row["module_blob"] == before and row["disposition"] == "OWNER_CANCELED"
+                    for row in selected.values()),
+            "restore-drill reviewed case identities, variants or dispositions differ")
+    cases = hosted["cases"] | {key: row | {"module_blob": after} for key, row in selected.items()}
+    return baseline | {"reviewed_hosted": hosted | {"cases": cases}}
+
+
 def reviewed_board139_native_successor(baseline, value, native):
     """Keep the historical skip seal; qualify two exact Board139 successors.
 
@@ -3885,6 +3911,7 @@ def admit_skips(value, result, native):
     unknown = []
     observed_collection = {}
     baseline = reviewed_canceled_backup_blob_successor(baseline, value)
+    baseline = reviewed_restore_drill_blob_successor(baseline, value)
     baseline = reviewed_board139_native_successor(baseline, value, native)
     baseline = reviewed_first_native_successor(baseline, value, native)
     reviewed = baseline.get("reviewed_hosted", {})
