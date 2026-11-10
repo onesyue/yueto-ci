@@ -4653,20 +4653,25 @@ def skip_blob_report(value, sources, *, policy=None):
     return skip_blob_mismatch_lines(bound, blobs if isinstance(blobs, dict) else {}, sources)
 
 
-def load_policy_module(ci_revision):
+def load_policy_module(ci_revision, checkout=None):
     """Return this module, or pytest-shards.py as of one historical ci revision.
 
     The checked-out baseline JSON is what join reads. A historical script is
     executed with this checkout's file path so those seals stay the current
     ones, while its successor functions stay the ones that revision shipped.
     Helper functions that did not exist yet are installed into that module so
-    both paths call one binder.
+    both paths call one binder. ``checkout`` defaults to this repository. A
+    revision this clone does not contain is an input error.
     """
     if ci_revision in (None, ""):
         return sys.modules[__name__]
     require(isinstance(ci_revision, str) and SHA.fullmatch(ci_revision),
             "skip-blob-precheck requires an exact ci revision")
-    source = git(ROOT, "show", f"{ci_revision}:scripts/pytest-shards.py")
+    repo = ROOT if checkout is None else checkout
+    try:
+        source = git(repo, "show", f"{ci_revision}:scripts/pytest-shards.py")
+    except subprocess.CalledProcessError as error:
+        raise ValueError("historical pytest-shards policy is not in this clone") from error
     path = Path(tempfile.mkdtemp(prefix="skip-blob-policy-")) / "pytest-shards.py"
     path.write_bytes(source)
     module = types.ModuleType("skip_blob_policy_" + ci_revision[:12])

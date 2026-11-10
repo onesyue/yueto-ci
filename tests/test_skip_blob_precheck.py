@@ -66,6 +66,64 @@ def _git(repo, *args, input_text=None):
         ["git", "-C", str(repo), *args], input=input_text, text=True, env=env).strip()
 
 
+def _object_present(revision):
+    completed = subprocess.run(
+        ["git", "-C", str(ROOT), "cat-file", "-e", revision],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    return completed.returncode == 0
+
+
+def _commit_policy(repo, source):
+    _git(repo, "init", "-q")
+    relative = "scripts/pytest-shards.py"
+    path = repo / relative
+    path.parent.mkdir(parents=True)
+    path.write_text(source, encoding="utf-8")
+    _git(repo, "add", "--", relative)
+    tree = _git(repo, "write-tree")
+    return _git(repo, "commit-tree", tree, input_text="policy fixture\n")
+
+
+def _drop_function(source, name, follower):
+    start = source.index("def " + name + "(")
+    end = source.index("def " + follower + "(")
+    if start >= end:
+        raise AssertionError("policy fixture ranges overlap")
+    return source[:start] + source[end:]
+
+
+def _historical_native_source(source):
+    replacements = (
+        (
+            "def reviewed_board139_native_successor(baseline, value, native, *, require_native=True):",
+            "def reviewed_board139_native_successor(baseline, value, native):",
+        ),
+        (
+            "def reviewed_first_native_successor(baseline, value, native, *, require_native=True):",
+            "def reviewed_first_native_successor(baseline, value, native):",
+        ),
+        (
+            "    if require_native:\n"
+            "        passed = native[\"obligations\"].get(module, {}).get(\"passed\", [])\n"
+            "        require(set(passed) == expected and len(passed) == len(expected), message)\n",
+            "    passed = native[\"obligations\"].get(module, {}).get(\"passed\", [])\n"
+            "    require(set(passed) == expected and len(passed) == len(expected), message)\n",
+        ),
+        (
+            "        if require_native:\n"
+            "            require(nodeid in native[\"obligations\"].get(module, {}).get(\"passed\", []),\n"
+            "                    \"first native successor lacks exact same-run call: \" + nodeid)\n",
+            "        require(nodeid in native[\"obligations\"].get(module, {}).get(\"passed\", []),\n"
+            "                \"first native successor lacks exact same-run call: \" + nodeid)\n",
+        ),
+    )
+    for old, new in replacements:
+        if source.count(old) != 1:
+            raise AssertionError("historical policy fixture anchor drifted")
+        source = source.replace(old, new, 1)
+    return source
+
+
 class SkipBlobPrecheck(unittest.TestCase):
     def test_unchanged_reviewed_blob_matches(self):
         self.assertEqual(SHARDS.skip_blob_report(_value(RESTORE, RESTORE_BEFORE), {}), [])
@@ -99,7 +157,14 @@ class SkipBlobPrecheck(unittest.TestCase):
             SHARDS.skip_blob_report(_value(CDN, mutated), {CDN: ROOT_ONLY_SOURCE}), [])
 
     def test_historical_policy_keeps_the_rejected_restore_blob(self):
-        policy = SHARDS.load_policy_module(REJECTED_CI)
+        source = _drop_function(
+            (ROOT / "scripts/pytest-shards.py").read_text(encoding="utf-8"),
+            "reviewed_restore_drill_blob_successor",
+            "reviewed_board139_native_successor")
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            commit = _commit_policy(repo, source)
+            policy = SHARDS.load_policy_module(commit, repo)
         self.assertFalse(hasattr(policy, "reviewed_restore_drill_blob_successor"))
         lines = SHARDS.skip_blob_report(_value(RESTORE, RESTORE_AFTER), {}, policy=policy)
         self.assertEqual(len(lines), 1)
@@ -109,14 +174,31 @@ class SkipBlobPrecheck(unittest.TestCase):
         self.assertEqual(SHARDS.skip_blob_report(_value(RESTORE, RESTORE_AFTER), {}), [])
 
     def test_historical_board_renewal_does_not_need_a_native_receipt(self):
-        policy = SHARDS.load_policy_module(REJECTED_CI)
-        bound = policy.prepare_skip_bindings(
-            _value(BOARD, BOARD_RENEWAL), {"obligations": {}},
-            require_native=False, check_shared_inputs=False)
+        source = _historical_native_source(
+            (ROOT / "scripts/pytest-shards.py").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            commit = _commit_policy(repo, source)
+            policy = SHARDS.load_policy_module(commit, repo)
+            function = policy.reviewed_board139_native_successor
+            self.assertNotIn("require_native", function.__code__.co_varnames)
+            bound = policy.prepare_skip_bindings(
+                _value(BOARD, BOARD_RENEWAL), {"obligations": {}},
+                require_native=False, check_shared_inputs=False)
         blobs = {nodeid.split("::", 1)[0]: case["module_blob"]
                  for nodeid, case in bound["reviewed"]["cases"].items()
                  if nodeid.startswith(BOARD + "::")}
         self.assertEqual(blobs, {BOARD: BOARD_RENEWAL})
+
+    def test_missing_policy_commit_is_an_input_error(self):
+        missing = "0" * 40
+        with self.assertRaises(ValueError) as caught:
+            SHARDS.load_policy_module(missing)
+        self.assertIn("not in this clone", str(caught.exception))
+        code = SHARDS.skip_blob_precheck_command(type("Args", (), {
+            "ops_rev": "b" * 40, "ci_rev": missing, "ops_checkout": ROOT,
+        })())
+        self.assertEqual(code, 2)
 
     def test_usage_error_is_not_a_blob_mismatch(self):
         code = SHARDS.skip_blob_precheck_command(type("Args", (), {
@@ -157,8 +239,11 @@ class SkipBlobPrecheck(unittest.TestCase):
             self.assertEqual(passed.returncode, 0, passed.stderr)
             self.assertEqual(passed.stdout.strip(), "skip-blob-precheck ok")
 
-    @unittest.skipUnless(OPS_CHECKOUT.is_dir(), "local yueops checkout is not present")
     def test_replay_rejected_pair_and_sealed_pair(self):
+        if not OPS_CHECKOUT.is_dir():
+            self.skipTest("local yueops checkout is not present")
+        if not (_object_present(REJECTED_CI) and _object_present(ACCEPTED_CI)):
+            self.skipTest("historical yueto-ci commits are not in this clone")
         rejected = self._command(OPS_CHECKOUT, OPS_REV, REJECTED_CI)
         self.assertEqual(rejected.returncode, 1, rejected.stderr)
         self.assertIn(RESTORE, rejected.stdout)
