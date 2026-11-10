@@ -7983,7 +7983,7 @@
     "changes": {
       "tests/native_loadshed_installer_20261030.py": {
         "before_blob": "a861b1d6b30b3ba59d5321051430c73c099d25c2",
-        "after_blob": "4fe2c7b40110f20fa496b0fdd85cfe8c75da8591",
+        "after_blob": "441aa89516d7a8afa651486cb893090563efe9d9",
         "mode": "100644",
         "floor": 14,
         "uid": 0

@@ -68,11 +68,11 @@ HISTORICAL_NATIVE_INPUTS = {
     "tests/native_loadshed_installer_20261030.py": "a861b1d6b30b3ba59d5321051430c73c099d25c2",
 }
 NATIVE_INPUTS = {
-    "tests/native_loadshed_installer_20261030.py": "4fe2c7b40110f20fa496b0fdd85cfe8c75da8591",
+    "tests/native_loadshed_installer_20261030.py": "441aa89516d7a8afa651486cb893090563efe9d9",
 }
 NATIVE_INPUT_SUCCESSOR_KEY = "reviewed_loadshed_native_input_successor"
 # Filled only from the actual signed source/review/qualification record.
-NATIVE_INPUT_SUCCESSOR_SHA256 = "baeee003134bbc90e174bc91326624a578a7d1fa475964915f179d1c7813dc03"
+NATIVE_INPUT_SUCCESSOR_SHA256 = "1c6883845729d08bb3ff932f54630a4cb25420b95b97650e5ee468c83333891f"
 NATIVE_TARGETS = {
     "tests/native_loadshed_installer_20261030.py": (14, 0),
     "tests/test_board139_schema_acl_native_20261018.py": (6, 1001),
