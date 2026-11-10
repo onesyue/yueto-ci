@@ -2347,31 +2347,43 @@ def reviewed_pr_input_proof(source, revision, *, names=None):
 
 
 def admit_reviewed_pr_inputs(common, files, source_revision, *, names=None, pin_is_ancestor=False):
-    """Peel exact bundles at the release pin, or a descendant, before historical validators."""
+    """Peel exact bundles at the release pin, or a descendant, before historical validators.
+
+    Stacked successors must peel to a fixpoint. A later map entry can expose a
+    predecessor's after-blob (site_refresh_plans leaves the site_devdeps lockfile
+    and package.json after-blobs); a single pass over insertion order would skip
+    the earlier name and leave those blobs for _admit_existing_shared_inputs.
+    """
     if not isinstance(common, dict):
         return common, files
-    for name, (_, paths) in REVIEWED_PR_INPUTS.items():
-        if names is not None and name not in names:
-            continue
-        if not paths.intersection(common) or not reviewed_pr_input_active(name, common.get):
-            continue
-        record = reviewed_pr_input_transition(name)
-        changes = record["changes"]
-        if not any(common.get(p) == c["after_blob"] for p, c in changes.items()):
-            continue
-        require(holds_release_pin(source_revision, pin_is_ancestor=pin_is_ancestor),
-                "reviewed PR input successor requires the signed release pin or its descendant: " + name)
-        common = dict(common)
-        if files is not None:
-            files = dict(files)
-        for path, change in changes.items():
-            require(common.get(path) == change["after_blob"],
-                    "reviewed PR input bundle missing or changed: " + path)
-            common[path] = change["before_blob"]
+    peeled = set()
+    progressed = True
+    while progressed:
+        progressed = False
+        for name, (_, paths) in REVIEWED_PR_INPUTS.items():
+            if name in peeled or (names is not None and name not in names):
+                continue
+            if not paths.intersection(common) or not reviewed_pr_input_active(name, common.get):
+                continue
+            record = reviewed_pr_input_transition(name)
+            changes = record["changes"]
+            if not any(common.get(p) == c["after_blob"] for p, c in changes.items()):
+                continue
+            require(holds_release_pin(source_revision, pin_is_ancestor=pin_is_ancestor),
+                    "reviewed PR input successor requires the signed release pin or its descendant: " + name)
+            common = dict(common)
             if files is not None:
-                require(files.get(path) == (change["mode"], change["after_blob"]),
-                        "reviewed PR input mode or tree changed: " + path)
-                files[path] = (change["mode"], change["before_blob"])
+                files = dict(files)
+            for path, change in changes.items():
+                require(common.get(path) == change["after_blob"],
+                        "reviewed PR input bundle missing or changed: " + path)
+                common[path] = change["before_blob"]
+                if files is not None:
+                    require(files.get(path) == (change["mode"], change["after_blob"]),
+                            "reviewed PR input mode or tree changed: " + path)
+                    files[path] = (change["mode"], change["before_blob"])
+            peeled.add(name)
+            progressed = True
     return common, files
 
 

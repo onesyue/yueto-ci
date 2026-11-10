@@ -190,6 +190,30 @@ def check_unrelated_historical_inputs_do_not_activate_new_seals():
         M.reviewed_pr_input_proof(Path('unused'), 'b' * 40)
 
 
+def check_stacked_site_successors_peel_to_fixpoint():
+    """A later successor must still peel its earlier predecessor (CI 42746203243)."""
+    newer = M.reviewed_pr_input_transition('site_refresh_plans')
+    older = M.reviewed_pr_input_transition('site_devdeps')
+    pkg_after = newer['changes']['site/package.json']['after_blob']
+    lock_after = older['changes']['site/pnpm-lock.yaml']['after_blob']
+    common = {
+        'site/package.json': pkg_after,
+        'site/pnpm-lock.yaml': lock_after,
+    }
+    files = {path: ('100644', blob) for path, blob in common.items()}
+    original = copy.deepcopy(common)
+    with patch.object(M, 'holds_release_pin', return_value=True):
+        before, before_files = M.admit_reviewed_pr_inputs(common, files, 'a' * 40,
+                                                          pin_is_ancestor=True)
+    pkg_before = older['changes']['site/package.json']['before_blob']
+    lock_before = older['changes']['site/pnpm-lock.yaml']['before_blob']
+    assert before['site/package.json'] == pkg_before
+    assert before['site/pnpm-lock.yaml'] == lock_before
+    assert before_files['site/package.json'] == ('100644', pkg_before)
+    assert before_files['site/pnpm-lock.yaml'] == ('100644', lock_before)
+    assert common == original
+
+
 class ReviewedPrInputTransitions(unittest.TestCase):
     def test_review_artifacts(self):
         for name in NAMES:
@@ -225,3 +249,6 @@ class ReviewedPrInputTransitions(unittest.TestCase):
 
     def test_unrelated_historical_inputs(self):
         check_unrelated_historical_inputs_do_not_activate_new_seals()
+
+    def test_stacked_site_successors_peel_to_fixpoint(self):
+        check_stacked_site_successors_peel_to_fixpoint()
