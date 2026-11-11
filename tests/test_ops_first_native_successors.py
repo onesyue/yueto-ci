@@ -464,6 +464,28 @@ class Successors20261110(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
             SHARDS._ordinary_skip_evidence_record(path, digest, {}, {"skip_module_blobs": {module: after}})
 
+    def test_20261111d_selective_deploy_evidence_moves_only_the_admitted_skip(self):
+        raw = (ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261111D).read_bytes()
+        self.assertEqual(SHARDS.sha(raw), SHARDS.ORDINARY_SKIP_EVIDENCE_20261111D_SHA256)
+        record = json.loads(raw)
+        self.assertEqual((len(record["updates"]), len(record["additions"])), (1, 0))
+        module = "tests/test_ops_selective_deploy_20261009.py"
+        before = "03118c494df39551571140bfc371e814bcb7f400"
+        after = "c0037189784255c6881365f66d3d1db258f07aac"
+        baseline = json.loads((ROOT / SHARDS.SKIP_BASELINE).read_bytes())
+        for nodeid in record["updates"]:
+            self.assertEqual(baseline["cases"][nodeid]["module_blob"], before)
+            reason = baseline["cases"][nodeid]["reason"]
+        admitted = {n: {"outcome": "skipped", "reason": reason, "module_blob": before}
+                    for n in record["updates"]}
+        path = ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261111D
+        digest = SHARDS.ORDINARY_SKIP_EVIDENCE_20261111D_SHA256
+        got = SHARDS._ordinary_skip_evidence_record(path, digest, admitted, {"skip_module_blobs": {module: after}})
+        self.assertEqual(set(got), set(record["updates"]))
+        self.assertTrue(all(c["module_blob"] == after and c["reason"] == reason for c in got.values()))
+        with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
+            SHARDS._ordinary_skip_evidence_record(path, digest, {}, {"skip_module_blobs": {module: after}})
+
 if __name__ == "__main__":
     unittest.main()
 

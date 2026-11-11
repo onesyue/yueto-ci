@@ -1,0 +1,12 @@
+{
+  "additions": {},
+  "evidence_run": "local-ace262936-20261111",
+  "schema": 1,
+  "source_revision": "ace2629366baa2b7e47e70d4b7838ab874d87864",
+  "updates": {
+    "tests/test_ops_selective_deploy_20261009.py::test_native_compose_noop_env_bind_shared_change_and_failure_recovery": {
+      "after_blob": "c0037189784255c6881365f66d3d1db258f07aac",
+      "before_blob": "03118c494df39551571140bfc371e814bcb7f400"
+    }
+  }
+}

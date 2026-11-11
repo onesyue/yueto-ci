@@ -3813,6 +3813,12 @@ ORDINARY_SKIP_EVIDENCE_20261111B = Path("reviews/ops-ordinary-skip-evidence-2026
 # with the same reason. Checked against the admitted baseline (not chained).
 ORDINARY_SKIP_EVIDENCE_20261111C_SHA256 = "9b9b669ed2037a275c5a86b7293df6a0fc5cb3da51ab91443adcf3a4d8aae3a6"
 ORDINARY_SKIP_EVIDENCE_20261111C = Path("reviews/ops-ordinary-skip-evidence-20261111c.json")
+# Ship 9 fix ace262936: the compose mount floor test adds the read-only
+# retired-entry list mount (#493). The admitted Docker-image skip in the same
+# module keeps its reason and moves 03118c49 -> c0037189. Checked against the
+# admitted baseline (not chained). No case is added.
+ORDINARY_SKIP_EVIDENCE_20261111D_SHA256 = "e297ce3a7eb9fa0459b527f1cd5851b13a6621a90c76dc88ff8967f75b60cc6e"
+ORDINARY_SKIP_EVIDENCE_20261111D = Path("reviews/ops-ordinary-skip-evidence-20261111d.json")
 ORDINARY_SKIP_EVIDENCE_FILES = (
     (ORDINARY_SKIP_EVIDENCE, ORDINARY_SKIP_EVIDENCE_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261110, ORDINARY_SKIP_EVIDENCE_20261110_SHA256),
@@ -3820,6 +3826,7 @@ ORDINARY_SKIP_EVIDENCE_FILES = (
     (ORDINARY_SKIP_EVIDENCE_20261111, ORDINARY_SKIP_EVIDENCE_20261111_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261111B, ORDINARY_SKIP_EVIDENCE_20261111B_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261111C, ORDINARY_SKIP_EVIDENCE_20261111C_SHA256),
+    (ORDINARY_SKIP_EVIDENCE_20261111D, ORDINARY_SKIP_EVIDENCE_20261111D_SHA256),
 )
 
 
