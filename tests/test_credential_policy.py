@@ -41,6 +41,10 @@ PAT_FALLBACKS = (
         r"\$\{\{ vars\.YUETO_CI_APP_CLIENT_ID != '' && github\.token"
         r" \|\| secrets\.YUETO_CI_PAT \}\}"
     ),
+    re.compile(
+        r"\$\{\{ vars\.YUETO_CI_APP_CLIENT_ID != '' && steps\.evidence_source_token\.outputs\.token"
+        r" \|\| secrets\.YUETO_CI_PAT \}\}"
+    ),
 )
 SOURCE_REPOS = {"yueboard", "yue-node", "yueops", "yuelink", "quic-go"}
 
@@ -82,6 +86,17 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         # poll x3, rescan, deadman.  A refactor that stops finding them
         # must not read as "no bare PAT left".
         self.assertGreaterEqual(uses, 11)
+
+    def test_evidence_source_fallback_requires_exact_switch_and_minter(self) -> None:
+        approved = "${{ vars.YUETO_CI_APP_CLIENT_ID != '' && steps.evidence_source_token.outputs.token || secrets.YUETO_CI_PAT }}"
+        self.assertTrue(any(pattern.fullmatch(approved) for pattern in PAT_FALLBACKS))
+        for invalid in (
+            "${{ secrets.YUETO_CI_PAT }}",
+            approved.replace("evidence_source_token", "unreviewed_token"),
+            approved.replace("vars.YUETO_CI_APP_CLIENT_ID != ''", "true"),
+        ):
+            with self.subTest(expression=invalid):
+                self.assertFalse(any(pattern.fullmatch(invalid) for pattern in PAT_FALLBACKS))
 
     def test_every_app_token_is_switched_pinned_and_least_privilege(self) -> None:
         steps = [
