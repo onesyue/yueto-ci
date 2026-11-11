@@ -1,17 +1,17 @@
-"""Execute the workflow bootstrap with controlled external commands and files.
+"""Execute the installer with controlled external commands and files.
 
 The fixtures model APT trust/fetch failures, not cryptography or a real install.
-Only four literal machine paths are relocated; the workflow shell is unchanged.
+The workflow names the installer once. Shards unpack its archive and never apt.
+DNS resolution retries; a package miss or a bad signature does not.
 """
 
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
+from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,8 +22,10 @@ FINGERPRINT = "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8"
 def workflow_shell():
     workflow = (ROOT / ".github/workflows/build.yml").read_text()
     assert workflow.count(STEP) == 1
-    step = workflow.split(STEP, 1)[1].split("\n      - name:", 1)[0]
-    return textwrap.dedent(step.split("        run: |\n", 1)[1])
+    assert "bash scripts/install-yueops-pg18-toolchain.sh\n" in workflow
+    # The package line lives in the installer. Shards must not apt-install it.
+    assert "postgresql-18" not in workflow
+    return (ROOT / "scripts/install-yueops-pg18-toolchain.sh").read_text()
 
 
 COMMAND_FIXTURE = r'''
@@ -71,6 +73,10 @@ elif command == "gpg":
         fail("controlled malformed key", 2)
     fingerprint = "BAD" if fault == "fingerprint" else "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8"
     print("fpr:::::::::" + fingerprint + ":")
+elif command == "sleep":
+    assert len(args) == 1
+    with (root / "sleeps").open("a") as out:
+        out.write(args[0] + "\n")
 elif command == "apt-get":
     options = {}
     while args and args[0] == "-o":
@@ -127,6 +133,14 @@ elif command == "apt-get":
             raise SystemExit(0)
         if fault == stage + "-signature":
             fail("controlled invalid InRelease signature")
+        if fault == "ubuntu-resolve" and stage == "ubuntu":
+            seen = sum(
+                1 for line in (root / "calls.jsonl").read_text().splitlines()
+                if json.loads(line)["action"] == "update" and not json.loads(line)["pgdg"])
+            if seen == 1:
+                fail("Temporary failure resolving 'archive.ubuntu.com'")
+        if fault == "ubuntu-resolve-exhausted" and stage == "ubuntu":
+            fail("Temporary failure resolving 'archive.ubuntu.com'")
         if fault == stage + "-update":
             fail("controlled index fetch failure")
         assert options["APT::Update::Error-Mode"] == "any"
@@ -155,7 +169,7 @@ class NativePostgresToolchainTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.bin = self.root / "bin"
         self.bin.mkdir()
-        for command in ("id", "dpkg", "sudo", "apt-get", "curl", "gpg"):
+        for command in ("id", "dpkg", "sudo", "apt-get", "curl", "gpg", "sleep"):
             p = self.bin / command
             p.write_text("#!" + sys.executable + "\n" + COMMAND_FIXTURE)
             p.chmod(0o755)
@@ -174,13 +188,21 @@ class NativePostgresToolchainTests(unittest.TestCase):
             self.assertEqual(self.shell.count(original), 1, original)
             self.shell = self.shell.replace(original, replacement)
 
-    def run_step(self, fault="", shell=None):
+    def run_step(self, fault="", shell=None, args=None):
+        body = self.shell if shell is None else shell
+        script = self.root / "install.sh"
+        script.write_text(body)
+        script.chmod(0o755)
+        retry = self.root / "ci-retry.sh"
+        if not retry.exists():
+            retry.write_bytes((ROOT / "scripts/ci-retry.sh").read_bytes())
+            retry.chmod(0o755)
         result = subprocess.run(
-            ["/bin/bash", "-c", self.shell if shell is None else shell],
+            ["/bin/bash", str(script), *(args or [])],
             env=os.environ | {"PATH": str(self.bin) + os.pathsep + os.defpath,
                               "FIXTURE_ROOT": str(self.root), "FIXTURE_FAULT": fault,
                               "GITHUB_PATH": str(self.root / "github-path")},
-            capture_output=True, text=True, timeout=20,
+            capture_output=True, text=True, timeout=20, check=False,
         )
         self.assertEqual((self.root / "system.sources").read_text(), self.system_sources)
         self.assertEqual(list(self.root.glob("apt.*")), [], "temporary APT state was not cleaned")
@@ -189,6 +211,10 @@ class NativePostgresToolchainTests(unittest.TestCase):
     def calls(self):
         p = self.root / "calls.jsonl"
         return [json.loads(line) for line in p.read_text().splitlines()] if p.exists() else []
+
+    def sleeps(self):
+        path = self.root / "sleeps"
+        return path.read_text().splitlines() if path.exists() else []
 
     def preinstall(self, missing=None, version="18.2"):
         target = self.root / "pg-bin"
@@ -293,6 +319,58 @@ class NativePostgresToolchainTests(unittest.TestCase):
         self.assertIn("require a non-root runner", result.stdout)
         self.assertFalse((self.root / "github-path").exists())
 
+    def test_one_dns_resolution_failure_retries_then_installs(self):
+        result = self.run_step("ubuntu-resolve")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            [c["action"] for c in self.calls()],
+            ["update", "update", "install", "update", "install"],
+        )
+        self.assertEqual(self.sleeps(), ["2"])
+        self.assertIn("transient failure on attempt 1/3", result.stderr)
+        self.assertIn("Temporary failure resolving", result.stderr)
+        self.assertEqual((self.root / "github-path").read_text(), str(self.root / "pg-bin") + "\n")
+
+    def test_repeated_dns_resolution_failure_stays_fatal(self):
+        result = self.run_step("ubuntu-resolve-exhausted")
+        self.assertEqual(result.returncode, 100, result.stderr)
+        self.assertEqual([c["action"] for c in self.calls()], ["update", "update", "update"])
+        self.assertEqual(self.sleeps(), ["2", "4"])
+        self.assertFalse((self.root / "github-path").exists())
+        self.assertFalse((self.root / "pg-bin").exists())
+
+    def test_pack_reuses_installed_tree_without_apt(self):
+        self.preinstall()
+        archive = self.root / "out.tar"
+        result = self.run_step(args=["pack", str(archive)])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls(), [])
+        listing = subprocess.run(["tar", "-tf", str(archive)], capture_output=True, text=True, check=False)
+        self.assertEqual(listing.returncode, 0, listing.stderr)
+        self.assertTrue(any(line.rstrip("/").endswith("postgres") for line in listing.stdout.splitlines()), listing.stdout)
+
+    def test_activate_missing_archive_fails_closed_without_apt(self):
+        script = (ROOT / "scripts/activate-yueops-pg18-toolchain.sh").read_text()
+        self.assertNotIn("apt-get", script)
+        self.assertNotIn("apt ", script)
+        result = subprocess.run(
+            ["bash", str(ROOT / "scripts/activate-yueops-pg18-toolchain.sh"), str(self.root / "missing.tar")],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_shards_unpack_one_archive_and_do_not_apt(self):
+        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        toolchain, rest = workflow.split("  yueops-pg18-toolchain:\n", 1)[1].split("  validate:\n", 1)
+        validate = rest.split("\n  validation-evidence:\n", 1)[0]
+        self.assertIn("fail-fast: false\n", validate)
+        self.assertIn("needs: [plan, yueops-pg18-toolchain]\n", "  validate:\n" + validate)
+        self.assertNotIn("apt-get", toolchain)
+        activate = validate.split(
+            "      - name: Activate YueOps PostgreSQL 18 toolchain\n", 1)[1].split("      - name:", 1)[0]
+        self.assertIn(".ci-policy/scripts/activate-yueops-pg18-toolchain.sh", activate)
+        self.assertNotIn("apt-get", activate)
+        self.assertNotIn("continue-on-error", activate)
 
 if __name__ == "__main__":
     unittest.main()

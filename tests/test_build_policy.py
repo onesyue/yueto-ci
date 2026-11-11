@@ -1412,10 +1412,6 @@ class BuildPolicyTest(unittest.TestCase):
             "            make verify-fork-tags\n",
             "yueboard) tools+=(buf corepack docker gcc go make node psql)",
             "Install native YueOps PostgreSQL 18 test toolchain",
-            "postgresql-18 postgresql-client-18",
-            "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8",
-            'for tool in postgres initdb pg_ctl psql; do',
-            'echo "$pg_bin" >> "$GITHUB_PATH"',
             "yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql uv)",
             "Preflight build and promotion dependencies",
             "for tool in bash curl docker envsubst git jq",
@@ -1426,6 +1422,18 @@ class BuildPolicyTest(unittest.TestCase):
         for invariant in required:
             with self.subTest(invariant=invariant):
                 self.assertIn(invariant, self.workflow)
+        installer = (ROOT / "scripts/install-yueops-pg18-toolchain.sh").read_text(encoding="utf-8")
+        for invariant in (
+            "postgresql-18 postgresql-client-18",
+            "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8",
+            "for tool in postgres initdb pg_ctl psql; do",
+            'echo "$pg_bin" >> "$GITHUB_PATH"',
+            "ci_retry 3 2 1",
+        ):
+            with self.subTest(invariant=invariant):
+                self.assertIn(invariant, installer)
+        self.assertEqual(installer.count('"${apt[@]}" update'), 2)
+        self.assertNotIn("postgresql-18", self.workflow)
         self.assertIn("python-version: '3.13'", self.workflow)
         self.assertIn(
             "Set up Python on GitHub-hosted runner",
