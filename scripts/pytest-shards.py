@@ -3819,6 +3819,14 @@ ORDINARY_SKIP_EVIDENCE_20261111C = Path("reviews/ops-ordinary-skip-evidence-2026
 # admitted baseline (not chained). No case is added.
 ORDINARY_SKIP_EVIDENCE_20261111D_SHA256 = "e297ce3a7eb9fa0459b527f1cd5851b13a6621a90c76dc88ff8967f75b60cc6e"
 ORDINARY_SKIP_EVIDENCE_20261111D = Path("reviews/ops-ordinary-skip-evidence-20261111d.json")
+# Ship 9 fix 9e628afe1: the signed-closure pin test admits
+# scripts/lib/retired_entry_quarantine.py as a REQUIRED sealed-root input. The
+# admitted explicit-GPG skip in the same module keeps its reason and moves
+# 3b3443dc -> c697afa5 (3b3443dc is the admitted blob after the reviewed
+# release skip-blob successor 1a88653d -> 3b3443dc). Not chained.
+# No case is added.
+ORDINARY_SKIP_EVIDENCE_20261111E_SHA256 = "249428bfb964c061815058bd0f4018faba69bed44fdea5865fbb1c89137bcdf5"
+ORDINARY_SKIP_EVIDENCE_20261111E = Path("reviews/ops-ordinary-skip-evidence-20261111e.json")
 ORDINARY_SKIP_EVIDENCE_FILES = (
     (ORDINARY_SKIP_EVIDENCE, ORDINARY_SKIP_EVIDENCE_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261110, ORDINARY_SKIP_EVIDENCE_20261110_SHA256),
@@ -3827,6 +3835,7 @@ ORDINARY_SKIP_EVIDENCE_FILES = (
     (ORDINARY_SKIP_EVIDENCE_20261111B, ORDINARY_SKIP_EVIDENCE_20261111B_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261111C, ORDINARY_SKIP_EVIDENCE_20261111C_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261111D, ORDINARY_SKIP_EVIDENCE_20261111D_SHA256),
+    (ORDINARY_SKIP_EVIDENCE_20261111E, ORDINARY_SKIP_EVIDENCE_20261111E_SHA256),
 )
 
 
