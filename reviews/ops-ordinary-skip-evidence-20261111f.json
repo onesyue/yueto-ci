@@ -1,0 +1,142 @@
+{
+  "additions": {
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_apply_imports_complete_private_closure_and_rollback_preserves_evolved_lease[False-False]": {
+      "module_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "outcome": "skipped",
+      "reason": "Skipped: real GNU owner/mode and root installer, Linux root image"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_apply_imports_complete_private_closure_and_rollback_preserves_evolved_lease[False-True]": {
+      "module_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "outcome": "skipped",
+      "reason": "Skipped: real GNU owner/mode and root installer, Linux root image"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_apply_imports_complete_private_closure_and_rollback_preserves_evolved_lease[True-False]": {
+      "module_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "outcome": "skipped",
+      "reason": "Skipped: real GNU owner/mode and root installer, Linux root image"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_apply_imports_complete_private_closure_and_rollback_preserves_evolved_lease[True-True]": {
+      "module_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "outcome": "skipped",
+      "reason": "Skipped: real GNU owner/mode and root installer, Linux root image"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_install_held_lease_keeps_timer_and_expiry_preflight": {
+      "module_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "outcome": "skipped",
+      "reason": "Skipped: real GNU owner/mode and root installer, Linux root image"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/retired_entry_quarantine.py]": {
+      "module_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/v4-relay-multi-a-peers.json]": {
+      "module_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_read_relays_does_not_depend_on_inherited_bytecode_environment[mutation-without-B]": {
+      "module_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer and GNU filesystem tools"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_read_relays_does_not_depend_on_inherited_bytecode_environment[protected]": {
+      "module_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "outcome": "skipped",
+      "reason": "Skipped: real root installer and GNU filesystem tools"
+    }
+  },
+  "evidence_run": "43024038775",
+  "schema": 1,
+  "source_revision": "8bb2ce01bd18b96a3adca9ccb92d150f4a698b54",
+  "updates": {
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_busy_provider_service_is_not_killed_or_republished": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_effective_unit_override_cannot_enable_writer[entrypoint]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_effective_unit_override_cannot_enable_writer[timeout]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_existing_private_closure_is_restored_as_a_pair_with_its_unit": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[scripts/lib/__init__.py]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[scripts/lib/__pycache__/ssh_auth.pyc]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[yueops/__pycache__/fleet_inventory_env.pyc]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_extra_importable_runtime_bytes_fail_before_import_or_service_start[yueops/unreviewed.py]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_identity_change_during_wait_is_not_admitted_as_address_refresh": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/converge-blackholed-pool-member-rotation.py]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/fleet-inventory-env.sh]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/moonvm_rotate.py]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/owned_dns.py]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/relay_peers.py]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/ssh_auth.py]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[scripts/lib/ssh_kr_proxy.py]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[yueops/__init__.py]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_missing_transitive_input_fails_before_any_mutation[yueops/fleet_inventory_env.py]": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_naturally_completed_rotation_refreshes_addresses_before_delivery": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_old_flat_closure_is_untouched_and_new_directories_are_removed_on_rollback": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_private_inventory_bridge_and_loader_ignore_external_package": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    },
+    "tests/test_relay_coordinator_delivery_closure_20260905.py::test_rollback_refuses_changed_published_dependency": {
+      "after_blob": "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404",
+      "before_blob": "89a5553d408705adb39c7f703a4f3b0325b49171"
+    }
+  }
+}

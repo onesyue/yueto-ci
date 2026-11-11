@@ -511,6 +511,30 @@ class Successors20261110(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
             SHARDS._ordinary_skip_evidence_record(path, digest, {}, {"skip_module_blobs": {module: after}})
 
+    def test_20261111f_relay_closure_evidence_moves_admitted_skips_and_adds_new_ids(self):
+        raw = (ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261111F).read_bytes()
+        self.assertEqual(SHARDS.sha(raw), SHARDS.ORDINARY_SKIP_EVIDENCE_20261111F_SHA256)
+        record = json.loads(raw)
+        self.assertEqual((len(record["updates"]), len(record["additions"])), (22, 9))
+        module = "tests/test_relay_coordinator_delivery_closure_20260905.py"
+        before = "89a5553d"
+        after = "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404"
+        self.assertTrue(all(n.startswith(module + "::") for n in (*record["updates"], *record["additions"])))
+        self.assertTrue(all(c["before_blob"].startswith(before) and c["after_blob"] == after
+                            for c in record["updates"].values()))
+        self.assertTrue(all(c["module_blob"] == after and c["reason"].startswith("Skipped: real ")
+                            and "root installer" in c["reason"] for c in record["additions"].values()))
+        admitted = {n: {"outcome": "skipped", "reason": "Skipped: real root installer",
+                        "module_blob": c["before_blob"]} for n, c in record["updates"].items()}
+        path = ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261111F
+        digest = SHARDS.ORDINARY_SKIP_EVIDENCE_20261111F_SHA256
+        got = SHARDS._ordinary_skip_evidence_record(path, digest, admitted, {"skip_module_blobs": {module: after}})
+        self.assertEqual(set(got), set(record["updates"]) | set(record["additions"]))
+        self.assertEqual(SHARDS._ordinary_skip_evidence_record(
+            path, digest, admitted, {"skip_module_blobs": {module: "f" * 40}}), {})
+        with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
+            SHARDS._ordinary_skip_evidence_record(path, digest, {}, {"skip_module_blobs": {module: after}})
+
 if __name__ == "__main__":
     unittest.main()
 

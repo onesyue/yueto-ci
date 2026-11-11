@@ -559,7 +559,8 @@ class PostgresKeyFingerprintTest(unittest.TestCase):
     """Run the real key reader with output larger than an OS pipe buffer."""
 
     def assignment(self) -> str:
-        lines = [line.strip() for line in WORKFLOW.read_text().splitlines()
+        script = (ROOT / "scripts" / "install-yueops-pg18-toolchain.sh").read_text()
+        lines = [line.strip() for line in script.splitlines()
                  if line.strip().startswith("fingerprint=$(gpg ")]
         self.assertEqual(len(lines), 1)
         return lines[0]
@@ -990,8 +991,10 @@ class BuildPolicyTest(unittest.TestCase):
             "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
             "'[\"ubuntu-24.04\"]')"
         )
-        # plan, validate, validation-evidence, candidate build, and publish.
-        self.assertEqual(self.workflow.count(selector), 5)
+        # plan, the one-shot PG18 toolchain, validate, validation-evidence,
+        # candidate build, and publish. The toolchain job keeps the same
+        # manual opt-in selector; it is not a new default runner.
+        self.assertEqual(self.workflow.count(selector), 6)
         self.assertIn(
             "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,
@@ -1412,10 +1415,6 @@ class BuildPolicyTest(unittest.TestCase):
             "            make verify-fork-tags\n",
             "yueboard) tools+=(buf corepack docker gcc go make node psql)",
             "Install native YueOps PostgreSQL 18 test toolchain",
-            "postgresql-18 postgresql-client-18",
-            "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8",
-            'for tool in postgres initdb pg_ctl psql; do',
-            'echo "$pg_bin" >> "$GITHUB_PATH"',
             "yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql uv)",
             "Preflight build and promotion dependencies",
             "for tool in bash curl docker envsubst git jq",
@@ -1426,6 +1425,18 @@ class BuildPolicyTest(unittest.TestCase):
         for invariant in required:
             with self.subTest(invariant=invariant):
                 self.assertIn(invariant, self.workflow)
+        installer = (ROOT / "scripts/install-yueops-pg18-toolchain.sh").read_text(encoding="utf-8")
+        for invariant in (
+            "postgresql-18 postgresql-client-18",
+            "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8",
+            "for tool in postgres initdb pg_ctl psql; do",
+            'echo "$pg_bin" >> "$GITHUB_PATH"',
+            "ci_retry 3 2 1",
+        ):
+            with self.subTest(invariant=invariant):
+                self.assertIn(invariant, installer)
+        self.assertEqual(installer.count('"${apt[@]}" update'), 2)
+        self.assertNotIn("postgresql-18", self.workflow)
         self.assertIn("python-version: '3.13'", self.workflow)
         self.assertIn(
             "Set up Python on GitHub-hosted runner",

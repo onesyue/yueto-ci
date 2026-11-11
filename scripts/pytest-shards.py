@@ -3827,6 +3827,13 @@ ORDINARY_SKIP_EVIDENCE_20261111D = Path("reviews/ops-ordinary-skip-evidence-2026
 # No case is added.
 ORDINARY_SKIP_EVIDENCE_20261111E_SHA256 = "249428bfb964c061815058bd0f4018faba69bed44fdea5865fbb1c89137bcdf5"
 ORDINARY_SKIP_EVIDENCE_20261111E = Path("reviews/ops-ordinary-skip-evidence-20261111e.json")
+# Ship 9 8bb2ce01b (run 43024038775): the relay-coordinator delivery-closure
+# module moved its admitted real-root-installer skips to blob 3c9f5d4f (22
+# updates, same reasons; transitive-input ids are now repo-relative) and adds
+# 9 new skips with the same root-installer class of reason. Updates are checked
+# against the admitted baseline (not chained); additions must be new ids.
+ORDINARY_SKIP_EVIDENCE_20261111F_SHA256 = "0322d89329822d0226409ea75a5c438b92b58039557c005242bf0b792b84a3d6"
+ORDINARY_SKIP_EVIDENCE_20261111F = Path("reviews/ops-ordinary-skip-evidence-20261111f.json")
 ORDINARY_SKIP_EVIDENCE_FILES = (
     (ORDINARY_SKIP_EVIDENCE, ORDINARY_SKIP_EVIDENCE_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261110, ORDINARY_SKIP_EVIDENCE_20261110_SHA256),
@@ -3836,6 +3843,7 @@ ORDINARY_SKIP_EVIDENCE_FILES = (
     (ORDINARY_SKIP_EVIDENCE_20261111C, ORDINARY_SKIP_EVIDENCE_20261111C_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261111D, ORDINARY_SKIP_EVIDENCE_20261111D_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261111E, ORDINARY_SKIP_EVIDENCE_20261111E_SHA256),
+    (ORDINARY_SKIP_EVIDENCE_20261111F, ORDINARY_SKIP_EVIDENCE_20261111F_SHA256),
 )
 
 
