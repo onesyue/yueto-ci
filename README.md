@@ -533,7 +533,8 @@ The Board `quality` validation row runs the source-owned UA matrix after the
 existing full Go quality checks. `scripts/validate-board-ua-cores.sh` prepares
 only checksum-verified official archives with `--download-only`, then executes
 the entire source gate in Docker with `--network none`. The Board helper also
-requires loopback to be the only network interface and forces offline core
+requires loopback to be the only interface UP, rejects non-loopback routes,
+and requires an unprivileged process before forcing offline core
 verification. There is no host parser execution or connected fallback.
 
 The runtime is the official Go 1.27.3 multiarch index
