@@ -205,6 +205,18 @@ class SourceEvidence(unittest.TestCase):
             value = P.expand({"validation_matrix": [ops], "matrix": [ops]}, self.repo, "b" * 40,
                              "ubuntu-24.04", 2, 1)
             self.assertEqual(P.envelope(value), value)
+            # Re-seal both layers: rejection must enforce the public approval
+            # scope, not merely notice a stale digest after candidate mutation.
+            for field, wrong in (("runner_arch", "ARM64"), ("runner_os", "Windows")):
+                changed = json.loads(json.dumps(value))
+                changed["ops_plan"]["context"][field] = wrong
+                changed["ops_plan"].pop("plan_sha256")
+                P.seal(changed["ops_plan"], "plan_sha256")
+                changed.pop("admission_sha256")
+                P.seal(changed, "admission_sha256")
+                with self.subTest(field=field), self.assertRaisesRegex(
+                        ValueError, "runner differs from reviewed hosted scope"):
+                    P.envelope(changed)
             P.verify_source_evidence(value, self.repo)
             with self.assertRaisesRegex(ValueError, "missing evidence"):
                 P.join(value, self.repo / "absent", "success", value["admission_sha256"], self.repo)
@@ -266,6 +278,15 @@ class SourceEvidence(unittest.TestCase):
         workflow = OpsShardWorkflow()
         workflow.setUp()
         self.addCleanup(workflow.doCleanups)
+        # Carry the real public runner scope into this generated historical
+        # fixture; source-owned admission must not invent a broader approval.
+        workflow.baseline["reviewed_hosted"] = {
+            "schema": 1, "context": workflow.baseline["context"], "cases": {},
+            "runner": P.skip_baseline()["reviewed_hosted"]["runner"],
+        }
+        (workflow.policy / "ops-pytest-skip-baseline.json").write_text(json.dumps(workflow.baseline))
+        workflow.fixture.git(workflow.policy, "add", "ops-pytest-skip-baseline.json")
+        workflow.fixture.commit(workflow.policy)
         migration = workflow.consumer.export_source_baseline(workflow.source, workflow.source_sha)
         self.assertTrue(migration["baseline"]["cases"])
         self.assertFalse(migration["unmatched"])
