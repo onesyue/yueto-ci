@@ -98,7 +98,33 @@ class PrivatePRValidation(unittest.TestCase):
                                  'scripts', 'policy', 'reviews', ':(top,glob)*.json',
                                  ':!pr-validation-policy.json', '.github/workflows/build.yml'],
                                 capture_output=True, text=True, check=False)
-        self.assertEqual(result.returncode, 0, 'frozen PR policy differs from canonical validation inputs')
+        self.assertEqual(result.returncode, 0, 'frozen PR policy differs from canonical validation inputs: ' + result.stderr)
+
+    def test_actual_shallow_checkout_fetches_fixed_object_and_still_rejects_drift(self):
+        # file:// forces Git's real depth-limited transport, not local object sharing.
+        checkout = self.path / 'shallow'
+        origin = self.path / 'detached-origin'
+        pin = json.loads((ROOT / 'pr-validation-policy.json').read_text())['policy_revision']
+        subprocess.run(['git', 'clone', '--quiet', '--depth=1', ROOT.as_uri(), str(origin)], check=True)
+        subprocess.run(['git', '-C', str(origin), 'fetch', '--quiet', '--no-tags', '--depth=1',
+                        'origin', f'{pin}:refs/ci/frozen-pr-policy'], check=True)
+        subprocess.run(['git', '-C', str(origin), 'checkout', '--quiet', '--detach'], check=True)
+        subprocess.run(['git', 'clone', '--quiet', '--depth=1', origin.as_uri(), str(checkout)], check=True)
+        self.assertEqual(subprocess.check_output(['git', '-C', str(checkout), 'rev-parse',
+                                                '--is-shallow-repository'], text=True).strip(), 'true')
+        compare = ['git', '-C', str(checkout), 'diff', '--exit-code', pin, '--', 'scripts']
+        missing = subprocess.run(compare, capture_output=True, text=True, check=False)
+        self.assertEqual(missing.returncode, 128)
+        self.assertIn(pin, missing.stderr)
+        policy = yaml.safe_load((ROOT / '.github/workflows/policy-ci.yml').read_text())
+        command = next(s['run'] for s in policy['jobs']['policy']['steps']
+                       if s.get('name') == 'Fetch fixed PR policy object for drift verification')
+        fetched = subprocess.run(['bash', '-c', command], cwd=checkout, capture_output=True, text=True, check=False)
+        self.assertEqual(fetched.returncode, 0, fetched.stderr)
+        self.assertEqual(subprocess.run(compare, capture_output=True, check=False).returncode, 0)
+        with (checkout / 'scripts/pytest-shards.py').open('a') as stream:
+            stream.write('\n# deliberate tracked policy drift\n')
+        self.assertEqual(subprocess.run(compare, capture_output=True, check=False).returncode, 1)
 
     def test_pr_boundary_requires_bound_source_evidence(self):
         build = yaml.safe_load((ROOT / '.github/workflows/build.yml').read_text())

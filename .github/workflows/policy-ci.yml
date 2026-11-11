@@ -22,6 +22,21 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Fetch fixed PR policy object for drift verification
+        run: |
+          set -euo pipefail
+          policy_revision=$(python3 - <<'PYCODE'
+          import json, re
+          value = json.load(open('pr-validation-policy.json'))
+          pin = value.get('policy_revision', '')
+          if value.get('schema') != 1 or not re.fullmatch(r'[0-9a-f]{40}', pin):
+              raise SystemExit('invalid fixed PR policy revision')
+          print(pin)
+          PYCODE
+          )
+          git fetch --no-tags --depth=1 origin "$policy_revision:refs/ci/frozen-pr-policy"
+          git cat-file -e "${policy_revision}^{commit}"
+
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
