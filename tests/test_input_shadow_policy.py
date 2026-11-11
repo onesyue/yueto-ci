@@ -434,6 +434,24 @@ class AffectedFeedbackTest(unittest.TestCase):
         self.assertEqual(local["inputs"]["head"], self.head)
         self.assertEqual(local["inputs"]["policy_commit"], "a" * 40)
 
+
+    def test_split_reference_roles_pass_and_an_unknown_suffix_does_not(self):
+        roles = ("reference-ordinary-000", "reference-serial", "native",
+                 "ordinary-000", "serial")
+        value = self.manifest(validators=[
+            {"validation": "yueops", "repo": "onesyue/yueops", "ref": self.head, "ops_role": role}
+            for role in roles])
+        FP.validate_feedback_manifest(value)
+        self.assertEqual(value["status"], "COMPLETE")
+        self.assertIn("validate-yueops-reference-ordinary-000", value["full_validation_obligations"])
+        self.assertNotIn("validate-yueops-reference", value["full_validation_obligations"])
+        bad = [dict(row) for row in self.validators]
+        bad[0] = {**bad[0], "ops_role": "reference-other"}
+        rejected = self.manifest(validators=bad)
+        FP.validate_feedback_manifest(rejected)
+        self.assertEqual(rejected["status"], "UNKNOWN")
+        self.assertIn("invalid Ops validator role", rejected["fallback"]["reasons"][0])
+
     def test_dirty_bytes_are_not_source_and_equal_tree_grants_no_waiver(self):
         before = self.manifest()
         (self.repo.path / "tests/test_app.py").write_text("uncommitted\n")
