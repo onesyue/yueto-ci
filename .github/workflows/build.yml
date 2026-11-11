@@ -132,12 +132,12 @@ jobs:
           validation_only="${VALIDATION_ONLY:-false}"
           case "$validation_only" in
             true)
-              [ "$EVENT_NAME" = workflow_dispatch ] &&
-                [ "$MANUAL_PROMOTE" = false ] &&
-                [[ "$REF_OVERRIDE" =~ ^[0-9a-f]{40}$ ]] || {
-                  echo 'validation_only requires manual dispatch, an exact 40-hex source SHA, and promote=false' >&2
-                  exit 1
-                }
+              if [ "$EVENT_NAME" != workflow_dispatch ] ||
+                 [ "$MANUAL_PROMOTE" != false ] ||
+                 ! [[ "$REF_OVERRIDE" =~ ^[0-9a-f]{40}$ ]]; then
+                echo 'validation_only requires manual dispatch, an exact 40-hex source SHA, and promote=false' >&2
+                exit 1
+              fi
               ;;
             false) ;;
             *) echo 'invalid validation_only value' >&2; exit 1 ;;
