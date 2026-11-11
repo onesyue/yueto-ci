@@ -50,7 +50,7 @@ class FailFastPolicyTest(unittest.TestCase):
         needs = {name.strip() for name in match.group(1).split(",")}
         self.assertEqual(needs, REQUIRED)
         # No status override: Actions applies its default success() to this if.
-        self.assertRegex(publish, r"(?m)^    if: needs.plan.outputs.has_builds == 'true'$")
+        self.assertRegex(publish, r"(?m)^    if: needs.plan.outputs.has_builds == 'true' && !inputs.validation_only$")
         self.assertNotIn("always()", publish)
         self.assertNotIn("continue-on-error:", publish)
         return needs
@@ -74,7 +74,7 @@ class FailFastPolicyTest(unittest.TestCase):
             with self.subTest(replacement=replacement), self.assertRaises(AssertionError):
                 self.assert_publication_gate(self.text.replace(original, replacement))
         for status in ("always()", "failure()", "!cancelled()"):
-            changed = self.text.replace("    if: needs.plan.outputs.has_builds == 'true'\n", f"    if: {status}\n")
+            changed = self.text.replace("    if: needs.plan.outputs.has_builds == 'true' && !inputs.validation_only\n", f"    if: {status}\n")
             with self.subTest(status=status), self.assertRaises(AssertionError):
                 self.assert_publication_gate(changed)
 
@@ -82,7 +82,7 @@ class FailFastPolicyTest(unittest.TestCase):
         for gate in ("validate", "build"):
             job = self.jobs[f"abort-on-{gate}-failure"]
             self.assertIn(f"    needs: [plan, {gate}]\n", job)
-            self.assertIn("    if: failure()\n", job)
+            self.assertIn("    if: failure() && !inputs.validation_only\n", job)
             self.assertIn("    permissions:\n      actions: write\n    steps:\n", job)
             self.assertRegex(job, r"(?m)^    timeout-minutes: [1-5]$")
             self.assertEqual(job.count("      - name:"), 1)
