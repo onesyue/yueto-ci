@@ -123,6 +123,46 @@ def _historical_native_source(source):
         source = source.replace(old, new, 1)
     return source
 
+def _ops_commit(repo, files):
+    if not (repo / ".git").exists():
+        _git(repo, "init", "-q")
+    _git(repo, "read-tree", "--empty")
+    for relative, text in files.items():
+        path = repo / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        _git(repo, "add", "--", relative)
+    tree = _git(repo, "write-tree")
+    return _git(repo, "commit-tree", tree, input_text="fixture\n")
+
+
+RESTORE_SOURCE = (
+    "import pytest\n\n"
+    "def test_e2e_real_backup_restores_and_passes():\n"
+    "    pytest.skip('base image missing')\n"
+)
+OPS_EVIDENCE = "tests/admission/ordinary-skip-evidence.json"
+
+
+def _ops_evidence(before, after):
+    return json.dumps({
+        "schema": 1,
+        "updates": {RESTORE_NODE: {"before_blob": before, "after_blob": after}},
+        "additions": {},
+    }, sort_keys=True) + "\n"
+
+
+def _restore_module_evidence(after):
+    updates = {
+        nodeid: {"before_blob": RESTORE_BEFORE, "after_blob": after}
+        for nodeid, case in SHARDS.skip_baseline()["cases"].items()
+        if nodeid.startswith(RESTORE + "::") and case.get("module_blob") == RESTORE_BEFORE
+    }
+    if len(updates) < 2:
+        raise AssertionError("restore drill module needs every admitted skip")
+    return json.dumps(
+        {"schema": 1, "updates": updates, "additions": {}}, sort_keys=True) + "\n"
+
 
 class SkipBlobPrecheck(unittest.TestCase):
     def test_unchanged_reviewed_blob_matches(self):
@@ -253,6 +293,70 @@ class SkipBlobPrecheck(unittest.TestCase):
         accepted = self._command(OPS_CHECKOUT, OPS_REV, ACCEPTED_CI)
         self.assertEqual(accepted.returncode, 0, accepted.stderr)
         self.assertEqual(accepted.stdout.strip(), "skip-blob-precheck ok")
+
+    def test_ops_commit_evidence_accepts_only_the_sealed_restore_blob(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            bare = _ops_commit(repo, {RESTORE: RESTORE_SOURCE})
+            blob = _git(repo, "rev-parse", f"{bare}:{RESTORE}")
+            self.assertNotEqual(blob, RESTORE_BEFORE)
+            self.assertNotEqual(blob, RESTORE_AFTER)
+            missing = self._command(repo, bare)
+            self.assertEqual(missing.returncode, 1, missing.stderr)
+            self.assertIn(RESTORE_BEFORE, missing.stdout)
+            self.assertIn(blob, missing.stdout)
+            self.assertIsNone(SHARDS.load_ops_skip_evidence(repo, bare))
+
+            wrong_after = _ops_commit(repo, {
+                RESTORE: RESTORE_SOURCE,
+                OPS_EVIDENCE: _ops_evidence(RESTORE_BEFORE, "a" * 40),
+            })
+            unmatched = self._command(repo, wrong_after)
+            self.assertEqual(unmatched.returncode, 1, unmatched.stderr)
+            self.assertIn(blob, unmatched.stdout)
+
+            wrong_before = _ops_commit(repo, {
+                RESTORE: RESTORE_SOURCE,
+                OPS_EVIDENCE: _ops_evidence("b" * 40, blob),
+            })
+            forged = self._command(repo, wrong_before)
+            self.assertEqual(forged.returncode, 2, forged.stdout)
+            self.assertIn("does not succeed an admitted skip", forged.stderr)
+            self.assertIn(RESTORE_NODE, forged.stderr)
+
+            partial = _ops_commit(repo, {
+                RESTORE: RESTORE_SOURCE,
+                OPS_EVIDENCE: _ops_evidence(RESTORE_BEFORE, blob),
+            })
+            incomplete = self._command(repo, partial)
+            self.assertEqual(incomplete.returncode, 1, incomplete.stderr)
+            self.assertIn(blob, incomplete.stdout)
+
+            sealed = _ops_commit(repo, {
+                RESTORE: RESTORE_SOURCE,
+                OPS_EVIDENCE: _restore_module_evidence(blob),
+            })
+            passed = self._command(repo, sealed)
+            self.assertEqual(passed.returncode, 0, passed.stderr)
+            self.assertEqual(passed.stdout.strip(), "skip-blob-precheck ok")
+            record = SHARDS.load_ops_skip_evidence(repo, sealed)
+            self.assertGreater(len(record["updates"]), 1)
+            self.assertEqual(record["updates"][RESTORE_NODE]["before_blob"], RESTORE_BEFORE)
+            self.assertEqual(record["updates"][RESTORE_NODE]["after_blob"], blob)
+
+    def test_malformed_ops_skip_evidence_is_an_input_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            broken = _ops_commit(repo, {OPS_EVIDENCE: "{\n"})
+            failed = self._command(repo, broken)
+            self.assertEqual(failed.returncode, 2, failed.stdout)
+            self.assertIn("invalid ops skip evidence", failed.stderr)
+            empty = _ops_commit(repo, {OPS_EVIDENCE: (
+                '{"schema": 1, "updates": {}, "additions": {}}\n'
+            )})
+            rejected = self._command(repo, empty)
+            self.assertEqual(rejected.returncode, 2, rejected.stdout)
+            self.assertIn("invalid ordinary skip evidence", rejected.stderr)
 
     def _command(self, checkout, revision, ci_revision=None):
         command = [
