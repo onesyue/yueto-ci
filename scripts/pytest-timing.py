@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -30,6 +31,30 @@ def revision(path):
         ["git", "-C", str(path), "rev-parse", "HEAD"], text=True,
         stderr=subprocess.DEVNULL,
     ).strip()
+
+
+
+def pr_workflow_identity(policy_revision, environment=None):
+    """Keep the private caller identity distinct from the central policy commit."""
+    env = os.environ if environment is None else environment
+    if not env.get("YUE_CI_PR_POLICY"):
+        return {}
+    if (env.get("GITHUB_REPOSITORY") != "onesyue/yueops"
+            or env.get("GITHUB_EVENT_NAME") != "pull_request"
+            or env["YUE_CI_PR_POLICY"] != policy_revision):
+        raise ValueError("invalid private PR policy context")
+    event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text())
+    pr = event["pull_request"]
+    head = pr["head"]["sha"]
+    merge = env.get("GITHUB_SHA", "")
+    if (event["repository"]["full_name"] != "onesyue/yueops"
+            or any(pr[k]["repo"]["full_name"] != "onesyue/yueops" for k in ("head", "base"))
+            or not re.fullmatch(r"[0-9a-f]{40}", head)
+            or not re.fullmatch(r"[0-9a-f]{40}", merge)
+            or not re.fullmatch(r"[0-9a-f]{40}", pr["base"]["sha"])):
+        raise ValueError("invalid private PR source identity")
+    return {"workflow_repository": env["GITHUB_REPOSITORY"],
+            "workflow_revision": merge, "pull_request_head": head}
 
 
 def install(output, site):
@@ -65,7 +90,12 @@ def install(output, site):
         },
         "resource_scope": "UNKNOWN: aggregate CPU and process-tree memory not sampled",
     }
-    if (identity["identity"]["GITHUB_SHA"]
+    pr_identity = pr_workflow_identity(identity["policy_revision"])
+    if pr_identity:
+        if pr_identity["pull_request_head"] != identity["source_revision"]:
+            raise ValueError("private PR checkout differs from event head")
+        identity["workflow_context"] = pr_identity
+    if (not pr_identity and identity["identity"]["GITHUB_SHA"]
             and identity["identity"]["GITHUB_SHA"] != identity["policy_revision"]):
         raise ValueError("central checkout differs from the workflow revision")
     identity["invocation_id"] = hashlib.sha256(

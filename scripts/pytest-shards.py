@@ -41,6 +41,7 @@ OPTIONAL_RETENTION_CONFIG = {
 }
 IDENTITY_FIELDS = ("policy_revision", "board_revision", "run_id", "run_attempt",
                    "runner_os", "runner_arch", "runner_image")
+PR_IDENTITY_FIELDS = ("workflow_repository", "workflow_revision", "pull_request_head")
 FILES = ("metadata.json", "events.jsonl", "pytest-exit-code.txt",
          "pytest-start-unix-ns.txt", "pytest-finish-unix-ns.txt", "selection.json")
 SKIP_BASELINE = "ops-pytest-skip-baseline.json"
@@ -140,7 +141,12 @@ def safe_module(name):
 
 
 def context_ok(context):
-    require(set(context) == set(IDENTITY_FIELDS), "incomplete or extra run identity")
+    pr_fields = set(PR_IDENTITY_FIELDS) if "workflow_repository" in context else set()
+    require(set(context) == set(IDENTITY_FIELDS) | pr_fields, "incomplete or extra run identity")
+    if pr_fields:
+        require(context["workflow_repository"] == "onesyue/yueops"
+                and all(SHA.fullmatch(context[k]) for k in ("workflow_revision", "pull_request_head")),
+                "invalid private PR context")
     for key in ("policy_revision", "board_revision"):
         require(isinstance(context[key], str) and SHA.fullmatch(context[key]),
                 f"invalid {key}")
@@ -3088,7 +3094,11 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
     identity = metadata.get("identity", {})
     mapping = {"GITHUB_RUN_ID": "run_id", "GITHUB_RUN_ATTEMPT": "run_attempt",
                "GITHUB_SHA": "policy_revision"}
-    require(identity.get("GITHUB_REPOSITORY") == "onesyue/yueto-ci"
+    pr_context = {k: value["context"][k] for k in PR_IDENTITY_FIELDS if k in value["context"]}
+    if pr_context:
+        mapping["GITHUB_SHA"] = "workflow_revision"
+        require(metadata.get("workflow_context") == pr_context, "private PR metadata differs")
+    require(identity.get("GITHUB_REPOSITORY") == pr_context.get("workflow_repository", "onesyue/yueto-ci")
             and all(identity.get(k) == value["context"][v] for k, v in mapping.items()),
             "run/attempt/runner identity mismatch")
     actual_runner = runner_context(value["context"], identity)
@@ -3355,7 +3365,7 @@ def aggregate(value, reference, directories):
 
 def workflow_identity():
     identity = {
-        "policy_revision": os.environ.get("GITHUB_SHA"),
+        "policy_revision": os.environ.get("YUE_CI_PR_POLICY") or os.environ.get("GITHUB_SHA"),
         "run_id": os.environ.get("GITHUB_RUN_ID"),
         "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
     }
@@ -3364,9 +3374,10 @@ def workflow_identity():
             "workflow policy identity differs")
     for key in ("run_id", "run_attempt"):
         require(re.fullmatch(r"[1-9][0-9]*", identity[key] or ""), f"invalid {key}")
-    require(os.environ.get("GITHUB_REPOSITORY") == "onesyue/yueto-ci",
+    pr_identity = load_timing().pr_workflow_identity(identity["policy_revision"])
+    require(bool(pr_identity) or os.environ.get("GITHUB_REPOSITORY") == "onesyue/yueto-ci",
             "unexpected workflow repository")
-    return identity
+    return identity | pr_identity
 
 
 def seal(value, key):
@@ -3387,6 +3398,10 @@ def envelope(value):
             "admission envelope digest differs")
     require(value.get("identity") == workflow_identity(), "stale workflow admission")
     require(value.get("mode") in ("none", "legacy", "sharded"), "unknown admission mode")
+    if "pull_request_head" in value["identity"]:
+        require(value["mode"] == "sharded"
+                and value.get("source_revision") == value["identity"]["pull_request_head"],
+                "private PR admission differs from exact event head")
     matrix = value.get("validation_matrix")
     require(isinstance(matrix, list) and matrix, "missing selected validators")
     ops = [m for m in matrix if m.get("validation") == "yueops"]
