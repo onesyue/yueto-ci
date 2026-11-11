@@ -5,6 +5,7 @@ The workflow names the installer once. Shards unpack its archive and never apt.
 DNS resolution retries; a package miss or a bad signature does not.
 """
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -181,6 +182,7 @@ class NativePostgresToolchainTests(unittest.TestCase):
         self.shell = workflow_shell()
         for original, replacement in {
             "/usr/lib/postgresql/18/bin": str(self.root / "pg-bin"),
+            "/usr/share/postgresql/18": str(self.root / "pg-share"),
             "/etc/os-release": str(self.os_release),
             "/usr/share/keyrings/ubuntu-archive-keyring.gpg": str(self.root / "ubuntu-key.gpg"),
             "/tmp/yueops-pg18-apt.XXXXXX": str(self.root / "apt.XXXXXX"),
@@ -339,25 +341,152 @@ class NativePostgresToolchainTests(unittest.TestCase):
         self.assertFalse((self.root / "github-path").exists())
         self.assertFalse((self.root / "pg-bin").exists())
 
-    def test_pack_reuses_installed_tree_without_apt(self):
+    def seed_prefix(self, *, libc=False):
         self.preinstall()
+        lib = self.root / "lib"
+        lib.mkdir()
+        (lib / "plpgsql.so").write_bytes(b"plpgsql")
+        (lib / "dict_snowball.so").write_bytes(b"snowball")
+        if libc:
+            (lib / "libc.so.6").write_bytes(b"not-the-loader")
+        share = self.root / "pg-share"
+        share.mkdir()
+        (share / "postgres.bki").write_text("bki")
+
+    def test_pack_reuses_installed_tree_without_apt(self):
+        self.seed_prefix()
         archive = self.root / "out.tar"
         result = self.run_step(args=["pack", str(archive)])
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.calls(), [])
         listing = subprocess.run(["tar", "-tf", str(archive)], capture_output=True, text=True, check=False)
         self.assertEqual(listing.returncode, 0, listing.stderr)
-        self.assertTrue(any(line.rstrip("/").endswith("postgres") for line in listing.stdout.splitlines()), listing.stdout)
+        names = [line.rstrip("/") for line in listing.stdout.splitlines()]
+        self.assertTrue(any(line.endswith("postgres") for line in names), listing.stdout)
+        self.assertTrue(any(line.endswith("plpgsql.so") for line in names), listing.stdout)
+        self.assertTrue(any(line.endswith("dict_snowball.so") for line in names), listing.stdout)
+        self.assertTrue(any(line.endswith("postgres.bki") for line in names), listing.stdout)
+        self.assertFalse(any("libc.so" in line or "ld-linux" in line for line in names), listing.stdout)
+
+    def test_pack_refuses_to_carry_libc(self):
+        self.seed_prefix(libc=True)
+        result = self.run_step(args=["pack", str(self.root / "out.tar")])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("refusing to pack libc", result.stderr)
+        self.assertFalse((self.root / "out.tar").exists())
 
     def test_activate_missing_archive_fails_closed_without_apt(self):
         script = (ROOT / "scripts/activate-yueops-pg18-toolchain.sh").read_text()
         self.assertNotIn("apt-get", script)
         self.assertNotIn("apt ", script)
+        self.assertNotIn("tar -C / ", script)
         result = subprocess.run(
             ["bash", str(ROOT / "scripts/activate-yueops-pg18-toolchain.sh"), str(self.root / "missing.tar")],
             capture_output=True, text=True, timeout=10, check=False,
         )
         self.assertNotEqual(result.returncode, 0)
+
+    def test_activate_unpacks_under_runner_temp_and_links_only_the_prefix(self):
+        script = (ROOT / "scripts/activate-yueops-pg18-toolchain.sh").read_text()
+        self.assertNotIn("tar -C / ", script)
+        self.assertNotIn("apt-get", script)
+        stage = self.root / "stage"
+        bindir = stage / "usr/lib/postgresql/18/bin"
+        libdir = stage / "usr/lib/postgresql/18/lib"
+        sharedir = stage / "usr/share/postgresql/18"
+        bindir.mkdir(parents=True)
+        libdir.mkdir(parents=True)
+        sharedir.mkdir(parents=True)
+        for name in ("postgres", "initdb", "pg_ctl", "psql"):
+            tool = bindir / name
+            tool.write_text("#!/bin/sh\nprintf '%s\\n' 'tool (PostgreSQL) 18.6'\n")
+            tool.chmod(0o755)
+        (libdir / "plpgsql.so").write_bytes(b"plpgsql")
+        (libdir / "dict_snowball.so").write_bytes(b"snowball")
+        (sharedir / "postgres.bki").write_text("bki")
+        archive = self.root / "pg18-toolchain.tar"
+        packed = subprocess.run(["tar", "-C", str(stage), "-cf", str(archive), "."], check=False)
+        self.assertEqual(packed.returncode, 0)
+        runner = self.root / "runner"
+        sysroot = self.root / "sysroot"
+        runner.mkdir()
+        env = os.environ | {
+            "RUNNER_TEMP": str(runner),
+            "YUEOPS_PG18_SYSROOT": str(sysroot),
+            "GITHUB_PATH": str(self.root / "github-path"),
+            "GITHUB_ENV": str(self.root / "github-env"),
+        }
+        result = subprocess.run(
+            ["bash", str(ROOT / "scripts/activate-yueops-pg18-toolchain.sh"), str(archive)],
+            capture_output=True, text=True, timeout=20, check=False, env=env,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        link = sysroot / "usr/lib/postgresql/18"
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(link.resolve(), (runner / "yueops-pg18/usr/lib/postgresql/18").resolve())
+        self.assertTrue((link / "lib/plpgsql.so").is_file())
+        self.assertEqual((self.root / "github-path").read_text().strip(), str(link / "bin"))
+        self.assertIn(f"LD_LIBRARY_PATH={runner}/yueops-pg18/usr/lib/postgresql/18/lib\n", (self.root / "github-env").read_text())
+        self.assertFalse((self.root / "usr").exists())
+
+    def test_unpacked_tree_initdb_creates_plpgsql(self):
+        homes = (
+            Path("/opt/homebrew/opt/postgresql@18"),
+            Path("/usr/local/opt/postgresql@18"),
+            Path("/usr/lib/postgresql/18"),
+        )
+        home = next((path for path in homes if (path / "bin" / "initdb").is_file()), None)
+        if home is None:
+            self.skipTest("PostgreSQL 18 initdb is not installed on this runner")
+        env = os.environ | {
+            "PATH": str(home / "bin") + os.pathsep + os.defpath,
+            "LC_ALL": "C",
+        }
+        result = subprocess.run(
+            [str(ROOT / "scripts/pg18-toolchain-roundtrip.sh")],
+            capture_output=True, text=True, timeout=60, check=False, env=env,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "plpgsql")
+
+    def test_toolchain_failure_makes_validation_evidence_reject_a_skipped_matrix(self):
+        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        validate = workflow.split("\n  validate:\n", 1)[1].split("\n  validation-evidence:\n", 1)[0]
+        gate = [line.strip() for line in validate.splitlines() if "yueops-pg18-toolchain.result" in line]
+        self.assertEqual(gate, [
+            "if: always() && needs.plan.result == 'success' && (needs.yueops-pg18-toolchain.result == 'success' || needs.yueops-pg18-toolchain.result == 'skipped')",
+        ])
+        evidence = workflow.split("\n  validation-evidence:\n", 1)[1].split("\n  build:\n", 1)[0]
+        self.assertIn("if: always() && needs.plan.result == 'success'\n", evidence)
+        self.assertIn("VALIDATION_RESULT: ${{ needs.validate.result }}", evidence)
+        head = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
+        previous = {key: os.environ.get(key) for key in ("GITHUB_SHA", "GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT", "GITHUB_REPOSITORY")}
+        os.environ["GITHUB_SHA"] = head
+        os.environ["GITHUB_RUN_ID"] = "431"
+        os.environ["GITHUB_RUN_ATTEMPT"] = "1"
+        os.environ["GITHUB_REPOSITORY"] = "onesyue/yueto-ci"
+        try:
+            spec = importlib.util.spec_from_file_location("pg18_pytest_shards", ROOT / "scripts/pytest-shards.py")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            body = {
+                "schema": 1,
+                "identity": module.workflow_identity(),
+                "mode": "none",
+                "source_revision": None,
+                "board_revision": None,
+                "ops_plan": None,
+                "validation_matrix": [{"validation": "yueboard"}],
+            }
+            digest = module.sha(module.encoded(body))
+            with self.assertRaisesRegex(ValueError, "selected validation matrix did not succeed"):
+                module.join(body | {"admission_sha256": digest}, None, "skipped", digest)
+        finally:
+            for key, value in previous.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
 
     def test_shards_unpack_one_archive_and_do_not_apt(self):
         workflow = (ROOT / ".github/workflows/build.yml").read_text()
@@ -371,6 +500,5 @@ class NativePostgresToolchainTests(unittest.TestCase):
         self.assertIn(".ci-policy/scripts/activate-yueops-pg18-toolchain.sh", activate)
         self.assertNotIn("apt-get", activate)
         self.assertNotIn("continue-on-error", activate)
-
 if __name__ == "__main__":
     unittest.main()

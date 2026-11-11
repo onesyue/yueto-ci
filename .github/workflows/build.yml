@@ -675,8 +675,9 @@ jobs:
           gcc --version
           psql --version
 
-      # Shards unpack the one-time archive. A missing archive fails closed
-      # and does not fall back to apt.
+      # Shards unpack the one-time archive under RUNNER_TEMP and symlink only
+      # the PostgreSQL prefix. System libraries stay untouched. A missing
+      # archive fails closed and does not fall back to apt.
       - name: Download YueOps PostgreSQL 18 toolchain
         if: matrix.validation == 'yueops'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
