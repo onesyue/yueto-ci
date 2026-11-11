@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def module(name):
     spec = importlib.util.spec_from_file_location(name.replace('-', '_'), ROOT / 'scripts' / f'{name}.py')
+    assert spec is not None and spec.loader is not None
     result = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(result)
     return result
@@ -87,6 +88,29 @@ class PrivatePRValidation(unittest.TestCase):
         self.assertIn("job[\"result\"] != \"success\"", generated['jobs']['complete']['steps'][0]['run'])
         self.assertEqual(generated['jobs']['validation-evidence']['steps'][3:],
                          build['jobs']['validation-evidence']['steps'][3:])
+
+    def test_generated_workflow_and_frozen_policy_have_no_drift(self):
+        pin = json.loads((ROOT / 'pr-validation-policy.json').read_text())['policy_revision']
+        self.assertEqual((ROOT / '.github/workflows/ops-pr-validation.yml').read_text(), GEN.render(pin))
+        # A future canonical planner, worker, trust anchor or baseline change
+        # requires a reviewed policy-pin update, not a silently stale PR gate.
+        result = subprocess.run(['git', '-C', str(ROOT), 'diff', '--exit-code', pin, '--',
+                                 'scripts', 'policy', 'reviews', ':(top,glob)*.json',
+                                 ':!pr-validation-policy.json', '.github/workflows/build.yml'],
+                                capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, 'frozen PR policy differs from canonical validation inputs')
+
+    def test_pr_boundary_requires_bound_source_evidence(self):
+        build = yaml.safe_load((ROOT / '.github/workflows/build.yml').read_text())
+        generated = GEN.derive(build, self.policy)
+        command = next(s['run'] for s in generated['jobs']['plan']['steps']
+                       if s.get('id') == 'ops_plan').splitlines()[-1]
+        for value, accepted in (({}, False), ({'source_evidence': {'status': 'BOUND_SOURCE_EVIDENCE',
+                                                                 'admission': False}}, True)):
+            (self.path / 'ops-admission.json').write_text(json.dumps(value))
+            result = subprocess.run(['bash', '-c', command], env=dict(os.environ, RUNNER_TEMP=str(self.path)),
+                                    capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode == 0, accepted, result.stderr)
 
     def test_new_worker_credential_is_rejected_by_generator(self):
         build = yaml.safe_load((ROOT / '.github/workflows/build.yml').read_text())

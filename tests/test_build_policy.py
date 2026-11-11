@@ -1252,10 +1252,15 @@ class BuildPolicyTest(unittest.TestCase):
                 "board-visual-capture.yml",
                 "build.yml",
                 "image-rescan.yml",
+                "ops-pr-validation.yml",
                 "policy-ci.yml",
                 "poll-sources.yml",
             ],
         )
+
+        pr_validation = (WORKFLOW_DIR / "ops-pr-validation.yml").read_text()
+        for forbidden in ("build-push-action", "imagetools create", "cosign", "promote=true", "packages: write"):
+            self.assertNotIn(forbidden, pr_validation)
 
         capture = (WORKFLOW_DIR / "board-visual-capture.yml").read_text()
         capture_code = "\n".join(

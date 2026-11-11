@@ -299,6 +299,13 @@ class SourceEvidence(unittest.TestCase):
 
     @unittest.skipUnless(sys.platform == "linux", "source-owned hosted admission requires Linux")
     def test_migrated_nonempty_baseline_actual_signed_full_role_join(self):
+        self._signed_full_role_join(private_pr=False)
+
+    @unittest.skipUnless(sys.platform == "linux", "source-owned hosted admission requires Linux")
+    def test_private_pr_signed_nonempty_full_role_join(self):
+        self._signed_full_role_join(private_pr=True)
+
+    def _signed_full_role_join(self, *, private_pr):
         # The existing fixture runs real pytest ordinary/reference/serial and
         # actual native-protocol fixture programs. Only the signing certificate
         # is a fixture trust injection; no loader or join function is mocked.
@@ -334,6 +341,16 @@ class SourceEvidence(unittest.TestCase):
         workflow.fixture.commit(workflow.policy)
         workflow.env["GITHUB_SHA"] = workflow.fixture.git(
             workflow.policy, "rev-parse", "HEAD").stdout.strip()
+        if private_pr:
+            event = Path(self.temp.name) / "pr-event.json"
+            event.write_text(json.dumps({"repository": {"full_name": "onesyue/yueops"},
+                "pull_request": {
+                    "head": {"sha": workflow.source_sha, "repo": {"full_name": "onesyue/yueops"}},
+                    "base": {"sha": "b" * 40, "repo": {"full_name": "onesyue/yueops"}},
+                }}))
+            workflow.env.update(YUE_CI_PR_POLICY=workflow.env["GITHUB_SHA"],
+                                GITHUB_SHA="d" * 40, GITHUB_REPOSITORY="onesyue/yueops",
+                                GITHUB_EVENT_NAME="pull_request", GITHUB_EVENT_PATH=str(event))
         for row in workflow.targets["matrix"] + workflow.targets["validation_matrix"]:
             row["ref"] = workflow.source_sha
         workflow.admission = workflow.call(workflow.consumer.expand, workflow.targets,
@@ -351,6 +368,21 @@ class SourceEvidence(unittest.TestCase):
             (workflow.artifacts / (workflow.prefix + "native") / "native.json").unlink()
             with self.assertRaises((ValueError, OSError)):
                 join()
+        if private_pr:
+            subprocess.run([*command, "rm", "--", E.BASELINE], check=True, capture_output=True)
+            subprocess.run([*command, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                            "-c", "gpg.program=" + self.gpg, "-c", "user.signingkey=" + self.fingerprint,
+                            "commit", "-S", "-qm", "missing source evidence"],
+                           env=self.env, check=True, capture_output=True)
+            missing_head = subprocess.check_output([*command, "rev-parse", "HEAD"]).decode().strip()
+            missing_event = json.loads(event.read_text())
+            missing_event["pull_request"]["head"]["sha"] = missing_head
+            event.write_text(json.dumps(missing_event))
+            for row in workflow.targets["matrix"] + workflow.targets["validation_matrix"]:
+                row["ref"] = missing_head
+            with self.assertRaises(ValueError):
+                workflow.call(workflow.consumer.expand, workflow.targets, workflow.source,
+                              workflow.board_sha, "ubuntu-24.04", 4, 4)
 
     def test_real_public_native_history_projection_preserves_phase_and_requires_passed(self):
         # Use the real public-approved records and real successor/export logic;
