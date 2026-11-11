@@ -707,7 +707,7 @@ def feedback_manifest(source, base: str, matrix: list, validators: list, context
                 raise Unknown("Ops image and validator selections differ")
             if any(row.get("node_profile") or (row.get("ops_role") not in (None, "legacy") and
                    (not isinstance(row["ops_role"], str) or not re.fullmatch(
-                       r"reference|native|serial|ordinary-[0-9]{3}", row["ops_role"])))
+                       r"reference(?:-(?:serial|ordinary-[0-9]{3}))?|native|serial|ordinary-[0-9]{3}", row["ops_role"])))
                    for row in ops):
                 raise Unknown("invalid Ops validator role")
             services = [row.get("service") for row in images]
