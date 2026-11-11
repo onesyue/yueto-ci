@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import argparse
 import ast
+import concurrent.futures
 import configparser
 import copy
-import concurrent.futures
 import hashlib
 import importlib.util
 import inspect
@@ -26,6 +26,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
+_SOURCE_SPEC = importlib.util.spec_from_file_location("trusted_source_evidence", ROOT / "scripts/source_evidence.py")
+source_evidence = importlib.util.module_from_spec(_SOURCE_SPEC)
+_SOURCE_SPEC.loader.exec_module(source_evidence)
 SHA = re.compile(r"[0-9a-f]{40}")
 EXPECTED_CONFIG = {
     "testpaths": "tests", "python_files": "test_*.py",
@@ -3398,15 +3401,25 @@ def envelope(value):
                     and value.get("ops_plan") is None, "invalid legacy role selection")
         else:
             planned = validate_plan(value["ops_plan"])
-            baseline = skip_baseline()
-            require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
-                    and isinstance(value.get("skip_module_blobs"), dict),
-                    "skip baseline or shared collection inputs differ")
-            admit_shared_inputs(baseline, value.get("common_inputs"),
-                                source_revision=value["source_revision"],
-                                estate_successor_of=value.get("estate_successor_of"),
-                                template_writer_retired_at=value.get("template_writer_retired_at"),
-                                pin_is_ancestor=value.get("pin_is_ancestor") is True)
+            if "source_evidence" in value:
+                bound = value["source_evidence"]
+                require(bound.get("source_revision") == value["source_revision"]
+                        and bound.get("status") == "BOUND_SOURCE_EVIDENCE"
+                        and bound.get("admission") is False, "invalid source evidence binding")
+                source_evidence.validate_baseline(bound, value.get("skip_module_blobs", {}))
+                require(value.get("skip_baseline_sha256") ==
+                        bound["evidence"][source_evidence.BASELINE]["sha256"],
+                        "source baseline digest differs")
+            else:
+                baseline = skip_baseline()
+                require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
+                        and isinstance(value.get("skip_module_blobs"), dict),
+                        "skip baseline or shared collection inputs differ")
+                admit_shared_inputs(baseline, value.get("common_inputs"),
+                                    source_revision=value["source_revision"],
+                                    estate_successor_of=value.get("estate_successor_of"),
+                                    template_writer_retired_at=value.get("template_writer_retired_at"),
+                                    pin_is_ancestor=value.get("pin_is_ancestor") is True)
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -3456,26 +3469,36 @@ def expand(targets, source, board, runner, capacity, shards):
                 "runner_arch": os.environ.get("RUNNER_ARCH"),
                 "runner_image": os.environ.get("ImageVersion"),
             }
+            bound = source_evidence.optional(source, ops["ref"])
             expected = plan(source, context, shards, serial_modules(source))
             require(expected["source_revision"] == ops["ref"], "planned source checkout differs")
-            baseline = skip_baseline()
-            common = shared_inputs(source, ops["ref"])
-            files = tree_inputs(source, ops["ref"])
-            successor_of = estate_successor_proof(baseline, source, ops["ref"])
-            retired_at = template_writer_retirement_proof(source, ops["ref"])
-            ancestor = release_pin_is_ancestor(source, ops["ref"])
-            admit_shared_inputs(baseline, common, files, source_revision=ops["ref"],
-                                estate_successor_of=successor_of, template_writer_retired_at=retired_at,
-                                pin_is_ancestor=ancestor)
-            if ancestor and ops["ref"] != release_pin():
-                value["pin_is_ancestor"] = True
-            if retired_at is not None:
-                value["template_writer_retired_at"] = retired_at
-            if successor_of is not None:
-                value["estate_successor_of"] = successor_of
-            value.update(mode="sharded", ops_plan=expected, common_inputs=common,
-                         skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
-                         skip_module_blobs={p: files[p][1] for p in expected["modules"]})
+            if bound is not None:
+                files = tree_inputs(source, ops["ref"])
+                blobs = {p: files[p][1] for p in expected["modules"]}
+                source_evidence.validate_baseline(bound, blobs)
+                value.update(mode="sharded", ops_plan=expected,
+                             common_inputs=shared_inputs(source, ops["ref"]),
+                             source_evidence=bound, skip_module_blobs=blobs,
+                             skip_baseline_sha256=bound["evidence"][source_evidence.BASELINE]["sha256"])
+            else:
+                baseline = skip_baseline()
+                common = shared_inputs(source, ops["ref"])
+                files = tree_inputs(source, ops["ref"])
+                successor_of = estate_successor_proof(baseline, source, ops["ref"])
+                retired_at = template_writer_retirement_proof(source, ops["ref"])
+                ancestor = release_pin_is_ancestor(source, ops["ref"])
+                admit_shared_inputs(baseline, common, files, source_revision=ops["ref"],
+                                    estate_successor_of=successor_of, template_writer_retired_at=retired_at,
+                                    pin_is_ancestor=ancestor)
+                if ancestor and ops["ref"] != release_pin():
+                    value["pin_is_ancestor"] = True
+                if retired_at is not None:
+                    value["template_writer_retired_at"] = retired_at
+                if successor_of is not None:
+                    value["estate_successor_of"] = successor_of
+                value.update(mode="sharded", ops_plan=expected, common_inputs=common,
+                             skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
+                             skip_module_blobs={p: files[p][1] for p in expected["modules"]})
             roles = role_order(expected)
         value["validation_matrix"] = [
             row for m in matrix
@@ -3494,8 +3517,16 @@ def expand(targets, source, board, runner, capacity, shards):
     return seal(value, "admission_sha256")
 
 
+def verify_source_evidence(value, source):
+    if "source_evidence" in value:
+        require(source is not None, "source checkout required for owner evidence")
+        require(source_evidence.load(source, value["source_revision"]) == value["source_evidence"],
+                "source evidence differs from original admission")
+
+
 def check_source(value, source, board):
     envelope(value)
+    verify_source_evidence(value, source)
     require(git(source, "rev-parse", "HEAD").decode().strip() == value["source_revision"]
             and not git(source, "status", "--porcelain", "--untracked-files=no"),
             "executing source differs or is dirty")
@@ -4038,6 +4069,10 @@ def prepare_skip_bindings(value, native, *, require_native=True, check_shared_in
 
 
 def admit_skips(value, result, native):
+    if "source_evidence" in value:
+        return source_evidence.admit_skips(value["source_evidence"], value["skip_module_blobs"],
+                                           result, native, set(NATIVE_TARGETS),
+                                           set(first_native_policy()["cases"]))
     bound = prepare_skip_bindings(value, native)
     sealed_baseline = bound["sealed_baseline"]
     retirement = bound["retirement"]
@@ -4122,8 +4157,76 @@ def admit_skips(value, result, native):
             "host_native_acceptance": "INDEPENDENT"}
 
 
-def join(value, evidence, validation_result, expected_sha):
+def export_source_baseline(source, revision):
+    """Migrate approved records only. New observations never create approvals."""
+    files = source_evidence.tree_inputs(source, revision)
+    blobs = {path: row["git_blob"] for path, row in files.items() if safe_module(path)}
+    value = {"source_revision": revision, "skip_module_blobs": blobs,
+             "pin_is_ancestor": release_pin_is_ancestor(source, revision)}
+    bound = prepare_skip_bindings(value, {}, require_native=False, check_shared_inputs=False)
+    baseline = bound["baseline"]
+    candidates = {}
+    for name in ("successors", "relay_successors", "metrics_successors", "meter_successors",
+                 "preservation_successors", "case_successors", "blob_successors",
+                 "release_blob_successors", "i10_blob_successors", "ordinary_skips"):
+        for nodeid, case in bound[name].items():
+            candidates.setdefault(nodeid, []).append(case)
+    for nodeid, case in baseline["cases"].items():
+        candidates.setdefault(nodeid, []).append(case)
+    hosted = bound["reviewed"].get("cases", {})
+    mandatory_nodes = set(first_native_policy()["cases"])
+    records, unmatched = {}, []
+    for nodeid in sorted(candidates.keys() | hosted.keys()):
+        module = nodeid.split("::", 1)[0]
+        live = blobs.get(module)
+        variants = []
+        specific = hosted.get(nodeid)
+        if specific is not None:
+            if specific["module_blob"] == live:
+                for variant in specific["variants"]:
+                    case = {key: specific[key] for key in ("outcome", "module_blob", "disposition")}
+                    if "native_target" in specific:
+                        case["native_target"] = specific["native_target"]
+                    variants.append(case | variant)
+        else:
+            for case in candidates.get(nodeid, []):
+                if case["module_blob"] == live:
+                    # Historical non-hosted records did not constrain pytest phase.
+                    # Enumerate that existing allowance, never infer a new reason/blob.
+                    for phase in ("setup", "call", "teardown"):
+                        variants.append(case | {"when": phase, "disposition": "HISTORICAL_UNEXECUTED"})
+        if variants:
+            if module in NATIVE_TARGETS or nodeid in mandatory_nodes:
+                # This tightens a historical label to an already mandatory
+                # public same-run obligation. It does not manufacture a pass.
+                for case in variants:
+                    case.update(disposition="SAME_RUN_NATIVE_REQUIRED", native_target=module)
+            records[nodeid] = list({source_evidence.canonical(row): row for row in variants}.values())
+        else:
+            unmatched.append(nodeid)
+    collection = {}
+    for module, case in baseline["collection_skips"].items():
+        if case["module_blob"] == blobs.get(module):
+            collection[module] = case
+        else:
+            unmatched.append(module)
+    inputs = {path: row for path, row in files.items() if path not in source_evidence.EVIDENCE_PATHS}
+    digest = source_evidence.digest(source_evidence.canonical(inputs))
+    exported = {"schema": 1, "status": "HISTORICAL_SKIPS_NOT_PASSES", "inputs_sha256": digest,
+                "context": baseline["context"], "cases": records, "collection_skips": collection}
+    source_evidence.validate_baseline({"baseline": exported}, blobs)
+    return {"schema": 1, "status": "EXPORT_WITH_UNMATCHED_HISTORY" if unmatched else "EXPORT_READY",
+            "source_revision": revision, "public_policy_revision":
+            git(ROOT, "rev-parse", "HEAD").decode().strip(),
+            "authority_baseline_sha256": sha((ROOT / SKIP_BASELINE).read_bytes()),
+            "unmatched": unmatched, "baseline": exported,
+            "shared_inputs": {"schema": 1, "inputs": inputs, "inputs_sha256": digest},
+            "admission": False}
+
+
+def join(value, evidence, validation_result, expected_sha, source=None):
     envelope(value)
+    verify_source_evidence(value, source)
     require(value["admission_sha256"] == expected_sha, "plan job admission digest differs")
     require(validation_result == "success", "selected validation matrix did not succeed")
     if value["mode"] != "sharded":
@@ -4476,9 +4579,7 @@ def _decorator_skip_sites(decorators, env):
         if not isinstance(decorator, ast.Call):
             continue
         name = _dotted(decorator.func)
-        if name == "pytest.mark.skip":
-            sites.append(True)
-        elif name == "pytest.mark.xfail" and not decorator.args:
+        if name == "pytest.mark.skip" or name == "pytest.mark.xfail" and not decorator.args:
             sites.append(True)
         elif name in {"pytest.mark.skipif", "pytest.mark.xfail"} and decorator.args:
             condition = _eval_skip_expr(decorator.args[0], env)
@@ -4743,6 +4844,12 @@ def skip_blob_precheck(checkout, revision, *, ci_revision=None):
     require(isinstance(revision, str) and SHA.fullmatch(revision),
             "skip-blob-precheck requires an exact ops revision")
     policy = load_policy_module(ci_revision) if ci_revision else None
+    if policy is None:
+        bound = source_evidence.optional(checkout, revision)
+        if bound is not None:
+            files = tree_inputs(checkout, revision)
+            source_evidence.validate_baseline(bound, {p: blob for p, (_, blob) in files.items()})
+            return ["source-owned skip blobs match exact signed source (not test admission)"]
     pin_is_ancestor = (release_pin_is_ancestor if policy is None
                        else policy.release_pin_is_ancestor)
     files = tree_inputs(checkout, revision)
@@ -4825,6 +4932,10 @@ def main():
     join_cli.add_argument("--evidence", type=Path, required=True)
     join_cli.add_argument("--validation-result", required=True)
     join_cli.add_argument("--expected-sha", required=True)
+    join_cli.add_argument("--source", type=Path)
+    export_cli = sub.add_parser("export-source-baseline")
+    export_cli.add_argument("--source", type=Path, required=True)
+    export_cli.add_argument("--revision", required=True)
     baseline_cli = sub.add_parser("generate-skip-baseline")
     for key in ("source", "events", "collection-xml", "collection-events"):
         baseline_cli.add_argument("--" + key, type=Path, required=True)
@@ -4851,6 +4962,8 @@ def main():
         elif args.command == "expand":
             result = expand(read_json(args.targets), args.source, args.board,
                             args.runner, args.capacity, args.shards)
+        elif args.command == "export-source-baseline":
+            result = export_source_baseline(args.source, args.revision)
         elif args.command == "generate-retired-host-baseline":
             result = generate_retired_host_baseline(args.predecessor, args.source, args.revision)
         elif args.command == "generate-skip-baseline":
@@ -4865,7 +4978,7 @@ def main():
             result = function(read_json(args.admission), args.source, args.board, args.output)
         else:
             result = join(read_json(args.admission), args.evidence, args.validation_result,
-                          args.expected_sha)
+                          args.expected_sha, args.source)
     except (ValueError, OSError, KeyError, TypeError, subprocess.CalledProcessError) as error:
         if args.command == "expand":
             from admission_diagnostics import rejection
