@@ -3,7 +3,10 @@
 # and does not apt. The archive is the whole server prefix
 # (bin plus lib, including plpgsql and dict_snowball) and the matching share tree.
 # Non-glibc libraries the binaries need are copied into that private lib dir.
-# libc and the dynamic loader stay on the shard; they are never packed.
+# Each packed bin/* gets RPATH $ORIGIN/../lib. Each packed library gets
+# RPATH $ORIGIN: patchelf writes DT_RUNPATH, which does not apply to the
+# dependencies of those libraries. initdb can then load libpq without
+# LD_LIBRARY_PATH. libc and the dynamic loader stay on the shard; they are never packed.
 # apt-get update retries only DNS and transport failures:
 # three attempts, then sleeps of 2s and 4s (ci_retry attempt * 2, jitter 1).
 # A package miss, a bad signature, or a partial index is fatal immediately.
@@ -19,7 +22,7 @@ pg_lib=$pg_prefix/lib
 pg_share=/usr/share/postgresql/18
 
 pack_toolchain() {
-  local archive=$1 stage lib libs base
+  local archive=$1 stage lib libs base binary library
   [ -n "$archive" ]
   [ -x "$pg_bin/postgres" ]
   [ -e "$pg_lib/plpgsql.so" ]
@@ -55,6 +58,23 @@ pack_toolchain() {
     rm -rf -- "$stage"
     exit 1
   fi
+  if ! command -v patchelf >/dev/null 2>&1; then
+    echo '::error::patchelf is required to set the packed PostgreSQL RPATH' >&2
+    rm -rf -- "$stage"
+    exit 1
+  fi
+  for binary in "$stage$pg_bin"/*; do
+    [ -f "$binary" ] && [ -x "$binary" ] || continue
+    # $ORIGIN stays literal; the dynamic linker expands it from the binary.
+    # shellcheck disable=SC2016
+    patchelf --set-rpath '$ORIGIN/../lib' "$binary"
+  done
+  # Libraries live in lib/, so their own dependencies are at $ORIGIN.
+  for library in "$stage$pg_lib"/*.so*; do
+    [ -f "$library" ] && [ ! -L "$library" ] || continue
+    # shellcheck disable=SC2016
+    patchelf --set-rpath '$ORIGIN' "$library"
+  done
   tar -C "$stage" -cf "$archive" .
   rm -rf -- "$stage"
 }
@@ -104,7 +124,7 @@ if [ ! -x "$pg_bin/postgres" ]; then
     -o Acquire::AllowDowngradeToInsecureRepositories=false \
     -o APT::Get::AllowUnauthenticated=false)
   ci_retry 3 2 1 "${apt[@]}" update
-  "${apt[@]}" install -y --no-install-recommends ca-certificates curl gnupg
+  "${apt[@]}" install -y --no-install-recommends ca-certificates curl gnupg patchelf
   pg_key="$apt_dir/pgdg.asc"
   curl --fail --silent --show-error --location \
     --retry 5 --retry-all-errors --retry-delay 2 \
@@ -119,6 +139,10 @@ if [ ! -x "$pg_bin/postgres" ]; then
     "Signed-By: $pg_key" > "$apt_dir/sources.list.d/pgdg.sources"
   ci_retry 3 2 1 "${apt[@]}" update
   "${apt[@]}" install -y --no-install-recommends postgresql-18 postgresql-client-18
+fi
+if ! command -v patchelf >/dev/null 2>&1; then
+  echo '::error::patchelf is required to set the packed PostgreSQL RPATH' >&2
+  exit 1
 fi
 for tool in postgres initdb pg_ctl psql; do
   [ -x "$pg_bin/$tool" ]

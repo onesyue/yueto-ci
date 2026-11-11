@@ -8,6 +8,8 @@ DNS resolution retries; a package miss or a bad signature does not.
 import importlib.util
 import json
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -155,7 +157,7 @@ elif command == "apt-get":
             assert args[3:] == ["postgresql-18", "postgresql-client-18"]
             tools()
         else:
-            assert args[3:] == ["ca-certificates", "curl", "gnupg"]
+            assert args[3:] == ["ca-certificates", "curl", "gnupg", "patchelf"]
     else:
         fail("unexpected APT action")
 else:
@@ -174,6 +176,9 @@ class NativePostgresToolchainTests(unittest.TestCase):
             p = self.bin / command
             p.write_text("#!" + sys.executable + "\n" + COMMAND_FIXTURE)
             p.chmod(0o755)
+        patchelf = self.bin / "patchelf"
+        patchelf.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"${FIXTURE_ROOT:?}/patchelf.log\"\n")
+        patchelf.chmod(0o755)
         self.os_release = self.root / "os-release"
         self.os_release.write_text("ID=ubuntu\nVERSION_ID=24.04\nVERSION_CODENAME=noble\n")
         (self.root / "ubuntu-key.gpg").write_text("UBUNTU_KEY")
@@ -190,7 +195,7 @@ class NativePostgresToolchainTests(unittest.TestCase):
             self.assertEqual(self.shell.count(original), 1, original)
             self.shell = self.shell.replace(original, replacement)
 
-    def run_step(self, fault="", shell=None, args=None):
+    def run_step(self, fault="", shell=None, args=None, system_path=True, path=None):
         body = self.shell if shell is None else shell
         script = self.root / "install.sh"
         script.write_text(body)
@@ -201,7 +206,7 @@ class NativePostgresToolchainTests(unittest.TestCase):
             retry.chmod(0o755)
         result = subprocess.run(
             ["/bin/bash", str(script), *(args or [])],
-            env=os.environ | {"PATH": str(self.bin) + os.pathsep + os.defpath,
+            env=os.environ | {"PATH": path if path is not None else str(self.bin) + (os.pathsep + os.defpath if system_path else ""),
                               "FIXTURE_ROOT": str(self.root), "FIXTURE_FAULT": fault,
                               "GITHUB_PATH": str(self.root / "github-path")},
             capture_output=True, text=True, timeout=20, check=False,
@@ -353,6 +358,58 @@ class NativePostgresToolchainTests(unittest.TestCase):
         share.mkdir()
         (share / "postgres.bki").write_text("bki")
 
+    def assert_origin_rpath(self):
+        log = self.root / "patchelf.log"
+        self.assertTrue(log.is_file(), "patchelf was not invoked")
+        lines = [line for line in log.read_text().splitlines() if line]
+        bin_lines = [line for line in lines if line.startswith("--set-rpath $ORIGIN/../lib ")]
+        lib_lines = [
+            line for line in lines
+            if line.startswith("--set-rpath $ORIGIN ") and not line.startswith("--set-rpath $ORIGIN/../lib ")
+        ]
+        self.assertEqual(sorted(lines), sorted(bin_lines + lib_lines))
+        self.assertEqual(
+            sorted(line.rsplit("/", 1)[-1] for line in bin_lines),
+            ["initdb", "pg_ctl", "postgres", "psql"],
+        )
+        self.assertEqual(
+            sorted(line.rsplit("/", 1)[-1] for line in lib_lines),
+            ["dict_snowball.so", "plpgsql.so"],
+        )
+
+    def write_roundtrip_tools(self, directory, log_path):
+        directory.mkdir(parents=True)
+        quoted = shlex.quote(str(log_path))
+        script = f"""#!/bin/sh
+printf '%s LD=%s\\n' "$(basename "$0")" "${{LD_LIBRARY_PATH-}}" >> {quoted}
+if [ -n "${{LD_LIBRARY_PATH:-}}" ]; then
+  echo 'LD_LIBRARY_PATH leaked' >&2
+  exit 1
+fi
+name=$(basename "$0")
+if [ "$name" = initdb ]; then
+  data=
+  for arg in "$@"; do
+    case "$arg" in
+      --pgdata=*) data=${{arg#--pgdata=}} ;;
+    esac
+  done
+  test -n "$data"
+  mkdir -p "$data"
+elif [ "$name" = psql ]; then
+  for arg in "$@"; do
+    case "$arg" in
+      *extname*) printf '%s\\n' plpgsql; exit 0 ;;
+    esac
+  done
+fi
+exit 0
+"""
+        for name in ("postgres", "initdb", "pg_ctl", "psql"):
+            path = directory / name
+            path.write_text(script)
+            path.chmod(0o755)
+
     def test_pack_reuses_installed_tree_without_apt(self):
         self.seed_prefix()
         archive = self.root / "out.tar"
@@ -367,6 +424,7 @@ class NativePostgresToolchainTests(unittest.TestCase):
         self.assertTrue(any(line.endswith("dict_snowball.so") for line in names), listing.stdout)
         self.assertTrue(any(line.endswith("postgres.bki") for line in names), listing.stdout)
         self.assertFalse(any("libc.so" in line or "ld-linux" in line for line in names), listing.stdout)
+        self.assert_origin_rpath()
 
     def test_pack_dereferences_external_soname_link(self):
         import tarfile
@@ -396,6 +454,7 @@ class NativePostgresToolchainTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("refusing to pack libc", result.stderr)
         self.assertFalse((self.root / "out.tar").exists())
+        self.assertFalse((self.root / "patchelf.log").exists())
 
     def test_activate_missing_archive_fails_closed_without_apt(self):
         script = (ROOT / "scripts/activate-yueops-pg18-toolchain.sh").read_text()
@@ -528,5 +587,193 @@ class NativePostgresToolchainTests(unittest.TestCase):
         self.assertIn(".ci-policy/scripts/activate-yueops-pg18-toolchain.sh", activate)
         self.assertNotIn("apt-get", activate)
         self.assertNotIn("continue-on-error", activate)
+
+    def test_pack_without_patchelf_writes_nothing(self):
+        self.seed_prefix()
+        (self.bin / "patchelf").unlink()
+        tools = self.root / "host-tools"
+        tools.mkdir()
+        for name in ("mktemp", "cp", "mkdir", "find", "grep", "tar", "rm", "awk", "basename", "dirname", "chmod"):
+            source = shutil.which(name)
+            self.assertIsNotNone(source, name)
+            (tools / name).symlink_to(source)
+        self.assertFalse((tools / "patchelf").exists())
+        archive = self.root / "out.tar"
+        result = self.run_step(
+            args=["pack", str(archive)],
+            path=str(self.bin) + os.pathsep + str(tools),
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("patchelf is required to set the packed PostgreSQL RPATH", result.stderr)
+        self.assertFalse(archive.exists())
+        self.assertFalse((self.root / "patchelf.log").exists())
+
+    def test_install_without_patchelf_fails_closed(self):
+        self.preinstall()
+        (self.bin / "patchelf").unlink()
+        tools = self.root / "host-tools"
+        tools.mkdir()
+        dirname = shutil.which("dirname")
+        self.assertIsNotNone(dirname)
+        (tools / "dirname").symlink_to(dirname)
+        result = self.run_step(path=str(self.bin) + os.pathsep + str(tools))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("patchelf is required to set the packed PostgreSQL RPATH", result.stderr)
+        self.assertFalse((self.root / "github-path").exists())
+
+    def test_isolated_roundtrip_rejects_an_inherited_library_path(self):
+        result = subprocess.run(
+            [
+                "env", "-i",
+                "PATH=/bin:/usr/bin",
+                "LD_LIBRARY_PATH=/tmp/leaked",
+                "YUEOPS_PG18_ISOLATED=1",
+                "/bin/bash", str(ROOT / "scripts/pg18-toolchain-roundtrip.sh"),
+            ],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("refuses LD_LIBRARY_PATH", result.stderr)
+
+    def test_roundtrip_exports_library_path_unless_isolated(self):
+        bindir = self.root / "direct-bin"
+        log = self.root / "direct.log"
+        self.write_roundtrip_tools(bindir, log)
+        lib = self.root / "direct-lib"
+        share = self.root / "direct-share"
+        lib.mkdir()
+        share.mkdir()
+        result = subprocess.run(
+            [
+                "env", "-i",
+                f"PATH={bindir}:/bin:/usr/bin",
+                f"HOME={self.root}",
+                f"TMPDIR={self.root}",
+                "LC_ALL=C",
+                f"YUEOPS_PG18_SHARE={share}",
+                f"YUEOPS_PG18_LIB={lib}",
+                "/bin/bash", str(ROOT / "scripts/pg18-toolchain-roundtrip.sh"),
+            ],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("LD_LIBRARY_PATH leaked", result.stderr)
+
+    def test_packed_tree_roundtrip_under_env_i_does_not_need_ld_library_path(self):
+        # Pack, unpack, then initdb and postgres with an empty environment.
+        # These stand-ins record the linker path. The Debian ELF case below
+        # repeats the same trip when patchelf can edit a real postgres.
+        lib = self.root / "lib"
+        lib.mkdir()
+        (lib / "plpgsql.so").write_bytes(b"plpgsql")
+        (lib / "dict_snowball.so").write_bytes(b"snowball")
+        share = self.root / "pg-share"
+        share.mkdir()
+        (share / "postgres.bki").write_text("bki")
+        log = self.root / "tool.log"
+        self.write_roundtrip_tools(self.root / "pg-bin", log)
+        archive = self.root / "out.tar"
+        result = self.run_step(args=["pack", str(archive)])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_origin_rpath()
+        unpack = self.root / "unpack"
+        unpack.mkdir()
+        extracted = subprocess.run(
+            ["tar", "-C", str(unpack), "-xf", str(archive)],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(extracted.returncode, 0, extracted.stderr)
+        found = list(unpack.rglob("pg-bin/initdb"))
+        self.assertEqual(len(found), 1)
+        prefix = found[0].parent.parent
+        trip = subprocess.run(
+            [
+                "env", "-i",
+                f"PATH={found[0].parent}:/bin:/usr/bin",
+                f"HOME={self.root}",
+                f"TMPDIR={self.root}",
+                "LC_ALL=C",
+                "YUEOPS_PG18_ISOLATED=1",
+                f"YUEOPS_PG18_SHARE={prefix / 'pg-share'}",
+                f"YUEOPS_PG18_LIB={prefix / 'lib'}",
+                "/bin/bash", str(ROOT / "scripts/pg18-toolchain-roundtrip.sh"),
+            ],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+        self.assertEqual(trip.returncode, 0, trip.stdout + trip.stderr)
+        self.assertEqual(trip.stdout.strip(), "plpgsql")
+        recorded = log.read_text().splitlines()
+        self.assertTrue(any(line.startswith("initdb ") for line in recorded), recorded)
+        self.assertTrue(any(line.startswith("pg_ctl ") for line in recorded), recorded)
+        self.assertTrue(any(line.startswith("psql ") for line in recorded), recorded)
+        self.assertTrue(all(line.endswith(" LD=") for line in recorded), recorded)
+
+    def test_packed_debian_elf_roundtrip_under_env_i(self):
+        patchelf = shutil.which("patchelf")
+        if patchelf is None:
+            self.skipTest("patchelf is not installed")
+        prefix = Path("/usr/lib/postgresql/18")
+        share = Path("/usr/share/postgresql/18")
+        postgres = prefix / "bin" / "postgres"
+        if not postgres.is_file() or not (prefix / "lib" / "plpgsql.so").is_file():
+            self.skipTest("Debian PostgreSQL 18 prefix is not installed")
+        if not share.is_dir() or not (prefix / "lib" / "dict_snowball.so").is_file():
+            self.skipTest("Debian PostgreSQL 18 share or dictionary is not installed")
+        probe = subprocess.run(
+            [patchelf, "--print-rpath", str(postgres)],
+            capture_output=True, text=True, check=False,
+        )
+        if probe.returncode != 0:
+            self.skipTest("patchelf cannot read this postgres binary")
+        archive = self.root / "elf.tar"
+        packed = subprocess.run(
+            ["/bin/bash", str(ROOT / "scripts/install-yueops-pg18-toolchain.sh"), "pack", str(archive)],
+            capture_output=True, text=True, timeout=60, check=False,
+        )
+        self.assertEqual(packed.returncode, 0, packed.stderr)
+        unpack = self.root / "elf-unpack"
+        unpack.mkdir()
+        extracted = subprocess.run(
+            ["tar", "-C", str(unpack), "-xf", str(archive)],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(extracted.returncode, 0, extracted.stderr)
+        unpacked_bin = unpack / "usr/lib/postgresql/18/bin"
+        unpacked_lib = unpack / "usr/lib/postgresql/18/lib"
+        unpacked_share = unpack / "usr/share/postgresql/18"
+        self.assertFalse(list(unpacked_lib.glob("libc.so*")))
+        self.assertFalse(list(unpacked_lib.glob("ld-linux*")))
+        for name in ("postgres", "initdb", "pg_ctl", "psql"):
+            printed = subprocess.run(
+                [patchelf, "--print-rpath", str(unpacked_bin / name)],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(printed.returncode, 0, printed.stderr)
+            self.assertIn("$ORIGIN/../lib", printed.stdout)
+        for name in ("libpq.so.5", "plpgsql.so"):
+            library = unpacked_lib / name
+            self.assertTrue(library.is_file(), name)
+            printed = subprocess.run(
+                [patchelf, "--print-rpath", str(library)],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(printed.returncode, 0, printed.stderr)
+            self.assertEqual(printed.stdout.strip(), "$ORIGIN")
+        trip = subprocess.run(
+            [
+                "env", "-i",
+                f"PATH={unpacked_bin}:/usr/bin:/bin",
+                f"HOME={self.root}",
+                f"TMPDIR={self.root}",
+                "LC_ALL=C",
+                "YUEOPS_PG18_ISOLATED=1",
+                f"YUEOPS_PG18_SHARE={unpacked_share}",
+                f"YUEOPS_PG18_LIB={unpacked_lib}",
+                "/bin/bash", str(ROOT / "scripts/pg18-toolchain-roundtrip.sh"),
+            ],
+            capture_output=True, text=True, timeout=90, check=False,
+        )
+        self.assertEqual(trip.returncode, 0, trip.stdout + trip.stderr)
+        self.assertEqual(trip.stdout.strip(), "plpgsql")
 if __name__ == "__main__":
     unittest.main()
