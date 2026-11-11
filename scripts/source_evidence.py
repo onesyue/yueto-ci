@@ -58,13 +58,13 @@ def _environment(home):
             "GIT_NO_REPLACE_OBJECTS": "1", "GIT_TERMINAL_PROMPT": "0"}
 
 
-def _git(repo, *args):
+def _git(repo, *args, input_data=None):
     executable = shutil.which("git", path=os.defpath)
     if executable is None:
         raise Rejected("git unavailable")
     with tempfile.TemporaryDirectory(prefix="source-git-") as home:
         result = subprocess.run([executable, "--no-replace-objects", "-C", str(repo),
-                                 *args], env=_environment(home), capture_output=True,
+                                 *args], env=_environment(home), input=input_data, capture_output=True,
                                 timeout=60, check=False)
     require(result.returncode == 0, "Git object unavailable")
     return result.stdout
@@ -120,16 +120,79 @@ def _verify(commit, policy_dir):
 
 def tree_inputs(repo, revision):
     require(isinstance(revision, str) and HEX40.fullmatch(revision), "exact source SHA required")
+    commit = _object(repo, "commit", revision)
+    tree_lines = [line for line in commit.split(b"\n\n", 1)[0].splitlines()
+                  if line.startswith(b"tree ")]
+    require(len(tree_lines) == 1, "invalid commit tree")
+    root_tree = tree_lines[0][5:].decode("ascii")
+    # ls-tree supplies batching hints only. Every returned raw tree is hashed,
+    # and traversal below follows only links from the authenticated root tree.
+    tree_ids = {root_tree}
+    for row in _git(repo, "ls-tree", "-rzt", "--full-tree", revision).split(b"\0"):
+        if row:
+            metadata = row.split(b"\t", 1)[0].split()
+            if len(metadata) == 3 and metadata[1] == b"tree":
+                tree_ids.add(metadata[2].decode("ascii"))
+    trees = _objects(repo, "tree", sorted(tree_ids))
     result = {}
-    for item in _git(repo, "ls-tree", "-rz", "--full-tree", revision).split(b"\0"):
-        if not item:
-            continue
-        metadata, path = item.split(b"\t", 1)
-        mode, kind, blob = metadata.decode("ascii").split()
-        name = path.decode("utf-8")
-        # Bind submodules and symlinks too; evidence itself must be a regular blob.
-        result[name] = {"mode": mode, "kind": kind, "git_blob": blob}
-    require(bool(result), "empty source tree")
+
+    def visit(oid, prefix, depth):
+        require(depth < 100, "source tree nesting limit")
+        require(oid in trees, "missing linked tree object")
+        raw = trees[oid]
+        offset = 0
+        names = set()
+        while offset < len(raw):
+            end = raw.find(b"\0", offset)
+            require(end >= offset and len(raw) >= end + 21, "invalid tree entry")
+            metadata = raw[offset:end]
+            mode, separator, name_bytes = metadata.partition(b" ")
+            name = name_bytes.decode("utf-8")
+            require(separator and name and name not in (".", "..") and "/" not in name
+                    and name not in names, "invalid tree path")
+            names.add(name)
+            child = raw[end + 1:end + 21].hex()
+            offset = end + 21
+            path = prefix + name
+            if mode == b"40000":
+                visit(child, path + "/", depth + 1)
+            else:
+                require(mode in (b"100644", b"100755", b"120000", b"160000"),
+                        "invalid tree mode")
+                result[path] = {"mode": mode.decode(),
+                                "kind": "commit" if mode == b"160000" else "blob",
+                                "git_blob": child}
+
+    visit(root_tree, "", 0)
+    return result
+
+
+def _object(repo, kind, oid):
+    require(HEX40.fullmatch(oid), "invalid object identity")
+    raw = _git(repo, "cat-file", kind, oid)
+    header = kind.encode() + b" " + str(len(raw)).encode() + b"\0"
+    require(hashlib.sha1(header + raw).hexdigest() == oid, "Git object identity mismatch")
+    return raw
+
+
+def _objects(repo, kind, ids):
+    require(all(HEX40.fullmatch(oid) for oid in ids), "invalid batch object identity")
+    stream = _git(repo, "cat-file", "--batch", input_data=("\n".join(ids) + "\n").encode())
+    offset, result = 0, {}
+    for expected in ids:
+        end = stream.find(b"\n", offset)
+        require(end >= offset, "missing batch object")
+        header = stream[offset:end].split()
+        require(len(header) == 3 and header[0].decode() == expected
+                and header[1].decode() == kind and header[2].isdigit(), "wrong batch object")
+        size = int(header[2])
+        raw = stream[end + 1:end + 1 + size]
+        offset = end + 2 + size
+        require(len(raw) == size and stream[offset - 1:offset] == b"\n", "truncated batch object")
+        identity = hashlib.sha1(kind.encode() + b" " + str(size).encode() + b"\0" + raw).hexdigest()
+        require(identity == expected, "Git object identity mismatch")
+        result[expected] = raw
+    require(offset == len(stream), "unexpected batch objects")
     return result
 
 
@@ -138,12 +201,94 @@ def load(repo, revision):
     return _load(repo, revision, ROOT / "policy")
 
 
+def optional(repo, revision):
+    """Legacy trees remain on historical policy; partial enrollment is an error."""
+    tree = tree_inputs(repo, revision)
+    if not EVIDENCE_PATHS.intersection(tree):
+        return None
+    return load(repo, revision)
+
+
+def validate_baseline(bound, module_blobs):
+    baseline = bound["baseline"]
+    require(set(baseline) == {"schema", "status", "inputs_sha256", "context", "cases",
+                              "collection_skips"}, "unexpected source baseline fields")
+    context = baseline["context"]
+    require(isinstance(context, dict) and set(context) == {"platform", "uid"}
+            and context["platform"] == "linux" and type(context["uid"]) is int
+            and context["uid"] >= 0, "invalid skip platform")
+    for nodeid, records in baseline["cases"].items():
+        variants = records if isinstance(records, list) else [records]
+        require(variants and len({canonical(item) for item in variants}) == len(variants),
+                "empty or duplicate skip variants")
+        for case in variants:
+            require(isinstance(nodeid, str) and "::" in nodeid and isinstance(case, dict),
+                    "invalid skip case")
+            fields = {"outcome", "reason", "when", "module_blob", "disposition"}
+            native = case.get("disposition") == "SAME_RUN_NATIVE_REQUIRED"
+            require(set(case) == fields | ({"native_target"} if native else set())
+                    and case["outcome"] in ("skipped", "xfail")
+                    and isinstance(case["reason"], str) and bool(case["reason"])
+                    and case["when"] in ("setup", "call", "teardown")
+                    and case["disposition"] in ("HISTORICAL_UNEXECUTED", "OWNER_CANCELED",
+                                                 "SAME_RUN_NATIVE_REQUIRED")
+                    and case["module_blob"] == module_blobs.get(nodeid.split("::", 1)[0])
+                    and isinstance(case["module_blob"], str)
+                    and HEX40.fullmatch(case["module_blob"]), "invalid or stale skip case: " + nodeid)
+            if native:
+                require(case["native_target"] == nodeid.split("::", 1)[0], "native target differs")
+    for module, case in baseline["collection_skips"].items():
+        require(isinstance(case, dict) and set(case) == {"reason", "module_blob"}
+                and isinstance(case["reason"], str) and bool(case["reason"])
+                and case["module_blob"] == module_blobs.get(module)
+                and isinstance(case["module_blob"], str)
+                and HEX40.fullmatch(case["module_blob"]), "invalid collection skip")
+    return baseline
+
+
+def admit_skips(bound, module_blobs, result, native, mandatory_modules, mandatory_nodes=()):
+    """Check observed facts; this does not replace the caller's native/role join."""
+    baseline = validate_baseline(bound, module_blobs)
+    counts = {"HISTORICAL_UNEXECUTED": 0, "OWNER_CANCELED": 0, "SAME_RUN_NATIVE_REQUIRED": 0}
+    collection = {}
+    for session in [result["reference"], *result["shards"]]:
+        require(session["execution_context"] == baseline["context"], "skip platform differs")
+        require(session.get("junit_sha256"), "missing JUnit evidence")
+        for row in session["nonpassing_outcomes"]:
+            nodeid = row["nodeid"]
+            records = baseline["cases"].get(nodeid, [])
+            variants = records if isinstance(records, list) else [records]
+            matching = [case for case in variants if all(row.get(key) == case[key]
+                        for key in ("outcome", "reason", "when"))]
+            require(len(matching) == 1, "unregistered or ambiguous skip/xfail: " + nodeid)
+            case = matching[0]
+            module = nodeid.split("::", 1)[0]
+            if module in mandatory_modules or nodeid in mandatory_nodes:
+                require(case["disposition"] == "SAME_RUN_NATIVE_REQUIRED",
+                        "cannot waive native obligation: " + nodeid)
+            if case["disposition"] == "SAME_RUN_NATIVE_REQUIRED":
+                require(nodeid in native["obligations"].get(case["native_target"], {}).get("passed", []),
+                        "missing same-run native evidence: " + nodeid)
+            counts[case["disposition"]] += 1
+        for module, reason in session["collection_skips"].items():
+            require(module not in mandatory_modules
+                    and not any(nodeid.startswith(module + "::") for nodeid in mandatory_nodes),
+                    "cannot collection-skip native module")
+            require(baseline["collection_skips"].get(module) == {
+                "reason": reason, "module_blob": module_blobs.get(module)}, "unregistered collection skip")
+            if session["assignment_id"] != "reference":
+                require(module not in collection, "duplicate collection skip")
+                collection[module] = reason
+    require(collection == result["reference"]["collection_skips"], "collection evidence differs")
+    return {"status": "NO_NEW_SKIPS", "baseline_sha256": bound["evidence"][BASELINE]["sha256"],
+            "baseline_source_revision": bound["source_revision"], "skips_are_passes": False,
+            "disposition_counts": counts, "host_native_acceptance": "INDEPENDENT"}
+
+
 def _load(repo, revision, policy_dir):
     # Explicit private injection exists only for isolated signing-fixture tests.
     require(isinstance(revision, str) and HEX40.fullmatch(revision), "exact source SHA required")
-    commit = _git(repo, "cat-file", "commit", revision)
-    require(hashlib.sha1(b"commit " + str(len(commit)).encode() + b"\0" + commit).hexdigest()
-            == revision, "commit identity mismatch")
+    commit = _object(repo, "commit", revision)
     _verify(commit, policy_dir)
     tree = tree_inputs(repo, revision)
     records, bindings = {}, {}
@@ -151,10 +296,11 @@ def _load(repo, revision, policy_dir):
         entry = tree.get(path, {})
         require(entry.get("kind") == "blob" and entry.get("mode") == "100644",
                 "missing or nonregular evidence: " + path)
-        data = _git(repo, "cat-file", "blob", entry["git_blob"])
+        data = _object(repo, "blob", entry["git_blob"])
         records[path] = _json(data)
         bindings[path] = entry | {"sha256": digest(data)}
     actual = {path: entry for path, entry in tree.items() if path not in EVIDENCE_PATHS}
+    require(actual, "empty source inputs")
     manifest = records[INPUTS]
     require(isinstance(manifest, dict) and set(manifest) == {"schema", "inputs", "inputs_sha256"}
             and manifest["schema"] == 1 and manifest["inputs"] == actual

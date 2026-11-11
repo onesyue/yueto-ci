@@ -92,6 +92,7 @@ class EstateInputTransition(unittest.TestCase):
             baseline_path = Path(directory) / "activated.json"
             baseline_path.write_text(json.dumps(self.sealed, indent=2) + "\n")
             with (patch.object(SHARDS, "SKIP_BASELINE", str(baseline_path)),
+                  patch.object(SHARDS.source_evidence, "optional", return_value=None),
                   patch.dict(os.environ, env),
                   patch.object(SHARDS, "plan", return_value=planned),
                   patch.object(SHARDS, "serial_modules", return_value=[]),

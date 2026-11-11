@@ -75,6 +75,7 @@ jobs:
       validation_matrix: ${{ steps.ops_plan.outputs.validation_matrix }}
       validation_parallelism: ${{ steps.ops_plan.outputs.max_parallel }}
       ops_mode: ${{ steps.ops_plan.outputs.ops_mode }}
+      ops_source: ${{ steps.plan.outputs.ops_source }}
       admission_sha256: ${{ steps.ops_plan.outputs.admission_sha256 }}
       admission_rejected: ${{ steps.ops_plan.outputs.admission_rejected }}
       has_builds: ${{ steps.plan.outputs.has_builds }}
@@ -1634,6 +1635,25 @@ jobs:
             --run-id "$HANDOFF_RUN_ID" \
             --run-attempt "$HANDOFF_RUN_ATTEMPT" \
             >> "$GITHUB_OUTPUT"
+      - name: Mint read-only source evidence token (GitHub App)
+        id: evidence_source_token
+        if: needs.plan.outputs.ops_mode == 'sharded' && vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueops
+          permission-contents: read
+      - name: Checkout exact Ops objects for independent evidence verification
+        if: needs.plan.outputs.ops_mode == 'sharded'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueops
+          ref: ${{ needs.plan.outputs.ops_source }}
+          token: ${{ vars.YUETO_CI_APP_CLIENT_ID != '' && steps.evidence_source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          path: .admission-source
+          persist-credentials: false
       - name: Download original admission plan
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
@@ -1662,6 +1682,7 @@ jobs:
           python3 scripts/pytest-shards.py join \
             --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
             --expected-sha "$ADMISSION_SHA256" \
+            --source "$GITHUB_WORKSPACE/.admission-source" \
             --evidence "$RUNNER_TEMP/ops-shard-evidence" \
             --validation-result "$VALIDATION_RESULT" > "$report"
           python3 - "$report" "$RUNNER_TEMP/ops-admission/ops-admission.json" <<'PY'
