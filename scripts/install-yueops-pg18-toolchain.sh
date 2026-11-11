@@ -42,7 +42,9 @@ pack_toolchain() {
           "$pg_prefix"/*) continue ;;
         esac
         if [ ! -e "$stage$pg_lib/$base" ]; then
-          cp -a "$lib" "$stage$pg_lib/$base"
+          # ldd names are commonly SONAME symlinks. Pack their bytes, not
+          # a dangling link whose versioned target remains on the build runner.
+          cp -pL "$lib" "$stage$pg_lib/$base"
         fi
       done < <(awk '/=> \// {print $3} /^\// {print $1}' "$libs")
     fi

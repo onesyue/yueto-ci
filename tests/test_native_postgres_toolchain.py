@@ -368,6 +368,28 @@ class NativePostgresToolchainTests(unittest.TestCase):
         self.assertTrue(any(line.endswith("postgres.bki") for line in names), listing.stdout)
         self.assertFalse(any("libc.so" in line or "ld-linux" in line for line in names), listing.stdout)
 
+    def test_pack_dereferences_external_soname_link(self):
+        import tarfile
+        self.seed_prefix()
+        with tempfile.TemporaryDirectory(prefix="pg18-external-lib-") as directory:
+            external = Path(directory)
+            target = external / "libfixture.so.1.2.3"
+            target.write_bytes(b"external dependency bytes")
+            soname = external / "libfixture.so.1"
+            soname.symlink_to(target.name)
+            ldd = self.bin / "ldd"
+            ldd.write_text("#!/bin/sh\nprintf '%s\\n' 'libfixture.so.1 => " + str(soname) + " (0x1)'\n")
+            ldd.chmod(0o755)
+            archive = self.root / "out.tar"
+            result = self.run_step(args=["pack", str(archive)])
+            self.assertEqual(result.returncode, 0, result.stderr)
+            with tarfile.open(archive) as packed:
+                member = next(m for m in packed.getmembers() if m.name.endswith("/lib/libfixture.so.1"))
+                self.assertTrue(member.isfile(), "SONAME must carry bytes, not a link to an unpacked target")
+                content = packed.extractfile(member)
+                assert content is not None
+                self.assertEqual(content.read(), target.read_bytes())
+
     def test_pack_refuses_to_carry_libc(self):
         self.seed_prefix(libc=True)
         result = self.run_step(args=["pack", str(self.root / "out.tar")])
