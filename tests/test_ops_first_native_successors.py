@@ -439,6 +439,31 @@ class Successors20261110(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
             SHARDS._ordinary_skip_evidence_record(path, digest, {}, {"skip_module_blobs": {module: after}})
 
+    def test_20261111c_cdn_vless_evidence_moves_only_the_admitted_skip(self):
+        raw = (ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261111C).read_bytes()
+        self.assertEqual(SHARDS.sha(raw), SHARDS.ORDINARY_SKIP_EVIDENCE_20261111C_SHA256)
+        record = json.loads(raw)
+        self.assertEqual((len(record["updates"]), len(record["additions"])), (1, 0))
+        module = "tests/test_cdn_vless_autohide_20261006.py"
+        self.assertEqual({n.split("::", 1)[0] for n in record["updates"]}, {module})
+        before = "cbfe9f4b0931c1b12d63f433a4ba854004e617c4"
+        after = "8919984185a50b7f92cb27dfa883c1f8f72c1635"
+        baseline = json.loads((ROOT / SHARDS.SKIP_BASELINE).read_bytes())
+        for nodeid in record["updates"]:
+            self.assertEqual(baseline["cases"][nodeid]["module_blob"], before)
+        reason = "Skipped: set XRAY_PROBE_TEST_BIN to run the native VLESS transport regression"
+        admitted = {n: {"outcome": "skipped", "reason": reason, "module_blob": before}
+                    for n in record["updates"]}
+        path = ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261111C
+        digest = SHARDS.ORDINARY_SKIP_EVIDENCE_20261111C_SHA256
+        got = SHARDS._ordinary_skip_evidence_record(path, digest, admitted, {"skip_module_blobs": {module: after}})
+        self.assertEqual(set(got), set(record["updates"]))
+        self.assertTrue(all(c["module_blob"] == after and c["reason"] == reason for c in got.values()))
+        self.assertEqual(SHARDS._ordinary_skip_evidence_record(
+            path, digest, admitted, {"skip_module_blobs": {module: before}}), {})
+        with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
+            SHARDS._ordinary_skip_evidence_record(path, digest, {}, {"skip_module_blobs": {module: after}})
+
 if __name__ == "__main__":
     unittest.main()
 

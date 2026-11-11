@@ -2294,10 +2294,16 @@ REVIEWED_PR_INPUTS = {
         "9e2912667e20acb474d995fffe67bbfae47a79d3e2842207fa900e49b80f3568",
         frozenset({"site/package.json"}),
     ),
+    # yueops a8bdd4684 + 5c4cc83a7 (ship 9): tests/conftest.py empty retired-entry
+    # quarantine fixture and direct-gfw domestic probe off in tests.
+    "conftest_quarantine_1111": (
+        "f0d8ba5b5660dadf4caf8690384a30ca99f540d47b519bd04d1736a1b608ccf5",
+        frozenset({"tests/conftest.py"}),
+    ),
 }
 
 # Later sidecars live in their own file so earlier outer seals' hashes stay exact.
-REVIEWED_PR_INPUT_FILES = {"ruff_retired_video": "ops-shared-input-successors-1106.json", "test_inputs_1105": "ops-shared-input-successors-1105.json", "site_refresh_plans": "ops-shared-input-successors-1110.json"}
+REVIEWED_PR_INPUT_FILES = {"ruff_retired_video": "ops-shared-input-successors-1106.json", "test_inputs_1105": "ops-shared-input-successors-1105.json", "site_refresh_plans": "ops-shared-input-successors-1110.json", "conftest_quarantine_1111": "ops-shared-input-successors-1111.json"}
 # Activate these sidecars only for their exact after-blobs (historical trees need no evidence).
 REVIEWED_PR_INPUT_ACTIVATION = {"ruff_retired_video": frozenset({
     ("pyproject.toml", "fbedf7789a78aaa402835eb3747e8be2e24772d2"),
@@ -2311,6 +2317,8 @@ REVIEWED_PR_INPUT_ACTIVATION = {"ruff_retired_video": frozenset({
     ("site/package.json", "09ceb094c9286134cce8e770196ce70159a5bec6"),
 }), "site_refresh_plans": frozenset({
     ("site/package.json", "2ee14b2010387075336100cd89318730b23c5c06"),
+}), "conftest_quarantine_1111": frozenset({
+    ("tests/conftest.py", "3776755a872e2919f9ca3360fb9a4c630b5b2ec8"),
 })}
 
 
@@ -3799,12 +3807,19 @@ ORDINARY_SKIP_EVIDENCE_20261111 = Path("reviews/ops-ordinary-skip-evidence-20261
 # admitted baseline like 20261111 (not chained). No case is added.
 ORDINARY_SKIP_EVIDENCE_20261111B_SHA256 = "516146046639bbbd1bcda7565a8c60b736471e13e952951a7b47bd8e28b5db91"
 ORDINARY_SKIP_EVIDENCE_20261111B = Path("reviews/ops-ordinary-skip-evidence-20261111b.json")
+# yueops 3f6b045c0 (ship 9, group-5 credential): the module's hide fixture now
+# stubs catalog group lookups and the notifier; the same admitted XRAY_PROBE_TEST_BIN
+# skip moves cbfe9f4b -> 89199841. Local run on 5c4cc83a7: 38 passed, 1 skipped
+# with the same reason. Checked against the admitted baseline (not chained).
+ORDINARY_SKIP_EVIDENCE_20261111C_SHA256 = "9b9b669ed2037a275c5a86b7293df6a0fc5cb3da51ab91443adcf3a4d8aae3a6"
+ORDINARY_SKIP_EVIDENCE_20261111C = Path("reviews/ops-ordinary-skip-evidence-20261111c.json")
 ORDINARY_SKIP_EVIDENCE_FILES = (
     (ORDINARY_SKIP_EVIDENCE, ORDINARY_SKIP_EVIDENCE_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261110, ORDINARY_SKIP_EVIDENCE_20261110_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261110B, ORDINARY_SKIP_EVIDENCE_20261110B_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261111, ORDINARY_SKIP_EVIDENCE_20261111_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261111B, ORDINARY_SKIP_EVIDENCE_20261111B_SHA256),
+    (ORDINARY_SKIP_EVIDENCE_20261111C, ORDINARY_SKIP_EVIDENCE_20261111C_SHA256),
 )
 
 

@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "reviewed_conftest_quarantine_1111_transition": {
+    "schema": 1,
+    "source_before": "d2129d5993ad977b7b51bf92ac6da477fdd0e531",
+    "source_after": "5c4cc83a7ae52aa888f1079a66eaaf9c16714be4",
+    "changes": {
+      "tests/conftest.py": {
+        "before_blob": "bdf05f9d2e1122e903e4b80d07c8e0ff2d315f55",
+        "after_blob": "3776755a872e2919f9ca3360fb9a4c630b5b2ec8",
+        "mode": "100644",
+        "source": "5c4cc83a7ae52aa888f1079a66eaaf9c16714be4"
+      }
+    },
+    "reviewer": "closeout executor (independent read-only source review)",
+    "prior_baseline_sha256": "190f2ad9a50a78d0d8bfac1eb383f350e36586688510aa025e74435e6c28332d",
+    "independent_review_sha256": "407cfb2b7e1e4edd9db193320839df0cf855b6a42da1b6b59b1bb6cebcb1564c",
+    "source_freeze_sha256": "1546772d2332c41a791315159874c301d928dee992f7a149567a4512a642d39f",
+    "qualification_receipt_sha256": "dea504aee79c9e093fd7069934a44e46ee81b6a06ed8dd69baab8ff366ebbd42"
+  }
+}

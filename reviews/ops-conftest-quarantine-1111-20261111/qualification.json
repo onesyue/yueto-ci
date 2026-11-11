@@ -1,0 +1,13 @@
+{
+  "source_revision": "5c4cc83a7ae52aa888f1079a66eaaf9c16714be4",
+  "status": "PASS_STATIC_SHARED_INPUT_QUALIFICATION_ONLY",
+  "full_execution_gate": "NOT_RUN; same-run native obligations remain required",
+  "test_only_inputs": true,
+  "collection_membership_equal": true,
+  "no_skip_or_collection_hook_change": true,
+  "import_side_effect": "one 0644 temporary JSON file holding an empty retired-entry list; YUEOPS_RETIRED_ENTRY_QUARANTINE points at it; no subprocess or network",
+  "changed_shared_inputs": [
+    "tests/conftest.py"
+  ],
+  "basis": "git diff d2129d599..5c4cc83a7 -- tests/conftest.py; only a8bdd4684 (direct-gfw domestic probe off in tests) and 5c4cc83a7 (retired-entry quarantine fixture) touch it"
+}

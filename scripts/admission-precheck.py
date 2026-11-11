@@ -34,8 +34,12 @@ def precheck(source, base, head):
         baseline = POLICY.skip_baseline()
         successor = POLICY.estate_successor_proof(baseline, source, head)
         ancestor = POLICY.release_pin_is_ancestor(source, head)
+        # Same proof the build planner passes; without it a tree that no longer
+        # carries the retired template writer is rejected even when the build admits it.
+        retired_at = POLICY.template_writer_retirement_proof(source, head)
         POLICY.admit_shared_inputs(baseline, common, after, source_revision=head,
                                    estate_successor_of=successor,
+                                   template_writer_retired_at=retired_at,
                                    pin_is_ancestor=ancestor)
     except POLICY.EvidenceUnavailable:
         raise

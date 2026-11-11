@@ -14,8 +14,8 @@ SPEC = importlib.util.spec_from_file_location('pr_input_shards', ROOT / 'scripts
 M = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(M)
 NAMES = tuple(M.REVIEWED_PR_INPUTS)
-CURRENT_GENERATION = frozenset({'test_inputs_1105', 'ruff_retired_video', 'site_refresh_plans'})
-EVIDENCE_DATES = {'ruff_retired_video': '20261106', 'test_inputs_1105': '20261105', 'site_refresh_plans': '20261110'}
+CURRENT_GENERATION = frozenset({'test_inputs_1105', 'ruff_retired_video', 'site_refresh_plans', 'conftest_quarantine_1111'})
+EVIDENCE_DATES = {'ruff_retired_video': '20261106', 'test_inputs_1105': '20261105', 'site_refresh_plans': '20261110', 'conftest_quarantine_1111': '20261111'}
 
 
 def evidence(name):
@@ -51,6 +51,10 @@ def check_review_and_qualification_bound_to_exact_source(name):
     elif name == 'site_refresh_plans':
         assert q['only_refresh_plans_script_removed'] and q['lockfile_unchanged']
         assert q['no_dependency_or_pin_change']
+    elif name == 'conftest_quarantine_1111':
+        assert q['test_only_inputs'] and q['collection_membership_equal']
+        assert q['no_skip_or_collection_hook_change']
+        assert q['changed_shared_inputs'] == ['tests/conftest.py']
     else:
         assert q['manifest_only_expected_devdependency_pins']
         assert q['importer_specifiers_match'] and q['all_snapshot_edges_resolve']
