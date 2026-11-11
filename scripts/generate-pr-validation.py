@@ -83,6 +83,8 @@ board=$(sed -n 's/^board=//p' "$RUNNER_TEMP/pr-identities")
     ops_plan["env"]["OPS_RUNNER"] = "ubuntu-24.04"
     # Do not expose arbitrary roles or capacity through reusable inputs.
     ops_plan["env"].update(OPS_SHARDS="16", OPS_CAPACITY="20")
+    ops_plan["run"] += """jq -e '.source_evidence.status == "BOUND_SOURCE_EVIDENCE" and .source_evidence.admission == false' "$RUNNER_TEMP/ops-admission.json" >/dev/null
+"""
     plan["steps"].append(ops_plan)
     plan["steps"].append(copy.deepcopy(original["plan"]["steps"][-1]))
     toolchain = copy.deepcopy(original["yueops-pg18-toolchain"])
