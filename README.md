@@ -483,3 +483,30 @@ external `yt-premerge` program. Existing hosted policy CI tests the gate behavio
 without private-repository credentials. After activation, missing evidence must
 be produced before a lane proceeds; new post-cutoff PR exceptions are not a
 remediation. An emergency or failed check remains visible and fails the audit.
+
+### Offline Board UA parser gate
+
+The Board `quality` validation row runs the source-owned UA matrix after the
+existing full Go quality checks. `scripts/validate-board-ua-cores.sh` prepares
+only checksum-verified official archives with `--download-only`, then executes
+the entire source gate in Docker with `--network none`. The Board helper also
+requires loopback to be the only network interface and forces offline core
+verification. There is no host parser execution or connected fallback.
+
+The runtime is the official Go 1.27.3 multiarch index
+`golang@sha256:c292963ad0e5f51e843c726edc204a4e4c26a859ba1e4d736d91028aa3633048`
+(AMD64 manifest `sha256:5bbe76a31abbe0f1449d7820e550131c020b097c24d3bcfc5ad1231779982c1c`).
+The source toolchain, host cache toolchain and container must agree; a toolchain
+change requires reviewing the image pin. Go auto-download and module-network
+access are disabled inside the gate. The source is read-only; verified core,
+module and compiler caches remain writable for locks and offline compilation.
+The temporary tmpfs explicitly permits test-binary execution while retaining
+nosuid/nodev. Only fixed non-secret environment settings enter the container. Execution is
+bounded to two CPUs, 4 GiB, and an 18-minute attach timeout; cleanup removes only
+the container ID created by this invocation. No image is built or published.
+
+The source-owned receipt remains authoritative for coverage: Stash transport
+projections do not certify native Stash, and structural-only client rows remain
+native-check unavailable. Missing source helpers, incomplete receipt coverage,
+invalid archives, unavailable Docker and failed isolation are failures, not
+optional skips. This gate requires the companion Board offline-helper change.
