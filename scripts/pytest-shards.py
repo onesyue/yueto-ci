@@ -3407,6 +3407,10 @@ def envelope(value):
                         and bound.get("status") == "BOUND_SOURCE_EVIDENCE"
                         and bound.get("admission") is False, "invalid source evidence binding")
                 source_evidence.validate_baseline(bound, value.get("skip_module_blobs", {}))
+                reviewed_runner = skip_baseline()["reviewed_hosted"]["runner"]
+                require(all(planned["context"].get(k) == v
+                            for k, v in reviewed_runner.items()),
+                        "source evidence runner differs from reviewed hosted scope")
                 require(value.get("skip_baseline_sha256") ==
                         bound["evidence"][source_evidence.BASELINE]["sha256"],
                         "source baseline digest differs")
