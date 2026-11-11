@@ -32,6 +32,22 @@ def digest(value: object) -> str:
         raise ValueError("invalid immutable candidate digest")
     return value
 
+def admitted_record(record: dict, expected: dict) -> dict:
+    """A later publish attempt may read the receipt from the attempt that built it."""
+    built = os.environ.get("CANDIDATE_BUILT_ATTEMPT", "")
+    if built == "":
+        return record
+    if re.fullmatch(r"[1-9][0-9]*", built) is None:
+        raise ValueError("invalid candidate built attempt")
+    current = expected["run_attempt"]
+    if not isinstance(current, str) or int(built) > int(current):
+        raise ValueError("candidate built attempt is newer than this publish")
+    if str(record.get("run_attempt")) != built:
+        raise ValueError("candidate receipt identity differs from admitted plan")
+    admitted = dict(record)
+    admitted["run_attempt"] = current
+    return admitted
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -50,7 +66,7 @@ def main() -> None:
         if not isinstance(record, dict):
             raise ValueError("candidate receipt must be an object")
         value = digest(record.pop("digest", None))
-        if record != expected:
+        if admitted_record(record, expected) != expected:
             raise ValueError("candidate receipt identity differs from admitted plan")
         print(f"digest={value}")
 
