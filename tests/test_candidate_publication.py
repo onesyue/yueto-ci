@@ -1,6 +1,7 @@
 """Exercise the actual W12 immutable handoff and its workflow consumers."""
 
 import copy
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -157,7 +158,18 @@ class PublicationWiringTest(unittest.TestCase):
         for job in (build, publish):
             self.assertIn("CANDIDATE_SOURCE_SHA: ${{ matrix.ref }}", job)
             self.assertIn('[ "$(git rev-parse HEAD)" = "$CANDIDATE_SOURCE_SHA" ]', job)
-            self.assertIn("name: candidate-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.service }}", job)
+        self.assertIn("name: candidate-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.service }}", build)
+        self.assertIn("candidate-artifact.py select", publish)
+        self.assertIn("--family candidate", publish)
+        self.assertIn("name: ${{ steps.candidate_artifact.outputs.name }}", publish)
+        self.assertIn("CANDIDATE_BUILT_ATTEMPT: ${{ steps.candidate_artifact.outputs.built_attempt }}", publish)
+        self.assertIn("actions: read", publish)
+        evidence = workflow.split("\n  validation-evidence:\n", 1)[1].split("\n  build:\n", 1)[0]
+        self.assertIn("--family admission", evidence)
+        self.assertIn("YUETO_HANDOFF_ATTEMPT: ${{ steps.handoff.outputs.built_attempt }}", evidence)
+        self.assertIn("ops-admission-${{ github.run_id }}-${{ steps.handoff.outputs.built_attempt }}", evidence)
+        self.assertIn("ops-shard-${{ github.run_id }}-${{ steps.handoff.outputs.built_attempt }}-*", evidence)
+        self.assertIn("actions: read", evidence)
         self.assertIn("overwrite: false", build)
         self.assertIn("digest-mismatch: error", publish)
         self.assertIn('candidate-receipt.py read', publish)
@@ -183,6 +195,147 @@ class PublicationWiringTest(unittest.TestCase):
             ("CANDIDATE_DIGEST: ${{ steps.build.outputs.digest }}", "CANDIDATE_DIGEST: latest"),
             ("digest-mismatch: error", "digest-mismatch: warn"),
             ("bash scripts/freeze-build-plan.sh", "cat"),
+            ("candidate-artifact.py select", "echo skipped"),
+            ("steps.candidate_artifact.outputs.name", "candidate-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.service }}"),
+            ("steps.handoff.outputs.built_attempt", "github.run_attempt"),
         ):
             with self.subTest(old=old), self.assertRaises(AssertionError):
                 self.assert_handoff(workflow.replace(old, new))
+
+
+class LaterAttemptReceiptTest(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.path = Path(self.temporary.name) / "candidate.json"
+        self.env = dict(os.environ, CANDIDATE_SERVICE="yueops-web",
+                        CANDIDATE_REPOSITORY="onesyue/yueops",
+                        CANDIDATE_SOURCE_SHA="a" * 40, GITHUB_SHA="b" * 40,
+                        GITHUB_RUN_ID="123", GITHUB_RUN_ATTEMPT="2",
+                        CANDIDATE_DIGEST="sha256:" + "c" * 64)
+
+    def cli(self, operation, env=None):
+        return subprocess.run([sys.executable, str(RECEIPT), operation, str(self.path)],
+                              env=env or self.env, text=True, capture_output=True, timeout=10)
+
+    def test_later_attempt_reads_only_the_attempt_that_built_the_candidate(self):
+        self.assertEqual(self.cli("write").returncode, 0)
+        accepted = {
+            "same": {**self.env, "CANDIDATE_BUILT_ATTEMPT": "2"},
+            "later": {**self.env, "GITHUB_RUN_ATTEMPT": "4", "CANDIDATE_BUILT_ATTEMPT": "2"},
+        }
+        refused = {
+            "wrong": {**self.env, "GITHUB_RUN_ATTEMPT": "4", "CANDIDATE_BUILT_ATTEMPT": "1"},
+            "newer": {**self.env, "CANDIDATE_BUILT_ATTEMPT": "3"},
+            "malformed": {**self.env, "CANDIDATE_BUILT_ATTEMPT": "0"},
+            "unset": {**self.env, "GITHUB_RUN_ATTEMPT": "4"},
+        }
+        for name, env in accepted.items():
+            with self.subTest(name=name):
+                result = self.cli("read", env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, "digest=" + self.env["CANDIDATE_DIGEST"] + "\n")
+        for name, env in refused.items():
+            with self.subTest(name=name):
+                result = self.cli("read", env)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, "")
+
+
+class CandidateArtifactTest(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+
+    def cli(self, payload, *args):
+        path = Path(self.temporary.name) / "artifacts.json"
+        path.write_text(json.dumps(payload))
+        return subprocess.run(
+            [sys.executable, str(ROOT / "scripts/candidate-artifact.py"), "select",
+             "--artifacts", str(path), *args],
+            text=True, capture_output=True, timeout=10)
+
+    def test_resume_reads_the_attempt_that_stored_the_artifact(self):
+        artifacts = [
+            {"name": "candidate-9-1-yueops-web", "expired": False},
+            {"name": "candidate-9-2-yueops-web", "expired": False},
+            {"name": "candidate-9-1-yue-bot", "expired": False},
+            {"name": "notes", "expired": False},
+        ]
+        current = self.cli(artifacts, "--family", "candidate", "--run-id", "9",
+                           "--run-attempt", "2", "--service", "yueops-web")
+        self.assertEqual(current.returncode, 0, current.stderr)
+        self.assertEqual(current.stdout, "built_attempt=2\nname=candidate-9-2-yueops-web\n")
+        earlier = self.cli(
+            [item for item in artifacts if item["name"] != "candidate-9-2-yueops-web"],
+            "--family", "candidate", "--run-id", "9", "--run-attempt", "3",
+            "--service", "yueops-web")
+        self.assertEqual(earlier.returncode, 0, earlier.stderr)
+        self.assertEqual(earlier.stdout, "built_attempt=1\nname=candidate-9-1-yueops-web\n")
+        admission = self.cli(
+            [{"name": "ops-admission-9-1", "expired": False},
+             {"name": "ops-admission-9-4", "expired": False}],
+            "--family", "admission", "--run-id", "9", "--run-attempt", "2")
+        self.assertEqual(admission.returncode, 0, admission.stderr)
+        self.assertEqual(admission.stdout, "built_attempt=1\nname=ops-admission-9-1\n")
+
+    def test_missing_expired_foreign_and_duplicate_artifacts_emit_no_name(self):
+        cases = {
+            "empty": [],
+            "expired": [{"name": "candidate-9-1-yueops-web", "expired": True}],
+            "other service": [{"name": "candidate-9-1-yue-bot", "expired": False}],
+            "future": [{"name": "candidate-9-3-yueops-web", "expired": False}],
+            "duplicate": [{"name": "candidate-9-1-yueops-web", "expired": False},
+                          {"name": "candidate-9-1-yueops-web", "expired": False}],
+            "broken": ["candidate-9-1-yueops-web"],
+            "newline ignored": [{"name": "candidate-9-1-yueops-web\nextra", "expired": False}],
+        }
+        for name, payload in cases.items():
+            with self.subTest(name=name):
+                result = self.cli(payload, "--family", "candidate", "--run-id", "9",
+                                  "--run-attempt", "2", "--service", "yueops-web")
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertEqual(result.stdout, "")
+                self.assertIn("handoff artifact refused", result.stderr)
+        no_service = self.cli([], "--family", "candidate", "--run-id", "9", "--run-attempt", "2")
+        self.assertNotEqual(no_service.returncode, 0)
+        self.assertEqual(no_service.stdout, "")
+        with_service = self.cli([], "--family", "admission", "--run-id", "9",
+                                "--run-attempt", "2", "--service", "yueops-web")
+        self.assertNotEqual(with_service.returncode, 0)
+        self.assertEqual(with_service.stdout, "")
+
+
+class HandoffAttemptIdentityTest(unittest.TestCase):
+    def test_join_identity_uses_the_attempt_that_produced_the_admission(self):
+        spec = importlib.util.spec_from_file_location(
+            "handoff_pytest_shards", ROOT / "scripts/pytest-shards.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        head = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
+        keys = ("GITHUB_SHA", "GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT",
+                "GITHUB_REPOSITORY", "YUETO_HANDOFF_ATTEMPT")
+        previous = {key: os.environ.get(key) for key in keys}
+        os.environ["GITHUB_SHA"] = head
+        os.environ["GITHUB_RUN_ID"] = "431"
+        os.environ["GITHUB_RUN_ATTEMPT"] = "2"
+        os.environ["GITHUB_REPOSITORY"] = "onesyue/yueto-ci"
+        os.environ.pop("YUETO_HANDOFF_ATTEMPT", None)
+        try:
+            self.assertEqual(module.workflow_identity()["run_attempt"], "2")
+            os.environ["YUETO_HANDOFF_ATTEMPT"] = "2"
+            self.assertEqual(module.workflow_identity()["run_attempt"], "2")
+            os.environ["YUETO_HANDOFF_ATTEMPT"] = "1"
+            self.assertEqual(module.workflow_identity()["run_attempt"], "1")
+            os.environ["YUETO_HANDOFF_ATTEMPT"] = "3"
+            with self.assertRaisesRegex(ValueError, "newer"):
+                module.workflow_identity()
+            os.environ["YUETO_HANDOFF_ATTEMPT"] = "0"
+            with self.assertRaisesRegex(ValueError, "invalid handoff"):
+                module.workflow_identity()
+        finally:
+            for key, value in previous.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
