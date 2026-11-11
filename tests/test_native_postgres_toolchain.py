@@ -415,6 +415,7 @@ class NativePostgresToolchainTests(unittest.TestCase):
             "YUEOPS_PG18_SYSROOT": str(sysroot),
             "GITHUB_PATH": str(self.root / "github-path"),
             "GITHUB_ENV": str(self.root / "github-env"),
+            "LD_LIBRARY_PATH": "/opt/hostedtoolcache/Python/lib",
         }
         result = subprocess.run(
             ["bash", str(ROOT / "scripts/activate-yueops-pg18-toolchain.sh"), str(archive)],
@@ -426,7 +427,12 @@ class NativePostgresToolchainTests(unittest.TestCase):
         self.assertEqual(link.resolve(), (runner / "yueops-pg18/usr/lib/postgresql/18").resolve())
         self.assertTrue((link / "lib/plpgsql.so").is_file())
         self.assertEqual((self.root / "github-path").read_text().strip(), str(link / "bin"))
-        self.assertIn(f"LD_LIBRARY_PATH={runner}/yueops-pg18/usr/lib/postgresql/18/lib\n", (self.root / "github-env").read_text())
+        private_lib = f"{runner}/yueops-pg18/usr/lib/postgresql/18/lib"
+        self.assertIn(
+            f"LD_LIBRARY_PATH={private_lib}:/opt/hostedtoolcache/Python/lib\n",
+            (self.root / "github-env").read_text(),
+        )
+        self.assertNotIn(f"LD_LIBRARY_PATH={private_lib}\n", (self.root / "github-env").read_text())
         self.assertFalse((self.root / "usr").exists())
 
     def test_unpacked_tree_initdb_creates_plpgsql(self):

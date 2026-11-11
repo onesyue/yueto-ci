@@ -39,10 +39,17 @@ fi
 "${elevate[@]}" ln -s -- "$pg_prefix" "$link_lib"
 "${elevate[@]}" ln -s -- "$pg_share" "$link_share"
 pg_bin=$link_lib/bin
+# Prepend the private lib dir and keep the value setup-python already set.
+# Replacing LD_LIBRARY_PATH drops the tool-cache lib for every later step.
+if [ -n "${LD_LIBRARY_PATH:-}" ]; then
+  export LD_LIBRARY_PATH="$pg_prefix/lib:$LD_LIBRARY_PATH"
+else
+  export LD_LIBRARY_PATH="$pg_prefix/lib"
+fi
 for tool in postgres initdb pg_ctl psql; do
   [ -x "$pg_bin/$tool" ]
   "$pg_bin/$tool" --version | grep -E '\(PostgreSQL\) 18[.]'
 done
 [ "$(id -u)" -ne 0 ] || { echo '::error::native PostgreSQL fixtures require a non-root runner'; exit 1; }
 echo "$pg_bin" >> "${GITHUB_PATH:?}"
-printf 'LD_LIBRARY_PATH=%s\n' "$pg_prefix/lib" >> "${GITHUB_ENV:?}"
+printf 'LD_LIBRARY_PATH=%s\n' "$LD_LIBRARY_PATH" >> "${GITHUB_ENV:?}"

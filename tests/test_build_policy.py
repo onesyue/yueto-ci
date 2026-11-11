@@ -559,7 +559,8 @@ class PostgresKeyFingerprintTest(unittest.TestCase):
     """Run the real key reader with output larger than an OS pipe buffer."""
 
     def assignment(self) -> str:
-        lines = [line.strip() for line in WORKFLOW.read_text().splitlines()
+        script = (ROOT / "scripts" / "install-yueops-pg18-toolchain.sh").read_text()
+        lines = [line.strip() for line in script.splitlines()
                  if line.strip().startswith("fingerprint=$(gpg ")]
         self.assertEqual(len(lines), 1)
         return lines[0]
@@ -990,8 +991,10 @@ class BuildPolicyTest(unittest.TestCase):
             "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
             "'[\"ubuntu-24.04\"]')"
         )
-        # plan, validate, validation-evidence, candidate build, and publish.
-        self.assertEqual(self.workflow.count(selector), 5)
+        # plan, the one-shot PG18 toolchain, validate, validation-evidence,
+        # candidate build, and publish. The toolchain job keeps the same
+        # manual opt-in selector; it is not a new default runner.
+        self.assertEqual(self.workflow.count(selector), 6)
         self.assertIn(
             "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,
