@@ -1613,22 +1613,38 @@ jobs:
     if: always() && needs.plan.result == 'success'
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Select verified admission attempt
+        id: handoff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HANDOFF_RUN_ID: ${{ github.run_id }}
+          HANDOFF_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          python3 scripts/candidate-artifact.py select \
+            --family admission \
+            --run-id "$HANDOFF_RUN_ID" \
+            --run-attempt "$HANDOFF_RUN_ATTEMPT" \
+            >> "$GITHUB_OUTPUT"
       - name: Download original admission plan
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: ops-admission-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ops-admission-${{ github.run_id }}-${{ steps.handoff.outputs.built_attempt }}
           path: ${{ runner.temp }}/ops-admission
           digest-mismatch: error
       - name: Download all current Ops role evidence
         if: needs.plan.outputs.ops_mode == 'sharded'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          pattern: ops-shard-${{ github.run_id }}-${{ github.run_attempt }}-*
+          pattern: ops-shard-${{ github.run_id }}-${{ steps.handoff.outputs.built_attempt }}-*
           path: ${{ runner.temp }}/ops-shard-evidence
           merge-multiple: false
           digest-mismatch: error
@@ -1636,6 +1652,7 @@ jobs:
         env:
           VALIDATION_RESULT: ${{ needs.validate.result }}
           ADMISSION_SHA256: ${{ needs.plan.outputs.admission_sha256 }}
+          YUETO_HANDOFF_ATTEMPT: ${{ steps.handoff.outputs.built_attempt }}
         run: |
           set -euo pipefail
           report="${RUNNER_TEMP:?}/ops-validation-evidence-${GITHUB_RUN_ID:?}-${GITHUB_RUN_ATTEMPT:?}.json"
@@ -1683,7 +1700,7 @@ jobs:
   build:
     needs: [plan]
     # Candidate preparation overlaps validation. built-<sha> and :latest
-    # move only in publish (which no longer waits for validation, B1).
+    # move only in publish, and publish waits for this run's validation and evidence.
     # Job-level `if` is evaluated before strategy expansion.  A source-only
     # target therefore skips this job without asking Actions to expand or run
     # an empty Docker matrix.
@@ -2121,6 +2138,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      actions: read
       packages: write
     strategy:
       # Deliberately not fail-fast: publish only starts after every gate is
@@ -2235,10 +2253,26 @@ jobs:
             echo "source_sha=${SOURCE_SHA}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Select verified candidate artifact
+        id: candidate_artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SERVICE: ${{ matrix.service }}
+          CANDIDATE_RUN_ID: ${{ github.run_id }}
+          CANDIDATE_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          python3 .ci-policy/scripts/candidate-artifact.py select \
+            --family candidate \
+            --run-id "$CANDIDATE_RUN_ID" \
+            --run-attempt "$CANDIDATE_RUN_ATTEMPT" \
+            --service "$CANDIDATE_SERVICE" \
+            >> "$GITHUB_OUTPUT"
+
       - name: Download verified candidate identity
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: candidate-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.service }}
+          name: ${{ steps.candidate_artifact.outputs.name }}
           path: ${{ runner.temp }}/verified-candidate
           digest-mismatch: error
 
@@ -2248,6 +2282,7 @@ jobs:
           CANDIDATE_SERVICE: ${{ matrix.service }}
           CANDIDATE_REPOSITORY: ${{ matrix.repo }}
           CANDIDATE_SOURCE_SHA: ${{ matrix.ref }}
+          CANDIDATE_BUILT_ATTEMPT: ${{ steps.candidate_artifact.outputs.built_attempt }}
         run: |
           set -euo pipefail
           [ "$(git rev-parse HEAD)" = "$CANDIDATE_SOURCE_SHA" ]

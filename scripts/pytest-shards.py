@@ -3363,6 +3363,13 @@ def workflow_identity():
         require(re.fullmatch(r"[1-9][0-9]*", identity[key] or ""), f"invalid {key}")
     require(os.environ.get("GITHUB_REPOSITORY") == "onesyue/yueto-ci",
             "unexpected workflow repository")
+    handoff = os.environ.get("YUETO_HANDOFF_ATTEMPT", "")
+    if handoff:
+        require(re.fullmatch(r"[1-9][0-9]*", handoff) is not None,
+                "invalid handoff attempt")
+        require(int(handoff) <= int(identity["run_attempt"]),
+                "handoff attempt is newer than this job")
+        identity["run_attempt"] = handoff
     return identity
 
 
