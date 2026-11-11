@@ -147,8 +147,9 @@ class PublicationWiringTest(unittest.TestCase):
         self.assertTrue(build.startswith("    needs: [plan]\n"))
         # Publication joins verified candidates with complete validation evidence.
         self.assertTrue(publish.startswith("    needs: [build, plan, validate, validation-evidence]\n"))
-        self.assertIn("if: needs.plan.outputs.has_builds == 'true'", publish)
-        self.assertNotIn("always()", publish)
+        self.assertIn("needs.plan.outputs.has_builds == 'true'", publish)
+        self.assertIn("needs.validate.result == 'success'", publish)
+        self.assertIn("needs.validation-evidence.result == 'success'", publish)
         self.assertNotIn("continue-on-error", build + publish)
         self.assertNotIn("built-${SOURCE_SHA}", build)
         self.assertNotIn('promotion_tag_args=', build)
@@ -167,8 +168,8 @@ class PublicationWiringTest(unittest.TestCase):
         evidence = workflow.split("\n  validation-evidence:\n", 1)[1].split("\n  build:\n", 1)[0]
         self.assertIn("--family admission", evidence)
         self.assertIn("YUETO_HANDOFF_ATTEMPT: ${{ steps.handoff.outputs.built_attempt }}", evidence)
-        self.assertIn("ops-admission-${{ github.run_id }}-${{ steps.handoff.outputs.built_attempt }}", evidence)
-        self.assertIn("ops-shard-${{ github.run_id }}-${{ steps.handoff.outputs.built_attempt }}-*", evidence)
+        self.assertIn("ops-admission-${{ github.run_id }}-${{ steps.resume_handoff.outputs.built_attempt || steps.handoff.outputs.built_attempt }}", evidence)
+        self.assertIn("ops-shard-${{ github.run_id }}-${{ steps.resume_handoff.outputs.built_attempt || steps.handoff.outputs.built_attempt }}-*", evidence)
         self.assertIn("actions: read", evidence)
         self.assertIn("overwrite: false", build)
         self.assertIn("digest-mismatch: error", publish)
