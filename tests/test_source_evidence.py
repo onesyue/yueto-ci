@@ -79,6 +79,34 @@ class SourceEvidence(unittest.TestCase):
     def load(self, head=None):
         return E._load(self.repo, head or self.head, self.policy)
 
+    def test_actual_skip_blob_cli_accepts_signed_source_and_rejects_unregistered_case(self):
+        with tempfile.TemporaryDirectory() as directory:
+            public = Path(directory)
+            (public / "scripts").mkdir()
+            for name in ("pytest-shards.py", "source_evidence.py"):
+                shutil.copyfile(E.ROOT / "scripts" / name, public / "scripts" / name)
+            shutil.copytree(self.policy, public / "policy")
+
+            def command(head):
+                return subprocess.run([
+                    sys.executable, str(public / "scripts/pytest-shards.py"),
+                    "skip-blob-precheck", "--ops-checkout", str(self.repo),
+                    "--ops-rev", head,
+                ], capture_output=True, text=True, check=False, env=self.env)
+
+            accepted = command(self.head)
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            self.assertEqual(accepted.stdout.strip(), "skip-blob-precheck ok")
+            # A correctly signed but unregistered approval is still rejected.
+            baseline = self.baseline | {"cases": {"tests/test_missing.py::test_case": {
+                "outcome": "skipped", "reason": "Skipped: unregistered", "when": "setup",
+                "module_blob": "a" * 40, "disposition": "HISTORICAL_UNEXECUTED",
+            }}}
+            (self.repo / E.BASELINE).write_text(json.dumps(baseline))
+            rejected = command(self.commit())
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertNotIn("skip-blob-precheck ok", rejected.stdout)
+
     def test_signed_exact_tree_bound_not_admitted(self):
         result = self.load()
         self.assertEqual(result["source_revision"], self.head)
