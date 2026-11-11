@@ -55,21 +55,27 @@ class FailFastPolicyTest(unittest.TestCase):
         assert match is not None
         needs = {name.strip() for name in match.group(1).split(",")}
         self.assertEqual(needs, REQUIRED)
-        # No status override: Actions applies its default success() to this if.
-        self.assertRegex(publish, r"(?m)^    if: needs.plan.outputs.has_builds == 'true'$")
-        self.assertNotIn("always()", publish)
+        expected = "always() && needs.plan.result == 'success' && needs.validate.result == 'success' && needs.validation-evidence.result == 'success' && needs.plan.outputs.has_builds == 'true' && !inputs.validation_only && (needs.build.result == 'success' || (needs.plan.outputs.resume == 'true' && needs.build.result == 'skipped'))"
+        self.assertIn("    if: " + expected + "\n", publish)
         self.assertNotIn("continue-on-error:", publish)
         return needs
 
     def test_publication_requires_success_for_every_prerequisite(self) -> None:
-        needs = self.assert_publication_gate(self.text)
+        self.assert_publication_gate(self.text)
+        expression = re.search(r"(?m)^    if: (.+)$", self.jobs['publish']).group(1)
         names = sorted(REQUIRED)
         for states in itertools.product(("success", "failure", "skipped", "cancelled", "in_progress"), repeat=4):
             results = dict(zip(names, states))
-            with self.subTest(results=results):
-                # Exercise the actual declared dependency set with Actions' success rule.
-                admitted = all(results[name] == "success" for name in needs)
-                self.assertEqual(admitted, states == ("success",) * 4)
+            for resume in (False, True):
+                actual = expression.replace('always()', 'True').replace('!inputs.validation_only', 'True')
+                actual = actual.replace("needs.plan.outputs.has_builds == 'true'", 'True')
+                actual = actual.replace("needs.plan.outputs.resume == 'true'", str(resume))
+                for name, state in results.items():
+                    actual = actual.replace('needs.' + name + '.result', repr(state))
+                admitted = eval(actual.replace('&&', ' and ').replace('||', ' or '), {'__builtins__': {}}, {})
+                expected = all(results[n] == 'success' for n in REQUIRED - {'build'}) and (results['build'] == 'success' or (resume and results['build'] == 'skipped'))
+                with self.subTest(results=results, resume=resume):
+                    self.assertEqual(admitted, expected)
 
     def test_old_async_graph_and_status_overrides_are_rejected(self) -> None:
         original = "needs: [build, plan, validate, validation-evidence]"
@@ -80,7 +86,7 @@ class FailFastPolicyTest(unittest.TestCase):
             with self.subTest(replacement=replacement), self.assertRaises(AssertionError):
                 self.assert_publication_gate(self.text.replace(original, replacement))
         for status in ("always()", "failure()", "!cancelled()"):
-            changed = self.text.replace("    if: needs.plan.outputs.has_builds == 'true'\n", f"    if: {status}\n")
+            changed = self.text.replace(re.search(r"(?m)^    if: (.+)$", self.jobs["publish"]).group(0), f"    if: {status}")
             with self.subTest(status=status), self.assertRaises(AssertionError):
                 self.assert_publication_gate(changed)
 
@@ -88,7 +94,7 @@ class FailFastPolicyTest(unittest.TestCase):
         for gate in ("validate", "build"):
             job = self.jobs[f"abort-on-{gate}-failure"]
             self.assertIn(f"    needs: [plan, {gate}]\n", job)
-            self.assertIn("    if: failure()\n", job)
+            self.assertIn("    if: failure() && !inputs.validation_only\n", job)
             self.assertIn("    permissions:\n      actions: write\n    steps:\n", job)
             self.assertRegex(job, r"(?m)^    timeout-minutes: [1-5]$")
             self.assertEqual(job.count("      - name:"), 1)

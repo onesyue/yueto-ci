@@ -483,3 +483,52 @@ external `yt-premerge` program. Existing hosted policy CI tests the gate behavio
 without private-repository credentials. After activation, missing evidence must
 be produced before a lane proceeds; new post-cutoff PR exceptions are not a
 remediation. An emergency or failed check remains visible and fails the audit.
+
+### Validate an exact candidate without publication
+
+The existing `build.yml` manual dispatch accepts `validation_only: true` with
+`service` selecting one source repository and `ref` set to its full lowercase
+40-hex commit SHA. For example, select `yueboard`, `yue-node`, `yueops`, or
+`yuelink`; `all` is rejected because one SHA cannot identify several repositories.
+YueOps still requires an exact trusted `migration_base`; the existing optional
+`yueboard_contract_ref` retains its ACL validation meaning. Set `promote: false`.
+
+This mode uses the same planner, complete selected validation matrix, Ops
+admission/skip-blob checks, and validation-evidence join as a build. It has its
+own `validate-only` concurrency group. Image builds, signing, registry publication
+and cancellation jobs are skipped, including when planning or validation fails;
+its executable jobs have only `contents: read` workflow permissions. Source
+checkout retains the existing read-only credential mechanism. The evidence join
+runs after failed validation so a failed gate is visible without publication.
+The default remains `validation_only: false`, preserving ordinary candidate builds.
+Validation success is not release approval and does not move any image tag.
+
+### Evidence-only promotion resume
+
+An explicit resume dispatch uses `ref` for the replacement signed Ops evidence
+source and `resume_build_run_id`, `resume_build_attempt`, `resume_build_source`
+for the original image build. It requires `promote=true`, `validation_only=false`,
+hosted Linux and an explicit Ops service/group. The existing planner and all
+validation roles run against the new source. The build job is skipped only on
+this path; promotion still requires successful complete validation and join.
+
+`scripts/resume-binding.py inspect` verifies exact GitHub run/attempt/jobs,
+immutable artifact archive digests, original image provenance, Board/migration
+context and actual Docker input/recipe equality. A candidate artifact includes
+its unchanged schema-1 receipt plus `candidate-context.json`; older artifacts
+without this context are refused rather than reconstructed from local claims.
+Evidence files are not unconditionally excluded: if Docker consumes them, their
+change invalidates reuse. The original image source revision remains unchanged.
+
+The trusted policy can be exported without `.git` and invoked using `python -I`
+with explicit `--policy-sha`. `prepare` binds a new validation run; `resolve`
+checks its canonical join before publication; `publication` reads back the
+registry digest/revision and retains an immutable per-service receipt.
+`verify-publication` independently reads those exact API artifacts and returns
+both original build and new publication identities. The protocol marker is
+`resume-protocol.json`. No helper dispatches or publishes on its own.
+
+This protocol does not relax existing default-branch, fingerprint, signature,
+SBOM or rollback rules. The root caller currently restricts resume to the Ops
+group with `--no-deploy`; deployment consumers must separately validate the old
+image/new evidence identity binding before deployment resume can be enabled.

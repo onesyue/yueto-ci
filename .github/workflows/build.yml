@@ -26,6 +26,11 @@ on:
         description: 'YueOps: full SHA of trusted previous release/validation baseline (required for SQL coverage)'
         required: false
         type: string
+      validation_only:
+        description: 'validate an exact source SHA without building, signing, or publishing images'
+        required: true
+        type: boolean
+        default: false
       promote:
         description: 'promote verified default-branch HEAD to sha-* and latest'
         required: true
@@ -33,6 +38,18 @@ on:
         default: false
       yueboard_contract_ref:
         description: 'optional exact YueBoard SHA for manual YueOps ACL validation'
+        required: false
+        type: string
+      resume_build_run_id:
+        description: 'exact original build run for evidence-only revalidation and publication'
+        required: false
+        type: string
+      resume_build_attempt:
+        description: 'exact original build attempt (never latest attempt selection)'
+        required: false
+        type: string
+      resume_build_source:
+        description: 'original image source SHA; ref remains the replacement evidence SHA'
         required: false
         type: string
       runner:
@@ -59,11 +76,16 @@ env:
 # same target no longer evict each other's pending runs. Image publication is
 # still serialized per service by the job-level verified-image-* groups.
 concurrency:
-  group: build-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}-${{ github.event.inputs.ref || 'registry-default' }}
+  group: ${{ inputs.validation_only && 'validate-only' || 'build' }}-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}-${{ github.event.inputs.ref || 'registry-default' }}
   cancel-in-progress: false
 
 jobs:
   plan:
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+      attestations: read
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     # Bounded on purpose: the Actions default is 360 minutes, and a wedged
     # job would hold its concurrency group (and the release) for six hours.
@@ -71,7 +93,8 @@ jobs:
     # 8-14 min (yueboard / yueops), multi-arch build <= 13 min.
     timeout-minutes: 10
     outputs:
-      matrix: ${{ steps.plan.outputs.matrix }}
+      matrix: ${{ steps.resume.outputs.matrix || steps.plan.outputs.matrix }}
+      resume: ${{ steps.plan.outputs.resume }}
       validation_matrix: ${{ steps.ops_plan.outputs.validation_matrix }}
       validation_parallelism: ${{ steps.ops_plan.outputs.max_parallel }}
       ops_mode: ${{ steps.ops_plan.outputs.ops_mode }}
@@ -111,12 +134,17 @@ jobs:
       - id: plan
         env:
           GH_API_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          RESUME_BUILD_RUN_ID: ${{ github.event.inputs.resume_build_run_id || '' }}
+          RESUME_BUILD_ATTEMPT: ${{ github.event.inputs.resume_build_attempt || '' }}
+          RESUME_BUILD_SOURCE: ${{ github.event.inputs.resume_build_source || '' }}
+          RESUME_RUNNER: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}
           SERVICE: ${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
           REF_OVERRIDE: ${{ github.event.inputs.ref || github.event.client_payload.ref || '' }}
           MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_ACTOR: ${{ github.actor }}
           WORKFLOW_GIT_REF: ${{ github.ref }}
+          VALIDATION_ONLY: ${{ inputs.validation_only && 'true' || 'false' }}
           MANUAL_PROMOTE: ${{ github.event.inputs.promote || 'false' }}
           DISPATCH_PROMOTE: ${{ github.event.client_payload.promote || 'false' }}
           MANUAL_YUEBOARD_CONTRACT_REF: ${{ github.event.inputs.yueboard_contract_ref || '' }}
@@ -124,6 +152,35 @@ jobs:
         run: |
           set -euo pipefail
           promote=false
+          validation_only="${VALIDATION_ONLY:-false}"
+          resume=false
+          RESUME_BUILD_RUN_ID="${RESUME_BUILD_RUN_ID:-}"
+          RESUME_BUILD_ATTEMPT="${RESUME_BUILD_ATTEMPT:-}"
+          RESUME_BUILD_SOURCE="${RESUME_BUILD_SOURCE:-}"
+          if [ -n "$RESUME_BUILD_RUN_ID$RESUME_BUILD_ATTEMPT$RESUME_BUILD_SOURCE" ]; then
+            [[ "$RESUME_BUILD_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+            [[ "$RESUME_BUILD_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+            [[ "$RESUME_BUILD_SOURCE" =~ ^[0-9a-f]{40}$ ]]
+            [[ "$REF_OVERRIDE" =~ ^[0-9a-f]{40}$ ]]
+            [ "$EVENT_NAME" = workflow_dispatch ]
+            [ "$MANUAL_PROMOTE" = true ]
+            [ "$validation_only" = false ]
+            [ "$RESUME_RUNNER" = ubuntu-24.04 ]
+            case "$SERVICE" in yueops|yueops-web|checkin-api|yue-bot) ;; *) exit 1 ;; esac
+            resume=true
+          fi
+          case "$validation_only" in
+            true)
+              if [ "$EVENT_NAME" != workflow_dispatch ] ||
+                 [ "$MANUAL_PROMOTE" != false ] ||
+                 ! [[ "$REF_OVERRIDE" =~ ^[0-9a-f]{40}$ ]]; then
+                echo 'validation_only requires manual dispatch, an exact 40-hex source SHA, and promote=false' >&2
+                exit 1
+              fi
+              ;;
+            false) ;;
+            *) echo 'invalid validation_only value' >&2; exit 1 ;;
+          esac
           # The ACL checkout and schema floor are one contract. Reading both
           # from the same reviewed file prevents a new floor from being
           # validated against an older YueBoard tree.
@@ -213,6 +270,13 @@ jobs:
           # validators in separate registries. `all` covers YueLink without
           # ever inventing a Docker target for it.
           target_plan="$(bash scripts/plan-build-targets.sh "$SERVICE" "$REF_OVERRIDE")"
+          if [ "$validation_only" = true ]; then
+            # One SHA cannot identify commits in several independent repositories.
+            jq -e '[.validation_matrix[].repo] | unique | length == 1' <<<"$target_plan" >/dev/null || {
+              echo 'validation_only requires a single source repository target' >&2
+              exit 1
+            }
+          fi
           if jq -e 'any(.validation_matrix[]; .validation == "yueops")' <<<"$target_plan" >/dev/null &&
              ! [[ "$MIGRATION_BASE" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::YueOps validation requires an explicit 40-hex migration_base from a trusted previous release"
@@ -298,6 +362,9 @@ jobs:
               ;;
             *) echo '::error::duplicate Ops validation entries'; exit 1 ;;
           esac
+          if [ "$validation_only" = true ]; then
+            target_plan="$(jq '.matrix = [] | .has_builds = false' <<<"$target_plan")"
+          fi
           # All parallel consumers must judge the same immutable source, including
           # candidate-only Node builds and source-only Link validation.
           target_plan="$(bash scripts/freeze-build-plan.sh <<<"$target_plan")"
@@ -311,6 +378,7 @@ jobs:
           fi
           {
             echo "ops_source=$ops_source"
+            echo "resume=$resume"
             echo "matrix=$matrix"
             echo "validation_matrix=$validation_matrix"
             echo "has_builds=$has_builds"
@@ -355,6 +423,45 @@ jobs:
             echo "ops_mode=$(jq -er '.mode' "$RUNNER_TEMP/ops-admission.json")"
             echo "admission_sha256=$(jq -er '.admission_sha256' "$RUNNER_TEMP/ops-admission.json")"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate read-only original OCI proof retrieval
+        if: steps.plan.outputs.resume == 'true'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Bind original candidates to this new validation
+        id: resume
+        if: steps.plan.outputs.resume == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESUME_BUILD_RUN_ID: ${{ github.event.inputs.resume_build_run_id }}
+          RESUME_BUILD_ATTEMPT: ${{ github.event.inputs.resume_build_attempt }}
+          RESUME_BUILD_SOURCE: ${{ github.event.inputs.resume_build_source }}
+          EVIDENCE_SOURCE: ${{ steps.plan.outputs.ops_source }}
+          SERVICE: ${{ github.event.inputs.service }}
+          BOARD: ${{ steps.plan.outputs.yueboard_contract_ref }}
+          MIGRATION_BASE: ${{ github.event.inputs.migration_base }}
+        run: |
+          set -euo pipefail
+          python3 scripts/resume-binding.py prepare --source "$PWD/.ops-shard-source" \
+            --build-run-id "$RESUME_BUILD_RUN_ID" --build-attempt "$RESUME_BUILD_ATTEMPT" \
+            --build-source "$RESUME_BUILD_SOURCE" --evidence-source "$EVIDENCE_SOURCE" \
+            --policy-sha "$GITHUB_SHA" --service "$SERVICE" --board "$BOARD" \
+            --migration-base "$MIGRATION_BASE" --output "$RUNNER_TEMP/resume-binding.json"
+          echo "matrix=$(jq -c --arg source "$RESUME_BUILD_SOURCE" '.matrix | map(.ref = $source)' "$RUNNER_TEMP/build-target-plan.json")" >> "$GITHUB_OUTPUT"
+
+      - name: Retain original-build and new-validation binding
+        if: steps.plan.outputs.resume == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: resume-binding-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/resume-binding.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 14
 
       - name: Retain exact Ops admission plan
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -1622,8 +1729,13 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Select current resume admission attempt
+        id: resume_handoff
+        if: needs.plan.outputs.resume == 'true'
+        run: echo "built_attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
       - name: Select verified admission attempt
         id: handoff
+        if: needs.plan.outputs.resume != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           HANDOFF_RUN_ID: ${{ github.run_id }}
@@ -1657,14 +1769,14 @@ jobs:
       - name: Download original admission plan
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: ops-admission-${{ github.run_id }}-${{ steps.handoff.outputs.built_attempt }}
+          name: ops-admission-${{ github.run_id }}-${{ steps.resume_handoff.outputs.built_attempt || steps.handoff.outputs.built_attempt }}
           path: ${{ runner.temp }}/ops-admission
           digest-mismatch: error
       - name: Download all current Ops role evidence
         if: needs.plan.outputs.ops_mode == 'sharded'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          pattern: ops-shard-${{ github.run_id }}-${{ steps.handoff.outputs.built_attempt }}-*
+          pattern: ops-shard-${{ github.run_id }}-${{ steps.resume_handoff.outputs.built_attempt || steps.handoff.outputs.built_attempt }}-*
           path: ${{ runner.temp }}/ops-shard-evidence
           merge-multiple: false
           digest-mismatch: error
@@ -1725,7 +1837,7 @@ jobs:
     # Job-level `if` is evaluated before strategy expansion.  A source-only
     # target therefore skips this job without asking Actions to expand or run
     # an empty Docker matrix.
-    if: needs.plan.outputs.has_builds == 'true'
+    if: needs.plan.outputs.has_builds == 'true' && !inputs.validation_only && needs.plan.outputs.resume != 'true'
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 120
     permissions:
@@ -2135,16 +2247,26 @@ jobs:
           CANDIDATE_REPOSITORY: ${{ matrix.repo }}
           CANDIDATE_SOURCE_SHA: ${{ matrix.ref }}
           CANDIDATE_DIGEST: ${{ steps.build.outputs.digest }}
+          VALIDATION_KIND: ${{ matrix.validation }}
+          BOARD: ${{ needs.plan.outputs.yueboard_contract_ref }}
+          MIGRATION_BASE: ${{ github.event.inputs.migration_base }}
         run: |
           set -euo pipefail
           [ "$(git rev-parse HEAD)" = "$CANDIDATE_SOURCE_SHA" ]
           python3 .ci-policy/scripts/candidate-receipt.py write "${RUNNER_TEMP:?}/candidate.json"
+          if [ "$VALIDATION_KIND" = yueops ]; then
+            python3 .ci-policy/scripts/resume-binding.py context --source "$PWD" \
+              --candidate "$RUNNER_TEMP/candidate.json" --board "$BOARD" --migration-base "$MIGRATION_BASE" \
+              --output "$RUNNER_TEMP/candidate-context.json"
+          fi
 
       - name: Retain verified candidate identity
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: candidate-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.service }}
-          path: ${{ runner.temp }}/candidate.json
+          path: |
+            ${{ runner.temp }}/candidate.json
+            ${{ runner.temp }}/candidate-context.json
           if-no-files-found: error
           overwrite: false
           retention-days: 14
@@ -2154,12 +2276,13 @@ jobs:
     # Candidate builds overlap validation, but registry publication waits for
     # every required validation and evidence job to succeed for this exact run.
     # Failed, cancelled or skipped prerequisites cannot write publication tags.
-    if: needs.plan.outputs.has_builds == 'true'
+    if: always() && needs.plan.result == 'success' && needs.validate.result == 'success' && needs.validation-evidence.result == 'success' && needs.plan.outputs.has_builds == 'true' && !inputs.validation_only && (needs.build.result == 'success' || (needs.plan.outputs.resume == 'true' && needs.build.result == 'skipped'))
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 30
     permissions:
       contents: read
       actions: read
+      attestations: read
       packages: write
     strategy:
       # Deliberately not fail-fast: publish only starts after every gate is
@@ -2204,6 +2327,17 @@ jobs:
           ref: ${{ github.sha }}
           path: .ci-policy
           fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout exact replacement evidence for resume
+        if: needs.plan.outputs.resume == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: onesyue/yueops
+          ref: ${{ github.event.inputs.ref }}
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          path: .resume-evidence
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Install verified Docker Buildx
@@ -2276,6 +2410,7 @@ jobs:
 
       - name: Select verified candidate artifact
         id: candidate_artifact
+        if: needs.plan.outputs.resume != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           CANDIDATE_SERVICE: ${{ matrix.service }}
@@ -2291,10 +2426,28 @@ jobs:
             >> "$GITHUB_OUTPUT"
 
       - name: Download verified candidate identity
+        if: needs.plan.outputs.resume != 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ${{ steps.candidate_artifact.outputs.name }}
           path: ${{ runner.temp }}/verified-candidate
+          digest-mismatch: error
+
+      - name: Download explicit original candidate for resume
+        if: needs.plan.outputs.resume == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: candidate-${{ github.event.inputs.resume_build_run_id }}-${{ github.event.inputs.resume_build_attempt }}-${{ matrix.service }}
+          run-id: ${{ github.event.inputs.resume_build_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/verified-candidate
+          digest-mismatch: error
+      - name: Download current resume binding
+        if: needs.plan.outputs.resume == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: resume-binding-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/resume-binding
           digest-mismatch: error
 
       - name: Resolve verified candidate digest
@@ -2304,11 +2457,20 @@ jobs:
           CANDIDATE_REPOSITORY: ${{ matrix.repo }}
           CANDIDATE_SOURCE_SHA: ${{ matrix.ref }}
           CANDIDATE_BUILT_ATTEMPT: ${{ steps.candidate_artifact.outputs.built_attempt }}
+          RESUME: ${{ needs.plan.outputs.resume }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           [ "$(git rev-parse HEAD)" = "$CANDIDATE_SOURCE_SHA" ]
-          python3 .ci-policy/scripts/candidate-receipt.py read \
-            "${RUNNER_TEMP:?}/verified-candidate/candidate.json" >> "$GITHUB_OUTPUT"
+          if [ "$RESUME" = true ]; then
+            python3 .ci-policy/scripts/resume-binding.py resolve --source "$PWD/.resume-evidence" \
+              --binding "$RUNNER_TEMP/resume-binding/resume-binding.json" \
+              --candidate "$RUNNER_TEMP/verified-candidate/candidate.json" \
+              --service "$CANDIDATE_SERVICE" >> "$GITHUB_OUTPUT"
+          else
+            python3 .ci-policy/scripts/candidate-receipt.py read \
+              "${RUNNER_TEMP:?}/verified-candidate/candidate.json" >> "$GITHUB_OUTPUT"
+          fi
 
       # `built-<full sha>` — the answer to "does an image already exist for
       # this commit?", stored where the truth is: on the artifact itself.
@@ -2574,11 +2736,34 @@ jobs:
             "${promotion_tag_args[@]}" \
             "${IMAGE}@${DIGEST}"
 
+      - name: Record resumed publication after registry readback
+        if: needs.plan.outputs.resume == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_PASSWORD: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+          SERVICE: ${{ matrix.service }}
+        run: |
+          set -euo pipefail
+          python3 .ci-policy/scripts/resume-binding.py publication --source "$PWD/.resume-evidence" \
+            --binding "$RUNNER_TEMP/resume-binding/resume-binding.json" \
+            --candidate "$RUNNER_TEMP/verified-candidate/candidate.json" --service "$SERVICE" \
+            --output "$RUNNER_TEMP/resume-publication.json"
+      - name: Retain resumed publication identity
+        if: needs.plan.outputs.resume == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: resume-publication-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.service }}
+          path: ${{ runner.temp }}/resume-publication.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 14
+
   abort-on-validate-failure:
     # Candidate builds deliberately overlap validation. A failed validation
     # prevents publish from starting, so cancel only this failed run's work.
     needs: [plan, validate]
-    if: failure()
+    if: failure() && !inputs.validation_only
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -2600,7 +2785,7 @@ jobs:
     # letting a doomed release keep running. Runs no source code; its only
     # privilege is cancelling this very run. Never runs on success.
     needs: [plan, build]
-    if: failure()
+    if: failure() && !inputs.validation_only
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
