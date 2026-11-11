@@ -4853,7 +4853,7 @@ def skip_blob_precheck(checkout, revision, *, ci_revision=None):
         if bound is not None:
             files = tree_inputs(checkout, revision)
             source_evidence.validate_baseline(bound, {p: blob for p, (_, blob) in files.items()})
-            return ["source-owned skip blobs match exact signed source (not test admission)"]
+            return []
     pin_is_ancestor = (release_pin_is_ancestor if policy is None
                        else policy.release_pin_is_ancestor)
     files = tree_inputs(checkout, revision)
