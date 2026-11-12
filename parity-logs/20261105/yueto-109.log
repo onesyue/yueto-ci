@@ -1,8 +1,0 @@
-# repo=yt pr=109 head=e26b58600120ebb24a162f3f71fcf3ff2c25d4ff base=72de4d87e9a06feff9de8e97e52f27fe19d47880
-# command: git diff --check 72de4d87e9a06feff9de8e97e52f27fe19d47880 HEAD && /workspace/yo-venv/bin/python -m pytest -q scripts/test-selfrun-dispatch.py scripts/test-ship-errexit-and-lock.py
-# started: 2026-11-05T03:02:08Z runner=box
-........................................................................ [ 35%]
-........................................................................ [ 71%]
-s.s.s.........................s..........................                [100%]
-197 passed, 4 skipped in 55.69s
-# finished: 2026-11-05T03:03:04Z exit=0

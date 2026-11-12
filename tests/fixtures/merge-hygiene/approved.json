@@ -1,6 +1,6 @@
 {
   "pr": {"number": 203, "merge_commit_sha": "dddddddddddddddddddddddddddddddddddddddd", "user": {"login": "author"}, "merged_at": "2026-11-02T10:00:00Z", "updated_at": "2026-11-02T10:01:00Z", "html_url": "https://github.com/onesyue/yueops/pull/203", "base": {"sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}, "head": {"sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},
-  "reviews": [{"id": 1, "user": {"login": "reviewer", "type": "User"}, "state": "APPROVED", "submitted_at": "2026-11-02T09:00:00Z"}],
+  "reviews": [{"id": 1, "user": {"login": "reviewer", "type": "User"}, "state": "APPROVED", "commit_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "submitted_at": "2026-11-02T09:00:00Z"}],
   "checks": [{"id": 1, "app": {"id": 1}, "check_suite": {"id": 10}, "name": "policy", "started_at": "2026-11-02T09:00:00Z", "completed_at": "2026-11-02T09:30:00Z", "status": "completed", "conclusion": "success"}],
   "statuses": [{"id": 1, "context": "external-ci", "state": "success", "created_at": "2026-11-02T09:30:00Z"}]
 }
