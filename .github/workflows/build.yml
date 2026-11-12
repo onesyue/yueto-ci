@@ -476,6 +476,10 @@ jobs:
     container:
       image: ghcr.io/onesyue/yueops-ci-toolchain@sha256:133c8bcf6ab2ff5055dfdc06296243837ce4866d7a31bfa99d2089e4c7723f15
       options: --user runner --volume /var/run/docker.sock:/var/run/docker.sock
+    # A job container defaults to sh, which rejects `set -o pipefail`.
+    defaults:
+      run:
+        shell: bash
     # The toolchain image already has PostgreSQL 18, compilers, sing-box
     # 1.14 and Python 3.13. This job does not apt.
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
