@@ -653,7 +653,8 @@ class OpsShardWorkflow(unittest.TestCase):
         report = runner / f"ops-validation-evidence-{self.env['GITHUB_RUN_ID']}-{self.env['GITHUB_RUN_ATTEMPT']}.json"
         for status in ("success", "failure", "cancelled", "skipped"):
             report.unlink(missing_ok=True)
-            env = self.env | {"RUNNER_TEMP": str(runner), "VALIDATION_RESULT": status,
+            env = self.env | {"RUNNER_TEMP": str(runner), "GITHUB_WORKSPACE": str(self.policy),
+                              "VALIDATION_RESULT": status,
                               "ADMISSION_SHA256": self.admission["admission_sha256"]}
             executed = subprocess.run(["bash", "-c", script], cwd=self.policy, env=env,
                                       capture_output=True, text=True, timeout=15, check=False)

@@ -16,7 +16,7 @@ import test_credential_policy as credentials
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / '.github/workflows/build.yml'
-AUTHORITY = 'd5f2b6b25477a2a3913bf7affef4bd6a822eec2a'
+AUTHORITY = 'de5477ffada2e6b1618bb798acd8f455b86102d7'
 CONDITION = "matrix.validation == 'yueboard' || matrix.validation == 'yueops'"
 
 

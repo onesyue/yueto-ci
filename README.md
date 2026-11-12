@@ -487,7 +487,7 @@ remediation. An emergency or failed check remains visible and fails the audit.
 ### Browser origin authority in validation
 
 Every Board and Ops validation row checks generated origin projections against
-root commit `d5f2b6b25477a2a3913bf7affef4bd6a822eec2a`. The reviewed workflow
+root commit `de5477ffada2e6b1618bb798acd8f455b86102d7`. The reviewed workflow
 literal controls the root checkout and `--authority-ref`; dispatch inputs and
 candidate-provided digests cannot select another authority. Only the validator's
 existing source token gains contents-read access to the root `yueto` repository;
@@ -507,3 +507,22 @@ This contract targets the frozen Board consumer candidate
 those projections fail intentionally. Updating the authority requires a reviewed
 literal-pin change and compatible component projections. This does not authorize
 merging, deploying or modifying runtime configuration.
+
+### Validate an exact candidate without publication
+
+The existing `build.yml` manual dispatch accepts `validation_only: true` with
+`service` selecting one source repository and `ref` set to its full lowercase
+40-hex commit SHA. For example, select `yueboard`, `yue-node`, `yueops`, or
+`yuelink`; `all` is rejected because one SHA cannot identify several repositories.
+YueOps still requires an exact trusted `migration_base`; the existing optional
+`yueboard_contract_ref` retains its ACL validation meaning. Set `promote: false`.
+
+This mode uses the same planner, complete selected validation matrix, Ops
+admission/skip-blob checks, and validation-evidence join as a build. It has its
+own `validate-only` concurrency group. Image builds, signing, registry publication
+and cancellation jobs are skipped, including when planning or validation fails;
+its executable jobs have only `contents: read` workflow permissions. Source
+checkout retains the existing read-only credential mechanism. The evidence join
+runs after failed validation so a failed gate is visible without publication.
+The default remains `validation_only: false`, preserving ordinary candidate builds.
+Validation success is not release approval and does not move any image tag.
