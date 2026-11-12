@@ -31,7 +31,8 @@ class NativeRunExec(unittest.TestCase):
             backend,
         )
         native = workflow.index(
-            'sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py',
+            'sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC '
+            '"$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py',
             backend,
         )
         self.assertLess(prepare, native)
