@@ -1428,6 +1428,7 @@ class BuildPolicyTest(unittest.TestCase):
         validate = self.workflow.split("\n  validate:\n", 1)[1].split("\n  validation-evidence:\n", 1)[0]
         self.assertNotIn("apt-get", validate)
         self.assertIn("ImageVersion: yueops-ci-toolchain", validate)
+        self.assertIn("TMPDIR: /__w/_temp", validate)
         self.assertNotIn("postgresql-18", self.workflow)
         self.assertIn("python_bin=/usr/local/bin/python3", validate)
         self.assertNotIn("uses: actions/setup-python", validate)
