@@ -396,7 +396,21 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
         '''))
         uv.chmod(0o755)
         sudo = bindir / "sudo"
-        sudo.write_text('#!/bin/sh\nprintf "later-native\\n" >> "$AUDIT_FIXTURE_ROOT/calls"\n')
+        sudo.write_text(
+            "#!/bin/sh\n"
+            "token=\n"
+            "for arg in \"$@\"; do\n"
+            "  case $arg in\n"
+            "    *prepare-native-run-exec.sh) token=later-native-exec ;;\n"
+            "    *run-native-nginx-tests.py) token=later-native ;;\n"
+            "  esac\n"
+            "done\n"
+            "if [ -z \"$token\" ]; then\n"
+            "  printf 'unexpected-sudo\\n' >> \"$AUDIT_FIXTURE_ROOT/calls\"\n"
+            "  exit 1\n"
+            "fi\n"
+            "printf '%s\\n' \"$token\" >> \"$AUDIT_FIXTURE_ROOT/calls\"\n"
+        )
         sudo.chmod(0o755)
         env = dict(os.environ, PATH=str(bindir) + os.pathsep + os.environ["PATH"],
                    RUNNER_TEMP=str(runner), OPS_ROLE=role, GITHUB_RUN_ID="12345",
@@ -437,7 +451,7 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
             with self.subTest(role=role):
                 result, root, runner, calls = self.run_backend(role=role)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(calls, ["lock", "pypi", "osv", "later-ruff", "later-native"])
+                self.assertEqual(calls, ["lock", "pypi", "osv", "later-ruff", "later-native-exec", "later-native"])
                 self.assert_retained(root, runner, ["pypi", "osv"])
         for behavior, provider, expected, providers in (
                 ("pre-audit", "pypi", 12, []), ("error", "pypi", 7, []),
