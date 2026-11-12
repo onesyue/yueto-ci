@@ -234,6 +234,7 @@ class ManualWorkflow(unittest.TestCase):
             'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         ])
         mint = next(step for step in steps if step.get('id') == 'source_token')
+        self.assertEqual(mint['if'], "vars.YUETO_CI_APP_CLIENT_ID != ''")
         self.assertEqual(mint['with']['repositories'], 'yueops,yueboard')
         self.assertEqual(mint['with']['permission-contents'], 'read')
         execution = next(step for step in steps if step.get('name', '').startswith('Execute every'))
@@ -279,6 +280,24 @@ class ManualWorkflow(unittest.TestCase):
                     self.job['steps'][-1]['with']['path'] = '${{ runner.temp }}/ci-check-replay/**'
                 with self.assertRaises(AssertionError):
                     self.test_manual_only_read_only_complete_runner_has_reserved_upload_time()
+
+    def test_missing_app_configuration_refuses_before_any_clone_or_docker(self):
+        preflight = next(step for step in self.job['steps'] if step.get('name') == 'Validate replay inputs and host tools')
+        self.assertEqual(preflight['env']['REPLAY_APP_CLIENT_ID'], '${{ vars.YUETO_CI_APP_CLIENT_ID }}')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            marker = root / 'docker-invoked'
+            docker = root / 'docker'
+            docker.write_text(f'#!/bin/sh\ntouch {str(marker)!r}\n')
+            docker.chmod(0o755)
+            env = os.environ | {'RUNNER_TEMP': str(root), 'GITHUB_ENV': str(root / 'github-env'),
+                                'SOURCE_REF': 'a' * 40, 'BOARD_REF': 'b' * 40,
+                                'CI_CHECK_MIGRATION_BASE': 'c' * 40, 'REPLAY_APP_CLIENT_ID': '',
+                                'PATH': str(root) + os.pathsep + os.environ['PATH']}
+            result = subprocess.run(['/bin/bash', '-c', preflight['run']], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('requires configured GitHub App credentials; no PAT fallback', result.stderr)
+            self.assertFalse(marker.exists())
 
     def test_real_preparation_shell_always_revokes_before_credential_free_step(self):
         preparation = next(step for step in self.job['steps'] if step.get('name', '').startswith('Prepare exact'))
