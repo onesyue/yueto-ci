@@ -59,7 +59,7 @@ jq -nc \
           [. + {node_profile: "hy2"}, . + {node_profile: "vless"}]
         elif .validation == "yueboard" then
           (. as $row
-           | ["quality", "postgres", "migration", "e2e", "components", "frontends"]
+           | ["quality", "race", "postgres", "migration", "e2e", "components", "frontends"]
            | map($row + {board_role: .}))
         else [.] end)
       | add) as $validation_matrix

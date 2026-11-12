@@ -194,6 +194,7 @@ class GoCachePolicyTest(unittest.TestCase):
                          "matrix.validation == 'yue-node'")
         board_roles = {
             "Validate YueBoard backend quality gates": "quality",
+            "Validate YueBoard race": "race",
             "Validate YueBoard protocol compatibility": "quality",
             "Validate YueBoard PostgreSQL integration": "postgres",
             "Validate YueBoard clean PostgreSQL lifecycle": "postgres",

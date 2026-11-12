@@ -219,7 +219,7 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         plan = subprocess.run(['bash', str(ROOT / 'scripts/plan-build-targets.sh'), 'yueboard', 'c' * 40],
                               cwd=ROOT, check=True, capture_output=True, text=True)
         roles = [row['board_role'] for row in json.loads(plan.stdout)['validation_matrix']]
-        self.assertEqual(roles, ['quality', 'postgres', 'migration', 'e2e', 'components', 'frontends'])
+        self.assertEqual(roles, ['quality', 'race', 'postgres', 'migration', 'e2e', 'components', 'frontends'])
         for role in roles:
             with self.subTest(role=role):
                 self.run_workflow_role(workflow, role)
