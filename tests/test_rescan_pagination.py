@@ -8,6 +8,7 @@ import io
 import json
 import os
 import sys
+import threading
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -210,6 +211,106 @@ class RescanPaginationTest(unittest.TestCase):
     def test_second_page_network_failure_never_returns_first_page_only(self) -> None:
         with self.assertRaises(URLError):
             self.fetch([(filler(1), next_link(2)), URLError("unavailable")])
+
+    def test_bounded_concurrent_pages_and_one_resolution_per_shared_digest(self) -> None:
+        """Fake registry: in-flight reads stay at the cap, and one index digest
+        is resolved once even when amd64 and arm64 both reference it.
+        """
+        last = PLANNER.REGISTRY_CONCURRENCY + 2
+        service = "yueboard"
+        payloads = {
+            1: [promotion(0), promotion(1), promotion(2), *filler(1, 97)],
+            **{page: filler(page * 1000, 100) for page in range(2, last)},
+            last: filler(900000, 1),
+        }
+        links = {
+            page: self._catalog_link(service, page + 1, "next") + ", "
+            + self._catalog_link(service, last, "last")
+            for page in range(1, last)
+        }
+        links[last] = ""
+        state = {"inflight": 0, "max": 0, "parallel": 0}
+        lock = threading.Lock()
+        gate = threading.Event()
+        calls: list[int] = []
+
+        def request(req, timeout):
+            if timeout != PLANNER.REQUEST_TIMEOUT_SECONDS:
+                raise AssertionError(f"per-request timeout {timeout}")
+            self.assertEqual(PLANNER.REQUEST_TIMEOUT_SECONDS, 30)
+            page = int(parse_qs(urlsplit(req.full_url).query)["page"][0])
+            if req.get_header("Authorization") != "Bearer test-read-only":
+                raise AssertionError("registry request lost its read token")
+            with lock:
+                calls.append(page)
+                state["inflight"] += 1
+                state["max"] = max(state["max"], state["inflight"])
+                if page != 1:
+                    state["parallel"] += 1
+                    if state["parallel"] >= PLANNER.REGISTRY_CONCURRENCY:
+                        gate.set()
+            try:
+                if page != 1 and not gate.wait(2):
+                    raise AssertionError("registry reads did not reach the concurrency bound")
+                return Response(payloads[page], links[page])
+            finally:
+                with lock:
+                    state["inflight"] -= 1
+
+        with patch.dict(os.environ, {"GH_API_TOKEN": "test-read-only"}), \
+             patch.object(PLANNER.urllib.request, "urlopen", side_effect=request):
+            versions = PLANNER.fetch_versions(service)
+        self.assertEqual(sorted(calls), list(range(1, last + 1)))
+        self.assertEqual(len(calls), last)
+        self.assertEqual(state["max"], PLANNER.REGISTRY_CONCURRENCY)
+        self.assertGreater(last, PLANNER.REGISTRY_CONCURRENCY)
+
+        resolved: list[str] = []
+        original = PLANNER.resolve_index_digest
+
+        def resolve(name: str, digest: str) -> str:
+            self.assertEqual(name, service)
+            resolved.append(digest)
+            return original(name, digest)
+
+        with patch.object(PLANNER, "resolve_index_digest", side_effect=resolve):
+            matrix = PLANNER.plan(
+                [{"service": service, "platforms": "linux/amd64,linux/arm64"}],
+                lambda _: versions,
+            )["include"]
+        self.assertEqual(len(matrix), 6)
+        self.assertEqual(len(resolved), 3)
+        self.assertNotEqual(len(resolved), len(matrix))
+        platforms_for: dict[str, set[str]] = {}
+        for row in matrix:
+            platforms_for.setdefault(row["digest"], set()).add(row["platform"])
+        self.assertEqual(len(platforms_for), 3)
+        self.assertTrue(all(
+            plats == {"linux/amd64", "linux/arm64"} for plats in platforms_for.values()))
+
+    def test_failed_parallel_page_does_not_return_earlier_pages(self) -> None:
+        service = "yueboard"
+        last = 4
+
+        def request(req, timeout):
+            self.assertEqual(timeout, 30)
+            page = int(parse_qs(urlsplit(req.full_url).query)["page"][0])
+            if page == 3:
+                raise URLError("unavailable")
+            payload = filler(page * 1000, 100)
+            link = self._catalog_link(service, page + 1, "next") + ", " \
+                + self._catalog_link(service, last, "last")
+            return Response(payload, link)
+
+        with patch.dict(os.environ, {"GH_API_TOKEN": "test-read-only"}), \
+             patch.object(PLANNER.urllib.request, "urlopen", side_effect=request):
+            with self.assertRaises(URLError):
+                PLANNER.fetch_versions(service)
+
+    @staticmethod
+    def _catalog_link(service: str, page: int, rel: str) -> str:
+        path = f"/user/47652916/packages/container/{service}/versions"
+        return f'<https://api.github.com{path}?per_page=100&page={page}>; rel="{rel}"'
 
 
 if __name__ == "__main__":
