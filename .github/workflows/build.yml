@@ -57,7 +57,6 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  SECURITY_ORIGIN_AUTHORITY_REF: de5477ffada2e6b1618bb798acd8f455b86102d7
 
 # One queue per (target, source ref). A duplicate dispatch for the same ref
 # waits behind the running one (a newer pending duplicate replaces an older
@@ -607,12 +606,12 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Checkout exact browser origin authority
+      - name: Checkout the pinned yueto root
         if: matrix.validation == 'yueboard' || matrix.validation == 'yueops'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueto
-          ref: ${{ env.SECURITY_ORIGIN_AUTHORITY_REF }}
+          ref: master
           token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           path: .ci-origin-authority
           persist-credentials: false
@@ -631,8 +630,13 @@ jobs:
             yueboard|yueops) ;;
             *) echo 'unsupported browser origin component' >&2; exit 1 ;;
           esac
+          authority=$(git -C .ci-origin-authority rev-parse HEAD)
+          case "$authority" in
+            *[!0-9a-f]*|'') echo 'pinned root HEAD is not a commit' >&2; exit 1 ;;
+          esac
+          [ "${#authority}" -eq 40 ]
           node .ci-origin-authority/design/build-sources.mjs \
-            --authority-ref="$SECURITY_ORIGIN_AUTHORITY_REF" --scope=security \
+            --authority-ref="$authority" --scope=security \
             --repo="$ORIGIN_COMPONENT=$GITHUB_WORKSPACE" --check
 
       # Keep the protocol owner as the policy owner: central CI installs the
