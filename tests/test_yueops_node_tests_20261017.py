@@ -6,6 +6,7 @@ three entry points so a removed or renamed line turns red.
 """
 from __future__ import annotations
 
+from workflow_source import workflow_text
 from pathlib import Path
 
 import re
@@ -18,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _validate_steps(text: str | None = None) -> list[dict]:
     if text is None:
-        text = (ROOT / ".github" / "workflows" / "build.yml").read_text()
+        text = workflow_text()
     job = text.split("\n  validate:\n", 1)[1].split("\n  build:\n", 1)[0]
     result = []
     for match in re.finditer(r"^      - name: (.+)\n((?:(?!^      - |^  [a-z]).*\n)*)", job, re.M):
@@ -54,7 +55,7 @@ def _console_lint_step(workflow: str) -> dict:
 
 class YueOpsConsoleLintPolicy(unittest.TestCase):
     def workflow(self):
-        return (ROOT / ".github" / "workflows" / "build.yml").read_text()
+        return workflow_text()
 
     def test_console_lint_is_required_in_the_existing_early_frontend_step(self):
         _console_lint_step(self.workflow())
@@ -147,7 +148,7 @@ class YueOpsNodeTestPolicy(unittest.TestCase):
 
 
     def test_validate_job_keeps_the_utc_lens(self):
-        workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text()
+        workflow = workflow_text()
         job = workflow.split("\n  validate:\n", 1)[1].split("    strategy:", 1)[0]
         assert "    env:\n      TZ: UTC\n" in job
 
@@ -278,7 +279,7 @@ def _assert_native_contract(test, workflow):
 
 class YueOpsNativeObligationPolicy(unittest.TestCase):
     def test_native_step_keeps_reviewed_fixture_and_separate_uid_phases(self):
-        workflow = (ROOT / '.github/workflows/build.yml').read_text()
+        workflow = workflow_text()
         _assert_native_contract(self, workflow)
         steps = _validate_steps()
         names = [step['name'] for step in steps]
@@ -288,7 +289,7 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
         self.assertIn('class RequiredCases(consumer.NativeGate)', _native_driver())
 
     def test_contract_rejects_missing_fixture_pin_and_root_phase(self):
-        workflow = (ROOT / '.github/workflows/build.yml').read_text()
+        workflow = workflow_text()
         for removed in (
             'test -f "$YUEBOARD_MONEY_SCHEMA_FIXTURE"',
             'test ! -L "$YUEBOARD_MONEY_SCHEMA_FIXTURE"',
@@ -301,7 +302,7 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
                 _assert_native_contract(self, workflow.replace(removed, '', 1))
 
     def test_receipt_contract_rejects_removed_call_floor_uid_or_board_env(self):
-        workflow = (ROOT / '.github/workflows/build.yml').read_text()
+        workflow = workflow_text()
         target = 'tests/test_schema_contract_receipt_20261020.py'
         for before, after in (
             (target + ' 30 0', ''),

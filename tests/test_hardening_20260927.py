@@ -9,6 +9,7 @@ would go red.
 
 from __future__ import annotations
 
+from workflow_source import workflow_text
 import hashlib
 import io
 import json
@@ -80,7 +81,7 @@ class ForkTokenIsolationTest(unittest.TestCase):
     """C1: the private-fork PAT never reaches the step that runs `go test`."""
 
     def setUp(self) -> None:
-        self.validate = job(BUILD.read_text(), "validate")
+        self.validate = job(workflow_text(BUILD), "validate")
 
     def test_no_step_runs_dependency_code_with_a_credential(self) -> None:
         self.assertEqual(credential_leaks(self.validate), [])
@@ -141,7 +142,7 @@ class ForkTokenIsolationTest(unittest.TestCase):
 
 
 def plan_script() -> str:
-    plan = job(BUILD.read_text(), "plan")
+    plan = job(workflow_text(BUILD), "plan")
     step = [s for s in steps(plan) if s.startswith("      - id: plan\n")]
     assert len(step) == 1
     body = step[0].split("        run: |\n", 1)[1]
@@ -285,7 +286,7 @@ class PlanPromotionGateTest(unittest.TestCase):
         self.assertEqual(side.returncode, 0, side.stderr)
 
     def test_workflow_ref_is_wired_from_the_runtime(self) -> None:
-        plan = job(BUILD.read_text(), "plan")
+        plan = job(workflow_text(BUILD), "plan")
         self.assertIn("          WORKFLOW_GIT_REF: ${{ github.ref }}\n", plan)
 
 
@@ -593,7 +594,7 @@ class RunnerAndActionRuntimeTest(unittest.TestCase):
         # Scan floor: plan/validate/build selectors, shadow, poll, rescan x3,
         # deadman, policy.
         self.assertGreaterEqual(hosted, 10)
-        build = BUILD.read_text()
+        build = workflow_text(BUILD)
         # The signing job's hosted selector is the pinned image too.
         self.assertIn("'[\"ubuntu-24.04\"]')", job(build, "build"))
 
@@ -611,7 +612,7 @@ class RunnerAndActionRuntimeTest(unittest.TestCase):
         for name, text in self.workflows().items():
             with self.subTest(workflow=name):
                 self.assertNotIn("bufbuild/buf-setup-action@", text)
-        validate = job(BUILD.read_text(), "validate")
+        validate = job(workflow_text(BUILD), "validate")
         step = step_named(validate, "Set up Buf for YueBoard protocol compatibility")
         self.assertIn(
             "uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0", step

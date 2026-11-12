@@ -1,5 +1,6 @@
 """validation_only admits an owner signature and leaves the seal path closed."""
 
+from workflow_source import workflow_text
 import importlib.util
 import os
 import subprocess
@@ -12,10 +13,12 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
     "ci_check_shards", ROOT / "scripts/pytest-shards.py")
+assert SPEC is not None and SPEC.loader is not None
 SHARDS = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(SHARDS)
 FAIL_SPEC = importlib.util.spec_from_file_location(
     "ci_check_failures", ROOT / "scripts/ci_check_failures.py")
+assert FAIL_SPEC is not None and FAIL_SPEC.loader is not None
 FAILURES = importlib.util.module_from_spec(FAIL_SPEC)
 FAIL_SPEC.loader.exec_module(FAILURES)
 
@@ -97,6 +100,7 @@ class ValidationOnlyAdmission(unittest.TestCase):
             "assignments": [{"id": "ordinary-000"}],
         }
         with patch.object(SHARDS.source_evidence, "verify_signed_commit", return_value=None), \
+                patch.object(SHARDS.source_evidence, "optional", side_effect=AssertionError("stale seal read")), \
                 patch.object(SHARDS, "plan", return_value=expected), \
                 patch.object(SHARDS, "serial_modules", return_value=["tests/test_serial.py"]), \
                 patch.object(SHARDS, "tree_inputs", return_value={}), \
@@ -113,7 +117,7 @@ class ValidationOnlyAdmission(unittest.TestCase):
 
 class CiCheckSurface(unittest.TestCase):
     def test_workflow_flag_is_only_inside_the_validation_guard(self):
-        text = (ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
+        text = workflow_text()
         self.assertEqual(text.count("--validation-only"), 1)
         guard = text.split('if [ "${VALIDATION_ONLY:-false}" = true ]; then', 1)[1]
         guard = guard.split("\n          fi", 1)[0]

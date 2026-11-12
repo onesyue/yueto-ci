@@ -1,5 +1,5 @@
 name: Build & publish images
-run-name: ${{ github.event_name == 'workflow_dispatch' && format('Build & publish images {0} {1}', github.event.inputs.service, github.event.inputs.ref) || 'Build & publish images' }}
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Build & publish images {0} {1}{2}', github.event.inputs.service, github.event.inputs.ref, inputs.nonce != '' && format(' [nonce:{0}]', inputs.nonce) || '') || 'Build & publish images' }}
 
 # 统一构建仓（公开仓 = Actions 免费无上限）。
 # 私有代码仓由只读源码凭据 checkout（GitHub App 签发的短期 token；开关未设置时回退
@@ -21,6 +21,10 @@ on:
         default: 'all'
       ref:
         description: 'override source ref (default: per target registry)'
+        required: false
+        type: string
+      nonce:
+        description: 'optional dispatch correlation nonce (32 lowercase hex)'
         required: false
         type: string
       migration_base:
@@ -223,6 +227,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_ACTOR: ${{ github.actor }}
           WORKFLOW_GIT_REF: ${{ github.ref }}
+          DISPATCH_NONCE: ${{ inputs.nonce }}
           VALIDATION_ONLY: ${{ inputs.validation_only && 'true' || 'false' }}
           MANUAL_PROMOTE: ${{ github.event.inputs.promote || 'false' }}
           DISPATCH_PROMOTE: ${{ github.event.client_payload.promote || 'false' }}
@@ -231,6 +236,7 @@ jobs:
         run: |
           set -euo pipefail
           promote=false
+          [[ -z "${DISPATCH_NONCE:-}" || "$DISPATCH_NONCE" =~ ^[0-9a-f]{32}$ ]] || { echo "invalid dispatch nonce" >&2; exit 1; }
           validation_only="${VALIDATION_ONLY:-false}"
           resume=false
           RESUME_BUILD_RUN_ID="${RESUME_BUILD_RUN_ID:-}"
@@ -793,8 +799,13 @@ jobs:
           version: '0.10.9'
           enable-cache: true
 
+      - name: Set up YueOps Node
+        if: matrix.validation == 'yueops'
+        run: |
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-node-toolchain.sh"
+
       - name: Set up Node
-        if: matrix.validation == 'yueops' || matrix.validation == 'yueboard' || startsWith(matrix.validation, 'ui-')
+        if: matrix.validation == 'yueboard' || startsWith(matrix.validation, 'ui-')
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -1338,79 +1349,12 @@ jobs:
         env:
           UV_PYTHON_DOWNLOADS: never
         run: |
-          uv venv --python "$YUE_CI_PYTHON" .venv
-          echo "${GITHUB_WORKSPACE}/.venv/bin" >> "$GITHUB_PATH"
-          requirements_file="${RUNNER_TEMP}/ci-requirements.txt"
-          uv export --frozen --no-default-groups \
-            --group web-runtime --group checkin-runtime --group bot-runtime \
-            --group image-build --group test \
-            --no-emit-local --output-file "$requirements_file"
-          uv pip install --python .venv/bin/python \
-            --require-hashes -r "$requirements_file"
-          uv pip install --python .venv/bin/python \
-            --no-deps --no-build-isolation -e telegram-bot/yue \
-            --config-settings editable_mode=compat
-          # Backend pytest contains fail-closed AST contracts that import the
-          # real locked TypeScript compiler. Install once before pytest; the
-          # later Mini App lint/build/audit reuses this exact clean tree.
-          # --ignore-scripts: no dependency install hook may execute inside the
-          # job that holds the source credential (npm supply-chain worms ride
-          # postinstall). The lockfile carries no build-time native deps; the
-          # only install script in it is macOS-only fsevents.
-          npm --prefix telegram-bot/yue/miniapp ci --ignore-scripts
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-dependencies.sh"
 
       - name: Install pinned gitleaks for credential-evidence contracts
         if: matrix.validation == 'yueops'
         run: |
-          set -euo pipefail
-          # yueops' credential-evidence contracts execute the real scanner at
-          # the fixed production path. Fetch the upstream release at an
-          # immutable version and authenticate its exact bytes before use.
-          if [ -x /usr/local/bin/gitleaks ] &&
-             [ "$(/usr/local/bin/gitleaks version 2>/dev/null)" = '8.30.1' ]; then
-            echo "gitleaks 8.30.1 already present"
-            exit 0
-          fi
-          archive="${RUNNER_TEMP}/gitleaks_8.30.1_linux_x64.tar.gz"
-          extract_dir="${RUNNER_TEMP}/gitleaks-8.30.1"
-          # shellcheck source=scripts/ci-retry.sh
-          source "${GITHUB_WORKSPACE}/.ci-policy/scripts/ci-retry.sh"
-          vendor="${GITHUB_WORKSPACE}/.ci-policy/third_party/gitleaks_8.30.1_linux_x64.tar.gz"
-          if [[ -f "$vendor" ]] && printf '%s  %s\n' \
-            '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' \
-            "$vendor" | sha256sum --check --status; then
-            cp "$vendor" "$archive"
-          else
-          release_url='https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz'
-          if ! ci_download 4 --fail --location --silent --show-error \
-            --proto '=https' --proto-redir '=https' --tlsv1.2 \
-            --connect-timeout 10 --max-time 180 \
-            "$release_url" \
-            --output "$archive"; then
-            echo "GitHub release front failed; using the asset API" >&2
-            rm -f -- "$archive"
-            ci_release_asset_api 4 "$archive" "$release_url"
-          fi
-          fi
-          printf '%s  %s\n' \
-            '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' \
-            "$archive" | sha256sum --check --strict
-          mkdir -p "$extract_dir"
-          tar --extract --gzip --file "$archive" --directory "$extract_dir" gitleaks
-          # The evidence contract requires the scanner binary to be owned by
-          # the evidence owner (root in production, the invoking CI user in
-          # the test process), so install it owned by the current uid/gid.
-          install_cmd=(install -o "$(id -u)" -g "$(id -g)" -m 0755)
-          if [ ! -w /usr/local/bin ]; then
-            command -v sudo >/dev/null 2>&1 || {
-              echo "::error::installing gitleaks requires a writable /usr/local/bin or passwordless sudo"
-              exit 1
-            }
-            install_cmd=(sudo -n "${install_cmd[@]}")
-          fi
-          "${install_cmd[@]}" "$extract_dir/gitleaks" /usr/local/bin/gitleaks
-          test "$(/usr/local/bin/gitleaks version)" = '8.30.1'
-          test "$(stat -c '%u' /usr/local/bin/gitleaks)" = "$(id -u)"
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-gitleaks.sh"
 
       # Decoupling S2 (2026-10-28): YueOps' tolerant notices reader and
       # YueBoard's Go producer share contracts/yueboard-internal/notices.v1.json.
@@ -1425,17 +1369,7 @@ jobs:
           YUEOPS_REQUIRE_PRODUCER_CONTRACT: "1"
           UV_PYTHON_DOWNLOADS: never
         run: |
-          set -euo pipefail
-          contract_test=tests/test_yueboard_notices_contract_20261028.py
-          if [ ! -f "$contract_test" ]; then
-            echo "::notice::$contract_test is not on this Ops ref; notices wire contract not yet adopted"
-            exit 0
-          fi
-          test -d "$YUEBOARD_REPO_PATH/.git" || {
-            echo "::error::pinned YueBoard checkout is missing for the notices contract" >&2
-            exit 1
-          }
-          .venv/bin/python -m pytest -q -p no:cacheprovider -o addopts="" "$contract_test"
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-notices.sh"
 
       - name: Execute owned Ops pytest selection
         if: matrix.validation == 'yueops' && matrix.ops_role != 'legacy' && matrix.ops_role != 'native'
@@ -1446,11 +1380,7 @@ jobs:
           UV_PYTHON_DOWNLOADS: never
           OPS_ROLE: ${{ matrix.ops_role }}
         run: |
-          set -euo pipefail
-          .venv/bin/python .ci-policy/scripts/pytest-shards.py run \
-            --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
-            --source "$PWD" --board "$PWD/.ci-yueboard" --role "$OPS_ROLE" \
-            --output "$RUNNER_TEMP/ops-shard-evidence"
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-selection.sh"
 
       - name: Prepare passive yueops pytest timing
         if: matrix.validation == 'yueops' && matrix.ops_role == 'legacy'
@@ -1471,56 +1401,7 @@ jobs:
           # invocation inside scripts/run-pytest-parallel.sh.
           PYTEST_ADDOPTS: --durations=25
         run: |
-          set -euo pipefail
-          security_report=$(mktemp "${RUNNER_TEMP:?}/security-scan.XXXXXX.json")
-          python_lock_audit=$(mktemp "${RUNNER_TEMP:?}/python-lock-audit.XXXXXX.txt")
-          python_audit_cache=$(mktemp -d "${RUNNER_TEMP:?}/python-audit-cache.XXXXXX")
-          python_audit_reports=$(mktemp -d "${RUNNER_TEMP:?}/python-audit-reports.${GITHUB_RUN_ID:?}.${GITHUB_RUN_ATTEMPT:?}.${OPS_ROLE:?}.XXXXXX")
-          cleanup_reports() {
-            rm -f -- "$security_report" "$python_lock_audit"
-            rm -rf -- "$python_audit_cache"
-          }
-          trap cleanup_reports EXIT
-          uv lock --check
-          .venv/bin/python scripts/check-python-dependency-groups.py
-          bash scripts/security_scan.sh --json | tee "$security_report"
-          jq -e '.fail == 0' "$security_report" >/dev/null
-          uv export --frozen --all-groups --no-emit-local \
-            --no-annotate --no-header --output-file "$python_lock_audit"
-          # Provider coverage differs: Mako's 2026-10-05 advisory was present
-          # in OSV while a fresh PyPI audit still reported zero findings.
-          for vulnerability_service in pypi osv; do
-            uv run --frozen --only-group audit pip-audit \
-              --requirement "$python_lock_audit" \
-              --progress-spinner off --require-hashes --disable-pip --strict \
-              --cache-dir "$python_audit_cache" \
-              --vulnerability-service "$vulnerability_service" \
-              --format json --output "$python_audit_reports/$vulnerability_service.json"
-            jq -e '.dependencies | type == "array" and length >= 100 and all(.[]; .vulns == [] and (has("skip_reason") | not))' \
-              "$python_audit_reports/$vulnerability_service.json" >/dev/null
-          done
-          .venv/bin/python -m compileall -q web checkin-api telegram-bot/yue
-          uv run --frozen --only-group lint ruff check .
-          .venv/bin/python scripts/audit-route-consistency.py
-          # The manual branch is selected before execution, never after a shard failure.
-          if [ "$OPS_ROLE" = legacy ]; then
-            # 与本地 gauntlet 共用测试入口；中央显式串行，避免已复现的
-            # xdist 收集时 service 包 sys.path/sys.modules 污染。
-            # 覆盖与耗时取本次完整日志，不沿用旧 runner 的历史估计。
-            timing_dir="${RUNNER_TEMP:?}/yueops-pytest-timing"
-            invocation_id=$(.venv/bin/python -c 'import json,sys; print(json.load(open(sys.argv[1]))["invocation_id"])' "$timing_dir/metadata.json")
-            pytest_rc=0
-            .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-start-unix-ns.txt"
-            LENS_REPORT="$timing_dir/events.jsonl" LENS_INVOCATION_ID="$invocation_id" \
-              YUEOPS_PYTEST_SERIAL=1 bash scripts/run-pytest-parallel.sh || pytest_rc=$?
-            printf '%s\n' "$pytest_rc" > "$timing_dir/pytest-exit-code.txt"
-            .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-finish-unix-ns.txt"
-            if [ "$pytest_rc" -ne 0 ]; then exit "$pytest_rc"; fi
-          fi
-          # PATH-first doubles live under /run. A noexec mount makes execve
-          # fail and Python then runs the real docker or systemctl.
-          sudo -n env PATH="$PATH" bash .ci-policy/scripts/prepare-native-run-exec.sh
-          sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-backend.sh"
 
       # Provider JSON is diagnostic only. Never put it in native/shard evidence.
       - name: Retain Ops Python audit diagnostics
@@ -1552,141 +1433,19 @@ jobs:
         env:
           YUEBOARD_MONEY_SCHEMA_FIXTURE: ${{ github.workspace }}/.ci-yueboard/test/fixtures/schema.sql
         run: |
-          set -euo pipefail
-          # Use the reviewed checkout, not an unbound local schema or moving ref.
-          board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
-          test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"
-          test -f "$YUEBOARD_MONEY_SCHEMA_FIXTURE"
-          test ! -L "$YUEBOARD_MONEY_SCHEMA_FIXTURE"
-          git -C .ci-yueboard diff --exit-code "$board_pin" -- test/fixtures/schema.sql
-          test "$(id -u)" = 1001
-          native_evidence="${RUNNER_TEMP:?}/ops-shard-evidence"
-          .venv/bin/python .ci-policy/scripts/pytest-shards.py native-start \
-            --admission "$RUNNER_TEMP/ops-admission/ops-admission.json" \
-            --source "$PWD" --board "$PWD/.ci-yueboard" --output "$native_evidence"
-          native_driver=$(mktemp "${RUNNER_TEMP:?}/yueops-native.XXXXXX.py")
-          trap 'rm -f -- "$native_driver"' EXIT
-          cat > "$native_driver" <<'PY'
-          import importlib.util
-          import json
-          import os
-          from pathlib import Path
-          import sys
-
-          target, floor, uid = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-          if sys.platform != "linux" or os.geteuid() != uid:
-              raise SystemExit("native obligation execution context differs")
-          import pytest
-          source = Path.cwd() / "scripts/run-native-nginx-tests.py"
-          spec = importlib.util.spec_from_file_location("source_native_gate", source)
-          consumer = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(consumer)
-
-          class RequiredCases(consumer.NativeGate):
-              def __init__(self):
-                  super().__init__([])
-                  self.collection_bad = False
-
-              def pytest_deselected(self, items):
-                  self.collection_bad = True
-
-              def pytest_collectreport(self, report):
-                  if report.failed or report.skipped:
-                      self.collection_bad = True
-
-              def pytest_collection_finish(self, session):
-                  names = [item.nodeid for item in session.items]
-                  self.required = set(names)
-                  self.collection_bad |= (
-                      len(names) != len(self.required) or len(names) < floor
-                      or any(not name.startswith(target + "::") for name in names)
-                  )
-
-              def pytest_sessionfinish(self, session, exitstatus):
-                  super().pytest_sessionfinish(session, exitstatus)
-                  if self.collection_bad or len(self.required) < floor:
-                      session.exitstatus = 1
-                  self.receipt = {
-                      "target": target, "platform": sys.platform, "uid": os.geteuid(),
-                      "required": sorted(self.required), "passed": sorted(self.passed),
-                      "failed_or_skipped": sorted(self.bad),
-                      "collection_bad": self.collection_bad,
-                      "exitstatus": int(session.exitstatus),
-                  }
-                  print("NATIVE_OBLIGATION_RECEIPT " + json.dumps(self.receipt, sort_keys=True))
-
-          gate = RequiredCases()
-          code = int(pytest.main(["-q", "-ra", target], plugins=[gate]))
-          path = Path(sys.argv[4])
-          record = gate.receipt | {
-              "floor": floor, "process_exitstatus": code,
-              "binding": json.loads((path.parent / "native-context.json").read_text()),
-          }
-          with path.open("x") as handle:
-              handle.write(json.dumps(record, sort_keys=True) + "\n")
-          raise SystemExit(code)
-          PY
-          # PG creates its own disposable cluster as UID1001. Root is a separate
-          # phase; never make the ordinary suite root or silently accept skips.
-          .venv/bin/python "$native_driver" tests/test_board139_schema_acl_native_20261018.py 6 1001 \
-            "$native_evidence/test_board139_schema_acl_native_20261018.json"
-          sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC "$PWD/.venv/bin/python" \
-            "$native_driver" tests/test_node_systemd_pilot_20261018.py 38 0 \
-            "$native_evidence/test_node_systemd_pilot_20261018.json"
-          sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC "$PWD/.venv/bin/python" \
-            "$native_driver" tests/native_loadshed_installer_20261030.py 14 0 \
-            "$native_evidence/native_loadshed_installer_20261030.json"
-          sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard" \
-            "$PWD/.venv/bin/python" "$native_driver" \
-            tests/test_schema_contract_receipt_20261020.py 30 0 \
-            "$native_evidence/test_schema_contract_receipt_20261020.json"
-          # These complete modules cover ordinary root/checkout skips. Opt-in is
-          # explicit; the tests still require Linux root and isolated fixtures.
-          nginx_lab='nginx@sha256:9bf97bd7714f5e24c1ccd545ecb9eb5435cb6d109c97cebb15e7e455e0239edb'
-          docker pull "$nginx_lab"
-          docker tag "$nginx_lab" nginx:1.30.5
-          test "$(docker image inspect --format '{{.Id}}' "$nginx_lab")" = \
-            "$(docker image inspect --format '{{.Id}}' nginx:1.30.5)"
-          while read -r target floor; do
-            sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC YUE_PROTOCOL_RESULTS_NATIVE_LAB=1 \
-              YUE_PROTOCOL_RESULTS_NGINX_LAB=1 YUEBOARD_REPO_PATH="$PWD/.ci-yueboard" \
-              "$PWD/.venv/bin/python" "$native_driver" "$target" "$floor" 0 \
-              "$native_evidence/$(basename "$target" .py).json"
-          done <<'NATIVE_TARGETS'
-          tests/test_panel_subscribe_delivery_alert_20261012.py 17
-          tests/test_frozen_manifest_reader_20261015.py 4
-          tests/test_status_tls_installer_20261027.py 7
-          NATIVE_TARGETS
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-obligations.sh"
 
       - name: Validate yueops frontend
         if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         working-directory: frontend
         run: |
-          set -euo pipefail
-          npm ci --ignore-scripts
-          npm run lint
-          npm run build
-          audit_gate="$GITHUB_WORKSPACE/scripts/npm-audit-gate.py"
-          [ -f "$audit_gate" ] || {
-            echo "::error::source-owned npm audit gate is missing: scripts/npm-audit-gate.py"
-            exit 1
-          }
-          "$YUE_CI_PYTHON" "$audit_gate" "$GITHUB_WORKSPACE/frontend"
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-frontend.sh"
 
       - name: Validate Yue mini app
         if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         working-directory: telegram-bot/yue/miniapp
         run: |
-          set -euo pipefail
-          npm run lint
-          npm run build
-          audit_gate="$GITHUB_WORKSPACE/scripts/npm-audit-gate.py"
-          [ -f "$audit_gate" ] || {
-            echo "::error::source-owned npm audit gate is missing: scripts/npm-audit-gate.py"
-            exit 1
-          }
-          "$YUE_CI_PYTHON" "$audit_gate" \
-            "$GITHUB_WORKSPACE/telegram-bot/yue/miniapp"
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-miniapp.sh"
 
       # 2026-10-17 W6.10: the Mini App, console and site `node --test` suites
       # existed but no CI ran them, so only a developer's workstation could catch
@@ -1694,67 +1453,19 @@ jobs:
       - name: Run yueops node unit tests (Mini App, console, site)
         if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         run: |
-          set -euo pipefail
-          npm --prefix telegram-bot/yue/miniapp test
-          npm --prefix frontend test
-          corepack enable
-          site_pm=$(node -p "require('./site/package.json').packageManager || ''")
-          [ -n "$site_pm" ] || {
-            echo "::error::site/package.json has no packageManager pin"
-            exit 1
-          }
-          corepack install --global "$site_pm"
-          pnpm --dir site install --frozen-lockfile --ignore-scripts
-          deps=()
-          if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then deps=(--with-deps); fi
-          pnpm --dir site exec playwright install "${deps[@]}" chromium
-          pnpm --dir site test
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-node.sh"
 
       - name: Lint changed YueOps SQL migrations
         if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         env:
           MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}
         run: |
-          set -euo pipefail
-          squawk_flags=(
-            --pg-version=15.0
-            --assume-in-transaction
-            "--exclude=prefer-robust-stmts,prefer-text-field,prefer-identity,require-timeout-settings"
-          )
-          # Write first, then read: process substitution would hide a failed
-          # range selector and turn an invalid base into a green empty scan.
-          migration_list="${RUNNER_TEMP}/yueops-changed-migrations.nul"
-          python3 .ci-policy/scripts/changed-migrations.py --base "$MIGRATION_BASE" > "$migration_list"
-          mapfile -d '' -t migrations < "$migration_list"
-          if [ "${#migrations[@]}" -eq 0 ]; then
-            echo "no changed YueOps SQL migrations"
-            exit 0
-          fi
-          # Do not execute an npm registry package in the privileged release
-          # validation job. Fetch the upstream release binary at an immutable
-          # version and authenticate its exact bytes before use.
-          squawk_bin="${RUNNER_TEMP}/squawk-2.60.0"
-          curl --fail --location --silent --show-error \
-            --proto '=https' --proto-redir '=https' --tlsv1.2 \
-            --connect-timeout 10 --max-time 180 \
-            --retry 4 --retry-all-errors \
-            'https://github.com/sbdchd/squawk/releases/download/v2.60.0/squawk-linux-x64' \
-            --output "$squawk_bin"
-          printf '%s  %s\n' \
-            '708d77899e2b43e0d21cb811023dbbcfb3b8220b0c0b7e71c6e73568be7716e5' \
-            "$squawk_bin" | sha256sum --check --strict
-          chmod 0755 "$squawk_bin"
-          test "$("$squawk_bin" --version)" = 'squawk 2.60.0'
-          "$squawk_bin" "${squawk_flags[@]}" "${migrations[@]}"
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-migrations.sh"
 
       - name: Record complete Ops native and source gates
         if: matrix.validation == 'yueops' && matrix.ops_role == 'native'
         run: |
-          set -euo pipefail
-          .venv/bin/python .ci-policy/scripts/pytest-shards.py native-terminal \
-            --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
-            --source "$PWD" --board "$PWD/.ci-yueboard" \
-            --output "$RUNNER_TEMP/ops-shard-evidence"
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-terminal.sh"
 
       - name: Retain owned Ops evidence even after failure
         if: always() && matrix.validation == 'yueops' && matrix.ops_role != 'legacy'

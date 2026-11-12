@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from workflow_source import workflow_text
 import fnmatch
 import glob
 import hashlib
@@ -282,7 +283,7 @@ class PublishedWidgetContractTest(unittest.TestCase):
 
 class LockedPythonDualAuditTest(unittest.TestCase):
     def test_both_provider_results_are_required_without_skips(self) -> None:
-        source = WORKFLOW.read_text()
+        source = workflow_text(WORKFLOW)
         loop = re.search(r"^          for vulnerability_service in pypi osv; do\n.*?^          done\n",
                          source, re.MULTILINE | re.DOTALL)
         self.assertIsNotNone(loop, "both fresh advisory providers must be audited")
@@ -338,7 +339,7 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
     def step(self, name):
         match = re.search(
             rf"^      - name: {re.escape(name)}\n(?P<body>(?:(?!^      - |^  [a-z]).*\n)*)",
-            WORKFLOW.read_text(), re.MULTILINE)
+            workflow_text(WORKFLOW), re.MULTILINE)
         self.assertIsNotNone(match, name)
         body = match.group("body")
         script = re.search(r"^        run: \|\n((?:          .*\n|\n)*)", body, re.MULTILINE)
@@ -515,7 +516,7 @@ class VisualBaselineDiscoveryTest(unittest.TestCase):
     """Execute the release branch: missing baselines fail, existing ones compare."""
 
     def branch(self) -> str:
-        step = WORKFLOW.read_text().split("      - name: Validate YueBoard end-to-end suite\n", 1)[1].split("\n      - name:", 1)[0]
+        step = workflow_text(WORKFLOW).split("      - name: Validate YueBoard end-to-end suite\n", 1)[1].split("\n      - name:", 1)[0]
         branch = step[step.index("          shots=test/e2e/specs/__screenshots__"):]
         return textwrap.dedent(branch)
 
@@ -645,7 +646,7 @@ class VerifiedBuildxTest(unittest.TestCase):
         )
 
     def test_preinstalled_old_runner_is_replaced_before_action_reuse(self) -> None:
-        workflow = WORKFLOW.read_text()
+        workflow = workflow_text(WORKFLOW)
         setup = workflow.index("- name: Set up Docker Buildx")
         # Actual pinned setup action reuses an available plugin when version is
         # unspecified. Exercise the install step before that normal action path.
@@ -783,7 +784,7 @@ class VerifiedBuildxTest(unittest.TestCase):
 class BuildPolicyTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.workflow = WORKFLOW.read_text(encoding="utf-8")
+        cls.workflow = workflow_text(WORKFLOW)
         cls.policy_workflow = POLICY_WORKFLOW.read_text(encoding="utf-8")
         cls.image_rescan_workflow = IMAGE_RESCAN_WORKFLOW.read_text(encoding="utf-8")
         cls.services = json.loads(SERVICES.read_text(encoding="utf-8"))

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from workflow_source import workflow_text
 import re
 import unittest
 from pathlib import Path
@@ -24,7 +25,7 @@ class CiToolchainImageTest(unittest.TestCase):
                 self.assertFalse((ROOT / relative).exists(), relative)
 
     def test_validate_pins_the_image_and_does_not_apt(self) -> None:
-        workflow = WORKFLOW.read_text(encoding="utf-8")
+        workflow = workflow_text(WORKFLOW)
         validate = workflow.split("\n  validate:\n", 1)[1].split(
             "\n  validation-evidence:\n", 1
         )[0]

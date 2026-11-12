@@ -3769,7 +3769,7 @@ def envelope(value):
                 require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
                         and isinstance(value.get("skip_module_blobs"), dict),
                         "skip baseline or shared collection inputs differ")
-                require(value.get("validation_only") in (None, True),
+                require(value.get("validation_only") is None or value.get("validation_only") is True,
                         "validation_only must be absent or true")
                 if value.get("validation_only") is True:
                     require(value.get("admission_rule") is None,
@@ -3886,7 +3886,7 @@ def expand(targets, source, board, runner, capacity, shards, timing=None, weight
                 "runner_arch": os.environ.get("RUNNER_ARCH"),
                 "runner_image": os.environ.get("ImageVersion"),
             }
-            bound = source_evidence.optional(source, ops["ref"])
+            bound = None if validation_only else source_evidence.optional(source, ops["ref"])
             expected = plan(source, context, shards, serial_modules(source),
                             weights=weights, timing=timing)
             used_weights = detach_ordinary_weights(expected)

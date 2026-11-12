@@ -1,6 +1,7 @@
 """The actual YAML consumer preserves pytest results and diagnoses partial timing."""
 from __future__ import annotations
 
+from workflow_source import workflow_text
 import json
 import os
 from pathlib import Path
@@ -13,7 +14,7 @@ import textwrap
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = (ROOT / ".github/workflows/build.yml").read_text()
+WORKFLOW = workflow_text()
 
 
 def step(name):
