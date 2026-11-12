@@ -7,7 +7,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     PATH=/usr/lib/postgresql/18/bin:/usr/local/go/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    GOTOOLCHAIN=local
+    GOTOOLCHAIN=local \
+    UV_PYTHON_INSTALL_DIR=/opt/uv-python
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -70,6 +71,8 @@ RUN curl --fail --silent --show-error --location \
 
 # uv 0.10.9 is the version build.yml setup-uv pins. UV_SHA256 is filled from
 # the release tarball before the image is built; the workflow refuses a blank.
+# UV_PYTHON_INSTALL_DIR must stay set for `uv python find`: install and find
+# do not share a default directory.
 ARG UV_SHA256
 RUN test -n "$UV_SHA256" \
  && curl --fail --silent --show-error --location \
@@ -81,11 +84,14 @@ RUN test -n "$UV_SHA256" \
  && install -m 0755 /tmp/uv-x86_64-unknown-linux-gnu/uv /usr/local/bin/uv \
  && rm -rf /tmp/uv.tgz /tmp/uv-x86_64-unknown-linux-gnu \
  && uv --version | grep -F '0.10.9' \
- && UV_PYTHON_INSTALL_DIR=/opt/uv-python uv python install 3.13 \
- && ln -sfn "$(uv python find 3.13)" /usr/local/bin/python3.13 \
+ && uv python install 3.13 \
+ && py=$(uv python find 3.13) \
+ && test -x "$py" \
+ && ln -sfn "$py" /usr/local/bin/python3.13 \
  && ln -sfn python3.13 /usr/local/bin/python3 \
  && ln -sfn python3.13 /usr/local/bin/python \
- && python3 -c 'import sys; assert sys.version_info[:2] == (3, 13)'
+ && python3 -c 'import sys; assert sys.version_info[:2] == (3, 13)' \
+ && chmod -R a+rX /opt/uv-python
 
 RUN curl --fail --silent --show-error --location \
       --proto '=https' --proto-redir '=https' --tlsv1.2 \

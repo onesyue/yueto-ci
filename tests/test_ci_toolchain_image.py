@@ -50,7 +50,9 @@ class CiToolchainImageTest(unittest.TestCase):
             "dict_snowball.so",
             "sing-box-1.14",
             "go1.27.4",
+            "UV_PYTHON_INSTALL_DIR=/opt/uv-python",
             "uv python install 3.13",
+            "uv python find 3.13",
             "USER runner",
         ):
             with self.subTest(needle=needle):
