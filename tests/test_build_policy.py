@@ -2173,7 +2173,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn(".yueboard_contract_pin", self.workflow)
         self.assertIn("yueboard_contract_ref:", self.workflow)
         self.assertIn(
-            "ref: ${{ needs.plan.outputs.yueboard_contract_ref }}",
+            "ref: ${{ matrix.validation == 'yueops' && needs.plan.outputs.yueboard_contract_ref || needs.plan.outputs.yueboard_policy_pin }}",
             self.workflow,
         )
         self.assertIn(
@@ -2181,11 +2181,11 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow,
         )
         self.assertIn(
-            "repository_dispatch may not override the pinned YueBoard contract",
+            "YueOps requires explicit yueboard_contract_ref from signed desired",
             self.workflow,
         )
         self.assertIn(
-            'yueboard_contract_ref" != "$yueboard_contract_pin',
+            'explicit_board_ref" != "$yueboard_contract_pin',
             self.workflow,
         )
         self.assertIn(
@@ -2217,7 +2217,7 @@ class BuildPolicyTest(unittest.TestCase):
             self.native_validator,
         )
         self.assertIn(
-            "pinned YueBoard contract schema floor does not match central policy",
+            "admitted YueBoard schema floor must be a positive integer",
             self.native_validator,
         )
         self.assertIn(
@@ -2665,14 +2665,14 @@ class BuildPolicyTest(unittest.TestCase):
               "repo": "onesyue/yue-node", "ref": "master", "validation": "yue-node"}],
         )
 
-    def test_native_validator_rejects_stale_pinned_yueboard_floor(self) -> None:
+    def test_native_validator_rejects_invalid_admitted_yueboard_floor(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
             yueops = temp / "yueops"
             yueboard = temp / "yueboard"
             yueops.mkdir()
             yueboard.mkdir()
-            (yueboard / "schema-floor.txt").write_text("42\n", encoding="utf-8")
+            (yueboard / "schema-floor.txt").write_text("not-a-generation\n", encoding="utf-8")
             result = subprocess.run(
                 [
                     "python3",
@@ -2690,7 +2690,7 @@ class BuildPolicyTest(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 1)
         self.assertIn(
-            "pinned YueBoard contract schema floor does not match central policy",
+            "admitted YueBoard schema floor must be a positive integer",
             result.stderr,
         )
 

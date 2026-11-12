@@ -40,7 +40,10 @@ class OpsShardWorkflow(unittest.TestCase):
         (self.board / "schema.sql").write_text("-- controlled Board fixture\n")
         self.fixture.git(self.board, "init", "-q")
         self.fixture.git(self.board, "add", ".")
-        self.fixture.commit(self.board)
+        signer = self.fixture._signer()
+        self.fixture.git(self.board, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                         "-c", "user.signingkey=" + signer["fingerprint"],
+                         "-c", "gpg.program=" + signer["gpg"], "commit", "-S", "-qm", "signed Board fixture")
         self.board_sha = self.fixture.git(self.board, "rev-parse", "HEAD").stdout.strip()
         (self.policy / "native-node-contract.json").write_text(
             json.dumps({"yueboard_contract_pin": self.board_sha}))
@@ -998,6 +1001,23 @@ class OpsShardWorkflow(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Board"):
             self.call(self.consumer.native_terminal, self.admission, self.source, self.board,
                       self.base / "forbidden-native")
+
+    def test_signed_board_identity_replaces_central_pin_without_accepting_unsigned_or_wrong_checkout(self):
+        # The existing admission still names the original signed Board. A central
+        # pin update cannot silently alter that input or block this execution.
+        (self.policy / "native-node-contract.json").write_text(
+            json.dumps({"yueboard_contract_pin": "f" * 40}))
+        self.call(self.consumer.check_source, self.admission, self.source, self.board)
+        (self.board / "schema.sql").write_text("-- unsigned changed schema\n")
+        self.fixture.git(self.board, "add", ".")
+        self.fixture.git(self.board, "-c", "commit.gpgsign=false", "commit", "-qm", "unsigned")
+        with self.assertRaisesRegex(ValueError, "Board fixture differs"):
+            self.call(self.consumer.check_source, self.admission, self.source, self.board)
+        unsigned = self.fixture.git(self.board, "rev-parse", "HEAD").stdout.strip()
+        admitted = self.call(self.consumer.expand, self.targets, self.source, unsigned,
+                             "ubuntu-24.04", 4, 4)
+        with self.assertRaises(ValueError):
+            self.call(self.consumer.check_source, admitted, self.source, self.board)
 
     def test_missing_native_stale_attempt_and_forged_plan_block_join(self):
         self.full_bundle()

@@ -570,3 +570,23 @@ its siblings. Missing logs, incomplete execution, unsigned sources and failed
 native/evidence gates cannot produce success. Historical comparison must use the
 same Board contract revision and migration baseline; differences are reported,
 not silently treated as matching failures.
+
+### B9-8 Board validation context (requires paired ship change)
+
+Ops dispatches must provide `yueboard_contract_ref`: the exact production Board
+revision read from the signed root `release.yaml`. Missing input fails closed.
+The planner seals this revision into admission; shards and native obligations
+verify its owner signature and clean checkout, and evidence joins bind the same
+revision. Board's own publication pin remains unchanged.
+
+`ci-check.sh` resolves the default via `YUETO_ROOT/scripts/release-yaml.py`'s
+`verified_desired()` snapshot API. Set `YUETO_ROOT` when CI is in a worktree rather
+than a sibling of root. To reproduce a historical environment, pass
+`--board-ref <40-hex-SHA>`; ci-check always dispatches `validation_only=true` and
+`promote=false`. There is no fallback to a central pin or unsigned desired.
+
+This CI batch must remain draft until root ship passes signed desired Board
+identity and its resume verifier uses the original admission identity. The Ops
+`board_contract` marker/consumer contracts (LANE-A A9-4) and their execution by
+Board candidate CI are separate required B9-8 work. This batch does not establish
+historical replay success or completion of B9-8.

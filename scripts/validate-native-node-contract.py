@@ -530,18 +530,25 @@ def validate_widget_projection(root: Path) -> str:
     return public
 
 
+def validate_board_schema_input(yueboard_contract_root: Path) -> None:
+    # The selected Board owns its schema generation. Native ACL/schema tests
+    # execute its real fixture; central numeric equality cannot establish compatibility.
+    board_floor = read(yueboard_contract_root / "schema-floor.txt").strip()
+    if re.fullmatch(r"[1-9][0-9]*", board_floor) is None:
+        raise RuntimeError("admitted YueBoard schema floor must be a positive integer")
+    fixture = yueboard_contract_root / "test/fixtures/schema.sql"
+    if fixture.is_symlink() or not read(fixture).strip():
+        raise RuntimeError("admitted YueBoard schema fixture must be a nonempty regular file")
+
+
 def validate_yueops(
     root: Path, contract: dict, yueboard_contract_root: Path | None
 ) -> None:
     if yueboard_contract_root is None:
         raise RuntimeError(
-            "YueOps validation requires the pinned YueBoard contract checkout"
+            "YueOps validation requires the admitted YueBoard contract checkout"
         )
-    pinned_floor = read(yueboard_contract_root / "schema-floor.txt").strip()
-    if pinned_floor != str(contract["schema_floor"]):
-        raise RuntimeError(
-            "pinned YueBoard contract schema floor does not match central policy"
-        )
+    validate_board_schema_input(yueboard_contract_root)
     # 2026-09-20：deploy.py 3004 → 513 行 + 8 个 deploy_*.py。片段的主语是**部署生成器
     # 这个模块族**，不是那一个文件。地板让"glob 写错扫到空气"不能被当成通过。
     deploy = read_package(root / "yueops", "deploy*.py", min_files=5)

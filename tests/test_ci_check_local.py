@@ -40,7 +40,7 @@ class LocalReplay(unittest.TestCase):
             env = os.environ | {'PATH': str(binpath) + os.pathsep + os.environ['PATH'],
                                 'CI_CHECK_OUTPUT': str(root), 'CI_CHECK_MIGRATION_BASE': 'a' * 40,
                                 'YUEOPS_CHECKOUT': str(root / 'fixture')}
-            result = subprocess.run(['bash', str(ROOT / 'scripts/ci-check.sh'), 'yueops', 'b' * 40, '--local'],
+            result = subprocess.run(['bash', str(ROOT / 'scripts/ci-check.sh'), 'yueops', 'b' * 40, '--local', '--board-ref', 'c' * 40],
                                     env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 23, result.stderr)
             self.assertEqual(sentinel.read_text(), 'unrelated checkout')
