@@ -329,7 +329,12 @@ class SourceEvidence(unittest.TestCase):
                         "user.signingkey=" + self.fingerprint, "commit", "-S", "-qm", "fixture enrollment"],
                        env=self.env, check=True, capture_output=True)
         workflow.source_sha = subprocess.check_output([*command, "rev-parse", "HEAD"]).decode().strip()
-        shutil.copytree(self.policy, workflow.policy / "policy")
+        nested = workflow.policy / "policy"
+        # ShardPrimitives already wrote the shard signer here. Replace it with
+        # this test's fixture authority; copytree refuses an existing directory.
+        if nested.exists():
+            shutil.rmtree(nested)
+        shutil.copytree(self.policy, nested)
         workflow.fixture.git(workflow.policy, "add", "policy")
         workflow.fixture.commit(workflow.policy)
         workflow.env["GITHUB_SHA"] = workflow.fixture.git(

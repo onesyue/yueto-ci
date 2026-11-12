@@ -125,13 +125,12 @@ class AdmissionPrecheck(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError) as caught:
             PRE.POLICY.git(self.source, "merge-base", "--is-ancestor", self.base, unrelated)
         self.assertEqual(caught.exception.returncode, 1)
-        with patch.object(PRE.POLICY, "reviewed_estate_input_transition",
-                          return_value=(self.baseline, {"source_after": self.base})):
-            with patch("sys.argv", ["precheck", "--repo", "yueops", "--source", str(self.source),
-                                    "--base", self.base, "--head", unrelated]):
-                with contextlib.redirect_stderr(io.StringIO()) as output:
-                    self.assertEqual(PRE.main(), 1)
-                self.assertIn("ADMISSION_REJECTED:", output.getvalue())
+        with patch("sys.argv", ["precheck", "--repo", "yueops", "--source", str(self.source),
+                                "--base", self.base, "--head", unrelated]):
+            with contextlib.redirect_stderr(io.StringIO()) as output:
+                self.assertEqual(PRE.main(), 1)
+            self.assertIn("ADMISSION_REJECTED:", output.getvalue())
+            self.assertIn("not on the default branch", output.getvalue())
 
     def test_cli_rejection_exit_and_marker(self):
         (self.source / "pyproject.toml").write_text("unsealed")
