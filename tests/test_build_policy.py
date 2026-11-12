@@ -1369,7 +1369,7 @@ class BuildPolicyTest(unittest.TestCase):
 
     def test_policy_ci_runs_pinned_fail_closed_policy_tooling(self) -> None:
         required = (
-            "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+            "python3 scripts/run-policy-tests.py",
             "shellcheck --severity=warning scripts/*.sh",
             "python3 -m compileall -q scripts tests",
             'bash -n "$script"',
