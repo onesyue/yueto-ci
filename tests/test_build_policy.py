@@ -569,41 +569,6 @@ class VisualBaselineDiscoveryTest(unittest.TestCase):
         self.assertIn("INVOKED:", result.stdout)
 
 
-class PostgresKeyFingerprintTest(unittest.TestCase):
-    """Run the real key reader with output larger than an OS pipe buffer."""
-
-    def assignment(self) -> str:
-        script = (ROOT / "scripts" / "install-yueops-pg18-toolchain.sh").read_text()
-        lines = [line.strip() for line in script.splitlines()
-                 if line.strip().startswith("fingerprint=$(gpg ")]
-        self.assertEqual(len(lines), 1)
-        return lines[0]
-
-    def run_reader(self, assignment: str) -> subprocess.CompletedProcess:
-        script = """set -euo pipefail
-pg_key=fixture.asc
-gpg() {
-  awk 'BEGIN {
-    print "fpr:::::::::B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8:"
-    print "fpr:::::::::SUBKEY:"
-    for (i=0; i<65536; i++) print "uid:::::::::fixture padding larger than pipe buffer:"
-  }'
-}
-""" + assignment + '\nprintf "%s\\n" "$fingerprint"\n'
-        return subprocess.run(["bash", "-c", script], capture_output=True,
-                              text=True, timeout=10)
-
-    def test_first_fingerprint_without_truncating_producer(self) -> None:
-        result = self.run_reader(self.assignment())
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8\n")
-
-    def test_old_early_exit_reader_fails_under_pipefail(self) -> None:
-        assignment = self.assignment().split(" | awk ", 1)[0]
-        old_reader = assignment + " | awk -F: '$1 == \"fpr\" {print $10; exit}')"
-        self.assertNotEqual(self.run_reader(old_reader).returncode, 0)
-
-
 class VerifiedBuildxTest(unittest.TestCase):
     """Exercise the shell installer and the preinstalled-runner reuse path."""
 
@@ -1005,10 +970,9 @@ class BuildPolicyTest(unittest.TestCase):
             "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
             "'[\"ubuntu-24.04\"]')"
         )
-        # plan, the one-shot PG18 toolchain, validate, validation-evidence,
-        # candidate build, and publish. The toolchain job keeps the same
-        # manual opt-in selector; it is not a new default runner.
-        self.assertEqual(self.workflow.count(selector), 6)
+        # plan, validate, validation-evidence, candidate build, and publish.
+        # The toolchain image is not a runner. The selector stays manual.
+        self.assertEqual(self.workflow.count(selector), 5)
         self.assertIn(
             "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,
@@ -1016,10 +980,10 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("While this repository is public, do not register a persistent self-hosted runner.", self.readme)
         self.assertIn("`--ephemeral --disableupdate` runner", self.readme)
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
-        # Service mapping + integration DSNs + isolated clean-PG DSNs +
-        # the disposable E2E admin/app DSNs.
-        # Both integration phases independently receive all five DSNs, including template CAS.
-        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 15)
+        # Host port map only. Job containers reach the service as postgres:5432.
+        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 1)
+        self.assertNotIn("postgres://postgres:ci@127.0.0.1", self.workflow)
+        self.assertIn("postgres://postgres:ci@postgres:5432/", self.workflow)
 
     def test_source_poller_is_unconditional(self) -> None:
         """poller 不许有路径过滤——「每个提交都被中央验证」靠的就是这一点。
@@ -1265,11 +1229,37 @@ class BuildPolicyTest(unittest.TestCase):
                 "alert-chain-deadman.yml",
                 "board-visual-capture.yml",
                 "build.yml",
+                "ci-toolchain.yml",
                 "image-rescan.yml",
                 "policy-ci.yml",
                 "poll-sources.yml",
             ],
         )
+
+        toolchain = (WORKFLOW_DIR / "ci-toolchain.yml").read_text(encoding="utf-8")
+        toolchain_code = "\n".join(
+            line
+            for line in toolchain.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        self.assertIn(
+            "permissions:\n  contents: read\n  packages: write",
+            toolchain,
+        )
+        self.assertIn("context: images/yueops-ci-toolchain", toolchain_code)
+        self.assertIn(
+            "ghcr.io/onesyue/yueops-ci-toolchain:${{ github.sha }}",
+            toolchain_code,
+        )
+        published = re.findall(r"ghcr\.io/onesyue/\S+", toolchain_code)
+        self.assertTrue(published)
+        for image in published:
+            self.assertTrue(
+                image.startswith("ghcr.io/onesyue/yueops-ci-toolchain"),
+                image,
+            )
+        for forbidden in ("cosign", "imagetools", "promote", "id-token: write"):
+            self.assertNotIn(forbidden, toolchain_code)
 
         capture = (WORKFLOW_DIR / "board-visual-capture.yml").read_text()
         capture_code = "\n".join(
@@ -1418,18 +1408,16 @@ class BuildPolicyTest(unittest.TestCase):
     def test_runner_dependencies_are_bootstrapped_and_preflighted(self) -> None:
         required = (
             "Preflight planning dependencies",
-            "Install native yue-node test toolchain",
-            '"${apt[@]}" install -y --no-install-recommends build-essential',
-            "Install native YueBoard test toolchain",
-            "build-essential postgresql-client",
+            "ghcr.io/onesyue/yueops-ci-toolchain@sha256:",
+            "Use the runner Docker daemon",
             "Preflight validation dependencies",
             "yue-node) tools+=(base64 docker gcc go gpg jq make)",
             "YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}",
             "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \\\n",
             "            make verify-fork-tags\n",
             "yueboard) tools+=(buf corepack docker gcc go make node psql)",
-            "Install native YueOps PostgreSQL 18 test toolchain",
-            "yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql uv)",
+            "Require the toolchain NGINX and sing-box",
+            "yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql sing-box-1.14 uv)",
             "Preflight build and promotion dependencies",
             "for tool in bash curl docker envsubst git jq",
             "docker buildx version >/dev/null",
@@ -1439,17 +1427,19 @@ class BuildPolicyTest(unittest.TestCase):
         for invariant in required:
             with self.subTest(invariant=invariant):
                 self.assertIn(invariant, self.workflow)
-        installer = (ROOT / "scripts/install-yueops-pg18-toolchain.sh").read_text(encoding="utf-8")
+        image = (ROOT / "images/yueops-ci-toolchain/Dockerfile").read_text(encoding="utf-8")
         for invariant in (
             "postgresql-18 postgresql-client-18",
             "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8",
-            "for tool in postgres initdb pg_ctl psql; do",
-            'echo "$pg_bin" >> "$GITHUB_PATH"',
-            "ci_retry 3 2 1",
+            "plpgsql.so",
+            "dict_snowball.so",
+            "sing-box-1.14",
+            "go1.27.4",
         ):
             with self.subTest(invariant=invariant):
-                self.assertIn(invariant, installer)
-        self.assertEqual(installer.count('"${apt[@]}" update'), 2)
+                self.assertIn(invariant, image)
+        validate = self.workflow.split("\n  validate:\n", 1)[1].split("\n  validation-evidence:\n", 1)[0]
+        self.assertNotIn("apt-get", validate)
         self.assertNotIn("postgresql-18", self.workflow)
         self.assertIn("python-version: '3.13'", self.workflow)
         self.assertIn(
@@ -1465,7 +1455,7 @@ class BuildPolicyTest(unittest.TestCase):
             "Validate system Python on self-hosted runner",
             self.workflow,
         )
-        self.assertIn("system_python=/usr/bin/python3", self.workflow)
+        self.assertIn("system_python=$(command -v python3)", self.workflow)
         self.assertIn("sys.version_info[:2] != (3, 13)", self.workflow)
         self.assertIn("UV_PYTHON_DOWNLOADS: never", self.workflow)
         self.assertIn(
