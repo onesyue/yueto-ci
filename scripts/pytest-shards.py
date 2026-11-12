@@ -3769,14 +3769,19 @@ def envelope(value):
                 require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
                         and isinstance(value.get("skip_module_blobs"), dict),
                         "skip baseline or shared collection inputs differ")
-                if value.get("admission_rule") == "signed-default-branch":
-                    require(value.get("estate_successor_of") is None
-                            and value.get("template_writer_retired_at") is None
-                            and value.get("pin_is_ancestor") is not True,
-                            "signed admission does not carry a seal marker")
+                require(value.get("validation_only") in (None, True),
+                        "validation_only must be absent or true")
+                if value.get("validation_only") is True:
+                    require(value.get("admission_rule") is None, "validation_only cannot carry admission_rule")
                 else:
-                    require(False,
-                            "shared-input seals are retired; admit a signed default-branch commit")
+                    if value.get("admission_rule") == "signed-default-branch":
+                        require(value.get("estate_successor_of") is None
+                                and value.get("template_writer_retired_at") is None
+                                and value.get("pin_is_ancestor") is not True,
+                                "signed admission does not carry a seal marker")
+                    else:
+                        require(False,
+                                "shared-input seals are retired; admit a signed default-branch commit")
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -3847,8 +3852,9 @@ def admit_signed_default_branch(source, revision, policy_dir=None):
         raise ValueError("unauthorized source signature") from error
 
 
-def expand(targets, source, board, runner, capacity, shards, timing=None, weights=None):
+def expand(targets, source, board, runner, capacity, shards, timing=None, weights=None, *, validation_only=False):
     """Expand an exact target plan, without pytest collection or import."""
+    require(isinstance(validation_only, bool), "validation_only must be boolean")
     require(type(capacity) is int and capacity > 0, "capacity must be positive")
     require(runner in ("ubuntu-24.04", "yue-local-release"), "unsupported runner")
     matrix = targets["validation_matrix"]
@@ -3872,6 +3878,9 @@ def expand(targets, source, board, runner, capacity, shards, timing=None, weight
             roles = ["legacy"]
         else:
             require(source is not None, "Ops source checkout missing")
+            if validation_only:
+                # Owner signature admits any branch. Promotion seals stay on the other path.
+                source_evidence.verify_signed_commit(source, ops["ref"])
             context = value["identity"] | {
                 "board_revision": board, "runner_os": os.environ.get("RUNNER_OS"),
                 "runner_arch": os.environ.get("RUNNER_ARCH"),
@@ -3882,7 +3891,14 @@ def expand(targets, source, board, runner, capacity, shards, timing=None, weight
                             weights=weights, timing=timing)
             used_weights = detach_ordinary_weights(expected)
             require(expected["source_revision"] == ops["ref"], "planned source checkout differs")
-            if bound is not None:
+            if validation_only:
+                files = tree_inputs(source, ops["ref"])
+                value["validation_only"] = True
+                value.update(mode="sharded", ops_plan=expected,
+                             common_inputs=shared_inputs(source, ops["ref"]),
+                             skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
+                             skip_module_blobs={p: files[p][1] for p in expected["modules"]})
+            elif bound is not None:
                 files = tree_inputs(source, ops["ref"])
                 blobs = {p: files[p][1] for p in expected["modules"]}
                 source_evidence.validate_baseline(bound, blobs)
@@ -3934,6 +3950,8 @@ def verify_source_evidence(value, source):
 
 def check_source(value, source, board):
     envelope(value)
+    if value.get("validation_only") is True:
+        source_evidence.verify_signed_commit(source, value["source_revision"])
     verify_source_evidence(value, source)
     if (value.get("mode") == "sharded"
             and value.get("admission_rule") == "signed-default-branch"):
@@ -4811,6 +4829,9 @@ def materialize_split_reference(evidence, prefix, assignments, dest):
 
 def join(value, evidence, validation_result, expected_sha, source=None):
     envelope(value)
+    if value.get("validation_only") is True:
+        require(source is not None, "validation_only join requires the source checkout")
+        source_evidence.verify_signed_commit(source, value["source_revision"])
     verify_source_evidence(value, source)
     if (value.get("mode") == "sharded"
             and value.get("admission_rule") == "signed-default-branch"):
@@ -5532,6 +5553,7 @@ def main():
     expand_cli.add_argument("--shards", type=int, required=True)
     expand_cli.add_argument("--timing", type=Path)
     expand_cli.add_argument("--weights", type=Path)
+    expand_cli.add_argument("--validation-only", action="store_true")
     run_cli = sub.add_parser("run")
     run_cli.add_argument("--admission", type=Path, required=True)
     run_cli.add_argument("--source", type=Path, required=True)
@@ -5590,7 +5612,8 @@ def main():
             result = expand(read_json(args.targets), args.source, args.board,
                             args.runner, args.capacity, args.shards,
                             timing=args.timing,
-                            weights=load_weight_document(args.weights))
+                            weights=load_weight_document(args.weights),
+                            validation_only=args.validation_only)
         elif args.command == "export-source-baseline":
             result = export_source_baseline(args.source, args.revision)
         elif args.command == "generate-retired-host-baseline":
