@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates curl gnupg sudo git jq build-essential \
-      locales xz-utils logrotate docker.io \
+      locales xz-utils logrotate docker.io openssh-client \
  && rm -rf /var/lib/apt/lists/*
 
 # PGDG key fingerprint is the one the retired apt installer required.
@@ -91,7 +91,9 @@ RUN test -n "$UV_SHA256" \
  && ln -sfn "$py" /usr/local/bin/python3.13 \
  && ln -sfn python3.13 /usr/local/bin/python3 \
  && ln -sfn python3.13 /usr/local/bin/python \
- && python3 -c 'import sys; assert sys.version_info[:2] == (3, 13)' \
+ && ln -sfn /usr/local/bin/python3 /usr/bin/python3 \
+ && ln -sfn /usr/local/bin/python3 /usr/bin/python \
+ && /usr/bin/python3 -c 'import sys; assert sys.version_info[:2] == (3, 13)' \
  && chmod -R a+rX /opt/uv-python
 
 RUN curl --fail --silent --show-error --location \

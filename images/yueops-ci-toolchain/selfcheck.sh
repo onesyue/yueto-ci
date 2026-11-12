@@ -9,12 +9,14 @@ fi
 test -e /usr/lib/postgresql/18/lib/plpgsql.so
 test -e /usr/lib/postgresql/18/lib/dict_snowball.so
 test -f "$(pg_config --includedir)/pg_config.h"
+test -x /usr/bin/python3
+/usr/bin/python3 -c 'import sys; assert sys.version_info[:2] == (3, 13), sys.version'
 python3 -c 'import sys; assert sys.version_info[:2] == (3, 13), sys.version'
 uv --version | grep -F '0.10.9'
 go version | grep -F 'go1.27.4'
 sing-box-1.14 version | grep -E '^sing-box version 1\.14\.'
 nginx -v 2>&1 | grep -F 'nginx/1.30.5'
-for tool in initdb pg_ctl psql gcc make node npm jq git buf docker corepack; do
+for tool in initdb pg_ctl psql gcc make node npm jq git buf docker corepack ssh-keygen; do
   command -v "$tool" >/dev/null
 done
 data=$(mktemp -d)

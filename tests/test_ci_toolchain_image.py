@@ -55,12 +55,16 @@ class CiToolchainImageTest(unittest.TestCase):
             "UV_PYTHON_INSTALL_DIR=/opt/uv-python",
             "uv python install 3.13",
             "uv python find 3.13",
+            "ln -sfn /usr/local/bin/python3 /usr/bin/python3",
+            "openssh-client",
             "USER runner",
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, dockerfile)
         selfcheck = (IMAGE / "selfcheck.sh").read_text(encoding="utf-8")
         self.assertIn('test -f "$(pg_config --includedir)/pg_config.h"', selfcheck)
+        self.assertIn("test -x /usr/bin/python3", selfcheck)
+        self.assertIn("ssh-keygen", selfcheck)
         rebuild = (ROOT / ".github" / "workflows" / "ci-toolchain.yml").read_text(
             encoding="utf-8"
         )
