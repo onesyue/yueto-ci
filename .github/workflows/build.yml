@@ -738,10 +738,10 @@ jobs:
         run: |
           set -euo pipefail
           system_python=$(command -v python3)
-          [ -n "$system_python" ] && [ -x "$system_python" ] || {
+          if [ -z "$system_python" ] || [ ! -x "$system_python" ]; then
             echo "::error::toolchain image is missing python3"
             exit 1
-          }
+          fi
           "$system_python" - <<'PY'
           import sys
           if sys.version_info[:2] != (3, 13):
