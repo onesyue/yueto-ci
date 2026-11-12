@@ -1342,17 +1342,22 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("pull_request:", self.policy_workflow)
         self.assertIn("permissions:\n  contents: read", self.policy_workflow)
         policy_lower = self.policy_workflow.casefold()
+        # Manual replay may clone private sources and run disposable containers.
+        # The ordinary PR/push policy job remains credential-free, and neither
+        # job may acquire product publication permissions or commands.
+        ordinary = self.policy_workflow.split("\n  policy:\n", 1)[1].split("\n  local-replay:\n", 1)[0].casefold()
+        self.assertNotIn("secrets.", ordinary)
+        self.assertNotIn("docker", ordinary)
+        self.assertIn("if: github.event_name != 'workflow_dispatch'", ordinary)
+        self.assertNotRegex(policy_lower, r"docker\s+(?:push|build|login)\b")
         for forbidden in (
             "repository_dispatch",
-            "workflow_dispatch",
             "packages: write",
             "id-token: write",
             "actions: write",
-            "docker",
             "cosign",
             "promote",
             "repository-dispatch",
-            "secrets.",
             "ghcr.io",
             "buildx",
             "trivy",
@@ -1391,7 +1396,7 @@ class BuildPolicyTest(unittest.TestCase):
                 self.assertIn(invariant, self.policy_workflow)
         uses = re.findall(
             r"^\s*(?:-\s*)?uses:\s*([^\s#]+)",
-            self.policy_workflow,
+            self.policy_workflow.split("\n  policy:\n", 1)[1].split("\n  local-replay:\n", 1)[0],
             re.MULTILINE,
         )
         self.assertEqual(

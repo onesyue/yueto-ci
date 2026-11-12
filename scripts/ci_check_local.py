@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import os
+import shutil
+import time
 import json
 import re
 import subprocess
@@ -78,14 +82,28 @@ def run(source: Path, board: Path, policy: Path, admission: Path, output: Path, 
     }
     failed = False
     failures = []
-    for role in [*roles, 'join']:
+    expected_roles = [*roles, 'join']
+    statuses = {}
+    owner = hashlib.sha256(str(output.resolve()).encode()).hexdigest()
+    minimum_free = int(os.environ.get('CI_CHECK_MIN_FREE_BYTES', '0'))
+    if minimum_free < 0:
+        raise ValueError('minimum free disk space must not be negative')
+    summary = output / 'execution.json'
+    summary.write_text(json.dumps({'complete': False, 'roles': expected_roles, 'exit_codes': statuses}) + '\n')
+    for role in expected_roles:
+        free = shutil.disk_usage(output).free
+        with (output / 'resources.jsonl').open('a') as handle:
+            handle.write(json.dumps({'role': role, 'time': time.time(), 'free_bytes': free}) + '\n')
+        if free < minimum_free:
+            raise ValueError(f'infrastructure: free disk {free} below required {minimum_free} before {role}')
         job = output / role
         job.mkdir()
         job.chmod(0o777)
         env = common | {'OPS_ROLE': role, 'CI_CHECK_JOB': str(job),
                         'CI_CHECK_RESULT': 'failure' if failed else 'success'}
         command = ['docker', 'create', '--platform', 'linux/amd64',
-                   '--privileged', '--user', 'runner']
+                   '--privileged', '--user', 'runner', '--label', f'ci-check.owner={owner}',
+                   '--cidfile', str(job / 'container.cid')]
         # The role has its own nested daemon. Never mount the shared host socket.
         # The same paths are visible to fixtures and their private Docker daemon.
         for path in (source, board, policy, admission):
@@ -97,12 +115,15 @@ def run(source: Path, board: Path, policy: Path, admission: Path, output: Path, 
         print(f'ci-check: role {role}', file=sys.stderr, flush=True)
         log = job / 'role.log'
         status = execute_container(command, log, job / 'container.json')
+        statuses[role] = status
+        summary.write_text(json.dumps({'complete': False, 'roles': expected_roles, 'exit_codes': statuses}) + '\n')
         text = log.read_text(errors='replace')
         failures.extend(node_ids(text))
         if status:
             failed = True
             print(f'ci-check: {role} failed ({status}); {log}', file=sys.stderr)
             print('\n'.join(text.splitlines()[-12:]), file=sys.stderr)
+    summary.write_text(json.dumps({'complete': True, 'roles': expected_roles, 'exit_codes': statuses}) + '\n')
     failures = list(dict.fromkeys(failures))
     (output / 'failures.txt').write_text(''.join(item + '\n' for item in failures))
     for item in failures:

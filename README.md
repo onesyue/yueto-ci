@@ -590,3 +590,39 @@ identity and its resume verifier uses the original admission identity. The Ops
 `board_contract` marker/consumer contracts (LANE-A A9-4) and their execution by
 Board candidate CI are separate required B9-8 work. This batch does not establish
 historical replay success or completion of B9-8.
+
+### Hosted execution of the local replay engine
+
+Central policy CI has a manual-only `local-replay` job. Supply exact
+`source_ref`, `board_ref`, and `migration_base` SHAs, and dispatch the frozen
+policy branch. It calls the same `ci-check.sh --local` engine for every role in
+admission and the final join; it does not replace the run with a smoke test.
+Only one manual local replay runs at a time, independently of PR policy checks.
+
+Preparation uses `--local --prepare-only` to fetch standalone clones and save
+`prepared.json`. The App token can read only yueops/yueboard, is scoped to that
+step, and is explicitly revoked before execution. Revocation failure stops the
+job. The next step consumes `--prepared <receipt>` without credentials or the
+preparation Git/gh configuration. Input identities, clean clone state, origin,
+default-branch refs and single ownership are checked before source planning.
+
+The hosted controller reserves 330 minutes of the 360-minute job limit for
+execution. It requires 8 GiB free initially and checks a 2 GiB operational disk
+reserve while running; these are failure thresholds, not a measured bound on
+native test disk use. Time or resource exhaustion yields an incomplete
+infrastructure failure. Source execution waits for a durable owned-session receipt;
+all exit paths stop that process group, including descendants whose leader exits
+early. The always-step can recover a surviving authenticated session if the
+controller itself was killed. It also reads exact controller/Docker
+container ID receipts, verifies the per-replay owner label, retains logs and
+removes only those owned containers. Evidence upload excludes source clones and
+authentication directories and retains logs, admission, resource samples,
+per-role exits and the complete-role/join receipt for seven days.
+
+Resource reference: the fixed toolchain reports 642,314,601 bytes via Docker
+image inspect. Historical remote run 43313724086 selected 35 validation roles,
+whose summed job durations were 140.83 minutes (maximum 16.75 minutes), plus a
+separate join. Its native job failed early, so this is not proof that the full
+local replay fits the limit. Role counts always come from admission. Compare
+local and remote failures only at identical policy/source/Board/baseline SHAs;
+actual full local execution remains required for B9-9 acceptance.

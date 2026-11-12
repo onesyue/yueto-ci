@@ -153,6 +153,10 @@ class LocalReplay(unittest.TestCase):
                 status = LOCAL.run(root, root, root, admission, root / 'output', 'e' * 40)
             self.assertEqual(status, 1)
             self.assertEqual(seen, ['ordinary-000', 'ordinary-001', 'native', 'join'])
+            summary = json.loads((root / 'output/execution.json').read_text())
+            self.assertTrue(summary['complete'])
+            self.assertEqual(summary['roles'], seen)
+            self.assertEqual(summary['exit_codes']['ordinary-000'], 1)
             self.assertEqual((root / 'output/failures.txt').read_text(), 'tests/test_a.py::test_red\n')
 
 
