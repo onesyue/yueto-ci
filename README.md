@@ -277,8 +277,12 @@ Review runner major, Python/toolchains and evidence identity together.
 and independently anchored SHA-256 pins. HTTPS download, hash verification before
 execution and actual command resolution are mandatory; environment overrides
 cannot replace these pins. Buildx creates the pinned OCI BuildKit builder only
-for builds. Poll/rescan need CLI imagetools only. Trivy actions use the verified
+for builds. Rescan needs CLI imagetools only. Trivy actions use the verified
 installation with `skip-setup-trivy: true`; SBOM keeps its own Syft path.
+Buildx, Cosign and Gitleaks installers download the already pinned upstream
+artifacts, with the existing release-asset API fallback and checksum verification.
+Their binary copies are no longer stored in `third_party/`; a download failure
+remains a failure rather than admitting an unverified replacement.
 
 While this repository is public, do not register a persistent self-hosted runner.
 Never attach production hosts. Before using a local release runner, make the

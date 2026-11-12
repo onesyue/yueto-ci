@@ -13,12 +13,6 @@ archive="${RUNNER_TEMP}/gitleaks_8.30.1_linux_x64.tar.gz"
 extract_dir="${RUNNER_TEMP}/gitleaks-8.30.1"
 # shellcheck source=scripts/ci-retry.sh
 source "${GITHUB_WORKSPACE}/.ci-policy/scripts/ci-retry.sh"
-vendor="${GITHUB_WORKSPACE}/.ci-policy/third_party/gitleaks_8.30.1_linux_x64.tar.gz"
-if [[ -f "$vendor" ]] && printf '%s  %s\n' \
-  '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' \
-  "$vendor" | sha256sum --check --status; then
-  cp "$vendor" "$archive"
-else
 release_url='https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz'
 if ! ci_download 4 --fail --location --silent --show-error \
   --proto '=https' --proto-redir '=https' --tlsv1.2 \
@@ -28,7 +22,6 @@ if ! ci_download 4 --fail --location --silent --show-error \
   echo "GitHub release front failed; using the asset API" >&2
   rm -f -- "$archive"
   ci_release_asset_api 4 "$archive" "$release_url"
-fi
 fi
 printf '%s  %s\n' \
   '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' \

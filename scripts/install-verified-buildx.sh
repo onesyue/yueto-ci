@@ -49,10 +49,6 @@ trap cleanup EXIT
 if [[ ! -f "$plugin" || ! -x "$plugin" ]] ||
    ! printf '%s  %s\n' "$BUILDX_SHA256" "$plugin" | sha256sum --check --status; then
   download_dir=$(mktemp -d "$RUNNER_TEMP/yueto-buildx.XXXXXXXX")
-  vendor="$(dirname "${BASH_SOURCE[0]}")/../third_party/buildx-${BUILDX_VERSION}.linux-amd64"
-  if [[ -f "$vendor" ]] && printf '%s  %s\n' "$BUILDX_SHA256" "$vendor" | sha256sum --check --status; then
-    cp "$vendor" "$download_dir/docker-buildx"
-  else
   release_url="https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-amd64"
   if ! ci_download 4 --fail --location --silent --show-error \
     --proto '=https' --proto-redir '=https' --tlsv1.2 \
@@ -62,7 +58,6 @@ if [[ ! -f "$plugin" || ! -x "$plugin" ]] ||
     echo "GitHub release front failed; using the asset API" >&2
     rm -f -- "$download_dir/docker-buildx"
     ci_release_asset_api 4 "$download_dir/docker-buildx" "$release_url"
-  fi
   fi
   printf '%s  %s\n' "$BUILDX_SHA256" "$download_dir/docker-buildx" |
     sha256sum --check --strict
