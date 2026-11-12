@@ -3491,6 +3491,10 @@ def expand(targets, source, board, runner, capacity, shards):
     value["max_parallel"] = min(capacity, len(value["validation_matrix"]))
     if runner == "yue-local-release":
         value["max_parallel"] = 1
+    if source is not None and isinstance(value.get("source_revision"), str):
+        record = load_ops_skip_evidence(source, value["source_revision"])
+        if record is not None:
+            value["ops_skip_evidence"] = record
     return seal(value, "admission_sha256")
 
 
@@ -3845,6 +3849,7 @@ ORDINARY_SKIP_EVIDENCE_FILES = (
     (ORDINARY_SKIP_EVIDENCE_20261111E, ORDINARY_SKIP_EVIDENCE_20261111E_SHA256),
     (ORDINARY_SKIP_EVIDENCE_20261111F, ORDINARY_SKIP_EVIDENCE_20261111F_SHA256),
 )
+OPS_SKIP_EVIDENCE = "tests/admission/ordinary-skip-evidence.json"
 
 
 def ordinary_skip_evidence_file(relative=None):
@@ -3881,17 +3886,53 @@ def ordinary_skip_evidence_successors(admitted, value):
         path = ordinary_skip_evidence_file(relative)
         if path is not None:
             successors.update(_ordinary_skip_evidence_record(path, digest, admitted, value))
+    record = value.get("ops_skip_evidence") if isinstance(value, dict) else None
+    if isinstance(record, dict):
+        successors.update(_apply_ordinary_skip_record(record, admitted, value))
     return successors
 
 
 def _ordinary_skip_evidence_record(path, digest, admitted, value):
     raw = path.read_bytes()
     require(sha(raw) == digest, "unreviewed ordinary skip evidence")
-    record = json.loads(raw)
+    return _apply_ordinary_skip_record(json.loads(raw), admitted, value)
+
+
+def load_ops_skip_evidence(checkout, revision):
+    """Ops-commit skip evidence, or None when that path is absent.
+
+    The ops commit is the seal. This policy tree does not pin another digest.
+    A missing path adds no successors. Any other git or record failure is an error.
+    """
+    require(isinstance(revision, str) and SHA.fullmatch(revision),
+            "ops skip evidence requires an exact revision")
+    spec = f"{revision}:{OPS_SKIP_EVIDENCE}"
+    try:
+        raw = git(checkout, "show", spec)
+    except subprocess.CalledProcessError as error:
+        err = error.stderr or b""
+        if error.returncode == 128 and OPS_SKIP_EVIDENCE.encode() in err:
+            return None
+        raise
+    try:
+        record = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise ValueError("invalid ops skip evidence") from error
+    _skip_evidence_shape(record)
+    return {"schema": record["schema"], "updates": record["updates"],
+            "additions": record["additions"]}
+
+
+def _skip_evidence_shape(record):
     require(isinstance(record, dict) and record.get("schema") == 1
-            and isinstance(record.get("updates"), dict) and isinstance(record.get("additions"), dict)
+            and isinstance(record.get("updates"), dict)
+            and isinstance(record.get("additions"), dict)
             and (record["updates"] or record["additions"]),
             "invalid ordinary skip evidence")
+
+
+def _apply_ordinary_skip_record(record, admitted, value):
+    _skip_evidence_shape(record)
     blobs = value.get("skip_module_blobs") if isinstance(value, dict) else None
     blobs = blobs if isinstance(blobs, dict) else {}
     successors = {}
@@ -3977,7 +4018,42 @@ def apply_reviewed_skip_blob_successors(baseline, value, native, *, require_nati
         reviewed_board139_native_successor, baseline, value, native, require_native)
     baseline = _invoke_native_successor(
         reviewed_first_native_successor, baseline, value, native, require_native)
-    return baseline
+    return apply_ops_reviewed_skip_blobs(baseline, value)
+
+
+def apply_ops_reviewed_skip_blobs(baseline, value):
+    """Rewrite a reviewed case blob when the ops commit seals that pair.
+
+    Join compares a reviewed case blob directly. An ordinary successor does
+    not reach it. Disposition, variants and outcome stay on the reviewed row.
+    A blob a hardcoded successor already moved is left as it is.
+    """
+    record = value.get("ops_skip_evidence") if isinstance(value, dict) else None
+    if not isinstance(record, dict) or not isinstance(baseline, dict):
+        return baseline
+    hosted = baseline.get("reviewed_hosted")
+    cases = hosted.get("cases") if isinstance(hosted, dict) else None
+    if not isinstance(cases, dict):
+        return baseline
+    blobs = value.get("skip_module_blobs")
+    blobs = blobs if isinstance(blobs, dict) else {}
+    updates = record.get("updates") if isinstance(record.get("updates"), dict) else {}
+    rewritten = dict(cases)
+    changed = False
+    for nodeid, change in updates.items():
+        module = nodeid.split("::", 1)[0] if isinstance(nodeid, str) and "::" in nodeid else ""
+        if not isinstance(change, dict) or blobs.get(module) != change.get("after_blob"):
+            continue
+        row = rewritten.get(nodeid)
+        if not isinstance(row, dict) or row.get("module_blob") == change.get("after_blob"):
+            continue
+        require(row.get("module_blob") == change.get("before_blob"),
+                "ordinary skip evidence does not succeed an admitted skip: " + str(nodeid))
+        rewritten[nodeid] = row | {"module_blob": change["after_blob"]}
+        changed = True
+    if not changed:
+        return baseline
+    return baseline | {"reviewed_hosted": hosted | {"cases": rewritten}}
 
 
 def prepare_skip_bindings(value, native, *, require_native=True, check_shared_inputs=True):
@@ -4194,7 +4270,8 @@ ORDINARY_BINDING_KEYS = (
 )
 _POLICY_HELPERS = (
     "_invoke_native_successor", "synthetic_native_obligations",
-    "apply_reviewed_skip_blob_successors", "prepare_skip_bindings",
+    "apply_ops_reviewed_skip_blobs", "apply_reviewed_skip_blob_successors",
+    "prepare_skip_bindings",
 )
 
 
@@ -4752,6 +4829,9 @@ def skip_blob_precheck(checkout, revision, *, ci_revision=None):
         "source_revision": revision,
         "pin_is_ancestor": pin_is_ancestor(checkout, revision),
     }
+    record = load_ops_skip_evidence(checkout, revision)
+    if record is not None:
+        value["ops_skip_evidence"] = record
     cache = {}
 
     def sources(module):
