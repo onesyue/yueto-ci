@@ -55,9 +55,6 @@ class MergeCache(unittest.TestCase):
         runner = patch.object(self.audit.subprocess, "run", side_effect=self.http)
         runner.start()
         self.addCleanup(runner.stop)
-        receipts = patch.object(self.audit, "receipt", return_value=None)
-        self.receipt = receipts.start()
-        self.addCleanup(receipts.stop)
 
     def http(self, command, **kwargs):
         self.assertEqual(command[:2], ["gh", "api"])
@@ -87,11 +84,11 @@ class MergeCache(unittest.TestCase):
         return response(body, headers={"ETag": etag})
 
     def audit_rows(self, repo="yueto-ci", registered=None):
-        return self.audit.audit("onesyue", [repo], self.cutoff, registered or {}, self.now)
+        return self.audit.audit("onesyue", [repo], self.cutoff, self.now)
 
     def test_disk_hit_after_reload_revalidates_evidence_and_reuses_compare(self):
         cold = self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
-        self.assertEqual(len(self.requests), 4)
+        self.assertEqual(len(self.requests), 3)
         self.requests.clear()
         self.conditional = True
         reloaded = load_audit()
@@ -103,12 +100,12 @@ class MergeCache(unittest.TestCase):
     def test_full_rerun_counts_and_unchanged_verdict(self):
         self.fixture["reviews"] = []
         cold = self.audit_rows()
-        self.assertEqual(len(self.requests), 6)  # anchor + PR list + four evidence requests
+        self.assertEqual(len(self.requests), 4)  # PR list plus three native evidence requests
         self.requests.clear()
         self.conditional = True
         self.assertEqual(self.audit_rows(), cold)
-        self.assertEqual(len(self.requests), 5)  # discovery and mutable evidence, all conditional
-        self.assertEqual(self.not_modified, 5)
+        self.assertEqual(len(self.requests), 4)  # discovery and mutable evidence, all conditional
+        self.assertEqual(self.not_modified, 4)
 
     def test_cache_key_separates_owner_repo_pr_merge_and_inputs(self):
         self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
@@ -120,7 +117,7 @@ class MergeCache(unittest.TestCase):
             with self.subTest(owner=owner, repo=repo, pr=pr):
                 self.requests.clear()
                 self.audit.merged_findings(owner, repo, pr)
-                self.assertEqual(len(self.requests), 3 if repo == "yueops" else 4)
+                self.assertEqual(len(self.requests), 3)
 
     def test_missing_merge_sha_and_corrupt_cache_never_pass_as_a_hit(self):
         for sha in (None, "", "invalid"):
@@ -128,15 +125,15 @@ class MergeCache(unittest.TestCase):
                 self.audit.merged_findings("onesyue", "yueto-ci", self.pr | {"merge_commit_sha": sha})
         self.assertEqual(self.requests, [])
         self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
-        path, = Path(self.tmp.name).glob("v*/compare/*.json")
+        path, = list(Path(self.tmp.name).glob("v*/http/*.json"))[:1]
         for content in ("{", "{}", '{"findings": [], "evidence_only": true}'):
             path.write_text(content)
             self.requests.clear()
             self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
-            self.assertEqual(len(self.requests), 4)
+            self.assertEqual(len(self.requests), 3)
 
     def test_incomplete_fetch_and_failed_cache_write_never_create_a_result(self):
-        with patch.object(self.audit, "evidence_only", side_effect=ValueError("unavailable")):
+        with patch.object(self.audit, "all_rows", side_effect=ValueError("unavailable")):
             with self.assertRaises(ValueError):
                 self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
         self.assertEqual(list(Path(self.tmp.name).glob("v*/compare/*.json")), [])
@@ -158,7 +155,7 @@ class MergeCache(unittest.TestCase):
             pr = self.pr | {"number": number}
             with self.subTest(change=change):
                 cold = self.audit.merged_findings("onesyue", "yueops", pr)
-                self.assertEqual(cold, (expected, False))
+                self.assertEqual(cold, expected)
                 self.requests.clear()
                 self.conditional = True
                 self.assertEqual(self.audit.merged_findings("onesyue", "yueops", pr), cold)
@@ -174,35 +171,10 @@ class MergeCache(unittest.TestCase):
         self.fixture["checks"][0]["conclusion"] = "failure"
         rows = self.audit_rows()
         self.assertIn("check_nonpassing_at_merge:policy", rows[0]["findings"])
-        self.assertEqual(len(self.requests), 6)
-        cached, = Path(self.tmp.name).glob("v2/compare/*.json")
+        self.assertEqual(len(self.requests), 4)
+        cached, = list(Path(self.tmp.name).glob("v3/http/*.json"))[:1]
         self.assertNotIn("findings", json.loads(cached.read_text()))
 
-    def test_local_receipts_exceptions_and_activation_are_rechecked(self):
-        self.fixture["reviews"] = []
-        self.assertEqual(self.audit_rows()[0]["findings"], ["no_approving_review_at_merge"])
-        registered = {("yueto-ci", 203): {"reason": "historical", "approver": "owner"}}
-        self.assertEqual(self.audit_rows(registered=registered)[0]["exception"], registered[("yueto-ci", 203)])
-        self.anchor["merged_at"] = "2026-11-01T00:00:00Z"
-        row, = self.audit_rows(registered=registered)
-        self.assertIsNone(row["exception"])
-        self.assertIn("required_merge_receipt_missing", row["findings"])
-        self.receipt.return_value = {"backfilled": True}
-        row, = self.audit_rows()
-        self.assertEqual(row["findings"], [])
-        self.assertEqual(row["satisfied_by_receipt"], ["no_approving_review_at_merge"])
-        self.receipt.side_effect = ValueError("uncommitted receipt")
-        with self.assertRaises(ValueError):
-            self.audit_rows()
-
-    def test_evidence_only_waiver_still_preserves_red_checks_on_hit(self):
-        self.files = [{"filename": "merge-receipts/yueops/203.json", "status": "added"}]
-        self.fixture["reviews"] = []
-        self.fixture["checks"][0]["conclusion"] = "failure"
-        cold = self.audit_rows()
-        self.assertTrue(cold[0]["evidence_only"])
-        self.assertEqual(cold[0]["findings"], ["check_nonpassing_at_merge:policy"])
-        self.assertEqual(self.audit_rows(), cold)
 
     def test_updated_cutoff_stops_full_page_but_old_recently_updated_merge_does_not(self):
         old = self.pr | {"merged_at": "2026-10-01T00:00:00Z", "updated_at": "2026-10-01T00:00:00Z"}
@@ -214,13 +186,6 @@ class MergeCache(unittest.TestCase):
         self.assertEqual(sum("/pulls?" in r for r in self.requests), 2)
         self.assertTrue(all("sort=updated&direction=desc" in r for r in self.requests if "/pulls?" in r))
 
-    def test_activation_extends_cutoff_and_equal_boundary_continues(self):
-        self.anchor["merged_at"] = "2026-10-01T00:00:00Z"
-        old = self.pr | {"merged_at": "2026-10-01T00:00:00Z", "updated_at": "2026-10-01T00:00:00Z"}
-        self.pulls = {1: [old | {"merged_at": None}] * 100, 2: [old]}
-        self.fixture["reviews"] = []
-        self.assertEqual(len(self.audit_rows()), 1)
-        self.assertEqual(sum("/pulls?" in r for r in self.requests), 2)
 
     def test_open_pr_always_refetches_evidence_and_detects_new_failure(self):
         self.files = [{"filename": "merge-receipts/yueops/203.json", "status": "added"}]
@@ -229,7 +194,7 @@ class MergeCache(unittest.TestCase):
         self.fixture["checks"][0]["conclusion"] = "failure"
         row = self.audit.premerge("onesyue", "yueto-ci", 203)
         self.assertIn("check_nonpassing_at_merge:policy", row["findings"])
-        self.assertEqual(len(self.requests), 6)
+        self.assertEqual(len(self.requests), 5)
 
     def test_warm_audit_detects_changed_checks_reviews_and_statuses(self):
         original = copy.deepcopy(self.fixture)
@@ -248,7 +213,7 @@ class MergeCache(unittest.TestCase):
                 rows = self.audit_rows()
                 self.assertEqual(len(rows), 1)
                 self.assertIn(reason, rows[0]["findings"])
-                self.assertEqual(len(self.requests), 5)
+                self.assertEqual(len(self.requests), 4)
                 self.assertFalse(any("/compare/" in endpoint for endpoint in self.requests))
 
     def test_warm_remote_failure_never_falls_back_to_green(self):
@@ -264,7 +229,6 @@ class MergeCache(unittest.TestCase):
                 with self.subTest(status=status, output_format=output_format), patch.object(
                         self.audit.subprocess, "run", side_effect=unavailable), patch(
                         "sys.argv", ["audit", "--repos", "yueto-ci", "--hours", "240", "--format", output_format]), patch.object(
-                        self.audit, "exceptions", return_value={}), patch.object(
                         self.audit, "datetime", wraps=self.audit.datetime) as clock, contextlib.redirect_stdout(io.StringIO()) as output:
                     clock.now.return_value = self.now
                     self.assertEqual(self.audit.main(), 2)
@@ -339,8 +303,7 @@ class MergeCache(unittest.TestCase):
                 with self.subTest(status=status, output_format=output_format), patch.object(
                         self.audit.subprocess, "run", return_value=response(
                             self.anchor, status=status, headers={"x-ratelimit-remaining": "299"})) as run, patch.object(
-                        self.audit.time, "sleep") as sleep, patch("sys.argv", ["audit", "--format", output_format]), patch.object(
-                        self.audit, "exceptions", return_value={}), contextlib.redirect_stdout(io.StringIO()) as output:
+                        self.audit.time, "sleep") as sleep, patch("sys.argv", ["audit", "--format", output_format]), contextlib.redirect_stdout(io.StringIO()) as output:
                     self.assertEqual(self.audit.main(), 2)
                     self.assertEqual(run.call_count, 1)
                     sleep.assert_not_called()

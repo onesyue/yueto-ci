@@ -1,7 +1,0 @@
-# repo=yt pr=114 head=c8e8134ca4e80bdf815a561e44a1bc6d368ac786 base=28c7e9b2e91d2574617d56a2f82d8e1f1d3e1330
-# command: git diff --check 28c7e9b2e91d2574617d56a2f82d8e1f1d3e1330 HEAD && /workspace/yo-venv/bin/python -m pytest -q scripts/i18n/test-gen-node-names.py
-# started: 2026-11-05T03:36:53Z runner=box
-........................................................................ [ 61%]
-..............................................                           [100%]
-118 passed in 0.20s
-# finished: 2026-11-05T03:36:54Z exit=0

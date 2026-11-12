@@ -1,9 +1,0 @@
-{
-  "schema": 1,
-  "repo": "yueboard",
-  "pr": 139,
-  "head": "08bf94184af24ebcc9f4af036cd7027fbf397cdb",
-  "backfilled": true,
-  "review": {"tool": "codex", "verdict": "approve", "reviewed_head": "08bf94184af24ebcc9f4af036cd7027fbf397cdb", "artifact": "reviews/merge-receipts-20261105/yueboard-139.md", "reviewer": "codex", "reviewed_at": "2026-11-04T17:16:01Z"},
-  "parity": {"result": "pass", "head": "08bf94184af24ebcc9f4af036cd7027fbf397cdb", "command": "go vet ./... && go test ./... ; YUEBOARD_CONTRACT_BASELINE=ee961bca go test -count=1 ./internal/platform/goldenfile/", "log_sha256": "f32282ead00312e209ddace7f7d6c63701b98f959f9dd1c003e26aaebf26e2c4", "ran_at": "2026-11-04T17:00:30Z", "runner": "mac-5f08d00f"}
-}

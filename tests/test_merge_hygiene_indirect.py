@@ -30,7 +30,7 @@ class IndirectMergeSource(unittest.TestCase):
         self.direct_checks = fixture["checks"]
         self.old_checks = [fixture["checks"][0] | {"conclusion": "failure"}]
         self.reviews, self.statuses = fixture["reviews"], fixture["statuses"]
-        self.proof = {"backfilled": False, "review": {"artifact": "reviews/merge-receipts-test/direct.md"}}
+        self.direct_reviews = [r | {"commit_id": "e" * 40} for r in self.reviews]
         self.second_compare = {"status": "ahead", "base_commit": {"sha": "a" * 40},
                                "merge_base_commit": {"sha": "a" * 40},
                                "ahead_by": 1, "behind_by": 0, "total_commits": 1}
@@ -55,7 +55,7 @@ class IndirectMergeSource(unittest.TestCase):
                 return [self.old] * 100
             return self.associated
         if "/reviews?" in endpoint:
-            return self.reviews
+            return self.direct_reviews if "/pulls/252/" in endpoint else self.reviews
         if "/check-runs?" in endpoint:
             return {"check_runs": self.old_checks if f'/commits/{"a" * 40}/' in endpoint else self.direct_checks}
         if "/statuses?" in endpoint:
@@ -68,28 +68,20 @@ class IndirectMergeSource(unittest.TestCase):
             return {"files": [{"filename": "scripts/source.py", "status": "modified"}], "total_commits": 1}
         raise AssertionError(endpoint)
 
-    def receipt(self, _repo, pr):
-        return self.proof if pr["number"] == 252 else None
 
-    def run_audit(self, api=None, receipt=None):
-        with patch.object(AUDIT, "api", side_effect=api or self.api), patch.object(
-                AUDIT, "receipt", side_effect=receipt or self.receipt), patch.object(
-                AUDIT, "enforcement_cutoff", return_value=AUDIT.timestamp("2026-11-01T00:00:00Z")):
-            return AUDIT.audit("onesyue", ["yueto-ci"], AUDIT.timestamp("2026-11-02T00:00:00Z"), {},
+    def run_audit(self, api=None):
+        with patch.object(AUDIT, "api", side_effect=api or self.api):
+            return AUDIT.audit("onesyue", ["yueto-ci"], AUDIT.timestamp("2026-11-02T00:00:00Z"),
                                AUDIT.timestamp("2026-11-03T00:00:00Z"))
 
-    def test_actual_delayed_ancestor_closure_retains_old_red_and_missing_receipt(self):
-        old, direct = self.run_audit()
+    def test_actual_delayed_ancestor_closure_retains_old_red(self):
+        old, = self.run_audit()
         self.assertEqual(old["findings"], [])
         binding = old["indirect_merge"]
         self.assertIn("check_nonpassing_at_merge:policy", binding["historical_findings"])
-        self.assertIn("required_merge_receipt_missing", binding["historical_findings"])
-        self.assertIsNone(old["receipt"])
         self.assertEqual(binding["direct_pr"], 252)
         self.assertEqual(binding["direct_merged_at"], "2026-11-02T10:00:00Z")
         self.assertEqual(binding["indirect_merged_at"], "2026-11-02T10:00:02Z")
-        self.assertEqual(direct["findings"], [])
-        self.assertNotIn("indirect_merge", direct)
 
     def test_direct_red_pending_unknown_and_later_green_cannot_be_borrowed(self):
         check = self.direct_checks[0]
@@ -103,15 +95,13 @@ class IndirectMergeSource(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.run_audit()
 
-    def test_missing_and_invalid_direct_receipt_block(self):
-        self.proof = None
-        with self.assertRaises(ValueError):
-            self.run_audit()
-        def invalid(_repo, pr):
-            if pr["number"] == 252:
-                raise ValueError("uncommitted or wrong-head receipt")
-        with self.assertRaises(ValueError):
-            self.run_audit(receipt=invalid)
+
+    def test_direct_missing_or_stale_native_approval_cannot_certify_ancestor(self):
+        for reviews in ([], [r | {"commit_id": "a" * 40} for r in self.direct_reviews]):
+            with self.subTest(reviews=reviews):
+                self.direct_reviews = reviews
+                with self.assertRaisesRegex(ValueError, "native review/check"):
+                    self.run_audit()
 
     def test_actual_direct_red_is_not_reclassified(self):
         self.merged = [self.direct, copy.deepcopy(self.direct) | {"number": 253}]
@@ -149,11 +139,8 @@ class IndirectMergeSource(unittest.TestCase):
     def main_result(self, accepted=None):
         output = io.StringIO()
         with patch.object(AUDIT, "api", side_effect=self.api), patch.object(
-                AUDIT, "receipt", side_effect=self.receipt), patch.object(
-                AUDIT, "enforcement_cutoff", return_value=AUDIT.timestamp("2026-11-01T00:00:00Z")), patch.object(
-                AUDIT, "baseline", return_value=(AUDIT.timestamp("2026-11-03T00:00:00Z"), accepted or {})), patch.object(
-                AUDIT, "exceptions", return_value={}), patch(
-                "sys.argv", ["audit", "--repos", "yueto-ci", "--baseline", "baseline.json", "--format", "json"]), contextlib.redirect_stdout(output):
+                AUDIT, "baseline", return_value=(AUDIT.timestamp("2026-11-03T00:00:00Z"), accepted or {})), patch(
+                "sys.argv", ["audit", "--repos", "yueto-ci", "--hours", "10000", "--baseline", "baseline.json", "--format", "json"]), contextlib.redirect_stdout(output):
             code = AUDIT.main()
         return code, json.loads(output.getvalue())
 
@@ -168,7 +155,6 @@ class IndirectMergeSource(unittest.TestCase):
                 self.assertEqual(result["unregistered"], 1)
                 old = next(row for row in result["findings"] if row["pr"] == 248)
                 self.assertIn("check_nonpassing_at_merge:policy", old["findings"])
-                self.assertIn("required_merge_receipt_missing", old["findings"])
                 self.assertNotIn("indirect_merge", old)
 
     def test_unsupported_topology_preserves_exact_accepted_history_and_old_findings(self):
@@ -189,7 +175,6 @@ class IndirectMergeSource(unittest.TestCase):
                 self.assertEqual(retained["findings"], findings)
                 self.assertTrue(retained["accepted_history"])
                 self.assertNotIn("indirect_merge", retained)
-                self.assertIsNone(retained["receipt"])
                 self.assertEqual(self.main_result()[0], 1)
 
     def test_malformed_or_duplicate_parent_evidence_remains_incomplete(self):
@@ -236,24 +221,12 @@ class IndirectMergeSource(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.run_audit()
 
-    def test_evidence_only_direct_does_not_certify_source_ancestor(self):
-        original = AUDIT.merged_row
-        def row(*args):
-            result = original(*args)
-            if result["pr"] == 252:
-                result["evidence_only"] = True
-            return result
-        with patch.object(AUDIT, "merged_row", side_effect=row):
-            with self.assertRaises(ValueError):
-                self.run_audit()
-
 
     def test_text_output_distinguishes_indirect_from_old_head_success(self):
         rows = self.run_audit()
         output = io.StringIO()
         with patch.object(AUDIT, "audit", return_value=rows), patch.object(
-                AUDIT, "baseline", return_value=(AUDIT.timestamp("2026-11-01T00:00:00Z"), {})), patch.object(
-                AUDIT, "exceptions", return_value={}), patch("sys.argv", ["audit", "--repos", "yueto-ci"]), contextlib.redirect_stdout(output):
+                AUDIT, "baseline", return_value=(AUDIT.timestamp("2026-11-01T00:00:00Z"), {})), patch("sys.argv", ["audit", "--repos", "yueto-ci"]), contextlib.redirect_stdout(output):
             self.assertEqual(AUDIT.main(), 0)
         self.assertIn("INDIRECT ", output.getvalue())
         self.assertIn("historical old-head findings (not passed):", output.getvalue())
@@ -266,7 +239,6 @@ class IndirectMergeSource(unittest.TestCase):
                 return candidate
             return self.api(endpoint)
         with patch.object(AUDIT, "api", side_effect=live), patch.object(
-                AUDIT, "receipt", return_value=None), patch.object(
                 AUDIT, "indirect_merge", side_effect=AssertionError("premerge cannot borrow a source")):
             row = AUDIT.premerge("onesyue", "yueto-ci", 248)
         self.assertIn("check_nonpassing_at_merge:policy", row["findings"])
