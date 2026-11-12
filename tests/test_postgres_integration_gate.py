@@ -206,12 +206,12 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
                 if result.returncode:
                     raise RuntimeError(result.stdout + result.stderr)
                 phases.extend(step_phases)
-            expected = {'postgres': ['domain'], 'migration': ['domain', 'remaining']}.get(role, [])
+            expected = {'postgres': ['domain'], 'migration': ['remaining']}.get(role, [])
             if phases != expected:
                 raise RuntimeError(f'{role}: expected local phases {expected}, executed {phases}')
         return phases
 
-    def test_each_planned_role_executes_with_its_own_domain_receipt(self):
+    def test_each_planned_role_executes_its_own_phase(self):
         for path in GATE.ORDER:
             self.package(path)
         self.command_gate()
@@ -224,16 +224,32 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
             with self.subTest(role=role):
                 self.run_workflow_role(workflow, role)
 
-    def test_postgres_only_domain_condition_leaves_migration_without_receipt(self):
+    def test_repeating_domain_on_the_migration_role_is_rejected(self):
         for path in GATE.ORDER:
             self.package(path)
-        workflow = (ROOT / '.github/workflows/build.yml').read_text().replace(
+        self.command_gate()
+        original = (ROOT / '.github/workflows/build.yml').read_text()
+        workflow = original.replace(
+            "- name: Validate YueBoard PostgreSQL integration\n"
+            "        if: matrix.validation == 'yueboard' && matrix.board_role == 'postgres'",
             "- name: Validate YueBoard PostgreSQL integration\n"
             "        if: matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')",
-            "- name: Validate YueBoard PostgreSQL integration\n"
-            "        if: matrix.validation == 'yueboard' && matrix.board_role == 'postgres'", 1)
-        with self.assertRaisesRegex(RuntimeError, 'No such file or directory.*yueboard-pg-123-1.json'):
+            1)
+        self.assertNotEqual(workflow, original)
+        with self.assertRaisesRegex(RuntimeError, r"migration: expected local phases \['remaining'\], executed \['domain', 'remaining'\]"):
             self.run_workflow_role(workflow, 'migration')
+
+    def test_remaining_without_domain_receipt_does_not_claim_domain_packages(self):
+        for path in GATE.ORDER:
+            self.package(path)
+        self.command_gate()
+        receipt = self.root / 'receipt.json'
+        remaining = self.command('remaining', receipt)
+        self.assertEqual(remaining.returncode, 0, remaining.stdout + remaining.stderr)
+        data = json.loads(receipt.read_text())
+        self.assertNotIn('domain', data)
+        executed = sum((data[group]['packages'] for group in ('commands', 'modules', 'migrations')), [])
+        self.assertEqual(executed, [path for path in GATE.ORDER if path not in GATE.DOMAIN])
 
     def test_moving_domain_into_reset_step_loses_postgres_and_reset_isolation(self):
         workflow = (ROOT / '.github/workflows/build.yml').read_text()

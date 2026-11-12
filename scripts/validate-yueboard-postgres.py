@@ -207,16 +207,29 @@ def main() -> None:
         with args.receipt.open('x') as file:
             json.dump({'manifest_sha256': manifest, 'domain': result}, file)
     else:
-        receipt = json.loads(args.receipt.read_text())
-        if receipt.get('manifest_sha256') != manifest or receipt.get('domain', {}).get('packages') != DOMAIN:
-            fail('missing or changed successful domain proof before module/migration tests')
+        # A receipt left by --phase domain still has to match this source.
+        # The migration role does not re-run that phase: its fresh service
+        # starts at module and migration coverage. A missing receipt is that
+        # path, and this process must not claim the domain packages.
+        prior = None
+        if args.receipt.exists():
+            prior = json.loads(args.receipt.read_text())
+            if prior.get('manifest_sha256') != manifest or prior.get('domain', {}).get('packages') != DOMAIN:
+                fail('missing or changed successful domain proof before module/migration tests')
+        receipt = {'manifest_sha256': manifest}
+        if prior is not None:
+            receipt['domain'] = prior['domain']
         receipt['commands'] = run_commands(entries)
         receipt['modules'] = run_group(MODULES, entries)
         # Full db/nativeproto suites, including compatibility, production-scale
         # and runtime-role cases. They destroy public and must run last.
         receipt['migrations'] = run_group(MIGRATIONS, entries)
-        executed = [path for group in ('domain', 'commands', 'modules', 'migrations') for path in receipt[group]['packages']]
-        if set(executed) != {row['path'] for row in entries} or len(executed) != len(entries):
+        groups = ('domain', 'commands', 'modules', 'migrations') if prior is not None else ('commands', 'modules', 'migrations')
+        executed = [path for group in groups for path in receipt[group]['packages']]
+        expected = {row['path'] for row in entries}
+        if prior is None:
+            expected -= set(DOMAIN)
+        if not expected or set(executed) != expected or len(executed) != len(expected):
             fail('discovered and executed integration packages differ')
         args.receipt.write_text(json.dumps(receipt, indent=2) + '\n')
         print(f'PostgreSQL integration complete: {len(executed)} packages, no skipped tests', flush=True)

@@ -1935,6 +1935,7 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow.index("- name: Validate YueBoard clean PostgreSQL lifecycle")
         ]
         self.assertIn("matrix.board_role == 'postgres'", postgres)
+        self.assertNotIn("matrix.board_role == 'migration'", postgres)
         self.assertNotIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET", postgres)
     def assert_release_jobs_are_bounded(self, workflow: str) -> None:
         """Every release job carries an explicit timeout and a UTC clock.

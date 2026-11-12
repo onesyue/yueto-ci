@@ -1050,7 +1050,7 @@ jobs:
           exit 1
 
       - name: Validate YueBoard PostgreSQL integration
-        if: matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'postgres'
         env:
           YUEBOARD_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
           YUEBOARD_TRAFFIC_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
@@ -1074,6 +1074,8 @@ jobs:
           set -euo pipefail
           # Fixtures must establish their own cluster roles on the fresh service.
           # Migration-first execution can conceal a broken fixture bootstrap.
+          # The migration role does not repeat this phase. It runs module and
+          # migration coverage on its own fresh service.
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \
             --phase domain --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"
 
