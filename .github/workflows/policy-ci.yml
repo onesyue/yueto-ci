@@ -115,6 +115,8 @@ jobs:
           python-version: '3.13'
 
       - name: Validate replay inputs and host tools
+        env:
+          REPLAY_APP_CLIENT_ID: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
         run: |
           set -euo pipefail
           export CI_CHECK_OUTPUT="$RUNNER_TEMP/ci-check-replay"
@@ -123,11 +125,16 @@ jobs:
           for value in "$SOURCE_REF" "$BOARD_REF" "$CI_CHECK_MIGRATION_BASE"; do
             [[ "$value" =~ ^[0-9a-f]{40}$ ]] || { echo 'exact source/Board/base SHAs required' >&2; exit 2; }
           done
+          [ -n "$REPLAY_APP_CLIENT_ID" ] || {
+            echo 'hosted local replay requires configured GitHub App credentials; no PAT fallback' >&2
+            exit 2
+          }
           for tool in gh git jq python3 docker gpgv; do command -v "$tool"; done
           docker info > "$CI_CHECK_OUTPUT/docker-info.txt"
           df -Pk > "$CI_CHECK_OUTPUT/disk-before.txt"
 
       - name: Mint clone-only source token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
         id: source_token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
