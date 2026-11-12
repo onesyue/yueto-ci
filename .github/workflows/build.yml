@@ -581,7 +581,7 @@ jobs:
   validate:
     needs: [plan]
     container:
-      image: ghcr.io/onesyue/yueops-ci-toolchain@sha256:133c8bcf6ab2ff5055dfdc06296243837ce4866d7a31bfa99d2089e4c7723f15
+      image: ghcr.io/onesyue/yueops-ci-toolchain@sha256:85441f1e198c26b8c57a15405ebee721f2546e174cbda982af8be7453a866001
       options: --user runner --volume /var/run/docker.sock:/var/run/docker.sock
     # A job container defaults to sh, which rejects `set -o pipefail`.
     defaults:
