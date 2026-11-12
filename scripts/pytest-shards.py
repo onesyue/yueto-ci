@@ -4551,6 +4551,7 @@ def join(value, evidence, validation_result, expected_sha, source=None):
     legacy = ["reference", *assignment_ids, "native"]
     split = [*(f"reference-{assignment}" for assignment in assignment_ids),
              *assignment_ids, "native"]
+    require(evidence.is_dir() and not evidence.is_symlink(), "missing evidence directory")
     names = sorted(p.name for p in evidence.iterdir())
     legacy_names = sorted(prefix + role for role in legacy)
     split_names = sorted(prefix + role for role in split)
