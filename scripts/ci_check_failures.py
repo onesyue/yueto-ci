@@ -25,6 +25,23 @@ def node_ids(text: str) -> list[str]:
     return found
 
 
+def failure_ids(text: str, repo: str) -> list[str]:
+    """Summarize known diagnostics; the workflow conclusion remains authoritative."""
+    result = node_ids(text)
+    if repo in {"yueboard", "yue-node"}:
+        for line in text.splitlines():
+            payload = line.split("Z ", 1)[-1].strip()
+            match = re.search(r"--- FAIL: (\S+)", payload)
+            diagnostic = ""
+            if match:
+                diagnostic = "go-test:" + match[1]
+            elif re.search(r"\bFAIL\s+\S+", payload) or re.search(r"\.go:\d+:\d+:", payload):
+                diagnostic = payload
+            if diagnostic and diagnostic not in result:
+                result.append(diagnostic)
+    return result
+
+
 def main() -> int:
     items = node_ids(sys.stdin.read())
     for item in items:

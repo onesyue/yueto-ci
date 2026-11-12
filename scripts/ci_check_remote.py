@@ -10,7 +10,7 @@ import time
 import uuid
 from pathlib import Path
 
-from ci_check_failures import node_ids
+from ci_check_failures import failure_ids
 
 REPO = "onesyue/yueto-ci"
 
@@ -37,24 +37,35 @@ def select_run(rows: list[dict], before: set[int], title: str, policy: str) -> d
     return matches[0]
 
 
-def dispatch(branch: str, policy: str, source: str, base: str, output: Path, *, board: str) -> int:
-    if re.fullmatch(r"[0-9a-f]{40}", board) is None:
-        raise ValueError("Board context must be an exact commit SHA")
+def dispatch(branch: str, policy: str, source: str, base: str, output: Path, *, board: str = "", repo: str = "yueops") -> int:
+    if repo not in {"yueops", "yueboard", "yue-node"}:
+        raise ValueError("unsupported validation repository")
+    for name, value in (("policy", policy), ("source", source)):
+        if re.fullmatch(r"[0-9a-f]{40}", value) is None:
+            raise ValueError(f"{name} must be an exact commit SHA")
+    if repo == "yueops":
+        for name, value in (("Board context", board), ("migration base", base)):
+            if re.fullmatch(r"[0-9a-f]{40}", value) is None:
+                raise ValueError(f"{name} must be an exact commit SHA")
+    elif board or base:
+        raise ValueError("Board/base context applies only to yueops")
     remote = gh("api", f"repos/{REPO}/commits/{branch}", "--jq", ".sha").strip()
     if remote != policy:
         raise ValueError("push the exact local policy commit before dispatching")
     before = {row["databaseId"] for row in runs(branch)}
     request = uuid.uuid4().hex
-    title = f"Build & publish images yueops {source} [nonce:{request}]"
+    title = f"Build & publish images {repo} {source} [nonce:{request}]"
     output.mkdir(parents=True, exist_ok=True)
     receipt = output / "dispatch.json"
-    intent = {"request": request, "policy_revision": policy, "source_revision": source,
+    intent = {"repository": repo, "request": request, "policy_revision": policy, "source_revision": source,
               "migration_base": base, "board_revision": board, "branch": branch, "prior_runs": sorted(before)}
     receipt.write_text(json.dumps(intent, indent=2) + "\n")
-    gh("workflow", "run", "build.yml", "--repo", REPO, "--ref", branch,
-       "-f", "service=yueops", "-f", f"ref={source}", "-f", f"migration_base={base}",
-       "-f", "validation_only=true", "-f", "promote=false", "-f", "runner=ubuntu-24.04",
-       "-f", f"nonce={request}", "-f", f"yueboard_contract_ref={board}")
+    fields = ["-f", f"service={repo}", "-f", f"ref={source}",
+              "-f", "validation_only=true", "-f", "promote=false",
+              "-f", "runner=ubuntu-24.04", "-f", f"nonce={request}"]
+    if repo == "yueops":
+        fields += ["-f", f"migration_base={base}", "-f", f"yueboard_contract_ref={board}"]
+    gh("workflow", "run", "build.yml", "--repo", REPO, "--ref", branch, *fields)
     deadline = time.monotonic() + 180
     row = None
     while time.monotonic() < deadline:
@@ -72,15 +83,17 @@ def dispatch(branch: str, policy: str, source: str, base: str, output: Path, *, 
                    stdout=sys.stderr, check=False)
     final = json.loads(gh("run", "view", run_id, "--repo", REPO,
                          "--json", "status,conclusion,headSha,displayTitle,event"))
+    (output / "result.json").write_text(json.dumps(final, indent=2) + "\n")
     if final["status"] != "completed":
         raise ValueError(f"run {run_id} has not completed; resume using {receipt}")
-    if final["headSha"] != policy or final["displayTitle"] != title:
+    if (final["headSha"] != policy or final["displayTitle"] != title
+            or final["event"] != "workflow_dispatch"):
         raise ValueError("completed run identity changed")
     # Download all jobs: a failed pytest command may have been captured by a
     # later evidence step. Failure-only logs are not a complete test corpus.
     log = gh("run", "view", run_id, "--repo", REPO, "--log")
     (output / "remote.log").write_text(log)
-    failures = node_ids(log)
+    failures = failure_ids(log, repo)
     (output / "failures.txt").write_text("".join(item + "\n" for item in failures))
     for item in failures:
         print(item)
@@ -92,11 +105,14 @@ def dispatch(branch: str, policy: str, source: str, base: str, output: Path, *, 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    for field in ("branch", "policy", "source", "base", "output", "board"):
+    for field in ("branch", "policy", "source", "output"):
         parser.add_argument(f"--{field}", required=True)
+    parser.add_argument("--repo", default="yueops")
+    parser.add_argument("--base", default="")
+    parser.add_argument("--board", default="")
     args = parser.parse_args()
     try:
-        return dispatch(args.branch, args.policy, args.source, args.base, Path(args.output), board=args.board)
+        return dispatch(args.branch, args.policy, args.source, args.base, Path(args.output), board=args.board, repo=args.repo)
     except (ValueError, subprocess.CalledProcessError, OSError) as error:
         print(f"ci-check: {error}", file=sys.stderr)
         return 2

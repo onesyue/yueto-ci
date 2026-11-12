@@ -127,7 +127,7 @@ class CiCheckSurface(unittest.TestCase):
         script = ROOT / "scripts/ci-check.sh"
         syntax = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
         self.assertEqual(syntax.returncode, 0, syntax.stderr)
-        cases = ([], ["yueboard", "abcdef1"], ["yueops", "not-a-sha"], ["yueops"])
+        cases = ([], ["unsupported", "abcdef1"], ["yueops", "not-a-sha"], ["yueops"])
         for args in cases:
             with self.subTest(args=args):
                 result = subprocess.run(
