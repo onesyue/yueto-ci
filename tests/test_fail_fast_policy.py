@@ -31,8 +31,14 @@ class FailFastPolicyTest(unittest.TestCase):
             self.assertRegex(job, r"(?m)^    timeout-minutes: \d+", name)
 
     def test_gating_matrices_fail_fast(self) -> None:
-        for name in ("validate", "build"):
-            self.assertRegex(self.jobs[name], r"(?m)^      fail-fast: true$", name)
+        # Image candidates stay all-or-nothing. Validate shards do not: one
+        # runner's DNS or apt failure must not cancel the others. A test
+        # failure still fails that shard immediately.
+        self.assertRegex(self.jobs["build"], r"(?m)^      fail-fast: true$")
+        self.assertRegex(self.jobs["validate"], r"(?m)^      fail-fast: false$")
+        pytest_step = self.jobs["validate"].split(
+            "      - name: Execute owned Ops pytest selection\n", 1)[1].split("      - name:", 1)[0]
+        self.assertNotIn("continue-on-error", pytest_step)
         # Publication must never be interrupted half-way through a retag.
         self.assertRegex(self.jobs["publish"], r"(?m)^      fail-fast: false$")
 

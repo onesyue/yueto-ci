@@ -486,6 +486,55 @@ class Successors20261110(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
             SHARDS._ordinary_skip_evidence_record(path, digest, {}, {"skip_module_blobs": {module: after}})
 
+    def test_20261111e_signed_closure_evidence_moves_only_the_admitted_skip(self):
+        raw = (ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261111E).read_bytes()
+        self.assertEqual(SHARDS.sha(raw), SHARDS.ORDINARY_SKIP_EVIDENCE_20261111E_SHA256)
+        record = json.loads(raw)
+        self.assertEqual((len(record["updates"]), len(record["additions"])), (1, 0))
+        module = "tests/test_entry_diagnostics_signed_closure_20261008.py"
+        sealed = "1a88653d038cb780b4eefd6a8b28718e801d1b5e"
+        # The reviewed release skip-blob successor admits 1a88653d -> 3b3443dc.
+        before = "3b3443dcf3a8fa9bce9cfa57da51969e2ab7ea1a"
+        after = "c697afa5bdf052b5343695ce33a6494053aaa69d"
+        baseline = json.loads((ROOT / SHARDS.SKIP_BASELINE).read_bytes())
+        for nodeid in record["updates"]:
+            self.assertEqual(baseline["cases"][nodeid]["module_blob"], sealed)
+            self.assertEqual(record["updates"][nodeid]["before_blob"], before)
+            reason = baseline["cases"][nodeid]["reason"]
+        admitted = {n: {"outcome": "skipped", "reason": reason, "module_blob": before}
+                    for n in record["updates"]}
+        path = ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261111E
+        digest = SHARDS.ORDINARY_SKIP_EVIDENCE_20261111E_SHA256
+        got = SHARDS._ordinary_skip_evidence_record(path, digest, admitted, {"skip_module_blobs": {module: after}})
+        self.assertEqual(set(got), set(record["updates"]))
+        self.assertTrue(all(c["module_blob"] == after and c["reason"] == reason for c in got.values()))
+        with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
+            SHARDS._ordinary_skip_evidence_record(path, digest, {}, {"skip_module_blobs": {module: after}})
+
+    def test_20261111f_relay_closure_evidence_moves_admitted_skips_and_adds_new_ids(self):
+        raw = (ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261111F).read_bytes()
+        self.assertEqual(SHARDS.sha(raw), SHARDS.ORDINARY_SKIP_EVIDENCE_20261111F_SHA256)
+        record = json.loads(raw)
+        self.assertEqual((len(record["updates"]), len(record["additions"])), (22, 9))
+        module = "tests/test_relay_coordinator_delivery_closure_20260905.py"
+        before = "89a5553d"
+        after = "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404"
+        self.assertTrue(all(n.startswith(module + "::") for n in (*record["updates"], *record["additions"])))
+        self.assertTrue(all(c["before_blob"].startswith(before) and c["after_blob"] == after
+                            for c in record["updates"].values()))
+        self.assertTrue(all(c["module_blob"] == after and c["reason"].startswith("Skipped: real ")
+                            and "root installer" in c["reason"] for c in record["additions"].values()))
+        admitted = {n: {"outcome": "skipped", "reason": "Skipped: real root installer",
+                        "module_blob": c["before_blob"]} for n, c in record["updates"].items()}
+        path = ROOT / SHARDS.ORDINARY_SKIP_EVIDENCE_20261111F
+        digest = SHARDS.ORDINARY_SKIP_EVIDENCE_20261111F_SHA256
+        got = SHARDS._ordinary_skip_evidence_record(path, digest, admitted, {"skip_module_blobs": {module: after}})
+        self.assertEqual(set(got), set(record["updates"]) | set(record["additions"]))
+        self.assertEqual(SHARDS._ordinary_skip_evidence_record(
+            path, digest, admitted, {"skip_module_blobs": {module: "f" * 40}}), {})
+        with self.assertRaisesRegex(ValueError, "does not succeed an admitted skip"):
+            SHARDS._ordinary_skip_evidence_record(path, digest, {}, {"skip_module_blobs": {module: after}})
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -74,6 +74,8 @@ exit 22
         for error in (
             "certificate identity does not match expected identity",
             "invalid signature", "attestation rejected",
+            "invalid InRelease signature", "Hash Sum mismatch",
+            "Unable to locate package postgresql-18",
             "no matching signatures: verification failed",
             "unknown failure", "HTTP 403 Forbidden: TLS handshake timeout",
             "invalid signature\nHTTP 503 Service Unavailable",
@@ -92,7 +94,9 @@ exit 22
 
     def test_transport_exhaustion_preserves_six_attempts_and_five_sleeps(self):
         for error in ("TLS handshake timeout", "HTTP 503 Service Unavailable",
-                      "rekor unavailable", "connection reset by peer", "MANIFEST_UNKNOWN"):
+                      "rekor unavailable", "connection reset by peer", "MANIFEST_UNKNOWN",
+                      "Temporary failure resolving 'archive.ubuntu.com'",
+                      "name or service not known", "network is unreachable"):
             for command in ("keyless_cosign sign image", "keyless_cosign attest image",
                             "verify_cosign verify image",
                             "verify_cosign verify-attestation --type cyclonedx image",
