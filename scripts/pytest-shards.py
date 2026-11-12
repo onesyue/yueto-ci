@@ -3454,11 +3454,14 @@ def envelope(value):
                 require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
                         and isinstance(value.get("skip_module_blobs"), dict),
                         "skip baseline or shared collection inputs differ")
-                admit_shared_inputs(baseline, value.get("common_inputs"),
-                                    source_revision=value["source_revision"],
-                                    estate_successor_of=value.get("estate_successor_of"),
-                                    template_writer_retired_at=value.get("template_writer_retired_at"),
-                                    pin_is_ancestor=value.get("pin_is_ancestor") is True)
+                if value.get("validation_only") is not True:
+                    require(value.get("validation_only") is None,
+                            "validation_only must be absent or true")
+                    admit_shared_inputs(baseline, value.get("common_inputs"),
+                                        source_revision=value["source_revision"],
+                                        estate_successor_of=value.get("estate_successor_of"),
+                                        template_writer_retired_at=value.get("template_writer_retired_at"),
+                                        pin_is_ancestor=value.get("pin_is_ancestor") is True)
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -3479,8 +3482,9 @@ def serial_modules(source):
     return description["serial_modules"]
 
 
-def expand(targets, source, board, runner, capacity, shards):
+def expand(targets, source, board, runner, capacity, shards, *, validation_only=False):
     """Expand an exact target plan, without pytest collection or import."""
+    require(isinstance(validation_only, bool), "validation_only must be boolean")
     require(type(capacity) is int and capacity > 0, "capacity must be positive")
     require(runner in ("ubuntu-24.04", "yue-local-release"), "unsupported runner")
     matrix = targets["validation_matrix"]
@@ -3503,6 +3507,9 @@ def expand(targets, source, board, runner, capacity, shards):
             roles = ["legacy"]
         else:
             require(source is not None, "Ops source checkout missing")
+            if validation_only:
+                # Owner signature admits any branch. Promotion seals stay on the other path.
+                source_evidence.verify_signed_commit(source, ops["ref"])
             context = value["identity"] | {
                 "board_revision": board, "runner_os": os.environ.get("RUNNER_OS"),
                 "runner_arch": os.environ.get("RUNNER_ARCH"),
@@ -3511,7 +3518,14 @@ def expand(targets, source, board, runner, capacity, shards):
             bound = source_evidence.optional(source, ops["ref"])
             expected = plan(source, context, shards, serial_modules(source))
             require(expected["source_revision"] == ops["ref"], "planned source checkout differs")
-            if bound is not None:
+            if validation_only:
+                files = tree_inputs(source, ops["ref"])
+                value["validation_only"] = True
+                value.update(mode="sharded", ops_plan=expected,
+                             common_inputs=shared_inputs(source, ops["ref"]),
+                             skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
+                             skip_module_blobs={p: files[p][1] for p in expected["modules"]})
+            elif bound is not None:
                 files = tree_inputs(source, ops["ref"])
                 blobs = {p: files[p][1] for p in expected["modules"]}
                 source_evidence.validate_baseline(bound, blobs)
@@ -3572,6 +3586,8 @@ def verify_source_evidence(value, source):
 
 def check_source(value, source, board):
     envelope(value)
+    if value.get("validation_only") is True:
+        source_evidence.verify_signed_commit(source, value["source_revision"])
     verify_source_evidence(value, source)
     require(git(source, "rev-parse", "HEAD").decode().strip() == value["source_revision"]
             and not git(source, "status", "--porcelain", "--untracked-files=no"),
@@ -4226,7 +4242,8 @@ def admit_skips(value, result, native, source=None):
         return source_evidence.admit_skips(value["source_evidence"], value["skip_module_blobs"],
                                            result, native, set(NATIVE_TARGETS),
                                            set(first_native_policy()["cases"]))
-    bound = prepare_skip_bindings(value, native)
+    bound = prepare_skip_bindings(
+        value, native, check_shared_inputs=value.get("validation_only") is not True)
     sealed_baseline = bound["sealed_baseline"]
     retirement = bound["retirement"]
     successors = bound["successors"]
@@ -4459,6 +4476,9 @@ def materialize_split_reference(evidence, prefix, assignments, dest):
 
 def join(value, evidence, validation_result, expected_sha, source=None):
     envelope(value)
+    if value.get("validation_only") is True:
+        require(source is not None, "validation_only join requires the source checkout")
+        source_evidence.verify_signed_commit(source, value["source_revision"])
     verify_source_evidence(value, source)
     require(value["admission_sha256"] == expected_sha, "plan job admission digest differs")
     require(validation_result == "success", "selected validation matrix did not succeed")
@@ -5172,6 +5192,7 @@ def main():
     expand_cli.add_argument("--runner", required=True)
     expand_cli.add_argument("--capacity", type=int, required=True)
     expand_cli.add_argument("--shards", type=int, required=True)
+    expand_cli.add_argument("--validation-only", action="store_true")
     run_cli = sub.add_parser("run")
     run_cli.add_argument("--admission", type=Path, required=True)
     run_cli.add_argument("--source", type=Path, required=True)
@@ -5217,7 +5238,8 @@ def main():
             result = aggregate(read_json(args.plan), args.reference, args.shard)
         elif args.command == "expand":
             result = expand(read_json(args.targets), args.source, args.board,
-                            args.runner, args.capacity, args.shards)
+                            args.runner, args.capacity, args.shards,
+                            validation_only=args.validation_only)
         elif args.command == "export-source-baseline":
             result = export_source_baseline(args.source, args.revision)
         elif args.command == "generate-retired-host-baseline":

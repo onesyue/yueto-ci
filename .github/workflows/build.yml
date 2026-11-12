@@ -1,4 +1,5 @@
 name: Build & publish images
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Build & publish images {0} {1}', github.event.inputs.service, github.event.inputs.ref) || 'Build & publish images' }}
 
 # 统一构建仓（公开仓 = Actions 免费无上限）。
 # 私有代码仓由只读源码凭据 checkout（GitHub App 签发的短期 token；开关未设置时回退
@@ -403,6 +404,7 @@ jobs:
         id: ops_plan
         env:
           OPS_RUNNER: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}
+          VALIDATION_ONLY: ${{ inputs.validation_only && 'true' || 'false' }}
           OPS_BOARD: ${{ steps.plan.outputs.yueboard_contract_ref }}
           # Public yueto-ci can run the whole validation matrix at once.
           # Sixteen ordinary groups plus native, reference and serial stay
@@ -412,11 +414,24 @@ jobs:
           OPS_CAPACITY: ${{ vars.YUEOPS_VALIDATION_PARALLELISM || '20' }}
         run: |
           set -euo pipefail
-          python3 scripts/pytest-shards.py expand \
-            --targets "${RUNNER_TEMP:?}/build-target-plan.json" \
-            --source "$PWD/.ops-shard-source" --board "$OPS_BOARD" \
-            --runner "$OPS_RUNNER" --shards "$OPS_SHARDS" --capacity "$OPS_CAPACITY" \
-            > "$RUNNER_TEMP/ops-admission.json"
+          expand_args=()
+          if [ "${VALIDATION_ONLY:-false}" = true ]; then
+            expand_args+=(--validation-only)
+          fi
+          if [ "${#expand_args[@]}" -eq 0 ]; then
+            python3 scripts/pytest-shards.py expand \
+              --targets "${RUNNER_TEMP:?}/build-target-plan.json" \
+              --source "$PWD/.ops-shard-source" --board "$OPS_BOARD" \
+              --runner "$OPS_RUNNER" --shards "$OPS_SHARDS" --capacity "$OPS_CAPACITY" \
+              > "$RUNNER_TEMP/ops-admission.json"
+          else
+            python3 scripts/pytest-shards.py expand \
+              --targets "${RUNNER_TEMP:?}/build-target-plan.json" \
+              --source "$PWD/.ops-shard-source" --board "$OPS_BOARD" \
+              --runner "$OPS_RUNNER" --shards "$OPS_SHARDS" --capacity "$OPS_CAPACITY" \
+              "${expand_args[@]}" \
+              > "$RUNNER_TEMP/ops-admission.json"
+          fi
           {
             echo "validation_matrix=$(jq -c '.validation_matrix' "$RUNNER_TEMP/ops-admission.json")"
             echo "max_parallel=$(jq -er '.max_parallel' "$RUNNER_TEMP/ops-admission.json")"

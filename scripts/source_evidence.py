@@ -209,6 +209,12 @@ def optional(repo, revision):
     return load(repo, revision)
 
 
+def verify_signed_commit(repo, revision):
+    """Require one owner signature. Branch membership is not an input."""
+    require(isinstance(revision, str) and HEX40.fullmatch(revision), "exact source SHA required")
+    _verify(_object(repo, "commit", revision), ROOT / "policy")
+
+
 def validate_baseline(bound, module_blobs):
     baseline = bound["baseline"]
     require(set(baseline) == {"schema", "status", "inputs_sha256", "context", "cases",
