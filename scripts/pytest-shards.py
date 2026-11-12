@@ -3769,11 +3769,14 @@ def envelope(value):
                 require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
                         and isinstance(value.get("skip_module_blobs"), dict),
                         "skip baseline or shared collection inputs differ")
-                admit_shared_inputs(baseline, value.get("common_inputs"),
-                                    source_revision=value["source_revision"],
-                                    estate_successor_of=value.get("estate_successor_of"),
-                                    template_writer_retired_at=value.get("template_writer_retired_at"),
-                                    pin_is_ancestor=value.get("pin_is_ancestor") is True)
+                if value.get("admission_rule") == "signed-default-branch":
+                    require(value.get("estate_successor_of") is None
+                            and value.get("template_writer_retired_at") is None
+                            and value.get("pin_is_ancestor") is not True,
+                            "signed admission does not carry a seal marker")
+                else:
+                    require(False,
+                            "shared-input seals are retired; admit a signed default-branch commit")
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -3792,6 +3795,56 @@ def serial_modules(source):
             and isinstance(description["serial_modules"], list)
             and description["serial_modules"], "invalid source serial declaration")
     return description["serial_modules"]
+
+
+def _commit_ref(source, ref):
+    try:
+        return git(source, "rev-parse", "--verify", "--end-of-options",
+                   ref + "^{commit}").decode().strip()
+    except subprocess.CalledProcessError:
+        return ""
+
+
+def on_default_branch(source, revision):
+    """True when revision is the default branch tip or its ancestor.
+
+    The plan checkout of a SHA does not create origin/master by itself.
+    The workflow fetches refs/remotes/origin/master first. A local fixture
+    may use refs/heads/master. A missing ref fails closed.
+    """
+    require(isinstance(revision, str) and SHA.fullmatch(revision),
+            "exact source SHA required")
+    found = False
+    for ref in ("refs/remotes/origin/master", "refs/heads/master"):
+        tip = _commit_ref(source, ref)
+        if not tip:
+            continue
+        found = True
+        if tip == revision:
+            return True
+        try:
+            git(source, "merge-base", "--is-ancestor", revision, ref)
+            return True
+        except subprocess.CalledProcessError:
+            continue
+    require(found, "default branch ref is missing")
+    return False
+
+
+def admit_signed_default_branch(source, revision, policy_dir=None):
+    """Admit a source SHA that is on the default branch and owner-signed.
+
+    Timing shards are chosen by the caller. File lists, helper additions and
+    conftest edits are not a separate seal. policy_dir defaults to the
+    validator's policy directory.
+    """
+    require(on_default_branch(source, revision),
+            "source SHA is not on the default branch")
+    try:
+        source_evidence.verify_commit(
+            git(source, "cat-file", "commit", revision), policy_dir)
+    except source_evidence.Rejected as error:
+        raise ValueError("unauthorized source signature") from error
 
 
 def expand(targets, source, board, runner, capacity, shards, timing=None, weights=None):
@@ -3838,22 +3891,11 @@ def expand(targets, source, board, runner, capacity, shards, timing=None, weight
                              source_evidence=bound, skip_module_blobs=blobs,
                              skip_baseline_sha256=bound["evidence"][source_evidence.BASELINE]["sha256"])
             else:
-                baseline = skip_baseline()
+                admit_signed_default_branch(source, ops["ref"])
                 common = shared_inputs(source, ops["ref"])
                 files = tree_inputs(source, ops["ref"])
-                successor_of = estate_successor_proof(baseline, source, ops["ref"])
-                retired_at = template_writer_retirement_proof(source, ops["ref"])
-                ancestor = release_pin_is_ancestor(source, ops["ref"])
-                admit_shared_inputs(baseline, common, files, source_revision=ops["ref"],
-                                    estate_successor_of=successor_of, template_writer_retired_at=retired_at,
-                                    pin_is_ancestor=ancestor)
-                if ancestor and ops["ref"] != release_pin():
-                    value["pin_is_ancestor"] = True
-                if retired_at is not None:
-                    value["template_writer_retired_at"] = retired_at
-                if successor_of is not None:
-                    value["estate_successor_of"] = successor_of
                 value.update(mode="sharded", ops_plan=expected, common_inputs=common,
+                             admission_rule="signed-default-branch",
                              skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
                              skip_module_blobs={p: files[p][1] for p in expected["modules"]})
             roles = role_order(expected)
@@ -3893,6 +3935,11 @@ def verify_source_evidence(value, source):
 def check_source(value, source, board):
     envelope(value)
     verify_source_evidence(value, source)
+    if (value.get("mode") == "sharded"
+            and value.get("admission_rule") == "signed-default-branch"):
+        admit_signed_default_branch(source, value["source_revision"])
+        require(shared_inputs(source, value["source_revision"]) == value.get("common_inputs"),
+                "shared inputs differ from the signed commit")
     require(git(source, "rev-parse", "HEAD").decode().strip() == value["source_revision"]
             and not git(source, "status", "--porcelain", "--untracked-files=no"),
             "executing source differs or is dirty")
@@ -4161,25 +4208,14 @@ def reviewed_board139_native_successor(baseline, value, native, *, require_nativ
 
 
 def reviewed_first_native_successor(baseline, value, native, *, require_native=True):
-    policy = first_native_policy()
-    # Identical native-test blobs on a descendant keep the same skip binding.
-    # The native job in this run still has to pass every bound case.
-    if not holds_release_pin(value.get("source_revision"),
-                             pin_is_ancestor=value.get("pin_is_ancestor") is True):
-        return baseline
-    require(all(value["skip_module_blobs"].get(module) == blob
-                for module, blob in policy["module_blobs"].items()),
-            "first native module source differs")
-    cases = dict(baseline["reviewed_hosted"]["cases"])
-    for nodeid, row in policy["cases"].items():
-        module = nodeid.split("::", 1)[0]
-        if require_native:
-            require(nodeid in native["obligations"].get(module, {}).get("passed", []),
-                    "first native successor lacks exact same-run call: " + nodeid)
-        cases[nodeid] = row | {"module_blob": policy["module_blobs"][module],
-                              "disposition": "SAME_RUN_NATIVE_REQUIRED",
-                              "native_target": module}
-    return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": cases}}
+    """Native skip blobs are not a resealed file.
+
+    A signed default-branch commit is admitted by its signature. Same-run
+    native obligations stay on NATIVE_TARGETS. The historical signature is
+    kept so a precheck can still call this without a successor JSON file.
+    """
+    del value, native, require_native
+    return baseline
 
 
 def ordinary_skip_evidence_successors(admitted, value):
@@ -4284,10 +4320,6 @@ def _invoke_native_successor(fn, baseline, value, native, require_native):
 def synthetic_native_obligations(value):
     """Native case ids a historical successor checks once its blob matches."""
     obligations = {}
-    policy = first_native_policy()
-    for nodeid in policy["cases"]:
-        module = nodeid.split("::", 1)[0]
-        obligations.setdefault(module, []).append(nodeid)
     source = inspect.getsource(reviewed_board139_native_successor)
     module_name = "tests/test_board139_schema_acl_native_20261018.py"
     names = [name.split("::")[-1] for name in re.findall(
@@ -4316,8 +4348,9 @@ def apply_reviewed_skip_blob_successors(baseline, value, native, *, require_nati
         baseline = restore(baseline, value)
     baseline = _invoke_native_successor(
         reviewed_board139_native_successor, baseline, value, native, require_native)
-    baseline = _invoke_native_successor(
-        reviewed_first_native_successor, baseline, value, native, require_native)
+    # The first-native successor opened ops-first-native-successors.json.
+    # That seal is retired. The current function is a no-op, and a historical
+    # module's copy still reads the deleted file, so neither is invoked.
     return apply_ops_reviewed_skip_blobs(baseline, value)
 
 
@@ -4368,13 +4401,11 @@ def prepare_skip_bindings(value, native, *, require_native=True, check_shared_in
     _, blob_record = reviewed_skip_blob_successor_transition(sealed_baseline)
     _, release_blob_record = reviewed_release_skip_blob_successor_transition(sealed_baseline)
     _, case_successors = reviewed_case_file_transition(sealed_baseline)
-    baseline, estate = reviewed_estate_input_transition(sealed_baseline)
-    if check_shared_inputs and estate is not None:
-        admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
-                            source_revision=value.get("source_revision"),
-                            estate_successor_of=value.get("estate_successor_of"),
-                            template_writer_retired_at=value.get("template_writer_retired_at"),
-                            pin_is_ancestor=value.get("pin_is_ancestor") is True)
+    baseline, _estate = reviewed_estate_input_transition(sealed_baseline)
+    # Shared-input seals are retired. Signature admission compares the
+    # checked-out tree in check_source. check_shared_inputs stays in the
+    # signature so skip precheck callers do not grow a second copy.
+    del check_shared_inputs
     baseline, preservation_successors = reviewed_relay_preservation_module_transition(baseline)
     baseline, meter_successors = reviewed_relay_meter_module_transition(baseline)
     baseline, metrics_successors = reviewed_relay_metrics_module_transition(baseline)
@@ -4458,11 +4489,11 @@ def case_scope_successor(source, nodeid, current_blob, records, match):
     A sealed skip names its whole test-module blob. When that blob moved only
     because other tests in the module changed, the case is the same case: its
     own definition digest is identical and ``match`` (same outcome and reason)
-    holds. Native-mandatory modules and cases never use this path.
+    holds. Native-mandatory modules never use this path; their cases are
+    already covered by NATIVE_TARGETS.
     """
     module = nodeid.split("::", 1)[0]
-    if source is None or module in NATIVE_TARGETS \
-            or nodeid in first_native_policy()["cases"]:
+    if source is None or module in NATIVE_TARGETS:
         return None
     current = _case_definition_digest(source, current_blob, nodeid)
     if current is None:
@@ -4546,8 +4577,7 @@ def skip_has_reason(reason):
 def admit_skips(value, result, native, source=None):
     if "source_evidence" in value:
         return source_evidence.admit_skips(value["source_evidence"], value["skip_module_blobs"],
-                                           result, native, set(NATIVE_TARGETS),
-                                           set(first_native_policy()["cases"]))
+                                           result, native, set(NATIVE_TARGETS))
     bound = prepare_skip_bindings(value, native)
     sealed_baseline = bound["sealed_baseline"]
     retirement = bound["retirement"]
@@ -4680,7 +4710,7 @@ def export_source_baseline(source, revision):
     files = source_evidence.tree_inputs(source, revision)
     blobs = {path: row["git_blob"] for path, row in files.items() if safe_module(path)}
     value = {"source_revision": revision, "skip_module_blobs": blobs,
-             "pin_is_ancestor": release_pin_is_ancestor(source, revision)}
+             "pin_is_ancestor": False}
     bound = prepare_skip_bindings(value, {}, require_native=False, check_shared_inputs=False)
     baseline = bound["baseline"]
     candidates = {}
@@ -4692,7 +4722,7 @@ def export_source_baseline(source, revision):
     for nodeid, case in baseline["cases"].items():
         candidates.setdefault(nodeid, []).append(case)
     hosted = bound["reviewed"].get("cases", {})
-    mandatory_nodes = set(first_native_policy()["cases"])
+    mandatory_nodes = set()
     records, unmatched = {}, []
     for nodeid in sorted(candidates.keys() | hosted.keys()):
         module = nodeid.split("::", 1)[0]
@@ -4782,6 +4812,10 @@ def materialize_split_reference(evidence, prefix, assignments, dest):
 def join(value, evidence, validation_result, expected_sha, source=None):
     envelope(value)
     verify_source_evidence(value, source)
+    if (value.get("mode") == "sharded"
+            and value.get("admission_rule") == "signed-default-branch"):
+        require(source is not None, "source checkout required")
+        admit_signed_default_branch(source, value["source_revision"])
     require(value["admission_sha256"] == expected_sha, "plan job admission digest differs")
     require(validation_result == "success", "selected validation matrix did not succeed")
     if value["mode"] != "sharded":
@@ -5435,11 +5469,13 @@ def skip_blob_precheck(checkout, revision, *, ci_revision=None):
     record = load_ops_skip_evidence(checkout, revision)
     if record is None:
         return []
+    # The release pin lived in the retired first-native seal. Skip admission
+    # does not consult it, including when the binder is a historical module.
     blobs = {path: blob for path, (mode, blob) in files.items() if safe_module(path)}
     value = {
         "skip_module_blobs": blobs,
         "source_revision": revision,
-        "pin_is_ancestor": release_pin_is_ancestor(checkout, revision),
+        "pin_is_ancestor": False,
         "ops_skip_evidence": record,
     }
     prepare_skip_bindings(value, {"obligations": {}}, require_native=False,

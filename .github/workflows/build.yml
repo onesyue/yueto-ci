@@ -394,10 +394,22 @@ jobs:
           ref: ${{ steps.plan.outputs.ops_source }}
           token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           path: .ops-shard-source
-          # Full history only so the planner can prove a later Ops revision
-          # descends from the sealed estate successor. Never uploaded.
+          # Full history of this SHA, plus the default branch fetched below,
+          # so admission can prove the commit is on master. Never uploaded.
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Fetch the default branch for admission
+        if: steps.plan.outputs.ops_source != '' && github.event.inputs.runner != 'yue-local-release'
+        env:
+          GIT_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+        run: |
+          set -euo pipefail
+          auth=$(printf 'x-access-token:%s' "$GIT_TOKEN" | base64 -w0)
+          git -C .ops-shard-source \
+            -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${auth}" \
+            fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
+          git -C .ops-shard-source rev-parse --verify refs/remotes/origin/master >/dev/null
 
       - name: Read previous ordinary shard weights
         if: steps.plan.outputs.ops_source != '' && github.event.inputs.runner != 'yue-local-release'
@@ -408,6 +420,7 @@ jobs:
           python3 scripts/pytest-shards.py previous-ordinary-weights \
             --output "${RUNNER_TEMP:?}/previous-ordinary-weights.json" \
             --timing-output "${RUNNER_TEMP:?}/previous-ops-timing"
+
       - name: Plan complete Ops jobs before collection
         id: ops_plan
         env:
@@ -1807,6 +1820,18 @@ jobs:
           # Case-scoped skip admission reads earlier blobs of a test module.
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Fetch the default branch for evidence admission
+        if: needs.plan.outputs.ops_mode == 'sharded'
+        env:
+          GIT_TOKEN: ${{ vars.YUETO_CI_APP_CLIENT_ID != '' && steps.evidence_source_token.outputs.token || secrets.YUETO_CI_PAT }}
+        run: |
+          set -euo pipefail
+          auth=$(printf 'x-access-token:%s' "$GIT_TOKEN" | base64 -w0)
+          git -C .admission-source \
+            -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${auth}" \
+            fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
+          git -C .admission-source rev-parse --verify refs/remotes/origin/master >/dev/null
       - name: Download original admission plan
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:

@@ -21,6 +21,31 @@ SPEC.loader.exec_module(SHARDS)
 
 
 class ShardPrimitives(unittest.TestCase):
+    _signer_cache = None
+
+    def _signer(self):
+        cached = type(self)._signer_cache
+        if cached is not None:
+            return cached
+        gpg = shutil.which("gpg")
+        if gpg is None:
+            raise AssertionError("gpg is required to prove signature admission")
+        home = Path(tempfile.mkdtemp(prefix="shard-signer-"))
+        home.chmod(0o700)
+        env = dict(os.environ, GNUPGHOME=str(home))
+        subprocess.run(
+            [gpg, "--batch", "--pinentry-mode", "loopback", "--passphrase", "",
+             "--quick-generate-key", "Fixture <fixture@example.invalid>",
+             "ed25519", "sign", "0"],
+            env=env, check=True, capture_output=True)
+        listing = subprocess.check_output([gpg, "--with-colons", "--list-keys"], env=env)
+        fingerprint = next(
+            line.split(b":")[9].decode() for line in listing.splitlines()
+            if line.startswith(b"fpr:"))
+        key = subprocess.check_output([gpg, "--export", fingerprint], env=env)
+        cached = {"gpg": gpg, "home": str(home), "fingerprint": fingerprint, "key": key}
+        type(self)._signer_cache = cached
+        return cached
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="pytest shards ")
         self.addCleanup(self.temporary.cleanup)
@@ -69,11 +94,6 @@ class ShardPrimitives(unittest.TestCase):
         for name in ("lens_report.py", "lens-report-source.json", "pytest-timing.py",
                      "pytest-shards.py", "admission_diagnostics.py", "source_evidence.py"):
             shutil.copyfile(ROOT / "scripts" / name, self.policy / "scripts" / name)
-        shutil.copyfile(ROOT / "ops-first-native-successors.json",
-                        self.policy / "ops-first-native-successors.json")
-        helper_policy = Path("reviews/ops-native-protocol-helper-20261106/helper-policy.json")
-        (self.policy / helper_policy).parent.mkdir(parents=True)
-        shutil.copyfile(ROOT / helper_policy, self.policy / helper_policy)
         self.env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", TZ="UTC",
                         PYTEST_ADDOPTS="", PYTHONPATH=str(self.site),
                         GITHUB_REPOSITORY="onesyue/yueto-ci", GITHUB_RUN_ID="42",
@@ -81,8 +101,22 @@ class ShardPrimitives(unittest.TestCase):
                         ImageVersion="fixture-image")
         for key in ("LENS_REPORT", "LENS_REPORT_OWNER", "LENS_INVOCATION_ID", "PYTEST_PLUGINS"):
             self.env.pop(key, None)
+        if getattr(self, "sign_commits", False):
+            signer = self._signer()
+            self.env["GNUPGHOME"] = signer["home"]
+            policy_dir = self.policy / "policy"
+            policy_dir.mkdir()
+            (policy_dir / "yueops-owner.gpg").write_bytes(signer["key"])
+            (policy_dir / "yueops-owner-signers.json").write_text(json.dumps({
+                "schema": 1, "signer": signer["fingerprint"],
+                "primary": signer["fingerprint"],
+                "keyring_sha256": hashlib.sha256(signer["key"]).hexdigest(),
+            }))
         for repo in (self.source, self.policy):
-            self.git(repo, "init", "-q")
+            if repo == self.source and getattr(self, "sign_commits", False):
+                self.git(repo, "init", "-q", "-b", "master")
+            else:
+                self.git(repo, "init", "-q")
             self.git(repo, "add", ".")
             self.commit(repo)
         self.env["GITHUB_SHA"] = self.git(self.policy, "rev-parse", "HEAD").stdout.strip()
@@ -100,8 +134,15 @@ class ShardPrimitives(unittest.TestCase):
                               capture_output=True, text=True, check=True)
 
     def commit(self, repo):
-        self.git(repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
-                 "-c", "commit.gpgsign=false", "commit", "-qm", "source fixture")
+        config = ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                  "-c", "commit.gpgsign=false"]
+        sign = []
+        if getattr(self, "sign_commits", False) and repo == self.source:
+            signer = self._signer()
+            config += ["-c", "user.signingkey=" + signer["fingerprint"],
+                       "-c", "gpg.program=" + signer["gpg"]]
+            sign = ["-S"]
+        self.git(repo, *config, "commit", *sign, "-qm", "source fixture")
 
     def run_session(self, assignment=None, collect_only=False, **extra):
         """Materialize a real producer envelope around the actual pytest command."""

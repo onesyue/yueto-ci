@@ -1,8 +1,0 @@
-{
-  "source_revision": "f2b41aa5029e5130302276edfc8ac76c9fe22abd",
-  "status": "PASS_STATIC_SHARED_INPUT_QUALIFICATION_ONLY",
-  "full_execution_gate": "NOT_RUN; same-run native obligations remain required",
-  "only_refresh_plans_script_removed": true,
-  "lockfile_unchanged": true,
-  "no_dependency_or_pin_change": true
-}
