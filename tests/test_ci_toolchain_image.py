@@ -52,11 +52,13 @@ class CiToolchainImageTest(unittest.TestCase):
             "dict_snowball.so",
             "sing-box-1.14",
             "go1.27.4",
-            "UV_PYTHON_INSTALL_DIR=/opt/uv-python",
-            "uv python install 3.13",
-            "uv python find 3.13",
+            "Python-3.13.12.tgz",
+            "12e7cb170ad2d1a69aee96a1cc7fc8de5b1e97a2bdac51683a3db016ec9a2996",
+            "pidfd_open",
             "ln -sfn /usr/local/bin/python3 /usr/bin/python3",
             "openssh-client",
+            "rsync",
+            "docker-hostpath.sh",
             "USER runner",
         ):
             with self.subTest(needle=needle):
@@ -65,6 +67,8 @@ class CiToolchainImageTest(unittest.TestCase):
         self.assertIn('test -f "$(pg_config --includedir)/pg_config.h"', selfcheck)
         self.assertIn("test -x /usr/bin/python3", selfcheck)
         self.assertIn("ssh-keygen", selfcheck)
+        self.assertIn("pidfd_open", selfcheck)
+        self.assertIn("rsync", selfcheck)
         rebuild = (ROOT / ".github" / "workflows" / "ci-toolchain.yml").read_text(
             encoding="utf-8"
         )
@@ -75,6 +79,38 @@ class CiToolchainImageTest(unittest.TestCase):
         )
         self.assertIn("provenance: false", rebuild)
         self.assertIn("yueops-ci-toolchain-selfcheck", rebuild)
+
+    def test_docker_wrapper_rewrites_host_work_path(self) -> None:
+        wrapper = IMAGE / "docker-hostpath.sh"
+        fake = ROOT / ".docker-fake-not-used"
+        # The wrapper execs DOCKER_REAL. A shell stub records its arguments.
+        import os
+        import subprocess
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            stub = Path(directory) / "docker"
+            stub.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n", encoding="utf-8")
+            stub.chmod(0o755)
+            completed = subprocess.run(
+                ["bash", str(wrapper), "run", "-v",
+                 "/__w/yueto-ci/yueto-ci/scripts/yueops-harden.sh:/review/yueops-harden.sh:ro",
+                 "--mount", "type=bind,source=/__w/yueto-ci/yueto-ci,target=/src"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "DOCKER_REAL": str(stub)},
+            )
+        lines = completed.stdout.splitlines()
+        self.assertEqual(
+            lines[2],
+            "/home/runner/work/yueto-ci/yueto-ci/scripts/yueops-harden.sh:/review/yueops-harden.sh:ro",
+        )
+        self.assertEqual(
+            lines[4],
+            "type=bind,source=/home/runner/work/yueto-ci/yueto-ci,target=/src",
+        )
+        self.assertFalse(fake.exists())
 
 
 if __name__ == "__main__":
