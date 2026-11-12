@@ -16,6 +16,7 @@ import inspect
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import sysconfig
@@ -3217,6 +3218,19 @@ def shard_pythonpath(source, site):
     return os.pathsep.join(str(path.resolve()) for path in (site, source))
 
 
+LOG_LINE_LIMIT = 400
+
+
+def print_reference_listing(part_id, listing, returncode):
+    """Echo a bounded summary; the whole listing is kept as part evidence."""
+    lines = listing.read_text(errors="replace").splitlines()
+    shown = lines[-40:] if returncode not in (0, 5) else lines[-1:]
+    for line in shown:
+        clipped = line if len(line) <= LOG_LINE_LIMIT else (
+            line[:LOG_LINE_LIMIT] + f"... [{len(line)} chars, full text in evidence]")
+        print(f"[{part_id}] {clipped}", flush=True)
+
+
 def _collect_reference_part(expected, source, output, site, actual_runner, timing, assignment):
     part = output / "parts" / assignment["id"]
     site = part / "site"
@@ -3236,10 +3250,18 @@ def _collect_reference_part(expected, source, output, site, actual_runner, timin
     xml = part / "pytest.xml"
     argv = [sys.executable, "-m", "pytest", "--collect-only", "-q",
             *assignment["modules"], "-o", f"cache_dir={cache}", "--junitxml", str(xml)]
+    # The full node-id listing stays in the part's evidence, not the job log:
+    # the hosted runner masks secrets per log line in super-linear time, and a
+    # single ~1 MiB parametrized id held this step for 25+ minutes after every
+    # pytest process had already exited in under a minute.
+    listing = part / "pytest-collect-stdout.txt"
     (part / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
-    result = subprocess.run(argv, cwd=source, env=env, check=False)
+    with listing.open("wb") as sink:
+        result = subprocess.run(argv, cwd=source, env=env, check=False,
+                                stdout=sink, stderr=subprocess.STDOUT)
     (part / "pytest-finish-unix-ns.txt").write_text(str(time.time_ns()))
     (part / "pytest-exit-code.txt").write_text(str(result.returncode))
+    print_reference_listing(assignment["id"], listing, result.returncode)
     require(result.returncode in (0, 5), "reference part failed")
     rows = [json.loads(line) for line in (part / "events.jsonl").read_text().splitlines()]
     corpus = next(row for row in rows if row.get("event") == "collection_corpus")
@@ -3258,16 +3280,21 @@ def _collect_reference_part(expected, source, output, site, actual_runner, timin
             "runner": runner, "execution_context": execution_context}
 
 
-def collect_reference_parts(expected, source, output, site, actual_runner, timing):
-    """Collect-only once per module assignment, in parallel processes.
+def collect_reference_parts(expected, source, output, site, actual_runner, timing, only_id=None):
+    """Collect-only once per module assignment.
 
     Each part is its own interpreter. That is not xdist: workers there reuse
-    one process and the Ops import path then leaks across files. The serial
-    loop made this job the 40-minute critical path after the test shards
-    had already finished.
+    one process and the Ops import path then leaks across files. The workflow
+    schedules `reference-<assignment>` as its own job. Collecting every
+    assignment in one runner stalled for about half an hour after each pytest
+    had already finished in under a minute. `only_id=None` still collects the
+    whole plan so a test can compare that oracle with the split union.
     """
     assignments = expected["assignments"]
-    limit = min(len(assignments), os.cpu_count() or 2)
+    if only_id is not None:
+        assignments = [item for item in assignments if item["id"] == only_id]
+        require(len(assignments) == 1, "unknown reference part")
+    limit = 1 if only_id is not None else min(len(assignments), os.cpu_count() or 2)
     collected = map_bounded([
         (lambda item=item: _collect_reference_part(
             expected, source, output, site, actual_runner, timing, item))
@@ -3366,6 +3393,13 @@ def workflow_identity():
         require(re.fullmatch(r"[1-9][0-9]*", identity[key] or ""), f"invalid {key}")
     require(os.environ.get("GITHUB_REPOSITORY") == "onesyue/yueto-ci",
             "unexpected workflow repository")
+    handoff = os.environ.get("YUETO_HANDOFF_ATTEMPT", "")
+    if handoff:
+        require(re.fullmatch(r"[1-9][0-9]*", handoff) is not None,
+                "invalid handoff attempt")
+        require(int(handoff) <= int(identity["run_attempt"]),
+                "handoff attempt is newer than this job")
+        identity["run_attempt"] = handoff
     return identity
 
 
@@ -3376,7 +3410,8 @@ def seal(value, key):
 
 def role_order(value):
     assignments = [a["id"] for a in value["assignments"]]
-    return ["native", "reference", *[a for a in assignments if a == "serial"],
+    parts = [f"reference-{assignment}" for assignment in assignments]
+    return ["native", *parts, *[a for a in assignments if a == "serial"],
             *[a for a in assignments if a != "serial"]]
 
 
@@ -3513,8 +3548,11 @@ def expand(targets, source, board, runner, capacity, shards):
             # for an all-target dispatch. Other validators keep their order.
             priority = {"native": 0, "reference": 1, "serial": 2}
             value["validation_matrix"].sort(
-                key=lambda row: priority.get(row.get("ops_role"),
-                                             4 if row.get("ops_role") else 3))
+                key=lambda row: priority.get(
+                    row.get("ops_role"),
+                    1 if isinstance(row.get("ops_role"), str)
+                    and row["ops_role"].startswith("reference-")
+                    else 4 if row.get("ops_role") else 3))
     value["max_parallel"] = min(capacity, len(value["validation_matrix"]))
     if runner == "yue-local-release":
         value["max_parallel"] = 1
@@ -3552,7 +3590,9 @@ def execute(value, source, board, role, output, site):
     require(value["mode"] == "sharded", "selection is hosted-only")
     expected = validate_plan(value["ops_plan"])
     assignments = {a["id"]: a for a in expected["assignments"]}
-    require(role == "reference" or role in assignments, "unknown execution role")
+    part_id = role[len("reference-"):] if role.startswith("reference-") else None
+    require(role == "reference" or role in assignments or part_id in assignments,
+            "unknown execution role")
     current = plan(source, expected["context"],
                    sum(a["id"].startswith("ordinary-") for a in expected["assignments"]),
                    serial_modules(source))
@@ -3563,8 +3603,9 @@ def execute(value, source, board, role, output, site):
     require(not os.environ.get("PYTEST_PLUGINS"), "unexpected pytest plugin override")
     timing = load_timing()
     timing.install(output, site)
-    if role == "reference":
-        return collect_reference_parts(expected, source, output, site, actual_runner, timing)
+    if role == "reference" or part_id is not None:
+        return collect_reference_parts(
+            expected, source, output, site, actual_runner, timing, only_id=part_id)
     modules = assignments[role]["modules"]
     selection = {
         "schema": 1, "plan_sha256": expected["plan_sha256"],
@@ -4127,6 +4168,7 @@ def prepare_skip_bindings(value, native, *, require_native=True, check_shared_in
     release_blob_successors = skip_blob_successors(release_blob_record, admitted, hosted)
     admitted.update(release_blob_successors)
     i10_blob_successors = skip_blob_successors(i10_blob_record, admitted, hosted)
+    admitted.update(i10_blob_successors)
     ordinary_skips = ordinary_skip_evidence_successors(admitted, value)
     baseline = apply_reviewed_skip_blob_successors(
         baseline, value, native, require_native=require_native)
@@ -4148,7 +4190,132 @@ def prepare_skip_bindings(value, native, *, require_native=True, check_shared_in
     }
 
 
-def admit_skips(value, result, native):
+def _case_definition_digest(source, blob, nodeid):
+    """Position-free digest of one test's own definition, or None.
+
+    The digest covers the test function (decorators and body), every
+    enclosing class with its decorators, and the module's ``pytestmark``.
+    Editing another test in the same module leaves it unchanged.
+    """
+    if source is None or not (isinstance(blob, str) and SHA.fullmatch(blob)):
+        return None
+    try:
+        tree = ast.parse(git(source, "cat-file", "blob", blob))
+    except (subprocess.CalledProcessError, SyntaxError, ValueError):
+        return None
+    parts = nodeid.split("::")[1:]
+    if not parts:
+        return None
+    parts[-1] = parts[-1].split("[", 1)[0]
+    chain = [ast.dump(node, include_attributes=False) for node in tree.body
+             if isinstance(node, (ast.Assign, ast.AnnAssign))
+             and any(isinstance(t, ast.Name) and t.id == "pytestmark"
+                     for t in (node.targets if isinstance(node, ast.Assign) else [node.target]))]
+    body, node = tree.body, None
+    for index, name in enumerate(parts):
+        kinds = ((ast.FunctionDef, ast.AsyncFunctionDef) if index == len(parts) - 1
+                 else (ast.ClassDef,))
+        found = [n for n in body if isinstance(n, kinds) and n.name == name]
+        if len(found) != 1:
+            return None
+        node = found[0]
+        if isinstance(node, ast.ClassDef):
+            chain.append("class " + node.name + "".join(
+                ast.dump(part, include_attributes=False)
+                for part in (*node.decorator_list, *node.bases, *node.keywords)))
+            body = node.body
+    chain.append(ast.dump(node, include_attributes=False))
+    return sha("\n".join(chain).encode())
+
+
+def case_scope_successor(source, nodeid, current_blob, records, match):
+    """Return the admitted record this skip still is, derived from source.
+
+    A sealed skip names its whole test-module blob. When that blob moved only
+    because other tests in the module changed, the case is the same case: its
+    own definition digest is identical and ``match`` (same outcome and reason)
+    holds. Native-mandatory modules and cases never use this path.
+    """
+    module = nodeid.split("::", 1)[0]
+    if source is None or module in NATIVE_TARGETS \
+            or nodeid in first_native_policy()["cases"]:
+        return None
+    current = _case_definition_digest(source, current_blob, nodeid)
+    if current is None:
+        return None
+    for record in records:
+        if (isinstance(record, dict) and record.get("module_blob") != current_blob
+                and match(record)
+                and _case_definition_digest(source, record.get("module_blob"), nodeid) == current):
+            return record
+    return None
+
+
+CASE_SCOPE_DEPTH = 32
+_BINDING_KEYS = ("successors", "relay_successors", "metrics_successors", "meter_successors",
+                 "preservation_successors", "case_successors", "blob_successors",
+                 "release_blob_successors", "i10_blob_successors", "ordinary_skips")
+
+
+def derive_prior_skips(value, source, pending):
+    """Node ids whose skip was admitted at an earlier blob of their own module.
+
+    Walks up to CASE_SCOPE_DEPTH earlier versions of each pending module in
+    the candidate's own history, binds the central skip policy as it applied
+    to that version, and keeps a case only when that admitted skip has the
+    same outcome and reason and the case's own definition is unchanged.
+    Nothing is written; no seal is added.
+    """
+    if source is None or not pending:
+        return set()
+    revision = value.get("source_revision")
+    current = value.get("skip_module_blobs", {})
+    remaining = {}
+    for nodeid, observed in pending:
+        remaining.setdefault(nodeid, observed)
+    history = {}
+    for module in {nodeid.split("::", 1)[0] for nodeid in remaining}:
+        blobs = []
+        try:
+            commits = git(source, "log", "--format=%H", "-n", str(CASE_SCOPE_DEPTH * 2),
+                          revision, "--", module).decode().split()
+        except (subprocess.CalledProcessError, EvidenceUnavailable):
+            continue
+        for commit in commits:
+            try:
+                blob = git(source, "rev-parse", f"{commit}^:{module}").decode().strip()
+            except subprocess.CalledProcessError:
+                continue
+            if blob != current.get(module) and blob not in blobs:
+                blobs.append(blob)
+        history[module] = blobs[:CASE_SCOPE_DEPTH]
+    accepted = set()
+    for depth in range(max(map(len, history.values()), default=0)):
+        trial = dict(value, skip_module_blobs=dict(current))
+        for module, blobs in history.items():
+            if depth < len(blobs):
+                trial["skip_module_blobs"][module] = blobs[depth]
+        try:
+            bound = prepare_skip_bindings(trial, {"obligations": {}}, require_native=False,
+                                          check_shared_inputs=False)
+        except (ValueError, EvidenceUnavailable):
+            continue
+        for nodeid, observed in list(remaining.items()):
+            records = [bound["baseline"]["cases"].get(nodeid),
+                       bound["sealed_baseline"]["cases"].get(nodeid),
+                       *(bound[key].get(nodeid) for key in _BINDING_KEYS)]
+            if case_scope_successor(
+                    source, nodeid, observed["module_blob"], records,
+                    lambda r, o=observed: (r.get("outcome"), r.get("reason"))
+                    == (o["outcome"], o["reason"])) is not None:
+                accepted.add(nodeid)
+                del remaining[nodeid]
+        if not remaining:
+            break
+    return accepted
+
+
+def admit_skips(value, result, native, source=None):
     if "source_evidence" in value:
         return source_evidence.admit_skips(value["source_evidence"], value["skip_module_blobs"],
                                            result, native, set(NATIVE_TARGETS),
@@ -4169,6 +4336,8 @@ def admit_skips(value, result, native):
     baseline = bound["baseline"]
     reviewed = bound["reviewed"]
     unknown = []
+    case_scoped = []
+    pending = []
     observed_collection = {}
     counts = {"HISTORICAL_UNEXECUTED": 0, "OWNER_CANCELED": 0,
               "SAME_RUN_NATIVE_REQUIRED": 0}
@@ -4195,17 +4364,32 @@ def admit_skips(value, result, native):
                     "outcome": row["outcome"], "reason": row.get("reason"),
                     "module_blob": value["skip_module_blobs"].get(module),
                 }
-                if observed not in (baseline["cases"].get(nodeid), successors.get(nodeid),
-                                    relay_successors.get(nodeid), metrics_successors.get(nodeid),
-                                    meter_successors.get(nodeid), preservation_successors.get(nodeid),
-                                    case_successors.get(nodeid), blob_successors.get(nodeid),
-                                    release_blob_successors.get(nodeid),
-                                    i10_blob_successors.get(nodeid),
-                                    ordinary_skips.get(nodeid)):
-                    unknown.append(nodeid)
-                    continue
+                records = (baseline["cases"].get(nodeid), successors.get(nodeid),
+                           relay_successors.get(nodeid), metrics_successors.get(nodeid),
+                           meter_successors.get(nodeid), preservation_successors.get(nodeid),
+                           case_successors.get(nodeid), blob_successors.get(nodeid),
+                           release_blob_successors.get(nodeid),
+                           i10_blob_successors.get(nodeid),
+                           ordinary_skips.get(nodeid), sealed_baseline["cases"].get(nodeid))
+                if observed not in records[:-1]:
+                    if case_scope_successor(
+                            source, nodeid, observed["module_blob"], records,
+                            lambda r: (r.get("outcome"), r.get("reason"))
+                            == (observed["outcome"], observed["reason"])) is None:
+                        pending.append((nodeid, observed))
+                        continue
+                    case_scoped.append(nodeid)
                 disposition = "HISTORICAL_UNEXECUTED"
             else:
+                current_blob = value["skip_module_blobs"].get(module)
+                variant = {"when": row.get("when"), "reason": row.get("reason")}
+                if (specific.get("module_blob") != current_blob
+                        and specific.get("outcome") == row["outcome"]
+                        and variant in specific.get("variants", [])
+                        and case_scope_successor(source, nodeid, current_blob, [specific],
+                                                 lambda r: True) is not None):
+                    specific = dict(specific, module_blob=current_blob)
+                    case_scoped.append(nodeid)
                 require(reviewed.get("schema") == 1
                         and session["execution_context"] == reviewed.get("context")
                         and all(value["ops_plan"]["context"].get(k) == v
@@ -4230,11 +4414,22 @@ def admit_skips(value, result, native):
                 observed_collection[module] = reason
     require(observed_collection == result["reference"]["collection_skips"],
             "reference and shards have different collection skips")
+    prior = derive_prior_skips(value, source, pending)
+    for nodeid, _ in pending:
+        if nodeid in prior:
+            case_scoped.append(nodeid)
+            counts["HISTORICAL_UNEXECUTED"] += 1
+        else:
+            unknown.append(nodeid)
+    unknown = list(dict.fromkeys(unknown))
     require(not unknown, "new or changed case skip/xfail: " + ", ".join(unknown))
-    return {"status": "NO_NEW_SKIPS", "baseline_sha256": value["skip_baseline_sha256"],
-            "baseline_source_revision": baseline["source_revision"],
-            "skips_are_passes": False, "disposition_counts": counts,
-            "host_native_acceptance": "INDEPENDENT"}
+    verdict = {"status": "NO_NEW_SKIPS", "baseline_sha256": value["skip_baseline_sha256"],
+               "baseline_source_revision": baseline["source_revision"],
+               "skips_are_passes": False, "disposition_counts": counts,
+               "host_native_acceptance": "INDEPENDENT"}
+    if case_scoped:
+        verdict["case_scope_successors"] = sorted(set(case_scoped))
+    return verdict
 
 
 def export_source_baseline(source, revision):
@@ -4304,6 +4499,43 @@ def export_source_baseline(source, revision):
             "admission": False}
 
 
+def materialize_split_reference(evidence, prefix, assignments, dest):
+    """Union per-assignment reference parts into the single tree aggregate reads."""
+    dest.mkdir()
+    (dest / "parts").mkdir()
+    payloads = []
+    for assignment in assignments:
+        src = evidence / (prefix + "reference-" + assignment["id"])
+        payload = read_json(src / "joined.json")
+        require(payload.get("parts") == [assignment["id"]],
+                "reference part does not match its assignment")
+        shutil.copytree(src / "parts" / assignment["id"], dest / "parts" / assignment["id"])
+        payloads.append(payload)
+    require(len({item["invocation_id"] for item in payloads}) == len(payloads),
+            "reused reference invocation")
+    require(all(item.get("execution_context") == payloads[0]["execution_context"]
+                for item in payloads),
+            "reference part execution context differs")
+    joined = join_reference_collections([
+        {"assignment_id": item["parts"][0], "nodeids": item["nodeids"],
+         "collection_skips": item["collection_skips"]}
+        for item in payloads
+    ])
+    first = payloads[0]
+    body = {
+        "schema": 1, "assignment_id": "reference",
+        "invocation_id": first["invocation_id"],
+        "nodeids": joined["nodeids"],
+        "collection_skips": joined["collection_skips"],
+        "runner_context": first["runner_context"],
+        "execution_context": first["execution_context"],
+        "junit_sha256": sha(json.dumps(joined, sort_keys=True).encode()),
+        "parts": [item["parts"][0] for item in payloads],
+    }
+    (dest / "joined.json").write_text(json.dumps(body) + "\n")
+    return dest
+
+
 def join(value, evidence, validation_result, expected_sha, source=None):
     envelope(value)
     verify_source_evidence(value, source)
@@ -4315,24 +4547,35 @@ def join(value, evidence, validation_result, expected_sha, source=None):
                 "sharded_corpus_evaluated": False}
     expected = validate_plan(value["ops_plan"])
     prefix = f"ops-shard-{value['identity']['run_id']}-{value['identity']['run_attempt']}-"
-    roles = ["reference", *[a["id"] for a in expected["assignments"]], "native"]
+    assignment_ids = [a["id"] for a in expected["assignments"]]
+    legacy = ["reference", *assignment_ids, "native"]
+    split = [*(f"reference-{assignment}" for assignment in assignment_ids),
+             *assignment_ids, "native"]
     require(evidence.is_dir() and not evidence.is_symlink(), "missing evidence directory")
-    require(sorted(p.name for p in evidence.iterdir()) == sorted(prefix + r for r in roles),
-            "missing or unexpected evidence roles")
+    names = sorted(p.name for p in evidence.iterdir())
+    legacy_names = sorted(prefix + role for role in legacy)
+    split_names = sorted(prefix + role for role in split)
+    require(names in (legacy_names, split_names), "missing or unexpected evidence roles")
     native_directory = evidence / (prefix + "native")
     native = read_json(native_directory / "native.json")
     expected_native = (native_execution_context(value, native_directory)
                        | {"status": "success"} | native_receipts(value, native_directory))
     seal(expected_native, "native_sha256")
     require(native == expected_native, "native/source gate receipt differs")
-    result = aggregate(expected, evidence / (prefix + "reference"),
-                       [evidence / (prefix + a["id"]) for a in expected["assignments"]])
+    shard_dirs = [evidence / (prefix + assignment) for assignment in assignment_ids]
+    if names == legacy_names:
+        result = aggregate(expected, evidence / (prefix + "reference"), shard_dirs)
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            reference = materialize_split_reference(
+                evidence, prefix, expected["assignments"], Path(tmp) / "reference")
+            result = aggregate(expected, reference, shard_dirs)
     runners = {r["assignment_id"]: r["runner_context"]
                for r in [result["reference"], *result["shards"]]}
     runners["native"] = native["runner_context"]
     return {"schema": 1, "status": "VALIDATION_MATRIX_COMPLETE", "mode": "sharded",
             "admission_sha256": value["admission_sha256"], "ordinary": result,
-            "skip_admission": admit_skips(value, result, native),
+            "skip_admission": admit_skips(value, result, native, source),
             "runner_observations": runner_summary(expected["context"], runners),
             "native_and_source_gates": native, "host_linux_skip_policy": "ROOT_GATE_UNCHANGED"}
 
@@ -4799,7 +5042,7 @@ def _source_of(sources, module):
     return None
 
 
-def skip_blob_mismatch_lines(bound, live_blobs, sources):
+def skip_blob_mismatch_lines(bound, live_blobs, sources, derivable=None):
     """Lines for catalog skips whose live module blob join would reject.
 
     Reviewed cases and collection skips are exact: the evidence join compares
@@ -4810,6 +5053,8 @@ def skip_blob_mismatch_lines(bound, live_blobs, sources):
     grouped = {}
 
     def add(module, old, new, nodeid):
+        if derivable is not None and "::collection" not in nodeid and derivable(nodeid, old, new):
+            return
         row = grouped.setdefault(module, {"olds": set(), "new": new, "ids": set()})
         if isinstance(old, str) and old:
             row["olds"].add(old)
@@ -4865,13 +5110,19 @@ def skip_blob_mismatch_lines(bound, live_blobs, sources):
     return lines
 
 
-def skip_blob_report(value, sources, *, policy=None):
+def skip_blob_report(value, sources, *, policy=None, checkout=None):
     """Bind skips with join's successor order, then list blob mismatches."""
     prepare = prepare_skip_bindings if policy is None else policy.prepare_skip_bindings
     bound = prepare(
         value, {"obligations": {}}, require_native=False, check_shared_inputs=False)
     blobs = value.get("skip_module_blobs") if isinstance(value, dict) else {}
-    return skip_blob_mismatch_lines(bound, blobs if isinstance(blobs, dict) else {}, sources)
+    derivable = None
+    if checkout is not None:
+        def derivable(nodeid, old, new):
+            return case_scope_successor(checkout, nodeid, new, [{"module_blob": old}],
+                                        lambda r: True) is not None
+    return skip_blob_mismatch_lines(bound, blobs if isinstance(blobs, dict) else {}, sources,
+                                    derivable)
 
 
 def load_policy_module(ci_revision, checkout=None):
@@ -4950,7 +5201,7 @@ def skip_blob_precheck(checkout, revision, *, ci_revision=None):
             cache[module] = _read_ops_module(checkout, revision, module)
         return cache[module]
 
-    return skip_blob_report(value, sources, policy=policy)
+    return skip_blob_report(value, sources, policy=policy, checkout=checkout)
 
 
 def skip_blob_precheck_command(args):
