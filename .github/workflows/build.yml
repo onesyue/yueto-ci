@@ -393,43 +393,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  yueops-pg18-toolchain:
-    needs: plan
-    # One install for the whole run. Shards unpack this archive and never apt.
-    # DNS and transport failures retry inside the installer (3 attempts, 2s
-    # then 4s). A package miss, a bad signature, or a partial index is fatal
-    # on the first attempt. No yueops shard skips this job.
-    # This job has no if. Without a yueops row the steps below are skipped
-    # and the job succeeds, so validate is not cancelled by a skipped need.
-    # An install failure still fails the job and leaves validate skipped.
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
-    timeout-minutes: 20
-    steps:
-      - name: Checkout toolchain scripts
-        if: contains(needs.plan.outputs.validation_matrix, '"validation":"yueops"')
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install native YueOps PostgreSQL 18 test toolchain
-        if: contains(needs.plan.outputs.validation_matrix, '"validation":"yueops"')
-        run: bash scripts/install-yueops-pg18-toolchain.sh
-      - name: Pack YueOps PostgreSQL 18 toolchain
-        if: contains(needs.plan.outputs.validation_matrix, '"validation":"yueops"')
-        run: bash scripts/install-yueops-pg18-toolchain.sh pack "${RUNNER_TEMP}/pg18-toolchain.tar"
-      - name: Upload YueOps PostgreSQL 18 toolchain
-        if: contains(needs.plan.outputs.validation_matrix, '"validation":"yueops"')
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: yueops-pg18-toolchain-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/pg18-toolchain.tar
-          if-no-files-found: error
-          retention-days: 1
-
   validate:
-    needs: [plan, yueops-pg18-toolchain]
-    # No job-level if. A failed toolchain is a failed need and skips this
-    # matrix instead of starting shards. A matrix with no yueops row still
-    # validates, because that toolchain job succeeds without installing.
+    needs: [plan]
+    container:
+      image: ghcr.io/onesyue/yueops-ci-toolchain@sha256:DIGEST_PLACEHOLDER
+      options: --user runner --volume /var/run/docker.sock:/var/run/docker.sock
+    # The toolchain image already has PostgreSQL 18, compilers, sing-box
+    # 1.14 and Python 3.13. This job does not apt.
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     # The 22k-test serial Ops gate reached 96% at the former 60-minute limit.
     # Keep all tests and allow the remaining suite/frontend stages to finish.
@@ -441,7 +411,7 @@ jobs:
     env:
       TZ: UTC
     strategy:
-      # One shard's runner DNS or apt failure must not cancel its siblings.
+      # One shard's failure must not cancel its siblings.
       # A test failure still fails that shard immediately: the pytest step
       # does not ignore a non-zero status. abort-on-validate-failure cancels
       # overlapping builds only after this matrix is red.
@@ -472,6 +442,14 @@ jobs:
       # 本步跳过、下面沿用旧 YUETO_CI_PAT；设置后改用 GitHub App 按需签发的一小时
       # 只读 token（contents:read，仅限列出的源码仓）。签发失败即整个 job 失败，
       # 不会静默回退到 PAT——回退只由「变量是否设置」这一处显式决定。
+      - name: Use the runner Docker daemon
+        run: |
+          set -euo pipefail
+          if [ -S /var/run/docker.sock ]; then
+            sudo chmod a+rw /var/run/docker.sock
+          fi
+          docker version >/dev/null
+
       - name: Mint read-only source token (GitHub App)
         id: source_token
         if: vars.YUETO_CI_APP_CLIENT_ID != ''
@@ -578,9 +556,9 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release'
         run: |
           set -euo pipefail
-          system_python=/usr/bin/python3
-          [ -x "$system_python" ] || {
-            echo "::error::self-hosted runner is missing $system_python"
+          system_python=$(command -v python3)
+          [ -n "$system_python" ] && [ -x "$system_python" ] || {
+            echo "::error::toolchain image is missing python3"
             exit 1
           }
           "$system_python" - <<'PY'
@@ -653,84 +631,12 @@ jobs:
           path: ~/.local/share/pnpm/store
           key: yue-pnpm-v1-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'web/pnpm-lock.yaml', 'web-admin/pnpm-lock.yaml') }}
 
-      # yue-node intentionally keeps its complete race/profile test contract
-      # in Makefile. The Go race detector also requires CGO plus a native C
-      # compiler. Self-hosted runners may not rely on hand-installed state.
-      - name: Install native yue-node test toolchain
-        if: matrix.validation == 'yue-node'
-        run: |
-          set -euo pipefail
-          if ! command -v make >/dev/null 2>&1 ||
-             ! command -v gcc >/dev/null 2>&1; then
-            command -v apt-get >/dev/null 2>&1 || {
-              echo "::error::native yue-node test toolchain is absent and this runner has no apt-get"
-              exit 1
-            }
-            apt=(apt-get)
-            if [ "$(id -u)" -ne 0 ]; then
-              command -v sudo >/dev/null 2>&1 || {
-                echo "::error::toolchain bootstrap requires root or passwordless sudo"
-                exit 1
-              }
-              apt=(sudo -n apt-get)
-            fi
-            "${apt[@]}" update
-            "${apt[@]}" install -y --no-install-recommends build-essential
-          fi
-          command -v make >/dev/null 2>&1
-          command -v gcc >/dev/null 2>&1
-          make --version
-          gcc --version
-
-      - name: Install native YueBoard test toolchain
-        if: matrix.validation == 'yueboard'
-        run: |
-          set -euo pipefail
-          missing=false
-          for tool in gcc psql; do
-            command -v "$tool" >/dev/null 2>&1 || missing=true
-          done
-          if [ "$missing" = true ]; then
-            command -v apt-get >/dev/null 2>&1 || {
-              echo "::error::YueBoard native test toolchain is absent and this runner has no apt-get"
-              exit 1
-            }
-            apt=(apt-get)
-            if [ "$(id -u)" -ne 0 ]; then
-              command -v sudo >/dev/null 2>&1 || {
-                echo "::error::toolchain bootstrap requires root or passwordless sudo"
-                exit 1
-              }
-              apt=(sudo -n apt-get)
-            fi
-            "${apt[@]}" update
-            "${apt[@]}" install -y --no-install-recommends build-essential postgresql-client
-          fi
-          command -v gcc >/dev/null 2>&1
-          command -v psql >/dev/null 2>&1
-          gcc --version
-          psql --version
-
-      # Shards unpack the one-time archive under RUNNER_TEMP and symlink only
-      # the PostgreSQL prefix. System libraries stay untouched. A missing
-      # archive fails closed and does not fall back to apt.
-      - name: Download YueOps PostgreSQL 18 toolchain
-        if: matrix.validation == 'yueops'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: yueops-pg18-toolchain-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/yueops-pg18-toolchain
-          digest-mismatch: error
-
-      - name: Activate YueOps PostgreSQL 18 toolchain
-        if: matrix.validation == 'yueops'
-        run: bash .ci-policy/scripts/activate-yueops-pg18-toolchain.sh "${RUNNER_TEMP}/yueops-pg18-toolchain/pg18-toolchain.tar"
-
-      - name: Install native YueOps NGINX test toolchain
+      - name: Require the toolchain NGINX and sing-box
         if: matrix.validation == 'yueops'
         run: |
           set -euo pipefail
-          sudo -n env PATH="$PATH" bash .ci-policy/scripts/install-native-nginx.sh
+          nginx -v 2>&1 | grep -F 'nginx/1.30.5'
+          sing-box-1.14 version | grep -E '^sing-box version 1\.14\.'
 
       - name: Preflight validation dependencies
         env:
@@ -741,7 +647,7 @@ jobs:
           case "$VALIDATION_KIND" in
             yue-node) tools+=(base64 docker gcc go gpg jq make) ;;
             yueboard) tools+=(buf corepack docker gcc go make node psql) ;;
-            yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql uv) ;;
+            yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql sing-box-1.14 uv) ;;
             yuelink) ;;
             ui-*) tools+=(corepack node npm) ;;
             *)
@@ -974,14 +880,14 @@ jobs:
       - name: Validate YueBoard PostgreSQL integration
         if: matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')
         env:
-          YUEBOARD_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
-          YUEBOARD_TRAFFIC_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
-          YUEBOARD_EMAILVERIFY_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
-          YUEBOARD_TEMPLATE_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
+          YUEBOARD_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
+          YUEBOARD_TRAFFIC_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
+          YUEBOARD_EMAILVERIFY_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
+          YUEBOARD_TEMPLATE_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
           YUEBOARD_TEST_FIXTURES: ${{ github.workspace }}/test/fixtures
           # The migration suite intentionally destroys public; this database is
           # the disposable PostgreSQL 18 service declared above.
-          YUEBOARD_MIGRATION_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
+          YUEBOARD_MIGRATION_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
           YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE: '1'
           # 整个集成套件共用一个测试账号、跨用例连续下单，会撞满生产默认的
           # 10 次/分钟结账闸门 —— 2026-08-02 实录：那道闸门刚加上，5 个**支付回归**
@@ -1002,8 +908,8 @@ jobs:
       - name: Validate YueBoard clean PostgreSQL lifecycle
         if: matrix.validation == 'yueboard' && matrix.board_role == 'postgres'
         env:
-          YUEBOARD_ADMIN_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/postgres' || 'postgres://postgres:ci@127.0.0.1:5432/postgres' }}
-          CLEAN_PG_DSN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_clean_gate' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_clean_gate' }}
+          YUEBOARD_ADMIN_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/postgres' || 'postgres://postgres:ci@postgres:5432/postgres' }}
+          CLEAN_PG_DSN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_clean_gate' || 'postgres://postgres:ci@postgres:5432/yueboard_clean_gate' }}
         run: |
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 "$YUEBOARD_ADMIN_DATABASE_URL" \
@@ -1019,14 +925,14 @@ jobs:
       - name: Validate YueBoard PostgreSQL module and migration integration
         if: matrix.validation == 'yueboard' && matrix.board_role == 'migration'
         env:
-          YUEBOARD_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
-          YUEBOARD_TRAFFIC_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
-          YUEBOARD_EMAILVERIFY_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
-          YUEBOARD_TEMPLATE_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
+          YUEBOARD_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
+          YUEBOARD_TRAFFIC_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
+          YUEBOARD_EMAILVERIFY_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
+          YUEBOARD_TEMPLATE_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
           YUEBOARD_TEST_FIXTURES: ${{ github.workspace }}/test/fixtures
           # The migration suite intentionally destroys public; this database is
           # the disposable PostgreSQL 18 service declared above.
-          YUEBOARD_MIGRATION_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_test' }}
+          YUEBOARD_MIGRATION_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
           YUEBOARD_MIGRATION_TEST_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE
           YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE: '1'
           # 整个集成套件共用一个测试账号、跨用例连续下单，会撞满生产默认的
@@ -1153,8 +1059,8 @@ jobs:
         id: board_e2e
         if: matrix.validation == 'yueboard' && matrix.board_role == 'e2e' && steps.board_frontend.outputs.layout == 'workspace'
         env:
-          YUEBOARD_ADMIN_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/postgres' || 'postgres://postgres:ci@127.0.0.1:5432/postgres' }}
-          YUEBOARD_E2E_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_e2e?sslmode=disable' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_e2e?sslmode=disable' }}
+          YUEBOARD_ADMIN_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/postgres' || 'postgres://postgres:ci@postgres:5432/postgres' }}
+          YUEBOARD_E2E_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_e2e?sslmode=disable' || 'postgres://postgres:ci@postgres:5432/yueboard_e2e?sslmode=disable' }}
           YUEBOARD_E2E_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE
         run: |
           set -euo pipefail
