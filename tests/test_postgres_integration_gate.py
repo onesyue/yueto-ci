@@ -624,8 +624,8 @@ class PostgresWorkflowWiringTest(unittest.TestCase):
                           for line in block.splitlines() if line.strip().startswith(tuple(key + ': ' for key in GATE.DSNS))}
                 self.assertEqual(set(values), set(GATE.DSNS))
                 self.assertEqual(len(set(values.values())), 1)
-                self.assertIn('127.0.0.1:5432/yueboard_test', next(iter(values.values())))
-                self.assertIn('127.0.0.1:55434/yueboard_test', next(iter(values.values())))
+                self.assertIn('@postgres:5432/yueboard_test', next(iter(values.values())))
+                self.assertNotIn('127.0.0.1', next(iter(values.values())))
                 self.assertIn('"$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py', block)
                 self.assertIn('--phase ' + phase, block)
                 self.assertIn('github.run_id', block)

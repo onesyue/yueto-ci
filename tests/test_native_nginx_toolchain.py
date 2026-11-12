@@ -202,15 +202,21 @@ else: sys.exit(24)
         self.assertEqual(target.read_text(), 'unchanged')
         self.assertFalse(any(row[0]=='apt-get' for row in self.calls()))
 
-    def test_actual_workflow_invokes_immutable_policy_installer(self):
+    def test_validate_uses_image_nginx_instead_of_apt(self):
         workflow = (ROOT/'.github/workflows/build.yml').read_text()
-        start = workflow.index('      - name: Install native YueOps NGINX test toolchain\n')
-        step = workflow[start:workflow.index('\n      - name:',start+1)]
+        start = workflow.index('      - name: Require the toolchain NGINX and sing-box\n')
+        step = workflow[start:workflow.index('\n      - name:', start+1)]
         self.assertIn("if: matrix.validation == 'yueops'", step)
-        self.assertIn('sudo -n env PATH="$PATH" bash .ci-policy/scripts/install-native-nginx.sh', step)
-        self.assertNotIn('libnginx-mod-stream', step)
+        self.assertIn("nginx -v 2>&1 | grep -F 'nginx/1.30.5'", step)
+        self.assertNotIn('install-native-nginx.sh', step)
+        self.assertNotIn('apt-get', step)
+        validate = workflow.split('\n  validate:\n', 1)[1].split('\n  validation-evidence:\n', 1)[0]
+        self.assertNotIn('install-native-nginx.sh', validate)
         self.assertIn('ref: ${{ github.sha }}\n          path: .ci-policy', workflow)
-        self.assertIn('sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py',workflow)
+        self.assertIn('sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py', workflow)
+        kept = 'sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC'
+        self.assertEqual(validate.count(kept), 5)
+        self.assertNotIn('sudo -n env PATH="$PATH" TZ=UTC', validate)
 
     def test_canonical_inputs_have_two_official_exact_version_pins(self):
         manifest = json.loads((ROOT/'scripts/native-nginx-toolchain.json').read_text())

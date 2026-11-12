@@ -308,7 +308,7 @@ All four labels must match. It takes one job; export permitted diagnostics and
 destroy the VM/Docker state. Only an authorized manual dispatch can select it;
 default manual runs and poll-triggered builds use hosted runners. Bootstrap GNU make,
 required Go/C toolchains and gettext-base; Debian13 verifies system Python3.13,
-while hosted jobs use setup-python. Manual runner state is not validation evidence.
+while hosted jobs use the toolchain image Python at /usr/local/bin/python3. Manual runner state is not validation evidence.
 
 ## Actions allowlist closure
 
