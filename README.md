@@ -177,17 +177,33 @@ publication needs a fresh attempt, rather than reusing a prior candidate receipt
 
 ### Ops corpus and timing
 
-[ops-pytest-skip-baseline.json](ops-pytest-skip-baseline.json) and
-[pytest-shards.py](scripts/pytest-shards.py) own exact collection, skip and shared-
-input contracts. Reviewed successor records are append-only: they bind specific
-source parents, before/after blobs and modes, and prior accepted review/freeze
+[pytest-shards.py](scripts/pytest-shards.py) admits a skip or xfail when pytest
+recorded a non-empty reason, and it reports that skip. validation-evidence fails
+when a selected shard did not run, or when a skip has no reason. A reason is not
+a pass: host and root skips are not Linux acceptance, and admission never reuses
+a prior successful job or replaces same-run native, reference, serial and ordinary
+execution.
+
+[ops-pytest-skip-baseline.json](ops-pytest-skip-baseline.json) remains the
+shared-input seal database. Envelope and expand still hash its bytes. Deleting
+the file here would make a missing seal look like an open gate. Skip comparison
+no longer treats that file, or the dated `reviews/ops-ordinary-skip-evidence-*.json`
+chain, as an allow-list. Those dated files are deleted.
+
+Shared-input successor records stay append-only: they bind specific source
+parents, before/after blobs and modes, and prior accepted review/freeze
 identities. Unknown paths/blobs, mixed dependency generations, missing history
 or resealed inconsistent envelopes fail. Hash syntax does not authenticate a
 review; the coordinator verifies its signed source and actual artifacts first.
-Historical skips retain their source/run identity. Admission never reuses prior
-successful jobs or replaces same-run native, reference, serial and ordinary
-execution. Host/root skips are not Linux acceptance.
-Before a yueops release, run `python3 scripts/pytest-shards.py skip-blob-precheck --ops-checkout <yueops-checkout> --ops-rev <40-character sha>` and stop if it exits 1: a skip module whose blob changed without a successor seal is what validation-evidence rejects. A yueops commit may carry `tests/admission/ordinary-skip-evidence.json` (schema 1, with non-empty `updates` or `additions`). That commit is the seal: each admitted skip nodeid in the changed module has `before_blob` equal to its admitted blob and `after_blob` equal to the new module blob. One nodeid does not cover its siblings. A missing path adds no successor. Malformed JSON fails the precheck. The SHA-pinned files under `reviews/` remain the historical chain.
+Historical skips retain their source/run identity.
+
+Before a yueops release, run
+`python3 scripts/pytest-shards.py skip-blob-precheck --ops-checkout <yueops-checkout> --ops-rev <40-character sha>`.
+A moved test-module blob is not a rejection. Exit 2 means the commit is
+unreadable, a requested historical policy commit is missing, or
+`tests/admission/ordinary-skip-evidence.json` is malformed or does not succeed
+an admitted skip. A missing evidence path adds no successor. Malformed JSON
+fails the precheck.
 The owner's 2026-11-03 Nezha retirement removes two active skip IDs. Historical
 seal verification reconstructs their exact predecessor bytes; admission rejects
 skips from the retired module, and historical review artifacts stay unchanged.

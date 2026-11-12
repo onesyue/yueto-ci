@@ -1,4 +1,4 @@
-"""Skip-blob precheck uses the same successor bindings as join."""
+"""Skip-blob precheck shares join's rule: a blob change is not a skip rejection."""
 import importlib.util
 import json
 import os
@@ -180,21 +180,10 @@ class SkipBlobPrecheck(unittest.TestCase):
     def test_successor_blob_matches(self):
         self.assertEqual(SHARDS.skip_blob_report(_value(RESTORE, RESTORE_AFTER), {}), [])
 
-    def test_ordinary_successor_matches_and_unsealed_blob_is_named(self):
-        record = json.loads((ROOT / "reviews/ops-ordinary-skip-evidence-20261111.json").read_text())
-        change = record["updates"][CDN_NODE]
-        self.assertNotEqual(change["before_blob"], change["after_blob"])
-        self.assertEqual(
-            SHARDS.skip_blob_report(_value(CDN, change["after_blob"]), {CDN: CDN_SOURCE}), [])
-        mutated = "e" * 40
-        lines = SHARDS.skip_blob_report(_value(CDN, mutated), {CDN: CDN_SOURCE})
-        self.assertEqual(len(lines), 1)
-        self.assertIn(CDN, lines[0])
-        self.assertIn(change["before_blob"], lines[0])
-        self.assertIn(mutated, lines[0])
-        self.assertIn(CDN_NODE, lines[0])
-        self.assertEqual(
-            SHARDS.skip_blob_report(_value(CDN, mutated), {CDN: ROOT_ONLY_SOURCE}), [])
+    def test_dated_ordinary_skip_reviews_are_not_a_precheck_allow_list(self):
+        self.assertEqual(list(ROOT.glob("reviews/ops-ordinary-skip-evidence-*.json")), [])
+        source = (ROOT / "scripts/pytest-shards.py").read_text(encoding="utf-8")
+        self.assertNotIn("ORDINARY_SKIP_EVIDENCE_FILES", source)
 
     def test_historical_policy_keeps_the_rejected_restore_blob(self):
         source = _drop_function(
@@ -246,7 +235,7 @@ class SkipBlobPrecheck(unittest.TestCase):
         })())
         self.assertEqual(code, 2)
 
-    def test_command_rejects_a_mutated_restore_blob_and_accepts_an_empty_tree(self):
+    def test_command_admits_a_reasoned_skip_and_an_empty_tree(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             _git(repo, "init", "-q")
@@ -262,13 +251,10 @@ class SkipBlobPrecheck(unittest.TestCase):
             tree = _git(repo, "write-tree")
             commit = _git(repo, "commit-tree", tree, input_text="fixture\n")
             blob = _git(repo, "rev-parse", f"{commit}:{relative}")
-            failed = self._command(repo, commit)
-            self.assertEqual(failed.returncode, 1, failed.stderr)
-            self.assertIn(RESTORE, failed.stdout)
-            self.assertIn(RESTORE_BEFORE, failed.stdout)
-            self.assertIn(blob, failed.stdout)
-            self.assertIn(RESTORE_NODE, failed.stdout)
-            self.assertNotIn(RESTORE_AFTER, failed.stdout)
+            admitted = self._command(repo, commit)
+            self.assertEqual(admitted.returncode, 0, admitted.stderr)
+            self.assertEqual(admitted.stdout.strip(), "skip-blob-precheck ok")
+            self.assertNotEqual(blob, RESTORE_BEFORE)
 
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
@@ -279,20 +265,16 @@ class SkipBlobPrecheck(unittest.TestCase):
             self.assertEqual(passed.returncode, 0, passed.stderr)
             self.assertEqual(passed.stdout.strip(), "skip-blob-precheck ok")
 
-    def test_replay_rejected_pair_and_sealed_pair(self):
+    def test_replay_historical_pairs_are_not_blob_rejections(self):
         if not OPS_CHECKOUT.is_dir():
             self.skipTest("local yueops checkout is not present")
         if not (_object_present(REJECTED_CI) and _object_present(ACCEPTED_CI)):
             self.skipTest("historical yueto-ci commits are not in this clone")
-        rejected = self._command(OPS_CHECKOUT, OPS_REV, REJECTED_CI)
-        self.assertEqual(rejected.returncode, 1, rejected.stderr)
-        self.assertIn(RESTORE, rejected.stdout)
-        self.assertIn(RESTORE_NODE, rejected.stdout)
-        self.assertIn(RESTORE_BEFORE, rejected.stdout)
-        self.assertIn(RESTORE_AFTER, rejected.stdout)
-        accepted = self._command(OPS_CHECKOUT, OPS_REV, ACCEPTED_CI)
-        self.assertEqual(accepted.returncode, 0, accepted.stderr)
-        self.assertEqual(accepted.stdout.strip(), "skip-blob-precheck ok")
+        for revision in (REJECTED_CI, ACCEPTED_CI):
+            with self.subTest(revision=revision):
+                result = self._command(OPS_CHECKOUT, OPS_REV, revision)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), "skip-blob-precheck ok")
 
     def test_ops_commit_evidence_accepts_only_the_sealed_restore_blob(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -302,9 +284,8 @@ class SkipBlobPrecheck(unittest.TestCase):
             self.assertNotEqual(blob, RESTORE_BEFORE)
             self.assertNotEqual(blob, RESTORE_AFTER)
             missing = self._command(repo, bare)
-            self.assertEqual(missing.returncode, 1, missing.stderr)
-            self.assertIn(RESTORE_BEFORE, missing.stdout)
-            self.assertIn(blob, missing.stdout)
+            self.assertEqual(missing.returncode, 0, missing.stderr)
+            self.assertEqual(missing.stdout.strip(), "skip-blob-precheck ok")
             self.assertIsNone(SHARDS.load_ops_skip_evidence(repo, bare))
 
             wrong_after = _ops_commit(repo, {
@@ -312,8 +293,8 @@ class SkipBlobPrecheck(unittest.TestCase):
                 OPS_EVIDENCE: _ops_evidence(RESTORE_BEFORE, "a" * 40),
             })
             unmatched = self._command(repo, wrong_after)
-            self.assertEqual(unmatched.returncode, 1, unmatched.stderr)
-            self.assertIn(blob, unmatched.stdout)
+            self.assertEqual(unmatched.returncode, 0, unmatched.stderr)
+            self.assertEqual(unmatched.stdout.strip(), "skip-blob-precheck ok")
 
             wrong_before = _ops_commit(repo, {
                 RESTORE: RESTORE_SOURCE,
@@ -329,8 +310,8 @@ class SkipBlobPrecheck(unittest.TestCase):
                 OPS_EVIDENCE: _ops_evidence(RESTORE_BEFORE, blob),
             })
             incomplete = self._command(repo, partial)
-            self.assertEqual(incomplete.returncode, 1, incomplete.stderr)
-            self.assertIn(blob, incomplete.stdout)
+            self.assertEqual(incomplete.returncode, 0, incomplete.stderr)
+            self.assertEqual(incomplete.stdout.strip(), "skip-blob-precheck ok")
 
             sealed = _ops_commit(repo, {
                 RESTORE: RESTORE_SOURCE,

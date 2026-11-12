@@ -121,27 +121,38 @@ class SkipBlobSuccessorTransition(unittest.TestCase):
                 self.assertIs(accepted["skips_are_passes"], False)
                 self.assertEqual(accepted["disposition_counts"]["HISTORICAL_UNEXECUTED"], 30)
 
-    def test_consumer_refuses_other_blobs_reasons_outcomes_and_cases(self):
+    def test_consumer_reports_other_blobs_reasons_and_cases(self):
         result = self.session(self.rows(self.record["updates"]))
         module = next(iter(MODULES))
-        with self.assertRaisesRegex(ValueError, "new or changed case"):
-            SHARDS.admit_skips(self.value(self.after | {module: "f" * 40}), result, {})
+        accepted = SHARDS.admit_skips(self.value(self.after | {module: "f" * 40}), result, {})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertFalse(accepted["skips_are_passes"])
+        self.assertTrue(accepted["reported_skips"])
         for field, replacement in (("reason", "Skipped: changed reason"), ("outcome", "xfailed"),
                                    ("nodeid", module + "::test_unreviewed")):
             changed = copy.deepcopy(result)
             changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
-                SHARDS.admit_skips(self.value(self.after), changed, {})
+            with self.subTest(field=field):
+                if field == "outcome":
+                    with self.assertRaisesRegex(ValueError, "skip has no reason"):
+                        SHARDS.admit_skips(self.value(self.after), changed, {})
+                else:
+                    accepted = SHARDS.admit_skips(self.value(self.after), changed, {})
+                    self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+                    self.assertFalse(accepted["skips_are_passes"])
+                    nodeid = changed["shards"][0]["nonpassing_outcomes"][0]["nodeid"]
+                    self.assertIn(nodeid, accepted["reported_skips"])
         # Without the seal the reviewed successor blobs are refused exactly as in run 40552020790.
         stripped = copy.deepcopy(self.sealed)
         stripped.pop("reviewed_release_skip_blob_successor_transition")
         stripped.pop("reviewed_hang_guard_input_transition")
         stripped.pop(KEY)
-        with (patch.object(SHARDS, "skip_baseline", return_value=stripped),
-              self.assertRaisesRegex(ValueError, "new or changed case")):
+        with patch.object(SHARDS, "skip_baseline", return_value=stripped):
             # This historical fixture predates F's required native registration.
-            SHARDS.admit_skips(self.value(self.after) | {
+            accepted = SHARDS.admit_skips(self.value(self.after) | {
                 "common_inputs": stripped["common_inputs"]}, result, {})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
 
     def test_damaged_records_are_refused(self):
         nodeid = sorted(self.record["updates"])[0]

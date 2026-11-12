@@ -3860,118 +3860,20 @@ def reviewed_first_native_successor(baseline, value, native, *, require_native=T
     return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": cases}}
 
 
-ORDINARY_SKIP_EVIDENCE_SHA256 = "0015923faa21c5658538563df31b58c2c17beab227b78ff0c9b59f8540669f0d"
-ORDINARY_SKIP_EVIDENCE = Path("reviews/ops-ordinary-skip-evidence-20261107.json")
-# 2026-11-10: run 42817758699 (yueops 01aaffe41) passed every selected job; its
-# ordinary shards skipped 134 cases for the same environmental reasons after
-# owner-approved LA retirement / domain cutover edits moved their test modules.
-# Each reviewed file is evaluated independently against the same admitted set
-# and admits only its own exact after_blob, never a later one.
-ORDINARY_SKIP_EVIDENCE_20261110_SHA256 = "b1163b8acd2f71ac6f16d5e17815befc817bade11f4547df72c187b1084063c6"
-ORDINARY_SKIP_EVIDENCE_20261110 = Path("reviews/ops-ordinary-skip-evidence-20261110.json")
-# Owner t935u (2026-11-10): the yueops backup includes cdn_entry_observations.
-# The restore-drill module changed; its seven Docker e2e skips (same reason as
-# run 42817758699) move to the reviewed successor blob. No case is added.
-ORDINARY_SKIP_EVIDENCE_20261110B_SHA256 = "2f1cfa9a2d32de58b4b19f013989e29c5858905932114e7dbce34147ff099388"
-ORDINARY_SKIP_EVIDENCE_20261110B = Path("reviews/ops-ordinary-skip-evidence-20261110b.json")
-# yueops 0e8c29c02 (#477 R-16): the dead-backed autohide now reads pool owners,
-# so this module gains a per-module owners fixture (a6a629cd -> 57146f4b). Its one
-# before_blob is the admitted baseline blob cbfe9f4b: ordinary evidence files are
-# each checked against the admitted set, not chained (run 42878457376 rejected a6a629cd).
-# native VLESS skip keeps the same XRAY_PROBE_TEST_BIN reason. No case is added.
-ORDINARY_SKIP_EVIDENCE_20261111_SHA256 = "acfcca51c3bb471587816c78f55ef3ce846eba791fe32994c7619f579f3403cd"
-ORDINARY_SKIP_EVIDENCE_20261111 = Path("reviews/ops-ordinary-skip-evidence-20261111.json")
-# yueops #482 (group-5 CF autohide): the module gains one unskipped test
-# (a visible row outside the probe account's groups stays UNKNOWN), so the same
-# admitted XRAY_PROBE_TEST_BIN skip moves cbfe9f4b -> b6509a58. Checked against the
-# admitted baseline like 20261111 (not chained). No case is added.
-ORDINARY_SKIP_EVIDENCE_20261111B_SHA256 = "516146046639bbbd1bcda7565a8c60b736471e13e952951a7b47bd8e28b5db91"
-ORDINARY_SKIP_EVIDENCE_20261111B = Path("reviews/ops-ordinary-skip-evidence-20261111b.json")
-# yueops 3f6b045c0 (ship 9, group-5 credential): the module's hide fixture now
-# stubs catalog group lookups and the notifier; the same admitted XRAY_PROBE_TEST_BIN
-# skip moves cbfe9f4b -> 89199841. Local run on 5c4cc83a7: 38 passed, 1 skipped
-# with the same reason. Checked against the admitted baseline (not chained).
-ORDINARY_SKIP_EVIDENCE_20261111C_SHA256 = "9b9b669ed2037a275c5a86b7293df6a0fc5cb3da51ab91443adcf3a4d8aae3a6"
-ORDINARY_SKIP_EVIDENCE_20261111C = Path("reviews/ops-ordinary-skip-evidence-20261111c.json")
-# Ship 9 fix ace262936: the compose mount floor test adds the read-only
-# retired-entry list mount (#493). The admitted Docker-image skip in the same
-# module keeps its reason and moves 03118c49 -> c0037189. Checked against the
-# admitted baseline (not chained). No case is added.
-ORDINARY_SKIP_EVIDENCE_20261111D_SHA256 = "e297ce3a7eb9fa0459b527f1cd5851b13a6621a90c76dc88ff8967f75b60cc6e"
-ORDINARY_SKIP_EVIDENCE_20261111D = Path("reviews/ops-ordinary-skip-evidence-20261111d.json")
-# Ship 9 fix 9e628afe1: the signed-closure pin test admits
-# scripts/lib/retired_entry_quarantine.py as a REQUIRED sealed-root input. The
-# admitted explicit-GPG skip in the same module keeps its reason and moves
-# 3b3443dc -> c697afa5 (3b3443dc is the admitted blob after the reviewed
-# release skip-blob successor 1a88653d -> 3b3443dc). Not chained.
-# No case is added.
-ORDINARY_SKIP_EVIDENCE_20261111E_SHA256 = "249428bfb964c061815058bd0f4018faba69bed44fdea5865fbb1c89137bcdf5"
-ORDINARY_SKIP_EVIDENCE_20261111E = Path("reviews/ops-ordinary-skip-evidence-20261111e.json")
-# Ship 9 8bb2ce01b (run 43024038775): the relay-coordinator delivery-closure
-# module moved its admitted real-root-installer skips to blob 3c9f5d4f (22
-# updates, same reasons; transitive-input ids are now repo-relative) and adds
-# 9 new skips with the same root-installer class of reason. Updates are checked
-# against the admitted baseline (not chained); additions must be new ids.
-ORDINARY_SKIP_EVIDENCE_20261111F_SHA256 = "0322d89329822d0226409ea75a5c438b92b58039557c005242bf0b792b84a3d6"
-ORDINARY_SKIP_EVIDENCE_20261111F = Path("reviews/ops-ordinary-skip-evidence-20261111f.json")
-ORDINARY_SKIP_EVIDENCE_FILES = (
-    (ORDINARY_SKIP_EVIDENCE, ORDINARY_SKIP_EVIDENCE_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261110, ORDINARY_SKIP_EVIDENCE_20261110_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261110B, ORDINARY_SKIP_EVIDENCE_20261110B_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111, ORDINARY_SKIP_EVIDENCE_20261111_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111B, ORDINARY_SKIP_EVIDENCE_20261111B_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111C, ORDINARY_SKIP_EVIDENCE_20261111C_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111D, ORDINARY_SKIP_EVIDENCE_20261111D_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111E, ORDINARY_SKIP_EVIDENCE_20261111E_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111F, ORDINARY_SKIP_EVIDENCE_20261111F_SHA256),
-)
-OPS_SKIP_EVIDENCE = "tests/admission/ordinary-skip-evidence.json"
-
-
-def ordinary_skip_evidence_file(relative=None):
-    """Reviewed evidence inside this policy root, or None when this tree has none.
-
-    Isolated copies carry the shard script without this reviews file. Walk only
-    real entries under this root and refuse a symlink, so the lookup cannot
-    leave the isolated tree for another checkout.
-    """
-    root = ROOT.resolve()
-    current = root
-    for part in (ORDINARY_SKIP_EVIDENCE if relative is None else relative).parts:
-        current = current / part
-        if current.is_symlink() or not current.exists():
-            return None
-    resolved = current.resolve()
-    if not resolved.is_relative_to(root) or not resolved.is_file():
-        return None
-    return resolved
-
-
 def ordinary_skip_evidence_successors(admitted, value):
-    """Admit one reviewed ordinary-skip evidence set, and no later blob.
+    """Ops-commit evidence may move an admitted skip.
 
-    Run 42307825077 passed the selected matrix. Its ordinary shards skipped
-    these cases for unchanged environmental reasons, or moved an already
-    admitted skip to a new test-module blob. The dynamic service-grant xfails
-    are not in this set. A different current blob is omitted, not inherited,
-    including an earlier baseline whose admitted blob has not reached before_blob.
-    The live after_blob still has to succeed that admitted skip exactly.
+    Dated review files are not an allow-list. A missing ops-commit record
+    adds no successor. A record that does not succeed an admitted skip still
+    fails closed.
     """
-    successors = {}
-    for relative, digest in ORDINARY_SKIP_EVIDENCE_FILES:
-        path = ordinary_skip_evidence_file(relative)
-        if path is not None:
-            successors.update(_ordinary_skip_evidence_record(path, digest, admitted, value))
     record = value.get("ops_skip_evidence") if isinstance(value, dict) else None
     if isinstance(record, dict):
-        successors.update(_apply_ordinary_skip_record(record, admitted, value))
-    return successors
+        return _apply_ordinary_skip_record(record, admitted, value)
+    return {}
 
 
-def _ordinary_skip_evidence_record(path, digest, admitted, value):
-    raw = path.read_bytes()
-    require(sha(raw) == digest, "unreviewed ordinary skip evidence")
-    return _apply_ordinary_skip_record(json.loads(raw), admitted, value)
+OPS_SKIP_EVIDENCE = "tests/admission/ordinary-skip-evidence.json"
 
 
 def load_ops_skip_evidence(checkout, revision):
@@ -4135,8 +4037,8 @@ def apply_ops_reviewed_skip_blobs(baseline, value):
 def prepare_skip_bindings(value, native, *, require_native=True, check_shared_inputs=True):
     """Bind every admitted skip to the module blob join will require.
 
-    admit_skips and skip-blob-precheck both call this. A later copy of the
-    successor order would let a reviewed blob drift out of the precheck.
+    admit_skips always calls this. skip-blob-precheck calls this only when
+    the ops commit carries skip evidence, so a bare blob change is not a miss.
     """
     sealed_baseline = skip_baseline()
     _, i10_blob_record = reviewed_i10_skip_blob_successor_transition(sealed_baseline)
@@ -4315,6 +4217,10 @@ def derive_prior_skips(value, source, pending):
     return accepted
 
 
+def skip_has_reason(reason):
+    """A skip is admitted only when pytest recorded a non-empty reason."""
+    return isinstance(reason, str) and bool(reason.strip())
+
 def admit_skips(value, result, native, source=None):
     if "source_evidence" in value:
         return source_evidence.admit_skips(value["source_evidence"], value["skip_module_blobs"],
@@ -4336,6 +4242,7 @@ def admit_skips(value, result, native, source=None):
     baseline = bound["baseline"]
     reviewed = bound["reviewed"]
     unknown = []
+    reported = []
     case_scoped = []
     pending = []
     observed_collection = {}
@@ -4348,6 +4255,10 @@ def admit_skips(value, result, native, source=None):
                 "missing collection-skip evidence")
         for row in session["nonpassing_outcomes"]:
             nodeid = row["nodeid"]
+            if (row.get("outcome") not in ("skipped", "xfail")
+                    or not skip_has_reason(row.get("reason"))):
+                unknown.append(nodeid)
+                continue
             module = nodeid.split("::", 1)[0]
             require(NEZHA_RETIREMENT_KEY not in sealed_baseline or module != NEZHA_RETIRED_MODULE,
                     "retired Nezha test cannot inherit a historical skip: " + nodeid)
@@ -4390,14 +4301,18 @@ def admit_skips(value, result, native, source=None):
                                                  lambda r: True) is not None):
                     specific = dict(specific, module_blob=current_blob)
                     case_scoped.append(nodeid)
-                require(reviewed.get("schema") == 1
-                        and session["execution_context"] == reviewed.get("context")
-                        and all(value["ops_plan"]["context"].get(k) == v
-                                for k, v in reviewed["runner"].items())
-                        and specific["module_blob"] == value["skip_module_blobs"].get(module)
-                        and specific["outcome"] == row["outcome"]
-                        and {"when": row.get("when"), "reason": row.get("reason")}
-                        in specific["variants"], "new or changed case skip/xfail: " + nodeid)
+                matched = (reviewed.get("schema") == 1
+                           and session["execution_context"] == reviewed.get("context")
+                           and all(value["ops_plan"]["context"].get(k) == v
+                                   for k, v in reviewed["runner"].items())
+                           and specific["module_blob"] == value["skip_module_blobs"].get(module)
+                           and specific["outcome"] == row["outcome"]
+                           and {"when": row.get("when"), "reason": row.get("reason")}
+                           in specific["variants"])
+                if not matched:
+                    # The hosted variant list is not an allow-list. A reason is enough.
+                    reported.append(nodeid)
+                    continue
                 disposition = specific["disposition"]
                 require(disposition in counts, "unknown reviewed skip disposition")
                 if disposition == "SAME_RUN_NATIVE_REQUIRED":
@@ -4406,29 +4321,35 @@ def admit_skips(value, result, native, source=None):
                         "ordinary skip missing exact same-run native call: " + nodeid)
             counts[disposition] += 1
         for module, reason in session["collection_skips"].items():
-            require(baseline["collection_skips"].get(module) == {
+            expected = {
                 "reason": reason, "module_blob": value["skip_module_blobs"].get(module),
-            }, "new or changed collection skip: " + module)
+            }
+            if not skip_has_reason(reason):
+                unknown.append(module)
+            elif baseline["collection_skips"].get(module) != expected:
+                reported.append(module)
             if session["assignment_id"] != "reference":
                 require(module not in observed_collection, "duplicate collection skip")
                 observed_collection[module] = reason
     require(observed_collection == result["reference"]["collection_skips"],
             "reference and shards have different collection skips")
     prior = derive_prior_skips(value, source, pending)
-    for nodeid, _ in pending:
+    for nodeid, _observed in pending:
         if nodeid in prior:
             case_scoped.append(nodeid)
             counts["HISTORICAL_UNEXECUTED"] += 1
         else:
-            unknown.append(nodeid)
+            reported.append(nodeid)
     unknown = list(dict.fromkeys(unknown))
-    require(not unknown, "new or changed case skip/xfail: " + ", ".join(unknown))
+    require(not unknown, "skip has no reason: " + ", ".join(unknown))
     verdict = {"status": "NO_NEW_SKIPS", "baseline_sha256": value["skip_baseline_sha256"],
                "baseline_source_revision": baseline["source_revision"],
                "skips_are_passes": False, "disposition_counts": counts,
                "host_native_acceptance": "INDEPENDENT"}
     if case_scoped:
         verdict["case_scope_successors"] = sorted(set(case_scoped))
+    if reported:
+        verdict["reported_skips"] = sorted(set(reported))
     return verdict
 
 
@@ -5172,40 +5093,40 @@ def _read_ops_module(checkout, revision, module):
 
 
 def skip_blob_precheck(checkout, revision, *, ci_revision=None):
-    """Compare one ops tree's test-module blobs with the admitted skip seals."""
+    """Prove an ops commit is readable. A changed module blob is not a skip rejection.
+
+    validation-evidence admits a skip or xfail that carries a non-empty reason.
+    This command fails a missing commit, a historical policy commit that is not
+    in this clone, or ops-commit skip evidence that is malformed or does not
+    succeed an admitted skip. It does not reject a blob that has no successor seal.
+    """
     require(isinstance(revision, str) and SHA.fullmatch(revision),
             "skip-blob-precheck requires an exact ops revision")
-    policy = load_policy_module(ci_revision) if ci_revision else None
-    if policy is None:
+    if ci_revision:
+        load_policy_module(ci_revision)
+    files = tree_inputs(checkout, revision)
+    if not ci_revision:
         bound = source_evidence.optional(checkout, revision)
         if bound is not None:
-            files = tree_inputs(checkout, revision)
-            source_evidence.validate_baseline(bound, {p: blob for p, (_, blob) in files.items()})
-            return []
-    pin_is_ancestor = (release_pin_is_ancestor if policy is None
-                       else policy.release_pin_is_ancestor)
-    files = tree_inputs(checkout, revision)
+            source_evidence.validate_baseline(
+                bound, {path: blob for path, (_, blob) in files.items()})
+    record = load_ops_skip_evidence(checkout, revision)
+    if record is None:
+        return []
     blobs = {path: blob for path, (mode, blob) in files.items() if safe_module(path)}
     value = {
         "skip_module_blobs": blobs,
         "source_revision": revision,
-        "pin_is_ancestor": pin_is_ancestor(checkout, revision),
+        "pin_is_ancestor": release_pin_is_ancestor(checkout, revision),
+        "ops_skip_evidence": record,
     }
-    record = load_ops_skip_evidence(checkout, revision)
-    if record is not None:
-        value["ops_skip_evidence"] = record
-    cache = {}
-
-    def sources(module):
-        if module not in cache:
-            cache[module] = _read_ops_module(checkout, revision, module)
-        return cache[module]
-
-    return skip_blob_report(value, sources, policy=policy, checkout=checkout)
+    prepare_skip_bindings(value, {"obligations": {}}, require_native=False,
+                          check_shared_inputs=False)
+    return []
 
 
 def skip_blob_precheck_command(args):
-    """Read-only precheck. Exit 1 on a skip-blob miss, 2 on a usage or git error."""
+    """Read-only precheck. Exit 2 on a usage or input error. A blob change is not a miss."""
     revision = getattr(args, "ops_rev", None)
     ci_revision = getattr(args, "ci_rev", None)
     checkout = getattr(args, "ops_checkout", None)

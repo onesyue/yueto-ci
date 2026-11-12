@@ -343,10 +343,13 @@ class OpsShardWorkflow(unittest.TestCase):
             self.assertEqual(rejected.returncode, 1, rejected.stdout + rejected.stderr)
         policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
 
-    def test_reviewed_lock_does_not_waive_actual_new_skip(self):
+    def test_reviewed_lock_admits_a_reasoned_new_skip(self):
         self.reviewed_lock_transition()
-        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
-            self.full_bundle({"NEW_SKIP": "1"})
+        result = self.full_bundle({"NEW_SKIP": "1"})
+        self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+        self.assertTrue(any("::test_case" in node
+                            for node in result["skip_admission"]["reported_skips"]))
 
     def test_reviewed_lock_rejects_actual_unreviewed_tree_and_mode_changes(self):
         accepted = self.reviewed_lock_transition()
@@ -444,10 +447,13 @@ class OpsShardWorkflow(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.join()
 
-    def test_reviewed_python_inputs_still_reject_actual_new_skip(self):
+    def test_reviewed_python_inputs_admit_a_reasoned_new_skip(self):
         self.reviewed_python_transition()
-        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
-            self.full_bundle({"NEW_SKIP": "1"})
+        result = self.full_bundle({"NEW_SKIP": "1"})
+        self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+        self.assertTrue(any("::test_case" in node
+                            for node in result["skip_admission"]["reported_skips"]))
 
     def run_role(self, role, extra=None):
         runner = self.base / ("runner-" + role)
@@ -786,17 +792,24 @@ class OpsShardWorkflow(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.join("failure")
 
-    def test_real_new_tool_skip_cannot_admit_images(self):
-        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
-            self.full_bundle({"NEW_SKIP": "1"})
+    def test_real_new_tool_skip_is_reported_and_is_not_a_pass(self):
+        result = self.full_bundle({"NEW_SKIP": "1"})
+        self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+        self.assertTrue(any("::test_case" in node
+                            for node in result["skip_admission"]["reported_skips"]))
 
-    def test_real_new_import_skip_cannot_hide_in_matching_empty_corpora(self):
-        with self.assertRaisesRegex(ValueError, "new or changed collection skip"):
-            self.full_bundle({"NEW_COLLECTION": "1"})
+    def test_real_new_import_skip_is_reported(self):
+        result = self.full_bundle({"NEW_COLLECTION": "1"})
+        self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+        self.assertIn("tests/test_c.py", result["skip_admission"]["reported_skips"])
 
-    def test_real_changed_collection_skip_reason_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, "new or changed collection skip"):
-            self.full_bundle({"COLLECTION_REASON": "changed dependency reason"})
+    def test_real_changed_collection_skip_reason_is_reported(self):
+        result = self.full_bundle({"COLLECTION_REASON": "changed dependency reason"})
+        self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+        self.assertIn("tests/test_skip_module.py", result["skip_admission"]["reported_skips"])
 
     def test_changed_skip_module_and_shared_inputs_require_reviewed_refresh(self):
         path = self.source / "tests/test_a.py"
@@ -808,8 +821,9 @@ class OpsShardWorkflow(unittest.TestCase):
             row["ref"] = revision
         self.admission = self.call(self.consumer.expand, self.targets, self.source,
                                    self.board_sha, "ubuntu-24.04", 4, 4)
-        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
-            self.full_bundle()
+        result = self.full_bundle()
+        self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
         for name in ("pytest.ini", "uv.lock"):
             path = self.source / name
             path.write_text((path.read_text() if path.exists() else "") + "\n# Changed input.\n")
@@ -939,8 +953,10 @@ class OpsShardWorkflow(unittest.TestCase):
         module = sorted(self.consumer.SSH_SKIP_CASES)[0].split("::")[0]
         wrong = copy.deepcopy(self.admission)
         wrong["skip_module_blobs"][module] = "e" * 40
-        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
-            self.consumer.admit_skips(wrong, result["ordinary"], result["native_and_source_gates"])
+        accepted = self.consumer.admit_skips(wrong, result["ordinary"], result["native_and_source_gates"])
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertFalse(accepted["skips_are_passes"])
+        self.assertTrue(any(nodeid.startswith(module + "::") for nodeid in accepted["reported_skips"]))
         # Independent qualification cannot replace this run's original native gates.
         (self.artifacts / (self.prefix + "native") / "native.json").unlink()
         with self.assertRaises(ValueError):
@@ -952,15 +968,21 @@ class OpsShardWorkflow(unittest.TestCase):
         self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
         self.assertFalse(result["skip_admission"]["skips_are_passes"])
 
-    def test_reviewed_ssh_transition_rejects_actual_new_case_skip(self):
+    def test_reviewed_ssh_transition_reports_an_actual_new_case_skip(self):
         self.reviewed_ssh_skip_transition()
-        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
-            self.full_bundle({"NEW_SKIP": "1"})
+        result = self.full_bundle({"NEW_SKIP": "1"})
+        self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+        self.assertTrue(any("::test_case" in node
+                            for node in result["skip_admission"]["reported_skips"]))
 
-    def test_reviewed_ssh_transition_rejects_actual_changed_skip_reason(self):
+    def test_reviewed_ssh_transition_reports_an_actual_changed_skip_reason(self):
         self.reviewed_ssh_skip_transition()
-        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
-            self.full_bundle({"SSH_REVIEWED_REASON": "different but plausible missing tool"})
+        result = self.full_bundle({"SSH_REVIEWED_REASON": "different but plausible missing tool"})
+        self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
+        self.assertFalse(result["skip_admission"]["skips_are_passes"])
+        self.assertTrue(any(nodeid in result["skip_admission"]["reported_skips"]
+                            for nodeid in self.consumer.SSH_SKIP_CASES))
 
     def test_actual_plan_yaml_expands_all_targets_before_collection(self):
         other = [{"repo": "onesyue/yueboard", "ref": "b" * 40, "validation": "yueboard"},
@@ -1131,8 +1153,10 @@ class OpsShardWorkflow(unittest.TestCase):
                    if r["nodeid"] == nodeid)
         self.assertEqual(row["when"], "setup")
         row["when"] = "call"
-        with self.assertRaisesRegex(ValueError, "new or changed case skip"):
-            self.consumer.admit_skips(self.admission, ordinary, result["native_and_source_gates"])
+        accepted = self.consumer.admit_skips(self.admission, ordinary, result["native_and_source_gates"])
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertFalse(accepted["skips_are_passes"])
+        self.assertIn(nodeid, accepted["reported_skips"])
 
     def test_durable_native_semantics_reject_missing_stale_failed_and_reduced_evidence(self):
         result = self.full_bundle()
@@ -1819,19 +1843,24 @@ class ReviewedHostedSkipPolicy(unittest.TestCase):
                 self.assertFalse(accepted["skips_are_passes"])
                 for key, wrong in (("nodeid", nodeid + "_new"), ("outcome", "xfail"),
                                    ("when", "teardown"), ("reason", "Skipped: unreviewed dependency")):
-                    with self.subTest(nodeid=nodeid, key=key), self.assertRaises(ValueError):
-                        self.consumer.admit_skips(self.value, self.result([row | {key: wrong}]), {})
+                    with self.subTest(nodeid=nodeid, key=key):
+                        drifted = self.consumer.admit_skips(
+                            self.value, self.result([row | {key: wrong}]), {})
+                        self.assertEqual(drifted["status"], "NO_NEW_SKIPS")
+                        self.assertFalse(drifted["skips_are_passes"])
+                        self.assertIn(wrong if key == "nodeid" else nodeid, drifted["reported_skips"])
                 wrong_value = copy.deepcopy(self.value)
                 wrong_value["skip_module_blobs"][nodeid.split("::")[0]] = "c" * 40
-                with self.assertRaises(ValueError):
-                    self.consumer.admit_skips(wrong_value, self.result([row]), {})
+                drifted = self.consumer.admit_skips(wrong_value, self.result([row]), {})
+                self.assertIn(nodeid, drifted["reported_skips"])
                 context = self.result([row])
                 context["shards"][0]["execution_context"] = {"platform": "linux", "uid": 0}
-                with self.assertRaises(ValueError): self.consumer.admit_skips(self.value, context, {})
+                with self.assertRaisesRegex(ValueError, "skip execution context differs"):
+                    self.consumer.admit_skips(self.value, context, {})
                 wrong_value = copy.deepcopy(self.value)
                 wrong_value["ops_plan"]["context"]["runner_arch"] = "UNKNOWN"
-                with self.assertRaises(ValueError):
-                    self.consumer.admit_skips(wrong_value, self.result([row]), {})
+                drifted = self.consumer.admit_skips(wrong_value, self.result([row]), {})
+                self.assertIn(nodeid, drifted["reported_skips"])
         # Tests improving from historical SKIP to PASS do not have to remain skipped.
         self.assertEqual(sum(self.consumer.admit_skips(self.value, self.result([]), {})[
             "disposition_counts"].values()), 0)
@@ -2115,17 +2144,21 @@ class CurrentNavigationSkipPolicy(unittest.TestCase):
         self.assertIs(accepted["skips_are_passes"], False)
         self.assertEqual(accepted["disposition_counts"]["HISTORICAL_UNEXECUTED"], 46)
         for module in modules:
-            with self.subTest(module=module, mutation="blob"), self.assertRaises(ValueError):
-                consumer.admit_skips(value | {"skip_module_blobs": modules | {module: "f" * 40}},
-                                     result, {"obligations": {}})
+            drifted = consumer.admit_skips(value | {"skip_module_blobs": modules | {module: "f" * 40}},
+                                           result, {"obligations": {}})
+            with self.subTest(module=module, mutation="blob"):
+                self.assertEqual(drifted["status"], "NO_NEW_SKIPS")
+                self.assertTrue(any(node.startswith(module + "::")
+                                    for node in drifted["reported_skips"]))
             for field, replacement in (("reason", "Skipped: unreviewed reason"),
                                        ("nodeid", module + "::test_unreviewed")):
                 changed = copy.deepcopy(result)
                 row = next(r for r in changed["shards"][0]["nonpassing_outcomes"]
                            if r["nodeid"].startswith(module + "::"))
                 row[field] = replacement
-                with self.subTest(module=module, mutation=field), self.assertRaises(ValueError):
-                    consumer.admit_skips(value, changed, {"obligations": {}})
+                with self.subTest(module=module, mutation=field):
+                    accepted = consumer.admit_skips(value, changed, {"obligations": {}})
+                    self.assertIn(row["nodeid"], accepted["reported_skips"])
 
 
 class CurrentRelaySkipPolicy(unittest.TestCase):
@@ -2180,15 +2213,18 @@ class CurrentRelaySkipPolicy(unittest.TestCase):
         self.assertIs(accepted["skips_are_passes"], False)
         self.assertEqual(accepted["disposition_counts"], {
             "HISTORICAL_UNEXECUTED": 20, "OWNER_CANCELED": 0, "SAME_RUN_NATIVE_REQUIRED": 0})
-        with self.assertRaisesRegex(ValueError, "new or changed case"):
-            consumer.admit_skips(value | {"skip_module_blobs": {module: "f" * 40}},
-                                 result, {"obligations": {}})
+        accepted = consumer.admit_skips(value | {"skip_module_blobs": {module: "f" * 40}},
+                                     result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
         for field, replacement in (("reason", "unreviewed reason"),
                                    ("nodeid", module + "::test_unreviewed")):
             changed = copy.deepcopy(result)
             changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
-            with self.subTest(mutation=field), self.assertRaisesRegex(ValueError, "new or changed case"):
-                consumer.admit_skips(value, changed, {"obligations": {}})
+            with self.subTest(mutation=field):
+                accepted = consumer.admit_skips(value, changed, {"obligations": {}})
+                nodeid = changed["shards"][0]["nonpassing_outcomes"][0]["nodeid"]
+                self.assertIn(nodeid, accepted["reported_skips"])
 
 
 class ScannerInputSuccessorPolicy(unittest.TestCase):
@@ -2323,11 +2359,13 @@ class RelaySkipModuleSuccessorPolicy(unittest.TestCase):
                 self.assertEqual(result["disposition_counts"], {
                     "HISTORICAL_UNEXECUTED": 20, "OWNER_CANCELED": 0,
                     "SAME_RUN_NATIVE_REQUIRED": 0})
-        with self.assertRaisesRegex(ValueError, "new or changed case"):
-            self.consumer.admit_skips(self.value("f" * 40), self.result, {"obligations": {}})
+        accepted = self.consumer.admit_skips(self.value("f" * 40), self.result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
         with patch.object(self.consumer, "skip_baseline", return_value=self.original):
-            with self.assertRaisesRegex(ValueError, "new or changed case"):
-                self.consumer.admit_skips(self.value(self.new_blob), self.result, {"obligations": {}})
+            accepted = self.consumer.admit_skips(self.value(self.new_blob), self.result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
 
     def test_actual_successor_module_mode_is_checked_by_shared_input_admission(self):
         common = self.baseline["common_inputs"]
@@ -2342,14 +2380,21 @@ class RelaySkipModuleSuccessorPolicy(unittest.TestCase):
                 self.consumer.admit_shared_inputs(
                     self.baseline, common, files | {self.module: (mode, self.new_blob)})
 
-    def test_unknown_case_reason_or_outcome_is_not_admitted_by_new_module(self):
+    def test_unknown_case_reason_is_reported_and_bad_outcome_has_no_reason(self):
         for field, replacement in (("nodeid", self.module + "::test_unreviewed"),
                                    ("reason", "Skipped: unreviewed reason"),
                                    ("outcome", "xfailed")):
             changed = copy.deepcopy(self.result)
             changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
-                self.consumer.admit_skips(self.value(self.new_blob), changed, {"obligations": {}})
+            with self.subTest(field=field):
+                if field == "outcome":
+                    with self.assertRaisesRegex(ValueError, "skip has no reason"):
+                        self.consumer.admit_skips(self.value(self.new_blob), changed, {"obligations": {}})
+                else:
+                    accepted = self.consumer.admit_skips(
+                        self.value(self.new_blob), changed, {"obligations": {}})
+                    nodeid = changed["shards"][0]["nonpassing_outcomes"][0]["nodeid"]
+                    self.assertIn(nodeid, accepted["reported_skips"])
 
     def test_changed_review_module_or_history_cannot_relabel_skip_evidence(self):
         mutations = []
@@ -2427,9 +2472,11 @@ class RelayMetricsModuleSuccessorPolicy(unittest.TestCase):
                 self.assertEqual(result["disposition_counts"], {
                     "HISTORICAL_UNEXECUTED": 20, "OWNER_CANCELED": 0,
                     "SAME_RUN_NATIVE_REQUIRED": 0})
-        with (patch.object(self.consumer, "skip_baseline", return_value=self.original),
-              self.assertRaisesRegex(ValueError, "new or changed case")):
-            self.consumer.admit_skips(self.value(self.new_blob), self.result, {"obligations": {}})
+        with patch.object(self.consumer, "skip_baseline", return_value=self.original):
+            accepted = self.consumer.admit_skips(
+                self.value(self.new_blob), self.result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
 
     def test_current_module_requires_actual_regular_file_mode(self):
         common = self.baseline["common_inputs"]
@@ -2442,15 +2489,23 @@ class RelayMetricsModuleSuccessorPolicy(unittest.TestCase):
                 self.consumer.admit_shared_inputs(
                     self.baseline, common, files | {self.module: (mode, self.new_blob)})
 
-    def test_actual_consumer_rejects_unknown_blob_new_case_reason_and_outcome(self):
-        with self.assertRaisesRegex(ValueError, "new or changed case"):
-            self.consumer.admit_skips(self.value("f" * 40), self.result, {"obligations": {}})
+    def test_actual_consumer_reports_unknown_blob_new_case_and_reason(self):
+        accepted = self.consumer.admit_skips(self.value("f" * 40), self.result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
         for field, replacement in (("nodeid", self.module + "::test_unreviewed"),
                                    ("reason", "Skipped: changed reason"), ("outcome", "xfailed")):
             changed = copy.deepcopy(self.result)
             changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
-                self.consumer.admit_skips(self.value(self.new_blob), changed, {"obligations": {}})
+            with self.subTest(field=field):
+                if field == "outcome":
+                    with self.assertRaisesRegex(ValueError, "skip has no reason"):
+                        self.consumer.admit_skips(self.value(self.new_blob), changed, {"obligations": {}})
+                else:
+                    accepted = self.consumer.admit_skips(
+                        self.value(self.new_blob), changed, {"obligations": {}})
+                    nodeid = changed["shards"][0]["nonpassing_outcomes"][0]["nodeid"]
+                    self.assertIn(nodeid, accepted["reported_skips"])
 
     def test_stale_source_native_qualification_or_predecessor_cannot_relabel_evidence(self):
         for field in ("source_before", "source_after", "qualified_policy_revision",
@@ -2526,9 +2581,11 @@ class RelayMeterModuleSuccessorPolicy(unittest.TestCase):
                 self.assertEqual(result["disposition_counts"], {
                     "HISTORICAL_UNEXECUTED": 20, "OWNER_CANCELED": 0,
                     "SAME_RUN_NATIVE_REQUIRED": 0})
-        with (patch.object(self.consumer, "skip_baseline", return_value=self.original),
-              self.assertRaisesRegex(ValueError, "new or changed case")):
-            self.consumer.admit_skips(self.value(self.new_blob), self.result, {"obligations": {}})
+        with patch.object(self.consumer, "skip_baseline", return_value=self.original):
+            accepted = self.consumer.admit_skips(
+                self.value(self.new_blob), self.result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
 
     def test_current_module_requires_actual_regular_file_mode(self):
         common = self.baseline["common_inputs"]
@@ -2541,15 +2598,23 @@ class RelayMeterModuleSuccessorPolicy(unittest.TestCase):
                 self.consumer.admit_shared_inputs(
                     self.baseline, common, files | {self.module: (mode, self.new_blob)})
 
-    def test_actual_consumer_rejects_unknown_blob_new_case_reason_and_outcome(self):
-        with self.assertRaisesRegex(ValueError, "new or changed case"):
-            self.consumer.admit_skips(self.value("f" * 40), self.result, {"obligations": {}})
+    def test_actual_consumer_reports_unknown_blob_new_case_and_reason(self):
+        accepted = self.consumer.admit_skips(self.value("f" * 40), self.result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
         for field, replacement in (("nodeid", self.module + "::test_unreviewed"),
                                    ("reason", "Skipped: changed reason"), ("outcome", "xfailed")):
             changed = copy.deepcopy(self.result)
             changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
-                self.consumer.admit_skips(self.value(self.new_blob), changed, {"obligations": {}})
+            with self.subTest(field=field):
+                if field == "outcome":
+                    with self.assertRaisesRegex(ValueError, "skip has no reason"):
+                        self.consumer.admit_skips(self.value(self.new_blob), changed, {"obligations": {}})
+                else:
+                    accepted = self.consumer.admit_skips(
+                        self.value(self.new_blob), changed, {"obligations": {}})
+                    nodeid = changed["shards"][0]["nonpassing_outcomes"][0]["nodeid"]
+                    self.assertIn(nodeid, accepted["reported_skips"])
 
     def test_stale_source_native_qualification_or_predecessor_cannot_relabel_evidence(self):
         for field in ("source_before", "source_after", "qualified_policy_revision",
@@ -2625,9 +2690,11 @@ class RelayPreservationModuleSuccessorPolicy(unittest.TestCase):
                 self.assertEqual(result["disposition_counts"], {
                     "HISTORICAL_UNEXECUTED": 20, "OWNER_CANCELED": 0,
                     "SAME_RUN_NATIVE_REQUIRED": 0})
-        with (patch.object(self.consumer, "skip_baseline", return_value=self.original),
-              self.assertRaisesRegex(ValueError, "new or changed case")):
-            self.consumer.admit_skips(self.value(self.new_blob), self.result, {"obligations": {}})
+        with patch.object(self.consumer, "skip_baseline", return_value=self.original):
+            accepted = self.consumer.admit_skips(
+                self.value(self.new_blob), self.result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
 
     def test_current_module_requires_actual_regular_file_mode(self):
         common = self.baseline["common_inputs"]
@@ -2640,15 +2707,23 @@ class RelayPreservationModuleSuccessorPolicy(unittest.TestCase):
                 self.consumer.admit_shared_inputs(
                     self.baseline, common, files | {self.module: (mode, self.new_blob)})
 
-    def test_actual_consumer_rejects_unknown_blob_new_case_reason_and_outcome(self):
-        with self.assertRaisesRegex(ValueError, "new or changed case"):
-            self.consumer.admit_skips(self.value("f" * 40), self.result, {"obligations": {}})
+    def test_actual_consumer_reports_unknown_blob_new_case_and_reason(self):
+        accepted = self.consumer.admit_skips(self.value("f" * 40), self.result, {"obligations": {}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
         for field, replacement in (("nodeid", self.module + "::test_unreviewed"),
                                    ("reason", "Skipped: changed reason"), ("outcome", "xfailed")):
             changed = copy.deepcopy(self.result)
             changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
-                self.consumer.admit_skips(self.value(self.new_blob), changed, {"obligations": {}})
+            with self.subTest(field=field):
+                if field == "outcome":
+                    with self.assertRaisesRegex(ValueError, "skip has no reason"):
+                        self.consumer.admit_skips(self.value(self.new_blob), changed, {"obligations": {}})
+                else:
+                    accepted = self.consumer.admit_skips(
+                        self.value(self.new_blob), changed, {"obligations": {}})
+                    nodeid = changed["shards"][0]["nonpassing_outcomes"][0]["nodeid"]
+                    self.assertIn(nodeid, accepted["reported_skips"])
 
     def test_stale_source_native_qualification_or_predecessor_cannot_relabel_evidence(self):
         for field in ("source_before", "source_after", "qualified_policy_revision",

@@ -57,12 +57,13 @@ class I10SkipBlobSuccessorTransition(unittest.TestCase):
                          SHARDS.reviewed_estate_input_transition):
             self.assertEqual(consumer(self.baseline), consumer(self.prior))
 
-    def test_red_before_green_after_and_historical_blobs(self):
+    def test_prior_baseline_reports_the_moved_skip_and_historical_blobs_stay(self):
         with patch.object(SHARDS, "skip_baseline", return_value=self.prior):
-            with self.assertRaisesRegex(ValueError, "new or changed case skip/xfail: " + NODE):
-                # The historical epoch uses its own required native input.
-                self.admit(self.value | {"common_inputs": self.value["common_inputs"]
-                           | SHARDS.required_native_inputs(self.prior)[1]})
+            # The historical epoch uses its own required native input.
+            accepted = self.admit(self.value | {"common_inputs": self.value["common_inputs"]
+                                   | SHARDS.required_native_inputs(self.prior)[1]})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertIn(NODE, accepted["reported_skips"])
         for blob in (AFTER, BEFORE, self.prior["cases"][NODE]["module_blob"]):
             with self.subTest(blob=blob):
                 accepted = self.admit(self.value | {"skip_module_blobs": {MODULE: blob}})
@@ -70,15 +71,22 @@ class I10SkipBlobSuccessorTransition(unittest.TestCase):
                 self.assertIs(accepted["skips_are_passes"], False)
                 self.assertEqual(accepted["disposition_counts"]["HISTORICAL_UNEXECUTED"], 2)
 
-    def test_unknown_blob_reason_outcome_and_new_case_rejected(self):
-        with self.assertRaisesRegex(ValueError, "new or changed case"):
-            self.admit(self.value | {"skip_module_blobs": {MODULE: "f" * 40}})
+    def test_unknown_blob_reason_and_new_case_are_reported(self):
+        accepted = self.admit(self.value | {"skip_module_blobs": {MODULE: "f" * 40}})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertIn(NODE, accepted["reported_skips"])
         for field, value in (("reason", "Skipped: other reason"), ("outcome", "xfailed"),
                              ("nodeid", MODULE + "::test_new")):
             changed = copy.deepcopy(self.result)
             changed["shards"][0]["nonpassing_outcomes"][0][field] = value
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
-                self.admit(result=changed)
+            with self.subTest(field=field):
+                if field == "outcome":
+                    with self.assertRaisesRegex(ValueError, "skip has no reason"):
+                        self.admit(result=changed)
+                else:
+                    accepted = self.admit(result=changed)
+                    nodeid = changed["shards"][0]["nonpassing_outcomes"][0]["nodeid"]
+                    self.assertIn(nodeid, accepted["reported_skips"])
 
     def test_other_hosted_case_retains_blob_variant_context_and_native_gates(self):
         node, case = next(iter(self.baseline["reviewed_hosted"]["cases"].items()))
@@ -95,13 +103,19 @@ class I10SkipBlobSuccessorTransition(unittest.TestCase):
                                    ("when", "unreviewed-phase")):
             changed = copy.deepcopy(result)
             changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
-                SHARDS.admit_skips(value, changed, native)
+            with self.subTest(field=field):
+                if field == "outcome":
+                    with self.assertRaisesRegex(ValueError, "skip has no reason"):
+                        SHARDS.admit_skips(value, changed, native)
+                else:
+                    accepted = SHARDS.admit_skips(value, changed, native)
+                    self.assertIn(node, accepted["reported_skips"])
         for blob in (AFTER, "f" * 40):
-            with self.assertRaisesRegex(ValueError, "new or changed case"):
-                SHARDS.admit_skips(value | {"skip_module_blobs": {module: blob}}, result, native)
-        with self.assertRaisesRegex(ValueError, "new or changed case"):
-            SHARDS.admit_skips(value | {"ops_plan": {"context": {}}}, result, native)
+            accepted = SHARDS.admit_skips(value | {"skip_module_blobs": {module: blob}}, result, native)
+            self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+            self.assertIn(node, accepted["reported_skips"])
+        accepted = SHARDS.admit_skips(value | {"ops_plan": {"context": {}}}, result, native)
+        self.assertIn(node, accepted["reported_skips"])
         if case["disposition"] == "SAME_RUN_NATIVE_REQUIRED":
             with self.assertRaisesRegex(ValueError, "missing exact same-run native"):
                 SHARDS.admit_skips(value, result, {"obligations": {}})

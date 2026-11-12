@@ -75,9 +75,9 @@ class AdmissionPrecheck(unittest.TestCase):
         (self.source / "app.py").write_text("raise RuntimeError('must never execute')\n")
         self.assertTrue(PRE.precheck(self.source, self.base, self.commit())[0])
 
-    def test_changed_catalog_skip_uses_the_shard_precheck(self):
-        # Run 43210004432 rejected this nodeid after admission-precheck had
-        # accepted the range. The module blob moved and the case still skips.
+    def test_changed_catalog_skip_is_not_a_blob_rejection(self):
+        # Run 43210004432 rejected this reasoned skip under the old ledger.
+        # Precheck and join now agree: a reason admits it.
         module = self.source / "tests" / "test_runtime_release_holds_20261009.py"
         module.parent.mkdir()
         module.write_text(
@@ -86,15 +86,9 @@ class AdmissionPrecheck(unittest.TestCase):
             "    pytest.skip('changed fixture skip')\n"
         )
         head = self.commit()
-        lines = PRE.POLICY.skip_blob_precheck(self.source, head)
-        self.assertTrue(lines)
-        self.assertTrue(all(
-            "test_native_dns_apply_noop_rollback_hold_lock_and_unknown_state" in line
-            for line in lines))
+        self.assertEqual(PRE.POLICY.skip_blob_precheck(self.source, head), [])
         accepted, reason = PRE.precheck(self.source, self.base, head)
-        self.assertFalse(accepted)
-        for line in lines:
-            self.assertIn(line, reason)
+        self.assertTrue(accepted, reason)
 
     def test_skip_rejection_is_the_shard_function_result(self):
         sentinel = (

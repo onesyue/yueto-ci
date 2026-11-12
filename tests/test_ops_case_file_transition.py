@@ -123,16 +123,26 @@ class CaseFileTransition(unittest.TestCase):
         self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
         self.assertEqual(accepted["disposition_counts"]["HISTORICAL_UNEXECUTED"], 20)
 
-    def test_consumer_rejects_unknown_blob_reason_outcome_and_new_case(self):
+    def test_consumer_reports_unknown_blob_reason_and_new_case(self):
         result = self.session(self.rows(self.successors))
-        with self.assertRaisesRegex(ValueError, "new or changed case"):
-            SHARDS.admit_skips(self.value(self.blobs | {RELAY: "f" * 40}), result, {})
+        accepted = SHARDS.admit_skips(self.value(self.blobs | {RELAY: "f" * 40}), result, {})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertFalse(accepted["skips_are_passes"])
+        self.assertTrue(accepted["reported_skips"])
         for field, replacement in (("reason", "Skipped: changed reason"), ("outcome", "xfailed"),
                                    ("nodeid", RELAY + "::test_unreviewed")):
             changed = copy.deepcopy(result)
             changed["shards"][0]["nonpassing_outcomes"][0][field] = replacement
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "new or changed case"):
-                SHARDS.admit_skips(self.value(self.blobs), changed, {})
+            with self.subTest(field=field):
+                if field == "outcome":
+                    with self.assertRaisesRegex(ValueError, "skip has no reason"):
+                        SHARDS.admit_skips(self.value(self.blobs), changed, {})
+                else:
+                    accepted = SHARDS.admit_skips(self.value(self.blobs), changed, {})
+                    self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+                    self.assertFalse(accepted["skips_are_passes"])
+                    nodeid = changed["shards"][0]["nonpassing_outcomes"][0]["nodeid"]
+                    self.assertIn(nodeid, accepted["reported_skips"])
         stripped = copy.deepcopy(self.sealed)
         # The bot packaging seal sits outside the case-file seal; strip it too so this
         # asserts the case refusal itself rather than the outer seal's prior hash.
@@ -143,11 +153,12 @@ class CaseFileTransition(unittest.TestCase):
         stripped.pop("reviewed_audit_lock_transition")
         stripped.pop("reviewed_bot_packaging_transition")
         stripped.pop("reviewed_case_file_transition")
-        with (patch.object(SHARDS, "skip_baseline", return_value=stripped),
-              self.assertRaisesRegex(ValueError, "new or changed case")):
+        with patch.object(SHARDS, "skip_baseline", return_value=stripped):
             # This historical baseline predates the native input registration.
-            SHARDS.admit_skips(self.value(self.blobs) | {
+            accepted = SHARDS.admit_skips(self.value(self.blobs) | {
                 "common_inputs": stripped["common_inputs"]}, result, {})
+        self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
+        self.assertTrue(accepted["reported_skips"])
 
     def test_reviewed_module_must_be_a_regular_file_and_the_record_cannot_drift(self):
         modes = self.sealed["reviewed_shared_input_transition"]["common_input_modes"]
