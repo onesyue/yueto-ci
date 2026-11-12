@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates curl gnupg sudo git jq build-essential \
-      locales xz-utils logrotate docker.io openssh-client \
+      locales xz-utils logrotate docker.io openssh-client rsync \
  && rm -rf /var/lib/apt/lists/*
 
 # PGDG key fingerprint is the one the retired apt installer required.
@@ -70,10 +70,11 @@ RUN curl --fail --silent --show-error --location \
  && corepack --version \
  && corepack enable
 
-# uv 0.10.9 is the version build.yml setup-uv pins. UV_SHA256 is filled from
+# uv 0.10.9 is the package installer build.yml pins. UV_SHA256 is filled from
 # the release tarball before the image is built; the workflow refuses a blank.
-# UV_PYTHON_INSTALL_DIR must stay set for `uv python find`: install and find
-# do not share a default directory.
+# CPython itself is the upstream 3.13.12 tarball built on this image. The uv
+# standalone interpreter is built without os.pidfd_open, and worker reclaim
+# refuses to run without it.
 ARG UV_SHA256
 RUN test -n "$UV_SHA256" \
  && curl --fail --silent --show-error --location \
@@ -84,17 +85,28 @@ RUN test -n "$UV_SHA256" \
  && tar -C /tmp -xzf /tmp/uv.tgz \
  && install -m 0755 /tmp/uv-x86_64-unknown-linux-gnu/uv /usr/local/bin/uv \
  && rm -rf /tmp/uv.tgz /tmp/uv-x86_64-unknown-linux-gnu \
- && uv --version | grep -F '0.10.9' \
- && uv python install 3.13 \
- && py=$(uv python find 3.13) \
- && test -x "$py" \
- && ln -sfn "$py" /usr/local/bin/python3.13 \
- && ln -sfn python3.13 /usr/local/bin/python3 \
- && ln -sfn python3.13 /usr/local/bin/python \
+ && uv --version | grep -F '0.10.9'
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      libssl-dev zlib1g-dev libffi-dev libsqlite3-dev libbz2-dev \
+      libreadline-dev libncurses-dev liblzma-dev uuid-dev \
+ && curl --fail --silent --show-error --location \
+      --proto '=https' --proto-redir '=https' --tlsv1.2 \
+      https://www.python.org/ftp/python/3.13.12/Python-3.13.12.tgz \
+      --output /tmp/Python.tgz \
+ && echo '12e7cb170ad2d1a69aee96a1cc7fc8de5b1e97a2bdac51683a3db016ec9a2996  /tmp/Python.tgz' | sha256sum -c \
+ && tar -C /tmp -xzf /tmp/Python.tgz \
+ && cd /tmp/Python-3.13.12 \
+ && ./configure --prefix=/usr/local \
+ && make -j"$(nproc)" \
+ && make install \
+ && cd / \
+ && rm -rf /tmp/Python-3.13.12 /tmp/Python.tgz /var/lib/apt/lists/* \
+ && ln -sfn python3 /usr/local/bin/python \
  && ln -sfn /usr/local/bin/python3 /usr/bin/python3 \
  && ln -sfn /usr/local/bin/python3 /usr/bin/python \
- && /usr/bin/python3 -c 'import sys; assert sys.version_info[:2] == (3, 13)' \
- && chmod -R a+rX /opt/uv-python
+ && /usr/bin/python3 -c 'import os, signal, sys; assert sys.version_info[:2] == (3, 13); assert hasattr(os, "pidfd_open") and hasattr(signal, "pidfd_send_signal")'
 
 RUN curl --fail --silent --show-error --location \
       --proto '=https' --proto-redir '=https' --tlsv1.2 \
@@ -115,7 +127,8 @@ RUN curl --fail --silent --show-error --location \
  && sing-box-1.14 version | grep -E '^sing-box version 1\.14\.'
 
 COPY selfcheck.sh /usr/local/bin/yueops-ci-toolchain-selfcheck
-RUN chmod 0755 /usr/local/bin/yueops-ci-toolchain-selfcheck \
+COPY docker-hostpath.sh /usr/local/bin/docker
+RUN chmod 0755 /usr/local/bin/yueops-ci-toolchain-selfcheck /usr/local/bin/docker \
  && groupadd --gid 1001 runner \
  && useradd --uid 1001 --gid 1001 --create-home --shell /bin/bash runner \
  && printf '%s\n' 'runner ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/runner \
