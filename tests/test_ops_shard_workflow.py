@@ -130,6 +130,19 @@ class OpsShardWorkflow(unittest.TestCase):
         with patch.dict(os.environ, self.env, clear=True):
             return function(*args)
 
+    def rebind_board_signer(self, gpg, fingerprint, env):
+        """A replaced fixture trust store must authenticate both source inputs."""
+        with self.assertRaises(ValueError):
+            self.call(self.consumer.source_evidence.verify_signed_commit, self.board, self.board_sha)
+        subprocess.run([
+            "git", "-C", str(self.board), "-c", "user.name=Fixture",
+            "-c", "user.email=fixture@example.invalid", "-c", "gpg.program=" + gpg,
+            "-c", "user.signingkey=" + fingerprint,
+            "commit", "--amend", "-S", "--no-edit",
+        ], env=env, check=True, capture_output=True)
+        self.board_sha = self.fixture.git(self.board, "rev-parse", "HEAD").stdout.strip()
+        self.call(self.consumer.source_evidence.verify_signed_commit, self.board, self.board_sha)
+
     def reviewed_lock_transition(self):
         """A signed master commit that changes a lockfile is admitted."""
         lock = self.source / "frontend/package-lock.json"
@@ -1010,7 +1023,9 @@ class OpsShardWorkflow(unittest.TestCase):
         self.call(self.consumer.check_source, self.admission, self.source, self.board)
         (self.board / "schema.sql").write_text("-- unsigned changed schema\n")
         self.fixture.git(self.board, "add", ".")
-        self.fixture.git(self.board, "-c", "commit.gpgsign=false", "commit", "-qm", "unsigned")
+        self.fixture.git(self.board, "-c", "user.name=Unsigned Fixture",
+                         "-c", "user.email=unsigned@example.invalid",
+                         "-c", "commit.gpgsign=false", "commit", "-qm", "unsigned")
         with self.assertRaisesRegex(ValueError, "Board fixture differs"):
             self.call(self.consumer.check_source, self.admission, self.source, self.board)
         unsigned = self.fixture.git(self.board, "rev-parse", "HEAD").stdout.strip()

@@ -335,6 +335,7 @@ class SourceEvidence(unittest.TestCase):
         if nested.exists():
             shutil.rmtree(nested)
         shutil.copytree(self.policy, nested)
+        workflow.rebind_board_signer(self.gpg, self.fingerprint, self.env)
         workflow.fixture.git(workflow.policy, "add", "policy")
         workflow.fixture.commit(workflow.policy)
         workflow.env["GITHUB_SHA"] = workflow.fixture.git(

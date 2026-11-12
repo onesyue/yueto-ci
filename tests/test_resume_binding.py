@@ -127,6 +127,7 @@ class ResumeBinding(unittest.TestCase):
         if snapshot.exists():
             shutil.rmtree(snapshot)
         shutil.copytree(self.owner.policy, snapshot)
+        self.workflow.rebind_board_signer(self.owner.gpg, self.owner.fingerprint, self.owner.env)
         self.workflow.fixture.git(self.workflow.policy, 'add', 'policy')
         self.workflow.fixture.commit(self.workflow.policy)
         self.policy = self.workflow.fixture.git(self.workflow.policy, 'rev-parse', 'HEAD').stdout.strip()
