@@ -4,16 +4,31 @@ on:
   push:
     branches: [master]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'Exact owner-signed YueOps source SHA (validation only)'
+        required: true
+        type: string
+      board_ref:
+        description: 'Exact owner-signed Board SHA for the same replay context'
+        required: true
+        type: string
+      migration_base:
+        description: 'Exact migration baseline SHA for the same replay context'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: policy-ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: policy-ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   policy:
+    if: github.event_name != 'workflow_dispatch'
     name: policy tests + workflow lint
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -74,3 +89,113 @@ jobs:
           command -v shellcheck
           shellcheck --severity=warning scripts/*.sh
           actionlint .github/workflows/*.yml
+
+  local-replay:
+    name: complete ci-check --local replay
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    concurrency:
+      group: ci-check-hosted-local
+      cancel-in-progress: false
+    env:
+      TZ: UTC
+      SOURCE_REF: ${{ inputs.source_ref }}
+      BOARD_REF: ${{ inputs.board_ref }}
+      CI_CHECK_MIGRATION_BASE: ${{ inputs.migration_base }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+
+      - name: Validate replay inputs and host tools
+        run: |
+          set -euo pipefail
+          export CI_CHECK_OUTPUT="$RUNNER_TEMP/ci-check-replay"
+          echo "CI_CHECK_OUTPUT=$CI_CHECK_OUTPUT" >> "$GITHUB_ENV"
+          mkdir -p "$CI_CHECK_OUTPUT"
+          for value in "$SOURCE_REF" "$BOARD_REF" "$CI_CHECK_MIGRATION_BASE"; do
+            [[ "$value" =~ ^[0-9a-f]{40}$ ]] || { echo 'exact source/Board/base SHAs required' >&2; exit 2; }
+          done
+          for tool in gh git jq python3 docker gpgv; do command -v "$tool"; done
+          docker info > "$CI_CHECK_OUTPUT/docker-info.txt"
+          df -Pk > "$CI_CHECK_OUTPUT/disk-before.txt"
+
+      - name: Mint clone-only source token
+        id: source_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueops,yueboard
+          permission-contents: read
+          skip-token-revoke: true # Explicitly revoked before any source execution.
+
+      - name: Prepare exact standalone clones and revoke credential
+        timeout-minutes: 20
+        env:
+          GH_TOKEN: ${{ steps.source_token.outputs.token }}
+        run: |
+          set -euo pipefail
+          auth=""
+          cleanup() {
+            status=$?
+            gh api --method DELETE /installation/token > /dev/null || status=2
+            if [ -n "$auth" ]; then rm -rf -- "$auth"; fi
+            printf '{"exit_code":%s,"credential_scope":"clone-only","phase":"preparation"}\n' "$status" > "$CI_CHECK_OUTPUT/preparation-status.json"
+            exit "$status"
+          }
+          trap cleanup EXIT
+          auth=$(mktemp -d "$RUNNER_TEMP/ci-check-auth.XXXXXX")
+          export GH_CONFIG_DIR="$auth/gh" GIT_CONFIG_GLOBAL="$auth/gitconfig"
+          gh auth setup-git --hostname github.com
+          bash scripts/ci-check.sh yueops "$SOURCE_REF" --local --board-ref "$BOARD_REF" \
+            --prepare-only > "$CI_CHECK_OUTPUT/preparation.log" 2>&1
+
+      - name: Execute every admitted role and join without source credential
+        timeout-minutes: 340
+        run: |
+          set -euo pipefail
+          python3 scripts/ci_check_hosted.py --source "$SOURCE_REF" --board "$BOARD_REF" \
+            --base "$CI_CHECK_MIGRATION_BASE" --output "$CI_CHECK_OUTPUT"
+
+      - name: Recover receipts and remove only recorded owned containers
+        if: always()
+        run: |
+          python3 scripts/ci_check_hosted.py --cleanup-only --output "$RUNNER_TEMP/ci-check-replay"
+
+      - name: Retain complete replay evidence on success or failure
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ci-check-local-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ci-check-replay/hosted-result.json
+            ${{ runner.temp }}/ci-check-replay/controller-session.json
+            ${{ runner.temp }}/ci-check-replay/hosted.log
+            ${{ runner.temp }}/ci-check-replay/host-resources.jsonl
+            ${{ runner.temp }}/ci-check-replay/preparation.log
+            ${{ runner.temp }}/ci-check-replay/preparation-status.json
+            ${{ runner.temp }}/ci-check-replay/prepared.json
+            ${{ runner.temp }}/ci-check-replay/admission.json
+            ${{ runner.temp }}/ci-check-replay/planner.log
+            ${{ runner.temp }}/ci-check-replay/docker-info.txt
+            ${{ runner.temp }}/ci-check-replay/disk-before.txt
+            ${{ runner.temp }}/ci-check-replay/timeout-container-*.log
+            ${{ runner.temp }}/ci-check-replay/local/execution.json
+            ${{ runner.temp }}/ci-check-replay/local/resources.jsonl
+            ${{ runner.temp }}/ci-check-replay/local/failures.txt
+            ${{ runner.temp }}/ci-check-replay/local/*/role.log
+            ${{ runner.temp }}/ci-check-replay/local/*/container.json
+            ${{ runner.temp }}/ci-check-replay/local/*/container.cid
+            ${{ runner.temp }}/ci-check-replay/local/*/temp/docker-daemon.log
+            ${{ runner.temp }}/ci-check-replay/local/evidence/**
