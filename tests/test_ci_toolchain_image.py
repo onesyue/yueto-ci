@@ -46,7 +46,8 @@ class CiToolchainImageTest(unittest.TestCase):
         self.assertIn("ARG UV_SHA256", dockerfile)
         self.assertIn('echo "$UV_SHA256  /tmp/uv.tgz" | sha256sum -c', dockerfile)
         for needle in (
-            "postgresql-18 postgresql-client-18",
+            "postgresql-18 postgresql-client-18 libpq-dev",
+            "pg_config.h",
             "plpgsql.so",
             "dict_snowball.so",
             "sing-box-1.14",
@@ -58,6 +59,8 @@ class CiToolchainImageTest(unittest.TestCase):
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, dockerfile)
+        selfcheck = (IMAGE / "selfcheck.sh").read_text(encoding="utf-8")
+        self.assertIn('test -f "$(pg_config --includedir)/pg_config.h"', selfcheck)
         rebuild = (ROOT / ".github" / "workflows" / "ci-toolchain.yml").read_text(
             encoding="utf-8"
         )

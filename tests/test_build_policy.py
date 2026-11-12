@@ -1429,7 +1429,8 @@ class BuildPolicyTest(unittest.TestCase):
                 self.assertIn(invariant, self.workflow)
         image = (ROOT / "images/yueops-ci-toolchain/Dockerfile").read_text(encoding="utf-8")
         for invariant in (
-            "postgresql-18 postgresql-client-18",
+            "postgresql-18 postgresql-client-18 libpq-dev",
+            "pg_config.h",
             "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8",
             "plpgsql.so",
             "dict_snowball.so",
