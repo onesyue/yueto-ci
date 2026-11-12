@@ -3217,6 +3217,19 @@ def shard_pythonpath(source, site):
     return os.pathsep.join(str(path.resolve()) for path in (site, source))
 
 
+LOG_LINE_LIMIT = 400
+
+
+def print_reference_listing(part_id, listing, returncode):
+    """Echo a bounded summary; the whole listing is kept as part evidence."""
+    lines = listing.read_text(errors="replace").splitlines()
+    shown = lines[-40:] if returncode not in (0, 5) else lines[-1:]
+    for line in shown:
+        clipped = line if len(line) <= LOG_LINE_LIMIT else (
+            line[:LOG_LINE_LIMIT] + f"... [{len(line)} chars, full text in evidence]")
+        print(f"[{part_id}] {clipped}", flush=True)
+
+
 def _collect_reference_part(expected, source, output, site, actual_runner, timing, assignment):
     part = output / "parts" / assignment["id"]
     site = part / "site"
@@ -3236,10 +3249,18 @@ def _collect_reference_part(expected, source, output, site, actual_runner, timin
     xml = part / "pytest.xml"
     argv = [sys.executable, "-m", "pytest", "--collect-only", "-q",
             *assignment["modules"], "-o", f"cache_dir={cache}", "--junitxml", str(xml)]
+    # The full node-id listing stays in the part's evidence, not the job log:
+    # the hosted runner masks secrets per log line in super-linear time, and a
+    # single ~1 MiB parametrized id held this step for 25+ minutes after every
+    # pytest process had already exited in under a minute.
+    listing = part / "pytest-collect-stdout.txt"
     (part / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
-    result = subprocess.run(argv, cwd=source, env=env, check=False)
+    with listing.open("wb") as sink:
+        result = subprocess.run(argv, cwd=source, env=env, check=False,
+                                stdout=sink, stderr=subprocess.STDOUT)
     (part / "pytest-finish-unix-ns.txt").write_text(str(time.time_ns()))
     (part / "pytest-exit-code.txt").write_text(str(result.returncode))
+    print_reference_listing(assignment["id"], listing, result.returncode)
     require(result.returncode in (0, 5), "reference part failed")
     rows = [json.loads(line) for line in (part / "events.jsonl").read_text().splitlines()]
     corpus = next(row for row in rows if row.get("event") == "collection_corpus")
