@@ -64,8 +64,77 @@ class DispatchBinding(unittest.TestCase):
             with self.assertRaisesRegex(OSError, 'log unavailable'):
                 REMOTE.dispatch('branch', policy, source, 'd' * 40, Path(directory), board='b' * 40)
             self.assertTrue((Path(directory) / 'dispatch.json').exists())
+            self.assertEqual(json.loads((Path(directory) / 'result.json').read_text()), row)
         self.assertTrue(any('--log' in args for args in calls))
         self.assertFalse(any('--log-failed' in args for args in calls))
+
+    def test_repo_inputs_fail_closed_before_network(self):
+        for repo, policy, source, base, board in [
+            ('unknown', 'a'*40, 'c'*40, '', ''),
+            ('yueboard', 'a'*7, 'c'*40, '', ''),
+            ('yue-node', 'a'*40, 'c'*7, '', ''),
+            ('yueboard', 'a'*40, 'c'*40, 'd'*40, ''),
+            ('yue-node', 'a'*40, 'c'*40, '', 'b'*40),
+            ('yueops', 'a'*40, 'c'*40, '', 'b'*40),
+        ]:
+            with self.subTest(repo=repo, base=base, board=board), patch.object(REMOTE, 'gh') as gh:
+                with self.assertRaises(ValueError):
+                    REMOTE.dispatch('branch', policy, source, base, Path('.'), board=board, repo=repo)
+                gh.assert_not_called()
+
+    def test_board_node_dispatch_binding_diagnostics_and_terminal_evidence(self):
+        for repo in ('yueboard', 'yue-node'):
+            for conclusion, log, expected in [
+                ('success', 'all checks passed\n', 0),
+                ('failure', 'unrecognized tool failed\n', 1),
+                ('cancelled', '', 1),
+                ('success', '2026-11-13T00:00:00Z --- FAIL: TestBoundary (0.01s)\n', 1),
+                ('failure', '2026-11-13T00:00:00Z internal/a.go:12:3: omit redundant nil check (S1009)\n', 1),
+            ]:
+                with self.subTest(repo=repo, conclusion=conclusion, log=log):
+                    policy, source, nonce = 'a'*40, 'c'*40, 'e'*32
+                    row = self.row(title=f'Build & publish images {repo} {source} [nonce:{nonce}]')
+                    final = row | {'conclusion': conclusion}
+                    def gh(*args):
+                        if args[0] == 'api':
+                            return policy
+                        if args[:2] == ('workflow', 'run'):
+                            for field in (f'service={repo}', f'ref={source}', 'validation_only=true', 'promote=false'):
+                                self.assertIn(field, args)
+                            self.assertFalse(any(x.startswith(('migration_base=', 'yueboard_contract_ref=')) for x in args))
+                            return ''
+                        return log if '--log' in args else json.dumps(final)
+                    with tempfile.TemporaryDirectory() as directory, \
+                            patch.object(REMOTE, 'gh', side_effect=gh), \
+                            patch.object(REMOTE, 'runs', side_effect=[[], [row]]), \
+                            patch.object(REMOTE.uuid, 'uuid4') as uid, \
+                            patch.object(REMOTE.subprocess, 'run'):
+                        uid.return_value.hex = nonce
+                        output = Path(directory)
+                        self.assertEqual(REMOTE.dispatch('branch', policy, source, '', output, repo=repo), expected)
+                        self.assertEqual((output / 'remote.log').read_text(), log)
+                        self.assertEqual(json.loads((output / 'result.json').read_text()), final)
+                        self.assertEqual(json.loads((output / 'dispatch.json').read_text())['repository'], repo)
+                        if 'S1009' in log:
+                            self.assertIn('S1009', (output / 'failures.txt').read_text())
+
+    def test_changed_terminal_identity_is_rejected_and_retained(self):
+        for field, value in [('headSha', 'b'*40), ('displayTitle', 'other'), ('event', 'push'), ('status', 'in_progress')]:
+            row = self.row(title=f'Build & publish images yueboard {"c"*40} [nonce:nonce]')
+            final = row | {field: value}
+            def gh(*args):
+                if args[0] == 'api':
+                    return 'a'*40
+                return '' if args[0] == 'workflow' else json.dumps(final)
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as directory, \
+                    patch.object(REMOTE, 'gh', side_effect=gh), \
+                    patch.object(REMOTE, 'runs', side_effect=[[], [row]]), \
+                    patch.object(REMOTE.uuid, 'uuid4') as uid, \
+                    patch.object(REMOTE.subprocess, 'run'):
+                uid.return_value.hex = 'nonce'
+                with self.assertRaises(ValueError):
+                    REMOTE.dispatch('branch', 'a'*40, 'c'*40, '', Path(directory), repo='yueboard')
+                self.assertEqual(json.loads((Path(directory) / 'result.json').read_text()), final)
 
 
 if __name__ == '__main__':

@@ -22,6 +22,16 @@ while [ "$#" -gt 0 ]; do
     *) usage ;;
   esac
 done
+case "$repo" in
+  yueops) ;;
+  yueboard|yue-node)
+    [ "$mode" = remote ] || fail "$repo local validation is not implemented"
+    [ "$prepare_only" = false ] && [ -z "$prepared" ] && [ -z "$board_sha" ] &&
+      [ -z "${CI_CHECK_MIGRATION_BASE:-}" ] || fail 'Board/base/prepared options apply only to yueops'
+    ;;
+  *) fail "unsupported validation repository: $repo" ;;
+esac
+[[ "$raw_sha" =~ ^[0-9a-f]{7,40}$ ]] || fail 'sha must be 7 to 40 lowercase hex characters'
 if [ "$prepare_only" = true ] || [ -n "$prepared" ]; then
   [ "$mode" = --local ] || usage
   [ "$prepare_only" = false ] || [ -z "$prepared" ] || usage
@@ -30,25 +40,28 @@ if [ "$prepare_only" = true ] || [ -n "$prepared" ]; then
 fi
 # ci-check is always validation-only. Explicit historical context is never a
 # publication default; ordinary use resolves the signed desired Board snapshot.
-if [ -z "$board_sha" ]; then
-  export YUETO_ROOT=${YUETO_ROOT:-$(dirname "$ROOT")}
-  board_sha=$(python3 "$ROOT/scripts/ci_check_board.py" --root "$YUETO_ROOT")
+if [ "$repo" = yueops ]; then
+  if [ -z "$board_sha" ]; then
+    export YUETO_ROOT=${YUETO_ROOT:-$(dirname "$ROOT")}
+    board_sha=$(python3 "$ROOT/scripts/ci_check_board.py" --root "$YUETO_ROOT")
+  fi
+  [[ "$board_sha" =~ ^[0-9a-f]{40}$ ]] || fail 'board ref must be an exact 40-hex commit SHA'
 fi
-[[ "$board_sha" =~ ^[0-9a-f]{40}$ ]] || fail 'board ref must be an exact 40-hex commit SHA'
-[ "$repo" = yueops ] || fail 'B9-9 validates yueops; other repositories are not wired here'
 [ "$mode" = remote ] || [ "$mode" = --local ] || usage
-[[ "$raw_sha" =~ ^[0-9a-f]{7,40}$ ]] || fail 'sha must be 7 to 40 lowercase hex characters'
 if [[ "$raw_sha" =~ ^[0-9a-f]{40}$ ]]; then
   full_sha=$raw_sha
 else
   full_sha=$(gh api --method GET "repos/onesyue/$repo/commits/$raw_sha" --jq .sha)
 fi
 [[ "$full_sha" =~ ^[0-9a-f]{40}$ ]] || fail 'could not resolve exact source SHA'
-base=${CI_CHECK_MIGRATION_BASE:-}
-if [ -z "$base" ]; then
-  base=$(gh api --method GET "repos/onesyue/$repo/commits/$full_sha" --jq '.parents[0].sha // empty')
+base=""
+if [ "$repo" = yueops ]; then
+  base=${CI_CHECK_MIGRATION_BASE:-}
+  if [ -z "$base" ]; then
+    base=$(gh api --method GET "repos/onesyue/$repo/commits/$full_sha" --jq '.parents[0].sha // empty')
+  fi
+  [[ "$base" =~ ^[0-9a-f]{40}$ ]] || fail 'migration base must be a full commit SHA'
 fi
-[[ "$base" =~ ^[0-9a-f]{40}$ ]] || fail 'migration base must be a full commit SHA'
 [ -z "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ] || fail 'commit policy edits before validation'
 policy_sha=$(git -C "$ROOT" rev-parse HEAD)
 # Keep every failure log and intent receipt; cleanup removes only owned clones.
@@ -58,7 +71,7 @@ output=$(cd "$output" && pwd)
 echo "ci-check: evidence $output" >&2
 if [ "$mode" = remote ]; then
   branch=$(git -C "$ROOT" symbolic-ref --quiet --short HEAD) || fail 'remote validation needs a named policy branch'
-  exec python3 "$ROOT/scripts/ci_check_remote.py" --branch "$branch" --policy "$policy_sha" \
+  exec python3 "$ROOT/scripts/ci_check_remote.py" --repo "$repo" --branch "$branch" --policy "$policy_sha" \
     --source "$full_sha" --base "$base" --board "$board_sha" --output "$output"
 fi
 checkouts=""

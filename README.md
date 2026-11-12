@@ -479,6 +479,20 @@ SBOM or rollback rules. The root caller currently restricts resume to the Ops
 group with `--no-deploy`; deployment consumers must separately validate the old
 image/new evidence identity binding before deployment resume can be enabled.
 
+### Validate Board or Node remotely (B10-2)
+
+`scripts/ci-check.sh yueboard <sha>` and `scripts/ci-check.sh yue-node <sha>`
+reuse the existing hosted validation roles on the current pushed policy branch.
+Every request fixes `validation_only=true` and `promote=false`, resolves an exact
+source commit, and binds its run to that source, policy commit and unique nonce.
+`remote.log` retains all job logs; `result.json` retains the terminal GitHub result.
+`failures.txt` summarizes pytest, Go test and Go compiler/lint diagnostics, including
+S1009. An empty summary never overrides a failed workflow conclusion.
+
+Board/Node local execution is not implemented: `--local` is rejected before any
+network request. Board context, migration base and prepared execution options
+remain YueOps-only. This interface does not establish local/remote equivalence.
+
 ### Reproduce a signed YueOps validation (B9-9)
 
 `scripts/ci-check.sh yueops <sha>` dispatches validation only from the current
