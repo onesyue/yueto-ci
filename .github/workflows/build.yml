@@ -492,6 +492,10 @@ jobs:
     # gauntlet that is green under a different zone is not evidence.
     env:
       TZ: UTC
+      # The host ImageVersion is not passed into a job container. Shard
+      # admission rejects a missing identity. OS and architecture still come
+      # from the runner; this names the toolchain image.
+      ImageVersion: yueops-ci-toolchain
     strategy:
       # One shard's failure must not cancel its siblings.
       # A test failure still fails that shard immediately: the pytest step
@@ -1372,7 +1376,7 @@ jobs:
             .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-finish-unix-ns.txt"
             if [ "$pytest_rc" -ne 0 ]; then exit "$pytest_rc"; fi
           fi
-          sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py
+          sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py
 
       # Provider JSON is diagnostic only. Never put it in native/shard evidence.
       - name: Retain Ops Python audit diagnostics
@@ -1482,13 +1486,13 @@ jobs:
           # phase; never make the ordinary suite root or silently accept skips.
           .venv/bin/python "$native_driver" tests/test_board139_schema_acl_native_20261018.py 6 1001 \
             "$native_evidence/test_board139_schema_acl_native_20261018.json"
-          sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" \
+          sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC "$PWD/.venv/bin/python" \
             "$native_driver" tests/test_node_systemd_pilot_20261018.py 38 0 \
             "$native_evidence/test_node_systemd_pilot_20261018.json"
-          sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" \
+          sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC "$PWD/.venv/bin/python" \
             "$native_driver" tests/native_loadshed_installer_20261030.py 14 0 \
             "$native_evidence/native_loadshed_installer_20261030.json"
-          sudo -n env PATH="$PATH" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard" \
+          sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard" \
             "$PWD/.venv/bin/python" "$native_driver" \
             tests/test_schema_contract_receipt_20261020.py 30 0 \
             "$native_evidence/test_schema_contract_receipt_20261020.json"
@@ -1500,7 +1504,7 @@ jobs:
           test "$(docker image inspect --format '{{.Id}}' "$nginx_lab")" = \
             "$(docker image inspect --format '{{.Id}}' nginx:1.30.5)"
           while read -r target floor; do
-            sudo -n env PATH="$PATH" TZ=UTC YUE_PROTOCOL_RESULTS_NATIVE_LAB=1 \
+            sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC YUE_PROTOCOL_RESULTS_NATIVE_LAB=1 \
               YUE_PROTOCOL_RESULTS_NGINX_LAB=1 YUEBOARD_REPO_PATH="$PWD/.ci-yueboard" \
               "$PWD/.venv/bin/python" "$native_driver" "$target" "$floor" 0 \
               "$native_evidence/$(basename "$target" .py).json"

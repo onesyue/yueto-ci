@@ -266,10 +266,10 @@ def _assert_native_contract(test, workflow):
         'test ! -L "$YUEBOARD_MONEY_SCHEMA_FIXTURE"',
         'test "$(id -u)" = 1001',
         '.venv/bin/python "$native_driver" tests/test_board139_schema_acl_native_20261018.py 6 1001',
-        'sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python"',
+        'sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC "$PWD/.venv/bin/python"',
         '"$native_driver" tests/test_node_systemd_pilot_20261018.py 38 0',
         'scripts/run-native-nginx-tests.py',
-        'sudo -n env PATH="$PATH" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"',
+        'sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"',
         'tests/test_schema_contract_receipt_20261020.py 30 0',
         '"$native_driver" tests/native_loadshed_installer_20261030.py 14 0',
     ):
