@@ -178,9 +178,324 @@ def collection_config_ok(actual):
     return (all(actual.get(k) == v for k, v in EXPECTED_CONFIG.items())
             and all(OPTIONAL_RETENTION_CONFIG.get(k) == v for k, v in extra.items()))
 
+ORDINARY_WEIGHTS_PREFIX = "ops-ordinary-weights-"
+PASSIVE_TIMING_PREFIX = "yueops-pytest-timing-"
 
-def plan(source, context, count, serial):
-    """Select whole tracked modules before importing pytest or product code."""
+
+def detach_ordinary_weights(value):
+    """Remove the timing map. The sealed plan schema stays weights-free."""
+    return value.pop("ordinary_weights", None)
+
+
+def _positive_millis(value):
+    return type(value) is int and value >= 1
+
+
+def _measured_seconds(value):
+    return (type(value) in (int, float)
+            and value == value
+            and value not in (float("inf"), float("-inf"))
+            and value >= 0)
+
+
+def assign_ordinary(modules, count, weights):
+    """Stride when weights is None. Otherwise longest-processing-time.
+
+    The tie break is (load, index). A positive weight makes the first
+    ``count`` heaviest modules fill distinct shards, because an empty shard
+    has load 0 and index 0 is not preferred once it is no longer empty.
+    """
+    if weights is None:
+        grouped = [list(modules[i::count]) for i in range(count)]
+    else:
+        ranked = sorted(modules, key=lambda module: (-weights[module], module))
+        grouped = [[] for _ in range(count)]
+        loads = [0] * count
+        for module in ranked:
+            index = min(range(count), key=lambda shard: (loads[shard], shard))
+            grouped[index].append(module)
+            loads[index] += weights[module]
+        for bucket in grouped:
+            bucket.sort()
+    require(all(grouped), "ordinary weight assignment left an empty shard")
+    return [{"id": f"ordinary-{i:03d}", "modules": grouped[i]} for i in range(count)]
+
+
+def _lower_median(values):
+    ordered = sorted(values)
+    return ordered[(len(ordered) - 1) // 2]
+
+
+def align_weights(modules, raw):
+    """Map current ordinary modules to positive integer milliseconds.
+
+    Unknown keys are dropped. A module with no usable measurement takes the
+    lower median of the known positive weights. No known weight means stride.
+    """
+    if not isinstance(raw, dict):
+        return None
+    module_set = set(modules)
+    known = []
+    aligned = {}
+    for key, value in raw.items():
+        if key not in module_set or not _positive_millis(value):
+            continue
+        aligned[key] = value
+        known.append(value)
+    if not known:
+        return None
+    fill = _lower_median(known)
+    return {module: aligned.get(module, fill) for module in modules}
+
+
+def weights_from_events(path, ordinary):
+    """Sum measured case phases into integer milliseconds, minimum 1."""
+    if not isinstance(path, Path) or not path.is_file() or path.is_symlink():
+        return {}
+    try:
+        text = path.read_text()
+    except (OSError, UnicodeError):
+        return {}
+    ordinary = set(ordinary)
+    seconds = {}
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(row, dict):
+            continue
+        if row.get("event") != "phase_timing" or row.get("report_kind") != "case":
+            continue
+        if row.get("duration_status") != "measured" or not _measured_seconds(row.get("duration_seconds")):
+            continue
+        nodeid = row.get("nodeid")
+        if not isinstance(nodeid, str) or not nodeid:
+            continue
+        module = nodeid.split("::", 1)[0]
+        if module not in ordinary:
+            continue
+        seconds[module] = seconds.get(module, 0.0) + row["duration_seconds"]
+    result = {}
+    for module, total in seconds.items():
+        if not _measured_seconds(total):
+            continue
+        result[module] = max(1, int(round(total * 1000)))
+    return result
+
+
+def resolve_ordinary_weights(modules, weights, timing):
+    """Return a complete weight map, or None when the stride must be kept."""
+    if weights is not None:
+        return align_weights(modules, weights)
+    events = timing
+    if isinstance(timing, Path) and timing.is_dir():
+        events = timing / "events.jsonl"
+    if not isinstance(events, Path):
+        return None
+    try:
+        measured = weights_from_events(events, modules)
+    except (OSError, UnicodeError, ValueError):
+        return None
+    return align_weights(modules, measured)
+
+
+def load_weight_document(path):
+    """Read a weight JSON file. A missing or corrupt file keeps the stride."""
+    if path is None:
+        return None
+    try:
+        if not path.is_file() or path.is_symlink():
+            return None
+        value = json.loads(path.read_text())
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def choose_weight_artifact(names):
+    """Prefer an ordinary-weights name over a passive timing name."""
+    chosen = select_weight_artifact([(None, list(names))])
+    return None if chosen is None else chosen[1]
+
+
+def select_weight_artifact(catalog):
+    """Pick from a newest-first ``(run id, artifact names)`` catalog.
+
+    Any ordinary-weights artifact wins over a passive timing artifact. Within
+    one kind, the newest run wins.
+    """
+    weights = None
+    timing = None
+    for run_id, names in catalog:
+        for name in names:
+            if not isinstance(name, str):
+                continue
+            if weights is None and name.startswith(ORDINARY_WEIGHTS_PREFIX):
+                weights = (run_id, name)
+            elif timing is None and name.startswith(PASSIVE_TIMING_PREFIX):
+                timing = (run_id, name)
+        if weights is not None:
+            break
+    return weights or timing
+
+
+def artifact_names_from_listing(text):
+    """Parse ``name<TAB>expired`` lines. Expired and unrelated names are omitted."""
+    names = []
+    for line in text.splitlines():
+        name, separator, expired = line.partition("\t")
+        if separator != "\t" or expired != "false":
+            continue
+        if name.startswith(ORDINARY_WEIGHTS_PREFIX) or name.startswith(PASSIVE_TIMING_PREFIX):
+            names.append(name)
+    return names
+
+
+def _default_gh(argv):
+    try:
+        completed = subprocess.run(argv, capture_output=True, text=True, timeout=60, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return 1, "", ""
+    # stderr can echo a request URL. Keep it off the console.
+    return completed.returncode, completed.stdout, ""
+
+
+def fetch_previous_ordinary_weights(output, timing_output, runner=None):
+    """Download the previous run's weights. Failure returns the stride status."""
+    run = runner or _default_gh
+    code, stdout, _stderr = run([
+        "gh", "run", "list", "-R", "onesyue/yueto-ci", "-w", "build.yml",
+        "-s", "success", "-L", "8", "--json", "databaseId",
+    ])
+    if code != 0:
+        return "stride", "run list failed"
+    try:
+        listed = json.loads(stdout)
+    except json.JSONDecodeError:
+        return "stride", "run list was not JSON"
+    if not isinstance(listed, list):
+        return "stride", "run list was not a list"
+    catalog = []
+    for item in listed:
+        if not isinstance(item, dict) or type(item.get("databaseId")) is not int:
+            continue
+        run_id = item["databaseId"]
+        if run_id < 1:
+            continue
+        code, stdout, _stderr = run([
+            "gh", "api", "--paginate",
+            f"/repos/onesyue/yueto-ci/actions/runs/{run_id}/artifacts",
+            "--jq", ".artifacts[] | [.name, .expired] | @tsv",
+        ])
+        if code != 0:
+            continue
+        catalog.append((run_id, artifact_names_from_listing(stdout)))
+    chosen = select_weight_artifact(catalog)
+    if chosen is None:
+        return "stride", "no usable artifact"
+    run_id, name = chosen
+    destination = Path(tempfile.mkdtemp(prefix="ordinary-weights-"))
+    try:
+        code, _stdout, _stderr = run([
+            "gh", "run", "download", str(run_id), "-R", "onesyue/yueto-ci",
+            "-n", name, "-D", str(destination),
+        ])
+        if code != 0:
+            return "stride", "artifact download failed"
+        if name.startswith(ORDINARY_WEIGHTS_PREFIX):
+            found = [path for path in destination.rglob("ordinary-weights.json")
+                     if path.is_file() and not path.is_symlink()]
+            if len(found) != 1:
+                return "stride", "ordinary weights file missing"
+            document = load_weight_document(found[0])
+            if not document:
+                return "stride", "ordinary weights file unusable"
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(json.dumps(document, sort_keys=True) + "\n")
+            return "timed", ""
+        found = [path for path in destination.rglob("events.jsonl")
+                 if path.is_file() and not path.is_symlink()]
+        if len(found) != 1:
+            return "stride", "timing events missing"
+        timing_output.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(found[0], timing_output / "events.jsonl")
+        return "timed-events", ""
+    finally:
+        shutil.rmtree(destination, ignore_errors=True)
+
+
+def ordinary_shard_evidence_dirs(evidence):
+    """Ordinary shard directories, excluding reference collect-only copies."""
+    if not isinstance(evidence, Path) or not evidence.is_dir():
+        return []
+    selected = []
+    for child in sorted(evidence.iterdir()):
+        name = child.name
+        if not child.is_dir() or child.is_symlink():
+            continue
+        if not name.startswith("ops-shard-") or "-ordinary-" not in name or "-reference-" in name:
+            continue
+        selected.append(child)
+    return selected
+
+
+def publish_ordinary_weights(admission, evidence, output):
+    """Write module milliseconds from ordinary shard events. Return whether written."""
+    try:
+        assignments = admission["ops_plan"]["assignments"]
+        ordinary = [
+            module
+            for item in assignments
+            if isinstance(item, dict) and str(item.get("id", "")).startswith("ordinary-")
+            for module in item.get("modules", [])
+        ]
+    except (KeyError, TypeError, AttributeError):
+        return False
+    if not ordinary:
+        return False
+    totals = {}
+    for directory in ordinary_shard_evidence_dirs(evidence):
+        for module, millis in weights_from_events(directory / "events.jsonl", ordinary).items():
+            totals[module] = totals.get(module, 0) + millis
+    if not totals:
+        return False
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(totals, sort_keys=True, indent=2) + "\n")
+    return True
+
+
+def previous_ordinary_weights_command(args, runner=None):
+    try:
+        status, reason = fetch_previous_ordinary_weights(
+            args.output, args.timing_output, runner=runner)
+    except (OSError, ValueError, TypeError):
+        status, reason = "stride", "previous weights unavailable"
+    if status == "timed":
+        print("ORDINARY_WEIGHTS: timed", file=sys.stderr)
+    elif status == "timed-events":
+        print("ORDINARY_WEIGHTS: timed-events", file=sys.stderr)
+    else:
+        print(f"ORDINARY_WEIGHTS: stride ({reason})", file=sys.stderr)
+    return 0
+
+
+def publish_ordinary_weights_command(args):
+    try:
+        wrote = publish_ordinary_weights(read_json(args.admission), args.evidence, args.output)
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+        wrote = False
+    print("ORDINARY_WEIGHTS: published" if wrote else "ORDINARY_WEIGHTS: absent", file=sys.stderr)
+    return 0
+
+def plan(source, context, count, serial, weights=None, timing=None):
+    """Select whole tracked modules before importing pytest or product code.
+
+    ``weights`` or ``timing`` rebalance ordinary shards and stay outside the
+    plan digest. Missing or unusable timing keeps the module-count stride.
+    """
     source = source.resolve()
     require(Path(git(source, "rev-parse", "--show-toplevel").decode().strip()).resolve()
             == source, "source must be the exact Git repository root")
@@ -229,10 +544,8 @@ def plan(source, context, count, serial):
             "serial modules are duplicate or outside the inventory")
     ordinary = [p for p in modules if p not in serial]
     require(type(count) is int and 1 <= count <= len(ordinary), "invalid shard capacity")
-    assignments = [
-        {"id": f"ordinary-{i:03d}", "modules": ordinary[i::count]}
-        for i in range(count)
-    ]
+    used = resolve_ordinary_weights(ordinary, weights, timing)
+    assignments = assign_ordinary(ordinary, count, used)
     if serial:
         assignments.append({"id": "serial", "modules": list(serial)})
     result = {
@@ -244,6 +557,8 @@ def plan(source, context, count, serial):
         "modules": hashes, "assignments": assignments,
     }
     result["plan_sha256"] = sha(encoded(result))
+    if used is not None:
+        result["ordinary_weights"] = {module: used[module] for module in ordinary}
     return result
 
 
@@ -3454,11 +3769,14 @@ def envelope(value):
                 require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
                         and isinstance(value.get("skip_module_blobs"), dict),
                         "skip baseline or shared collection inputs differ")
-                admit_shared_inputs(baseline, value.get("common_inputs"),
-                                    source_revision=value["source_revision"],
-                                    estate_successor_of=value.get("estate_successor_of"),
-                                    template_writer_retired_at=value.get("template_writer_retired_at"),
-                                    pin_is_ancestor=value.get("pin_is_ancestor") is True)
+                if value.get("admission_rule") == "signed-default-branch":
+                    require(value.get("estate_successor_of") is None
+                            and value.get("template_writer_retired_at") is None
+                            and value.get("pin_is_ancestor") is not True,
+                            "signed admission does not carry a seal marker")
+                else:
+                    require(False,
+                            "shared-input seals are retired; admit a signed default-branch commit")
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -3479,7 +3797,57 @@ def serial_modules(source):
     return description["serial_modules"]
 
 
-def expand(targets, source, board, runner, capacity, shards):
+def _commit_ref(source, ref):
+    try:
+        return git(source, "rev-parse", "--verify", "--end-of-options",
+                   ref + "^{commit}").decode().strip()
+    except subprocess.CalledProcessError:
+        return ""
+
+
+def on_default_branch(source, revision):
+    """True when revision is the default branch tip or its ancestor.
+
+    The plan checkout of a SHA does not create origin/master by itself.
+    The workflow fetches refs/remotes/origin/master first. A local fixture
+    may use refs/heads/master. A missing ref fails closed.
+    """
+    require(isinstance(revision, str) and SHA.fullmatch(revision),
+            "exact source SHA required")
+    found = False
+    for ref in ("refs/remotes/origin/master", "refs/heads/master"):
+        tip = _commit_ref(source, ref)
+        if not tip:
+            continue
+        found = True
+        if tip == revision:
+            return True
+        try:
+            git(source, "merge-base", "--is-ancestor", revision, ref)
+            return True
+        except subprocess.CalledProcessError:
+            continue
+    require(found, "default branch ref is missing")
+    return False
+
+
+def admit_signed_default_branch(source, revision, policy_dir=None):
+    """Admit a source SHA that is on the default branch and owner-signed.
+
+    Timing shards are chosen by the caller. File lists, helper additions and
+    conftest edits are not a separate seal. policy_dir defaults to the
+    validator's policy directory.
+    """
+    require(on_default_branch(source, revision),
+            "source SHA is not on the default branch")
+    try:
+        source_evidence.verify_commit(
+            git(source, "cat-file", "commit", revision), policy_dir)
+    except source_evidence.Rejected as error:
+        raise ValueError("unauthorized source signature") from error
+
+
+def expand(targets, source, board, runner, capacity, shards, timing=None, weights=None):
     """Expand an exact target plan, without pytest collection or import."""
     require(type(capacity) is int and capacity > 0, "capacity must be positive")
     require(runner in ("ubuntu-24.04", "yue-local-release"), "unsupported runner")
@@ -3490,6 +3858,7 @@ def expand(targets, source, board, runner, capacity, shards):
     value = {"schema": 1, "identity": workflow_identity(), "mode": "none",
              "source_revision": None, "board_revision": board,
              "ops_plan": None, "validation_matrix": matrix}
+    used_weights = None
     if selected:
         ops = selected[0]
         require(ops.get("repo") == "onesyue/yueops" and SHA.fullmatch(ops.get("ref", "")),
@@ -3509,7 +3878,9 @@ def expand(targets, source, board, runner, capacity, shards):
                 "runner_image": os.environ.get("ImageVersion"),
             }
             bound = source_evidence.optional(source, ops["ref"])
-            expected = plan(source, context, shards, serial_modules(source))
+            expected = plan(source, context, shards, serial_modules(source),
+                            weights=weights, timing=timing)
+            used_weights = detach_ordinary_weights(expected)
             require(expected["source_revision"] == ops["ref"], "planned source checkout differs")
             if bound is not None:
                 files = tree_inputs(source, ops["ref"])
@@ -3520,22 +3891,11 @@ def expand(targets, source, board, runner, capacity, shards):
                              source_evidence=bound, skip_module_blobs=blobs,
                              skip_baseline_sha256=bound["evidence"][source_evidence.BASELINE]["sha256"])
             else:
-                baseline = skip_baseline()
+                admit_signed_default_branch(source, ops["ref"])
                 common = shared_inputs(source, ops["ref"])
                 files = tree_inputs(source, ops["ref"])
-                successor_of = estate_successor_proof(baseline, source, ops["ref"])
-                retired_at = template_writer_retirement_proof(source, ops["ref"])
-                ancestor = release_pin_is_ancestor(source, ops["ref"])
-                admit_shared_inputs(baseline, common, files, source_revision=ops["ref"],
-                                    estate_successor_of=successor_of, template_writer_retired_at=retired_at,
-                                    pin_is_ancestor=ancestor)
-                if ancestor and ops["ref"] != release_pin():
-                    value["pin_is_ancestor"] = True
-                if retired_at is not None:
-                    value["template_writer_retired_at"] = retired_at
-                if successor_of is not None:
-                    value["estate_successor_of"] = successor_of
                 value.update(mode="sharded", ops_plan=expected, common_inputs=common,
+                             admission_rule="signed-default-branch",
                              skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
                              skip_module_blobs={p: files[p][1] for p in expected["modules"]})
             roles = role_order(expected)
@@ -3560,6 +3920,8 @@ def expand(targets, source, board, runner, capacity, shards):
         record = load_ops_skip_evidence(source, value["source_revision"])
         if record is not None:
             value["ops_skip_evidence"] = record
+    if used_weights is not None:
+        value["ordinary_weights"] = used_weights
     return seal(value, "admission_sha256")
 
 
@@ -3573,6 +3935,11 @@ def verify_source_evidence(value, source):
 def check_source(value, source, board):
     envelope(value)
     verify_source_evidence(value, source)
+    if (value.get("mode") == "sharded"
+            and value.get("admission_rule") == "signed-default-branch"):
+        admit_signed_default_branch(source, value["source_revision"])
+        require(shared_inputs(source, value["source_revision"]) == value.get("common_inputs"),
+                "shared inputs differ from the signed commit")
     require(git(source, "rev-parse", "HEAD").decode().strip() == value["source_revision"]
             and not git(source, "status", "--porcelain", "--untracked-files=no"),
             "executing source differs or is dirty")
@@ -3595,7 +3962,9 @@ def execute(value, source, board, role, output, site):
             "unknown execution role")
     current = plan(source, expected["context"],
                    sum(a["id"].startswith("ordinary-") for a in expected["assignments"]),
-                   serial_modules(source))
+                   serial_modules(source),
+                   weights=value.get("ordinary_weights"))
+    detach_ordinary_weights(current)
     require(current == expected, "source collection inputs or assignments changed")
     actual_runner = runner_context(expected["context"], os.environ)
     require(os.environ.get("PYTEST_ADDOPTS", "") in ("", "--durations=25"),
@@ -3839,139 +4208,30 @@ def reviewed_board139_native_successor(baseline, value, native, *, require_nativ
 
 
 def reviewed_first_native_successor(baseline, value, native, *, require_native=True):
-    policy = first_native_policy()
-    # Identical native-test blobs on a descendant keep the same skip binding.
-    # The native job in this run still has to pass every bound case.
-    if not holds_release_pin(value.get("source_revision"),
-                             pin_is_ancestor=value.get("pin_is_ancestor") is True):
-        return baseline
-    require(all(value["skip_module_blobs"].get(module) == blob
-                for module, blob in policy["module_blobs"].items()),
-            "first native module source differs")
-    cases = dict(baseline["reviewed_hosted"]["cases"])
-    for nodeid, row in policy["cases"].items():
-        module = nodeid.split("::", 1)[0]
-        if require_native:
-            require(nodeid in native["obligations"].get(module, {}).get("passed", []),
-                    "first native successor lacks exact same-run call: " + nodeid)
-        cases[nodeid] = row | {"module_blob": policy["module_blobs"][module],
-                              "disposition": "SAME_RUN_NATIVE_REQUIRED",
-                              "native_target": module}
-    return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": cases}}
+    """Native skip blobs are not a resealed file.
 
-
-ORDINARY_SKIP_EVIDENCE_SHA256 = "0015923faa21c5658538563df31b58c2c17beab227b78ff0c9b59f8540669f0d"
-ORDINARY_SKIP_EVIDENCE = Path("reviews/ops-ordinary-skip-evidence-20261107.json")
-# 2026-11-10: run 42817758699 (yueops 01aaffe41) passed every selected job; its
-# ordinary shards skipped 134 cases for the same environmental reasons after
-# owner-approved LA retirement / domain cutover edits moved their test modules.
-# Each reviewed file is evaluated independently against the same admitted set
-# and admits only its own exact after_blob, never a later one.
-ORDINARY_SKIP_EVIDENCE_20261110_SHA256 = "b1163b8acd2f71ac6f16d5e17815befc817bade11f4547df72c187b1084063c6"
-ORDINARY_SKIP_EVIDENCE_20261110 = Path("reviews/ops-ordinary-skip-evidence-20261110.json")
-# Owner t935u (2026-11-10): the yueops backup includes cdn_entry_observations.
-# The restore-drill module changed; its seven Docker e2e skips (same reason as
-# run 42817758699) move to the reviewed successor blob. No case is added.
-ORDINARY_SKIP_EVIDENCE_20261110B_SHA256 = "2f1cfa9a2d32de58b4b19f013989e29c5858905932114e7dbce34147ff099388"
-ORDINARY_SKIP_EVIDENCE_20261110B = Path("reviews/ops-ordinary-skip-evidence-20261110b.json")
-# yueops 0e8c29c02 (#477 R-16): the dead-backed autohide now reads pool owners,
-# so this module gains a per-module owners fixture (a6a629cd -> 57146f4b). Its one
-# before_blob is the admitted baseline blob cbfe9f4b: ordinary evidence files are
-# each checked against the admitted set, not chained (run 42878457376 rejected a6a629cd).
-# native VLESS skip keeps the same XRAY_PROBE_TEST_BIN reason. No case is added.
-ORDINARY_SKIP_EVIDENCE_20261111_SHA256 = "acfcca51c3bb471587816c78f55ef3ce846eba791fe32994c7619f579f3403cd"
-ORDINARY_SKIP_EVIDENCE_20261111 = Path("reviews/ops-ordinary-skip-evidence-20261111.json")
-# yueops #482 (group-5 CF autohide): the module gains one unskipped test
-# (a visible row outside the probe account's groups stays UNKNOWN), so the same
-# admitted XRAY_PROBE_TEST_BIN skip moves cbfe9f4b -> b6509a58. Checked against the
-# admitted baseline like 20261111 (not chained). No case is added.
-ORDINARY_SKIP_EVIDENCE_20261111B_SHA256 = "516146046639bbbd1bcda7565a8c60b736471e13e952951a7b47bd8e28b5db91"
-ORDINARY_SKIP_EVIDENCE_20261111B = Path("reviews/ops-ordinary-skip-evidence-20261111b.json")
-# yueops 3f6b045c0 (ship 9, group-5 credential): the module's hide fixture now
-# stubs catalog group lookups and the notifier; the same admitted XRAY_PROBE_TEST_BIN
-# skip moves cbfe9f4b -> 89199841. Local run on 5c4cc83a7: 38 passed, 1 skipped
-# with the same reason. Checked against the admitted baseline (not chained).
-ORDINARY_SKIP_EVIDENCE_20261111C_SHA256 = "9b9b669ed2037a275c5a86b7293df6a0fc5cb3da51ab91443adcf3a4d8aae3a6"
-ORDINARY_SKIP_EVIDENCE_20261111C = Path("reviews/ops-ordinary-skip-evidence-20261111c.json")
-# Ship 9 fix ace262936: the compose mount floor test adds the read-only
-# retired-entry list mount (#493). The admitted Docker-image skip in the same
-# module keeps its reason and moves 03118c49 -> c0037189. Checked against the
-# admitted baseline (not chained). No case is added.
-ORDINARY_SKIP_EVIDENCE_20261111D_SHA256 = "e297ce3a7eb9fa0459b527f1cd5851b13a6621a90c76dc88ff8967f75b60cc6e"
-ORDINARY_SKIP_EVIDENCE_20261111D = Path("reviews/ops-ordinary-skip-evidence-20261111d.json")
-# Ship 9 fix 9e628afe1: the signed-closure pin test admits
-# scripts/lib/retired_entry_quarantine.py as a REQUIRED sealed-root input. The
-# admitted explicit-GPG skip in the same module keeps its reason and moves
-# 3b3443dc -> c697afa5 (3b3443dc is the admitted blob after the reviewed
-# release skip-blob successor 1a88653d -> 3b3443dc). Not chained.
-# No case is added.
-ORDINARY_SKIP_EVIDENCE_20261111E_SHA256 = "249428bfb964c061815058bd0f4018faba69bed44fdea5865fbb1c89137bcdf5"
-ORDINARY_SKIP_EVIDENCE_20261111E = Path("reviews/ops-ordinary-skip-evidence-20261111e.json")
-# Ship 9 8bb2ce01b (run 43024038775): the relay-coordinator delivery-closure
-# module moved its admitted real-root-installer skips to blob 3c9f5d4f (22
-# updates, same reasons; transitive-input ids are now repo-relative) and adds
-# 9 new skips with the same root-installer class of reason. Updates are checked
-# against the admitted baseline (not chained); additions must be new ids.
-ORDINARY_SKIP_EVIDENCE_20261111F_SHA256 = "0322d89329822d0226409ea75a5c438b92b58039557c005242bf0b792b84a3d6"
-ORDINARY_SKIP_EVIDENCE_20261111F = Path("reviews/ops-ordinary-skip-evidence-20261111f.json")
-ORDINARY_SKIP_EVIDENCE_FILES = (
-    (ORDINARY_SKIP_EVIDENCE, ORDINARY_SKIP_EVIDENCE_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261110, ORDINARY_SKIP_EVIDENCE_20261110_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261110B, ORDINARY_SKIP_EVIDENCE_20261110B_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111, ORDINARY_SKIP_EVIDENCE_20261111_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111B, ORDINARY_SKIP_EVIDENCE_20261111B_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111C, ORDINARY_SKIP_EVIDENCE_20261111C_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111D, ORDINARY_SKIP_EVIDENCE_20261111D_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111E, ORDINARY_SKIP_EVIDENCE_20261111E_SHA256),
-    (ORDINARY_SKIP_EVIDENCE_20261111F, ORDINARY_SKIP_EVIDENCE_20261111F_SHA256),
-)
-OPS_SKIP_EVIDENCE = "tests/admission/ordinary-skip-evidence.json"
-
-
-def ordinary_skip_evidence_file(relative=None):
-    """Reviewed evidence inside this policy root, or None when this tree has none.
-
-    Isolated copies carry the shard script without this reviews file. Walk only
-    real entries under this root and refuse a symlink, so the lookup cannot
-    leave the isolated tree for another checkout.
+    A signed default-branch commit is admitted by its signature. Same-run
+    native obligations stay on NATIVE_TARGETS. The historical signature is
+    kept so a precheck can still call this without a successor JSON file.
     """
-    root = ROOT.resolve()
-    current = root
-    for part in (ORDINARY_SKIP_EVIDENCE if relative is None else relative).parts:
-        current = current / part
-        if current.is_symlink() or not current.exists():
-            return None
-    resolved = current.resolve()
-    if not resolved.is_relative_to(root) or not resolved.is_file():
-        return None
-    return resolved
+    del value, native, require_native
+    return baseline
 
 
 def ordinary_skip_evidence_successors(admitted, value):
-    """Admit one reviewed ordinary-skip evidence set, and no later blob.
+    """Ops-commit evidence may move an admitted skip.
 
-    Run 42307825077 passed the selected matrix. Its ordinary shards skipped
-    these cases for unchanged environmental reasons, or moved an already
-    admitted skip to a new test-module blob. The dynamic service-grant xfails
-    are not in this set. A different current blob is omitted, not inherited,
-    including an earlier baseline whose admitted blob has not reached before_blob.
-    The live after_blob still has to succeed that admitted skip exactly.
+    Dated review files are not an allow-list. A missing ops-commit record
+    adds no successor. A record that does not succeed an admitted skip still
+    fails closed.
     """
-    successors = {}
-    for relative, digest in ORDINARY_SKIP_EVIDENCE_FILES:
-        path = ordinary_skip_evidence_file(relative)
-        if path is not None:
-            successors.update(_ordinary_skip_evidence_record(path, digest, admitted, value))
     record = value.get("ops_skip_evidence") if isinstance(value, dict) else None
     if isinstance(record, dict):
-        successors.update(_apply_ordinary_skip_record(record, admitted, value))
-    return successors
+        return _apply_ordinary_skip_record(record, admitted, value)
+    return {}
 
 
-def _ordinary_skip_evidence_record(path, digest, admitted, value):
-    raw = path.read_bytes()
-    require(sha(raw) == digest, "unreviewed ordinary skip evidence")
-    return _apply_ordinary_skip_record(json.loads(raw), admitted, value)
+OPS_SKIP_EVIDENCE = "tests/admission/ordinary-skip-evidence.json"
 
 
 def load_ops_skip_evidence(checkout, revision):
@@ -4060,10 +4320,6 @@ def _invoke_native_successor(fn, baseline, value, native, require_native):
 def synthetic_native_obligations(value):
     """Native case ids a historical successor checks once its blob matches."""
     obligations = {}
-    policy = first_native_policy()
-    for nodeid in policy["cases"]:
-        module = nodeid.split("::", 1)[0]
-        obligations.setdefault(module, []).append(nodeid)
     source = inspect.getsource(reviewed_board139_native_successor)
     module_name = "tests/test_board139_schema_acl_native_20261018.py"
     names = [name.split("::")[-1] for name in re.findall(
@@ -4092,8 +4348,9 @@ def apply_reviewed_skip_blob_successors(baseline, value, native, *, require_nati
         baseline = restore(baseline, value)
     baseline = _invoke_native_successor(
         reviewed_board139_native_successor, baseline, value, native, require_native)
-    baseline = _invoke_native_successor(
-        reviewed_first_native_successor, baseline, value, native, require_native)
+    # The first-native successor opened ops-first-native-successors.json.
+    # That seal is retired. The current function is a no-op, and a historical
+    # module's copy still reads the deleted file, so neither is invoked.
     return apply_ops_reviewed_skip_blobs(baseline, value)
 
 
@@ -4135,8 +4392,8 @@ def apply_ops_reviewed_skip_blobs(baseline, value):
 def prepare_skip_bindings(value, native, *, require_native=True, check_shared_inputs=True):
     """Bind every admitted skip to the module blob join will require.
 
-    admit_skips and skip-blob-precheck both call this. A later copy of the
-    successor order would let a reviewed blob drift out of the precheck.
+    admit_skips always calls this. skip-blob-precheck calls this only when
+    the ops commit carries skip evidence, so a bare blob change is not a miss.
     """
     sealed_baseline = skip_baseline()
     _, i10_blob_record = reviewed_i10_skip_blob_successor_transition(sealed_baseline)
@@ -4144,13 +4401,11 @@ def prepare_skip_bindings(value, native, *, require_native=True, check_shared_in
     _, blob_record = reviewed_skip_blob_successor_transition(sealed_baseline)
     _, release_blob_record = reviewed_release_skip_blob_successor_transition(sealed_baseline)
     _, case_successors = reviewed_case_file_transition(sealed_baseline)
-    baseline, estate = reviewed_estate_input_transition(sealed_baseline)
-    if check_shared_inputs and estate is not None:
-        admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
-                            source_revision=value.get("source_revision"),
-                            estate_successor_of=value.get("estate_successor_of"),
-                            template_writer_retired_at=value.get("template_writer_retired_at"),
-                            pin_is_ancestor=value.get("pin_is_ancestor") is True)
+    baseline, _estate = reviewed_estate_input_transition(sealed_baseline)
+    # Shared-input seals are retired. Signature admission compares the
+    # checked-out tree in check_source. check_shared_inputs stays in the
+    # signature so skip precheck callers do not grow a second copy.
+    del check_shared_inputs
     baseline, preservation_successors = reviewed_relay_preservation_module_transition(baseline)
     baseline, meter_successors = reviewed_relay_meter_module_transition(baseline)
     baseline, metrics_successors = reviewed_relay_metrics_module_transition(baseline)
@@ -4234,11 +4489,11 @@ def case_scope_successor(source, nodeid, current_blob, records, match):
     A sealed skip names its whole test-module blob. When that blob moved only
     because other tests in the module changed, the case is the same case: its
     own definition digest is identical and ``match`` (same outcome and reason)
-    holds. Native-mandatory modules and cases never use this path.
+    holds. Native-mandatory modules never use this path; their cases are
+    already covered by NATIVE_TARGETS.
     """
     module = nodeid.split("::", 1)[0]
-    if source is None or module in NATIVE_TARGETS \
-            or nodeid in first_native_policy()["cases"]:
+    if source is None or module in NATIVE_TARGETS:
         return None
     current = _case_definition_digest(source, current_blob, nodeid)
     if current is None:
@@ -4315,11 +4570,14 @@ def derive_prior_skips(value, source, pending):
     return accepted
 
 
+def skip_has_reason(reason):
+    """A skip is admitted only when pytest recorded a non-empty reason."""
+    return isinstance(reason, str) and bool(reason.strip())
+
 def admit_skips(value, result, native, source=None):
     if "source_evidence" in value:
         return source_evidence.admit_skips(value["source_evidence"], value["skip_module_blobs"],
-                                           result, native, set(NATIVE_TARGETS),
-                                           set(first_native_policy()["cases"]))
+                                           result, native, set(NATIVE_TARGETS))
     bound = prepare_skip_bindings(value, native)
     sealed_baseline = bound["sealed_baseline"]
     retirement = bound["retirement"]
@@ -4336,6 +4594,7 @@ def admit_skips(value, result, native, source=None):
     baseline = bound["baseline"]
     reviewed = bound["reviewed"]
     unknown = []
+    reported = []
     case_scoped = []
     pending = []
     observed_collection = {}
@@ -4348,6 +4607,10 @@ def admit_skips(value, result, native, source=None):
                 "missing collection-skip evidence")
         for row in session["nonpassing_outcomes"]:
             nodeid = row["nodeid"]
+            if (row.get("outcome") not in ("skipped", "xfail")
+                    or not skip_has_reason(row.get("reason"))):
+                unknown.append(nodeid)
+                continue
             module = nodeid.split("::", 1)[0]
             require(NEZHA_RETIREMENT_KEY not in sealed_baseline or module != NEZHA_RETIRED_MODULE,
                     "retired Nezha test cannot inherit a historical skip: " + nodeid)
@@ -4390,14 +4653,18 @@ def admit_skips(value, result, native, source=None):
                                                  lambda r: True) is not None):
                     specific = dict(specific, module_blob=current_blob)
                     case_scoped.append(nodeid)
-                require(reviewed.get("schema") == 1
-                        and session["execution_context"] == reviewed.get("context")
-                        and all(value["ops_plan"]["context"].get(k) == v
-                                for k, v in reviewed["runner"].items())
-                        and specific["module_blob"] == value["skip_module_blobs"].get(module)
-                        and specific["outcome"] == row["outcome"]
-                        and {"when": row.get("when"), "reason": row.get("reason")}
-                        in specific["variants"], "new or changed case skip/xfail: " + nodeid)
+                matched = (reviewed.get("schema") == 1
+                           and session["execution_context"] == reviewed.get("context")
+                           and all(value["ops_plan"]["context"].get(k) == v
+                                   for k, v in reviewed["runner"].items())
+                           and specific["module_blob"] == value["skip_module_blobs"].get(module)
+                           and specific["outcome"] == row["outcome"]
+                           and {"when": row.get("when"), "reason": row.get("reason")}
+                           in specific["variants"])
+                if not matched:
+                    # The hosted variant list is not an allow-list. A reason is enough.
+                    reported.append(nodeid)
+                    continue
                 disposition = specific["disposition"]
                 require(disposition in counts, "unknown reviewed skip disposition")
                 if disposition == "SAME_RUN_NATIVE_REQUIRED":
@@ -4406,29 +4673,35 @@ def admit_skips(value, result, native, source=None):
                         "ordinary skip missing exact same-run native call: " + nodeid)
             counts[disposition] += 1
         for module, reason in session["collection_skips"].items():
-            require(baseline["collection_skips"].get(module) == {
+            expected = {
                 "reason": reason, "module_blob": value["skip_module_blobs"].get(module),
-            }, "new or changed collection skip: " + module)
+            }
+            if not skip_has_reason(reason):
+                unknown.append(module)
+            elif baseline["collection_skips"].get(module) != expected:
+                reported.append(module)
             if session["assignment_id"] != "reference":
                 require(module not in observed_collection, "duplicate collection skip")
                 observed_collection[module] = reason
     require(observed_collection == result["reference"]["collection_skips"],
             "reference and shards have different collection skips")
     prior = derive_prior_skips(value, source, pending)
-    for nodeid, _ in pending:
+    for nodeid, _observed in pending:
         if nodeid in prior:
             case_scoped.append(nodeid)
             counts["HISTORICAL_UNEXECUTED"] += 1
         else:
-            unknown.append(nodeid)
+            reported.append(nodeid)
     unknown = list(dict.fromkeys(unknown))
-    require(not unknown, "new or changed case skip/xfail: " + ", ".join(unknown))
+    require(not unknown, "skip has no reason: " + ", ".join(unknown))
     verdict = {"status": "NO_NEW_SKIPS", "baseline_sha256": value["skip_baseline_sha256"],
                "baseline_source_revision": baseline["source_revision"],
                "skips_are_passes": False, "disposition_counts": counts,
                "host_native_acceptance": "INDEPENDENT"}
     if case_scoped:
         verdict["case_scope_successors"] = sorted(set(case_scoped))
+    if reported:
+        verdict["reported_skips"] = sorted(set(reported))
     return verdict
 
 
@@ -4437,7 +4710,7 @@ def export_source_baseline(source, revision):
     files = source_evidence.tree_inputs(source, revision)
     blobs = {path: row["git_blob"] for path, row in files.items() if safe_module(path)}
     value = {"source_revision": revision, "skip_module_blobs": blobs,
-             "pin_is_ancestor": release_pin_is_ancestor(source, revision)}
+             "pin_is_ancestor": False}
     bound = prepare_skip_bindings(value, {}, require_native=False, check_shared_inputs=False)
     baseline = bound["baseline"]
     candidates = {}
@@ -4449,7 +4722,7 @@ def export_source_baseline(source, revision):
     for nodeid, case in baseline["cases"].items():
         candidates.setdefault(nodeid, []).append(case)
     hosted = bound["reviewed"].get("cases", {})
-    mandatory_nodes = set(first_native_policy()["cases"])
+    mandatory_nodes = set()
     records, unmatched = {}, []
     for nodeid in sorted(candidates.keys() | hosted.keys()):
         module = nodeid.split("::", 1)[0]
@@ -4539,6 +4812,10 @@ def materialize_split_reference(evidence, prefix, assignments, dest):
 def join(value, evidence, validation_result, expected_sha, source=None):
     envelope(value)
     verify_source_evidence(value, source)
+    if (value.get("mode") == "sharded"
+            and value.get("admission_rule") == "signed-default-branch"):
+        require(source is not None, "source checkout required")
+        admit_signed_default_branch(source, value["source_revision"])
     require(value["admission_sha256"] == expected_sha, "plan job admission digest differs")
     require(validation_result == "success", "selected validation matrix did not succeed")
     if value["mode"] != "sharded":
@@ -5172,40 +5449,42 @@ def _read_ops_module(checkout, revision, module):
 
 
 def skip_blob_precheck(checkout, revision, *, ci_revision=None):
-    """Compare one ops tree's test-module blobs with the admitted skip seals."""
+    """Prove an ops commit is readable. A changed module blob is not a skip rejection.
+
+    validation-evidence admits a skip or xfail that carries a non-empty reason.
+    This command fails a missing commit, a historical policy commit that is not
+    in this clone, or ops-commit skip evidence that is malformed or does not
+    succeed an admitted skip. It does not reject a blob that has no successor seal.
+    """
     require(isinstance(revision, str) and SHA.fullmatch(revision),
             "skip-blob-precheck requires an exact ops revision")
-    policy = load_policy_module(ci_revision) if ci_revision else None
-    if policy is None:
+    if ci_revision:
+        load_policy_module(ci_revision)
+    files = tree_inputs(checkout, revision)
+    if not ci_revision:
         bound = source_evidence.optional(checkout, revision)
         if bound is not None:
-            files = tree_inputs(checkout, revision)
-            source_evidence.validate_baseline(bound, {p: blob for p, (_, blob) in files.items()})
-            return []
-    pin_is_ancestor = (release_pin_is_ancestor if policy is None
-                       else policy.release_pin_is_ancestor)
-    files = tree_inputs(checkout, revision)
+            source_evidence.validate_baseline(
+                bound, {path: blob for path, (_, blob) in files.items()})
+    record = load_ops_skip_evidence(checkout, revision)
+    if record is None:
+        return []
+    # The release pin lived in the retired first-native seal. Skip admission
+    # does not consult it, including when the binder is a historical module.
     blobs = {path: blob for path, (mode, blob) in files.items() if safe_module(path)}
     value = {
         "skip_module_blobs": blobs,
         "source_revision": revision,
-        "pin_is_ancestor": pin_is_ancestor(checkout, revision),
+        "pin_is_ancestor": False,
+        "ops_skip_evidence": record,
     }
-    record = load_ops_skip_evidence(checkout, revision)
-    if record is not None:
-        value["ops_skip_evidence"] = record
-    cache = {}
-
-    def sources(module):
-        if module not in cache:
-            cache[module] = _read_ops_module(checkout, revision, module)
-        return cache[module]
-
-    return skip_blob_report(value, sources, policy=policy, checkout=checkout)
+    prepare_skip_bindings(value, {"obligations": {}}, require_native=False,
+                          check_shared_inputs=False)
+    return []
 
 
 def skip_blob_precheck_command(args):
-    """Read-only precheck. Exit 1 on a skip-blob miss, 2 on a usage or git error."""
+    """Read-only precheck. Exit 2 on a usage or input error. A blob change is not a miss."""
     revision = getattr(args, "ops_rev", None)
     ci_revision = getattr(args, "ci_rev", None)
     checkout = getattr(args, "ops_checkout", None)
@@ -5251,6 +5530,8 @@ def main():
     expand_cli.add_argument("--runner", required=True)
     expand_cli.add_argument("--capacity", type=int, required=True)
     expand_cli.add_argument("--shards", type=int, required=True)
+    expand_cli.add_argument("--timing", type=Path)
+    expand_cli.add_argument("--weights", type=Path)
     run_cli = sub.add_parser("run")
     run_cli.add_argument("--admission", type=Path, required=True)
     run_cli.add_argument("--source", type=Path, required=True)
@@ -5286,9 +5567,20 @@ def main():
     precheck_cli.add_argument("--ops-checkout", type=Path, required=True)
     precheck_cli.add_argument("--ops-rev", required=True)
     precheck_cli.add_argument("--ci-rev")
+    weights_cli = sub.add_parser("previous-ordinary-weights")
+    weights_cli.add_argument("--output", type=Path, required=True)
+    weights_cli.add_argument("--timing-output", type=Path, required=True)
+    publish_cli = sub.add_parser("publish-ordinary-weights")
+    publish_cli.add_argument("--admission", type=Path, required=True)
+    publish_cli.add_argument("--evidence", type=Path, required=True)
+    publish_cli.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.command == "skip-blob-precheck":
         return skip_blob_precheck_command(args)
+    if args.command == "previous-ordinary-weights":
+        return previous_ordinary_weights_command(args)
+    if args.command == "publish-ordinary-weights":
+        return publish_ordinary_weights_command(args)
     try:
         if args.command == "plan":
             result = plan(args.source, read_json(args.context), args.shards, args.serial_module)
@@ -5296,7 +5588,9 @@ def main():
             result = aggregate(read_json(args.plan), args.reference, args.shard)
         elif args.command == "expand":
             result = expand(read_json(args.targets), args.source, args.board,
-                            args.runner, args.capacity, args.shards)
+                            args.runner, args.capacity, args.shards,
+                            timing=args.timing,
+                            weights=load_weight_document(args.weights))
         elif args.command == "export-source-baseline":
             result = export_source_baseline(args.source, args.revision)
         elif args.command == "generate-retired-host-baseline":

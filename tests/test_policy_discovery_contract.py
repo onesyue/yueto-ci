@@ -5,7 +5,7 @@ executed once someone also remembered to add that line; PolicyCiRunsEveryTestFil
 caught the omission, but only because it happened to exist in one of the listed
 files. Discovery removes the list; this contract keeps discovery honest:
 
-* the workflow really runs ``python3 -m unittest discover -s tests -p 'test_*.py'``
+* the workflow really runs ``python3 scripts/run-policy-tests.py``
   and no longer carries a per-file list that could silently diverge;
 * every ``test_*`` case in ``tests/test_*.py`` is reachable by unittest: it lives
   on a ``unittest.TestCase`` subclass, or the module defines ``load_tests`` (the
@@ -17,16 +17,27 @@ files. Discovery removes the list; this contract keeps discovery honest:
 from __future__ import annotations
 
 import ast
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_CI = ROOT / ".github" / "workflows" / "policy-ci.yml"
-DISCOVER = "python3 -m unittest discover -s tests -p 'test_*.py'"
+DISCOVER = "python3 scripts/run-policy-tests.py"
 # 2026-09-28: 8 files / 150+ cases. Floors, not exact counts.
 MIN_FILES = 8
 MIN_CASES = 150
+
+
+def _runner():
+    path = ROOT / "scripts" / "run-policy-tests.py"
+    spec = importlib.util.spec_from_file_location("run_policy_tests", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("policy runner did not load")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _is_testcase_base(base: ast.expr) -> bool:
@@ -112,6 +123,52 @@ class PolicyDiscoveryContractTest(unittest.TestCase):
         mutated = workflow.replace(DISCOVER, "python3 tests/test_build_policy.py")
         self.assertNotIn(DISCOVER, mutated)
         self.assertRegex(mutated, r"python3 tests/test_[a-z0-9_]+\.py")
+
+    def test_runner_discovers_files_instead_of_naming_them(self) -> None:
+        script = (ROOT / "scripts" / "run-policy-tests.py").read_text(encoding="utf-8")
+        self.assertIn("test_*.py", script)
+        self.assertIn("unittest", script)
+        self.assertIn("discover", script)
+        self.assertNotIn("test_build_policy.py", script)
+
+    def test_parallel_processes_run_every_discovered_module(self) -> None:
+        runner = _runner()
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            for name in ("a", "b"):
+                (directory / f"test_{name}.py").write_text(
+                    "import unittest\n"
+                    "from pathlib import Path\n"
+                    "class T(unittest.TestCase):\n"
+                    "    def test_runs(self):\n"
+                    f"        Path({str(directory / name)!r}).write_text('ran')\n"
+                )
+            self.assertEqual(runner.run_policy_tests(directory, cwd=directory, workers=2), 0)
+            self.assertEqual((directory / "a").read_text(), "ran")
+            self.assertEqual((directory / "b").read_text(), "ran")
+
+    def test_import_error_fails_and_the_sibling_still_runs(self) -> None:
+        runner = _runner()
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            marker = directory / "ok"
+            (directory / "test_ok.py").write_text(
+                "import unittest\n"
+                "from pathlib import Path\n"
+                "class Ok(unittest.TestCase):\n"
+                "    def test_ok(self):\n"
+                f"        Path({str(marker)!r}).write_text('ok')\n"
+            )
+            (directory / "test_broken.py").write_text("raise ImportError('policy import boom')\n")
+            self.assertEqual(runner.run_policy_tests(directory, cwd=directory, workers=2), 1)
+            self.assertEqual(marker.read_text(), "ok")
+
+    def test_empty_discovery_fails(self) -> None:
+        runner = _runner()
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            self.assertEqual(runner.run_policy_tests(directory, cwd=directory, workers=2), 1)
+            self.assertEqual(runner.discovered_modules(directory), [])
 
 
 def _flatten(suite: unittest.TestSuite):

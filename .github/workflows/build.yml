@@ -366,7 +366,7 @@ jobs:
           )"
           case "$board_selection_count" in
             0) ;;
-            1|6)
+            1|7)
               board_repo="$(
                 jq -er '[.validation_matrix[] | select(.validation == "yueboard") | .repo] | unique | if length == 1 then .[0] else error("mixed") end' \
                   <<<"$target_plan"
@@ -375,11 +375,11 @@ jobs:
                 jq -er '[.validation_matrix[] | select(.validation == "yueboard") | .ref] | unique | if length == 1 then .[0] else error("mixed") end' \
                   <<<"$target_plan"
               )"
-              if [ "$board_selection_count" = 6 ]; then
-                expected_roles='["components","e2e","frontends","migration","postgres","quality"]'
+              if [ "$board_selection_count" = 7 ]; then
+                expected_roles='["components","e2e","frontends","migration","postgres","quality","race"]'
                 actual_roles="$(jq -c '[.validation_matrix[] | select(.validation == "yueboard") | .board_role] | sort' <<<"$target_plan")"
                 [ "$actual_roles" = "$expected_roles" ] || {
-                  echo "::error::YueBoard validation roles are not the six reviewed jobs" >&2
+                  echo "::error::YueBoard validation roles are not the seven reviewed jobs" >&2
                   exit 1
                 }
               fi
@@ -472,10 +472,32 @@ jobs:
           ref: ${{ steps.plan.outputs.ops_source }}
           token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           path: .ops-shard-source
-          # Full history only so the planner can prove a later Ops revision
-          # descends from the sealed estate successor. Never uploaded.
+          # Full history of this SHA, plus the default branch fetched below,
+          # so admission can prove the commit is on master. Never uploaded.
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Fetch the default branch for admission
+        if: steps.plan.outputs.ops_source != '' && github.event.inputs.runner != 'yue-local-release'
+        env:
+          GIT_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+        run: |
+          set -euo pipefail
+          auth=$(printf 'x-access-token:%s' "$GIT_TOKEN" | base64 -w0)
+          git -C .ops-shard-source \
+            -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${auth}" \
+            fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
+          git -C .ops-shard-source rev-parse --verify refs/remotes/origin/master >/dev/null
+
+      - name: Read previous ordinary shard weights
+        if: steps.plan.outputs.ops_source != '' && github.event.inputs.runner != 'yue-local-release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/pytest-shards.py previous-ordinary-weights \
+            --output "${RUNNER_TEMP:?}/previous-ordinary-weights.json" \
+            --timing-output "${RUNNER_TEMP:?}/previous-ops-timing"
 
       - name: Plan complete Ops jobs before collection
         id: ops_plan
@@ -490,11 +512,18 @@ jobs:
           OPS_CAPACITY: ${{ vars.YUEOPS_VALIDATION_PARALLELISM || '20' }}
         run: |
           set -euo pipefail
-          python3 scripts/pytest-shards.py expand \
-            --targets "${RUNNER_TEMP:?}/build-target-plan.json" \
-            --source "$PWD/.ops-shard-source" --board "$OPS_BOARD" \
-            --runner "$OPS_RUNNER" --shards "$OPS_SHARDS" --capacity "$OPS_CAPACITY" \
-            > "$RUNNER_TEMP/ops-admission.json"
+          expand_args=(
+            python3 scripts/pytest-shards.py expand
+            --targets "${RUNNER_TEMP:?}/build-target-plan.json"
+            --source "$PWD/.ops-shard-source" --board "$OPS_BOARD"
+            --runner "$OPS_RUNNER" --shards "$OPS_SHARDS" --capacity "$OPS_CAPACITY"
+          )
+          if [[ -f "${RUNNER_TEMP:?}/previous-ordinary-weights.json" ]]; then
+            expand_args+=(--weights "${RUNNER_TEMP}/previous-ordinary-weights.json")
+          elif [[ -f "${RUNNER_TEMP:?}/previous-ops-timing/events.jsonl" ]]; then
+            expand_args+=(--timing "${RUNNER_TEMP}/previous-ops-timing/events.jsonl")
+          fi
+          "${expand_args[@]}" > "$RUNNER_TEMP/ops-admission.json"
           {
             echo "validation_matrix=$(jq -c '.validation_matrix' "$RUNNER_TEMP/ops-admission.json")"
             echo "max_parallel=$(jq -er '.max_parallel' "$RUNNER_TEMP/ops-admission.json")"
@@ -776,7 +805,7 @@ jobs:
       # on every path, including a buf already on PATH.
       - name: Set up Buf for YueBoard protocol compatibility
         # Every YueBoard role runs the shared preflight, which requires buf.
-        # Limiting the installer to quality left the other five roles red.
+        # Limiting the installer to quality left the other six roles red.
         if: matrix.validation == 'yueboard'
         uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
         with:
@@ -1019,18 +1048,28 @@ jobs:
           make check-generated
           go vet ./...
           scripts/ci/check-server-error-logging.sh
-          go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
-          go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 run --timeout=6m ./...
+          bash .ci-policy/scripts/install-board-quality-tools.sh \
+            "${RUNNER_TEMP:?}/board-quality-tools"
+          export PATH="${RUNNER_TEMP}/board-quality-tools:${PATH}"
+          govulncheck ./...
+          golangci-lint run --timeout=6m ./...
           go test ./...
+
+      - name: Validate YueBoard protocol compatibility
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'
+        run: scripts/ci/proto-gate.sh
+
+      - name: Validate YueBoard race
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'race'
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          set -euo pipefail
           [ "$(go env CGO_ENABLED)" = "1" ] || {
             echo "::error::YueBoard race validation requires CGO_ENABLED=1"
             exit 1
           }
           go test -race ./...
-
-      - name: Validate YueBoard protocol compatibility
-        if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'
-        run: scripts/ci/proto-gate.sh
 
       - name: Configure YueBoard PostgreSQL lock diagnostics
         if: matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')
@@ -1059,7 +1098,7 @@ jobs:
           exit 1
 
       - name: Validate YueBoard PostgreSQL integration
-        if: matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'postgres'
         env:
           YUEBOARD_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
           YUEBOARD_TRAFFIC_TEST_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_test' || 'postgres://postgres:ci@postgres:5432/yueboard_test' }}
@@ -1083,6 +1122,8 @@ jobs:
           set -euo pipefail
           # Fixtures must establish their own cluster roles on the fresh service.
           # Migration-first execution can conceal a broken fixture bootstrap.
+          # The migration role does not repeat this phase. It runs module and
+          # migration coverage on its own fresh service.
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \
             --phase domain --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"
 
@@ -1786,6 +1827,18 @@ jobs:
           # Case-scoped skip admission reads earlier blobs of a test module.
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Fetch the default branch for evidence admission
+        if: needs.plan.outputs.ops_mode == 'sharded'
+        env:
+          GIT_TOKEN: ${{ vars.YUETO_CI_APP_CLIENT_ID != '' && steps.evidence_source_token.outputs.token || secrets.YUETO_CI_PAT }}
+        run: |
+          set -euo pipefail
+          auth=$(printf 'x-access-token:%s' "$GIT_TOKEN" | base64 -w0)
+          git -C .admission-source \
+            -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${auth}" \
+            fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
+          git -C .admission-source rev-parse --verify refs/remotes/origin/master >/dev/null
       - name: Download original admission plan
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
@@ -1841,6 +1894,23 @@ jobs:
           print(line)
           PY
 
+      - name: Publish ordinary shard weights
+        if: needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
+        run: |
+          set -euo pipefail
+          python3 scripts/pytest-shards.py publish-ordinary-weights \
+            --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
+            --evidence "${RUNNER_TEMP:?}/ops-shard-evidence" \
+            --output "${RUNNER_TEMP:?}/ordinary-weights.json"
+
+      - name: Upload ordinary shard weights
+        if: needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ops-ordinary-weights-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ordinary-weights.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Retain complete validation verdict
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

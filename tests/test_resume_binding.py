@@ -121,7 +121,12 @@ class ResumeBinding(unittest.TestCase):
         patcher = patch.object(B, 'load', side_effect=lambda name: self.evidence if name == 'source_evidence' else original_load(name))
         patcher.start()
         self.new_source = self.enroll()
-        shutil.copytree(self.owner.policy, self.workflow.policy / 'policy')
+        # Signed fixtures already keep their keyring at policy/policy.
+        # This snapshot replaces that directory with the owner policy tree.
+        snapshot = self.workflow.policy / 'policy'
+        if snapshot.exists():
+            shutil.rmtree(snapshot)
+        shutil.copytree(self.owner.policy, snapshot)
         self.workflow.fixture.git(self.workflow.policy, 'add', 'policy')
         self.workflow.fixture.commit(self.workflow.policy)
         self.policy = self.workflow.fixture.git(self.workflow.policy, 'rev-parse', 'HEAD').stdout.strip()

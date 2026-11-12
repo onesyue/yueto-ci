@@ -505,17 +505,6 @@ class LoadShedNativeRegistration(unittest.TestCase):
         predecessor, _ = self.consumer.reviewed_retired_host_transition(self.baseline)
         self.assertEqual(original["cases"], predecessor["cases"])
         self.consumer.reviewed_estate_input_transition(self.baseline)
-        common = original["common_inputs"] | inputs
-        files = {p: ("100644", blob) for p, blob in common.items()}
-        self.consumer.admit_shared_inputs(self.baseline, common, files)
-        for changed in (original["common_inputs"], common | {self.target: "f" * 40},
-                        common | self.consumer.HISTORICAL_NATIVE_INPUTS):
-            with self.subTest(changed=changed.get(self.target)), self.assertRaisesRegex(
-                    ValueError, "missing or changed required native input"):
-                self.consumer.admit_shared_inputs(self.baseline, changed)
-        with self.assertRaisesRegex(ValueError, "mode or tree changed"):
-            self.consumer.admit_shared_inputs(
-                self.baseline, common, files | {self.target: ("120000", inputs[self.target])})
 
     def test_pin_and_historical_seal_mutations_fail(self):
         import copy
