@@ -3,6 +3,9 @@
 Public build and release control for Yue.to server components. Private source
 is checked out with scoped credentials; images publish only to `ghcr.io/onesyue/*`.
 Client packages use [yuelink-ci](https://github.com/onesyue/yuelink-ci).
+The central `service=yuelink` validation target is retired; use that repository's
+validation entrypoints. The workspace native-contract validator remains available
+for its existing root caller.
 
 [services.json](services.json) defines image targets. Frontends ship inside
 their backend images (负责人 decision AX03-A, 2026-10-30); the former scratch
@@ -48,8 +51,6 @@ gh workflow run build.yml -R onesyue/yueto-ci -f service=all \
   -f migration_base=<40-hex-trusted-yueops-previous-revision>
 
 # Source-only validation: no image or registry writes.
-gh workflow run build.yml -R onesyue/yueto-ci \
-  -f service=yuelink -f ref=<40-hex-yuelink-sha>
 gh workflow run build.yml -R onesyue/yueto-ci \
   -f service=yue-node-validation -f ref=<40-hex-yue-node-sha> -f promote=false
 
@@ -449,8 +450,7 @@ not a continuing audit input.
 
 The existing `build.yml` manual dispatch accepts `validation_only: true` with
 `service` selecting one source repository and `ref` set to its full lowercase
-40-hex commit SHA. For example, select `yueboard`, `yue-node`, `yueops`, or
-`yuelink`; `all` is rejected because one SHA cannot identify several repositories.
+40-hex commit SHA. For example, select `yueboard`, `yue-node`, or `yueops`; `all` is rejected because one SHA cannot identify several repositories.
 YueOps still requires an exact trusted `migration_base`; the existing optional
 `yueboard_contract_ref` retains its ACL validation meaning. Set `promote: false`.
 

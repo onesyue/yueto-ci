@@ -164,12 +164,12 @@ jobs:
           docker run --rm --user runner --shm-size=256m "$image" \
             yueops-ci-toolchain-selfcheck
   plan:
+    if: github.event.inputs.service != 'toolchain'
     permissions:
       contents: read
       actions: read
       packages: read
       attestations: read
-    if: github.event.inputs.service != 'toolchain'
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     # Bounded on purpose: the Actions default is 360 minutes, and a wedged
     # job would hold its concurrency group (and the release) for six hours.
@@ -205,7 +205,7 @@ jobs:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
           owner: onesyue
-          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          repositories: yueboard,yue-node,yueops,quic-go
           permission-contents: read
       - name: Preflight planning dependencies
         run: |
@@ -672,7 +672,7 @@ jobs:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
           owner: onesyue
-          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          repositories: yueboard,yue-node,yueops,quic-go
           permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -700,7 +700,7 @@ jobs:
           persist-credentials: false
 
       - name: Checkout immutable central native-node policy
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard' || matrix.validation == 'yuelink'
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueto-ci
@@ -886,7 +886,6 @@ jobs:
           tools=(bash git)
           case "$VALIDATION_KIND" in
             yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql sing-box-1.14 uv) ;;
-            yuelink) ;;
             ui-*) tools+=(corepack node npm) ;;
             *)
               echo "::error::unsupported validation kind: $VALIDATION_KIND"
@@ -903,9 +902,7 @@ jobs:
             echo "::error::validated Python interpreter is unavailable"
             exit 1
           }
-          if [ "$VALIDATION_KIND" != yuelink ]; then
-            docker info >/dev/null
-          fi
+          docker info >/dev/null
 
       - name: Plan trusted Go caches
         id: go_cache
@@ -957,7 +954,7 @@ jobs:
             "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.ci-policy"
 
       - name: Validate native-node cross-repository contract
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yuelink'
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'
         env:
           VALIDATION_KIND: ${{ matrix.validation }}
         run: |
@@ -966,8 +963,7 @@ jobs:
               "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.ci-policy" "$GITHUB_WORKSPACE/.ci-yueboard"
           fi
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-native-node-contract.py \
-            --kind '${{ matrix.validation }}' --source . \
-            ${{ matrix.validation == 'yueops' && '--yueboard-contract-source .ci-yueboard' || '' }}
+            --kind '${{ matrix.validation }}' --source . --yueboard-contract-source .ci-yueboard
 
       # C1 (2026-09-27): the private-fork read credential lives ONLY in this
       # step. It verifies the signed fork tags and nothing else; the step's env
@@ -1496,7 +1492,7 @@ jobs:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
           owner: onesyue
-          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          repositories: yueboard,yue-node,yueops,quic-go
           permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1937,7 +1933,7 @@ jobs:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
           owner: onesyue
-          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          repositories: yueboard,yue-node,yueops,quic-go
           permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

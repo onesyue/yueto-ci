@@ -309,6 +309,7 @@ class ManualWorkflow(unittest.TestCase):
             ('app', 'fixture-secret', 17, 0, 0, 17),
             ('app', 'fixture-secret', 0, 1, 0, 2),
             ('app', 'fixture-secret', 0, 0, 1, 2),
+            ('app', 'fixture-secret', 0, 0, 3, 2),
             ('', 'fixture-secret', 0, 0, 0, 2),
             ('', 'fixture-secret', 17, 0, 0, 2),
             ('', 'fixture-secret', 0, 0, 1, 2),
