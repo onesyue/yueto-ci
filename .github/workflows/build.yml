@@ -42,7 +42,7 @@ on:
         type: boolean
         default: false
       yueboard_contract_ref:
-        description: 'optional exact YueBoard SHA for manual YueOps ACL validation'
+        description: 'required for Ops: exact production Board SHA from signed desired; historical context for validation_only'
         required: false
         type: string
       resume_build_run_id:
@@ -187,6 +187,7 @@ jobs:
       has_builds: ${{ steps.plan.outputs.has_builds }}
       promote: ${{ steps.plan.outputs.promote }}
       yueboard_contract_ref: ${{ steps.plan.outputs.yueboard_contract_ref }}
+      yueboard_policy_pin: ${{ steps.plan.outputs.yueboard_policy_pin }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -231,8 +232,7 @@ jobs:
           VALIDATION_ONLY: ${{ inputs.validation_only && 'true' || 'false' }}
           MANUAL_PROMOTE: ${{ github.event.inputs.promote || 'false' }}
           DISPATCH_PROMOTE: ${{ github.event.client_payload.promote || 'false' }}
-          MANUAL_YUEBOARD_CONTRACT_REF: ${{ github.event.inputs.yueboard_contract_ref || '' }}
-          DISPATCH_YUEBOARD_CONTRACT_REF: ${{ github.event.client_payload.yueboard_contract_ref || '' }}
+          YUEBOARD_CONTRACT_REF: ${{ github.event.inputs.yueboard_contract_ref || github.event.client_payload.yueboard_contract_ref || '' }}
         run: |
           set -euo pipefail
           promote=false
@@ -266,15 +266,16 @@ jobs:
             false) ;;
             *) echo 'invalid validation_only value' >&2; exit 1 ;;
           esac
-          # The ACL checkout and schema floor are one contract. Reading both
-          # from the same reviewed file prevents a new floor from being
-          # validated against an older YueBoard tree.
+          # Board publication and node validation retain their reviewed policy pin.
+          # Ops instead consumes the caller-bound production Board revision.
           yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
           yueboard_contract_ref="$yueboard_contract_pin"
+          explicit_board_ref=""
           case "$EVENT_NAME" in
             workflow_dispatch)
-              if [ -n "$MANUAL_YUEBOARD_CONTRACT_REF" ]; then
-                yueboard_contract_ref="$MANUAL_YUEBOARD_CONTRACT_REF"
+              if [ -n "$YUEBOARD_CONTRACT_REF" ]; then
+                explicit_board_ref="$YUEBOARD_CONTRACT_REF"
+                yueboard_contract_ref="$explicit_board_ref"
               fi
               case "$MANUAL_PROMOTE" in
                 true) promote=true ;;
@@ -286,10 +287,10 @@ jobs:
               esac
               ;;
             repository_dispatch)
-              [ -z "$DISPATCH_YUEBOARD_CONTRACT_REF" ] || {
-                echo "repository_dispatch may not override the pinned YueBoard contract" >&2
-                exit 1
-              }
+              explicit_board_ref="$YUEBOARD_CONTRACT_REF"
+              if [ -n "$explicit_board_ref" ]; then
+                yueboard_contract_ref="$explicit_board_ref"
+              fi
               case "$DISPATCH_PROMOTE" in
                 true)
                   [ "$EVENT_ACTOR" = "onesyue" ] || {
@@ -345,16 +346,19 @@ jobs:
               exit 1
             }
           fi
-          if [ "$EVENT_NAME" = "workflow_dispatch" ] &&
-             [ "$promote" = true ] &&
-             [ "$yueboard_contract_ref" != "$yueboard_contract_pin" ]; then
-            echo "promotion must use the reviewed pinned YueBoard contract" >&2
-            exit 1
-          fi
           # The tested planner keeps image builds and source-only product
           # validators in separate registries. `all` covers YueLink without
           # ever inventing a Docker target for it.
           target_plan="$(bash scripts/plan-build-targets.sh "$SERVICE" "$REF_OVERRIDE")"
+          if jq -e 'any(.validation_matrix[]; .validation == "yueops")' <<<"$target_plan" >/dev/null; then
+            [[ "$explicit_board_ref" =~ ^[0-9a-f]{40}$ ]] || {
+              echo 'YueOps requires explicit yueboard_contract_ref from signed desired (historical override only for validation_only)' >&2
+              exit 1
+            }
+          elif [ -n "$explicit_board_ref" ] && [ "$explicit_board_ref" != "$yueboard_contract_pin" ]; then
+            echo 'non-Ops validation must use the reviewed pinned YueBoard contract' >&2
+            exit 1
+          fi
           if [ "$validation_only" = true ]; then
             # One SHA cannot identify commits in several independent repositories.
             jq -e '[.validation_matrix[].repo] | unique | length == 1' <<<"$target_plan" >/dev/null || {
@@ -469,6 +473,7 @@ jobs:
             echo "has_builds=$has_builds"
             echo "promote=$promote"
             echo "yueboard_contract_ref=$yueboard_contract_ref"
+            echo "yueboard_policy_pin=$yueboard_contract_pin"
           } >> "$GITHUB_OUTPUT"
 
       - name: Checkout exact Ops source for module planning
@@ -687,7 +692,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueboard
-          ref: ${{ needs.plan.outputs.yueboard_contract_ref }}
+          ref: ${{ matrix.validation == 'yueops' && needs.plan.outputs.yueboard_contract_ref || needs.plan.outputs.yueboard_policy_pin }}
           token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           path: .ci-yueboard
           fetch-depth: 0

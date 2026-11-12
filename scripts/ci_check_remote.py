@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import time
@@ -36,7 +37,9 @@ def select_run(rows: list[dict], before: set[int], title: str, policy: str) -> d
     return matches[0]
 
 
-def dispatch(branch: str, policy: str, source: str, base: str, output: Path) -> int:
+def dispatch(branch: str, policy: str, source: str, base: str, output: Path, *, board: str) -> int:
+    if re.fullmatch(r"[0-9a-f]{40}", board) is None:
+        raise ValueError("Board context must be an exact commit SHA")
     remote = gh("api", f"repos/{REPO}/commits/{branch}", "--jq", ".sha").strip()
     if remote != policy:
         raise ValueError("push the exact local policy commit before dispatching")
@@ -46,12 +49,12 @@ def dispatch(branch: str, policy: str, source: str, base: str, output: Path) -> 
     output.mkdir(parents=True, exist_ok=True)
     receipt = output / "dispatch.json"
     intent = {"request": request, "policy_revision": policy, "source_revision": source,
-              "migration_base": base, "branch": branch, "prior_runs": sorted(before)}
+              "migration_base": base, "board_revision": board, "branch": branch, "prior_runs": sorted(before)}
     receipt.write_text(json.dumps(intent, indent=2) + "\n")
     gh("workflow", "run", "build.yml", "--repo", REPO, "--ref", branch,
        "-f", "service=yueops", "-f", f"ref={source}", "-f", f"migration_base={base}",
        "-f", "validation_only=true", "-f", "promote=false", "-f", "runner=ubuntu-24.04",
-       "-f", f"nonce={request}")
+       "-f", f"nonce={request}", "-f", f"yueboard_contract_ref={board}")
     deadline = time.monotonic() + 180
     row = None
     while time.monotonic() < deadline:
@@ -89,11 +92,11 @@ def dispatch(branch: str, policy: str, source: str, base: str, output: Path) -> 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    for field in ("branch", "policy", "source", "base", "output"):
+    for field in ("branch", "policy", "source", "base", "output", "board"):
         parser.add_argument(f"--{field}", required=True)
     args = parser.parse_args()
     try:
-        return dispatch(args.branch, args.policy, args.source, args.base, Path(args.output))
+        return dispatch(args.branch, args.policy, args.source, args.base, Path(args.output), board=args.board)
     except (ValueError, subprocess.CalledProcessError, OSError) as error:
         print(f"ci-check: {error}", file=sys.stderr)
         return 2

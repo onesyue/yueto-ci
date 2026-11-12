@@ -33,7 +33,7 @@ class DispatchBinding(unittest.TestCase):
     def test_dirty_remote_head_refused_before_dispatch(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(REMOTE, 'gh', return_value='b' * 40):
             with self.assertRaisesRegex(ValueError, 'push the exact'):
-                REMOTE.dispatch('branch', 'a' * 40, 'c' * 40, 'd' * 40, Path(directory))
+                REMOTE.dispatch('branch', 'a' * 40, 'c' * 40, 'd' * 40, Path(directory), board='b' * 40)
 
     def test_complete_logs_failure_is_not_hidden(self):
         policy, source, nonce = 'a' * 40, 'c' * 40, 'e' * 32
@@ -47,6 +47,7 @@ class DispatchBinding(unittest.TestCase):
                 return policy
             if args[:2] == ('workflow', 'run'):
                 self.assertIn('nonce=' + nonce, args)
+                self.assertIn('yueboard_contract_ref=' + 'b' * 40, args)
                 self.assertIn('validation_only=true', args)
                 self.assertIn('promote=false', args)
                 return ''
@@ -61,7 +62,7 @@ class DispatchBinding(unittest.TestCase):
                 patch.object(REMOTE.subprocess, 'run'):
             uid.return_value.hex = nonce
             with self.assertRaisesRegex(OSError, 'log unavailable'):
-                REMOTE.dispatch('branch', policy, source, 'd' * 40, Path(directory))
+                REMOTE.dispatch('branch', policy, source, 'd' * 40, Path(directory), board='b' * 40)
             self.assertTrue((Path(directory) / 'dispatch.json').exists())
         self.assertTrue(any('--log' in args for args in calls))
         self.assertFalse(any('--log-failed' in args for args in calls))

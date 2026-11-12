@@ -1,14 +1,30 @@
 #!/bin/bash
-# ci-check.sh <repo> <sha> [--local]: signed-source validation, never publication.
+# ci-check.sh <repo> <sha> [--local] [--board-ref SHA]: validation, never publication.
 set -euo pipefail
 unset CDPATH
 ROOT=$(cd -- "$(dirname "$0")/.." && pwd)
 fail() { echo "ci-check: $*" >&2; exit 2; }
-usage() { fail 'usage: ci-check.sh <repo> <sha> [--local]'; }
-[ "$#" -eq 2 ] || [ "$#" -eq 3 ] || usage
+usage() { fail 'usage: ci-check.sh <repo> <sha> [--local] [--board-ref SHA]'; }
+[ "$#" -ge 2 ] || usage
 repo=$1
 raw_sha=$2
-mode=${3:-remote}
+shift 2
+mode=remote
+board_sha=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --local) mode=--local; shift ;;
+    --board-ref) [ "$#" -ge 2 ] || usage; board_sha=$2; shift 2 ;;
+    *) usage ;;
+  esac
+done
+# ci-check is always validation-only. Explicit historical context is never a
+# publication default; ordinary use resolves the signed desired Board snapshot.
+if [ -z "$board_sha" ]; then
+  export YUETO_ROOT=${YUETO_ROOT:-$(dirname "$ROOT")}
+  board_sha=$(python3 "$ROOT/scripts/ci_check_board.py" --root "$YUETO_ROOT")
+fi
+[[ "$board_sha" =~ ^[0-9a-f]{40}$ ]] || fail 'board ref must be an exact 40-hex commit SHA'
 [ "$repo" = yueops ] || fail 'B9-9 validates yueops; other repositories are not wired here'
 [ "$mode" = remote ] || [ "$mode" = --local ] || usage
 [[ "$raw_sha" =~ ^[0-9a-f]{7,40}$ ]] || fail 'sha must be 7 to 40 lowercase hex characters'
@@ -33,7 +49,7 @@ echo "ci-check: evidence $output" >&2
 if [ "$mode" = remote ]; then
   branch=$(git -C "$ROOT" symbolic-ref --quiet --short HEAD) || fail 'remote validation needs a named policy branch'
   exec python3 "$ROOT/scripts/ci_check_remote.py" --branch "$branch" --policy "$policy_sha" \
-    --source "$full_sha" --base "$base" --output "$output"
+    --source "$full_sha" --base "$base" --board "$board_sha" --output "$output"
 fi
 command -v docker >/dev/null || fail 'docker is required for --local'
 checkouts=$(mktemp -d "$output/checkouts.XXXXXX")
@@ -56,8 +72,6 @@ clone_at() {
   git -C "$destination" fetch --quiet origin refs/heads/master:refs/remotes/origin/master
   git -C "$destination" checkout --quiet --detach "$revision"
 }
-board_sha=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["yueboard_contract_pin"])' "$ROOT/native-node-contract.json")
-[[ "$board_sha" =~ ^[0-9a-f]{40}$ ]] || fail 'invalid board contract revision'
 clone_at yueops "$full_sha" "$source" "${YUEOPS_CHECKOUT:-}"
 clone_at yueboard "$board_sha" "$board" "${YUEBOARD_CHECKOUT:-}"
 clone_at yueto-ci "$policy_sha" "$policy" "$ROOT"

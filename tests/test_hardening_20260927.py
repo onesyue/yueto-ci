@@ -178,8 +178,7 @@ class PlanPromotionGateTest(unittest.TestCase):
                 "WORKFLOW_GIT_REF": "refs/heads/master",
                 "MANUAL_PROMOTE": "false",
                 "DISPATCH_PROMOTE": "false",
-                "MANUAL_YUEBOARD_CONTRACT_REF": "",
-                "DISPATCH_YUEBOARD_CONTRACT_REF": "",
+                "YUEBOARD_CONTRACT_REF": json.loads((ROOT / "native-node-contract.json").read_text())["yueboard_contract_pin"],
                 "GITHUB_OUTPUT": str(output),
                 "RUNNER_TEMP": temp,
                 **overrides,
@@ -193,6 +192,18 @@ class PlanPromotionGateTest(unittest.TestCase):
             result.target_plan = (json.loads(target_plan.read_text())
                                   if target_plan.exists() else None)
             return result
+
+    def test_ops_requires_explicit_board_context_and_preserves_noncentral_identity(self):
+        for board in ("", "master", "b" * 12, "B" * 40):
+            with self.subTest(board=board):
+                result = self.run_plan(SERVICE="yueops", REF_OVERRIDE="a" * 40,
+                                       YUEBOARD_CONTRACT_REF=board)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.outputs, "")
+        result = self.run_plan(SERVICE="yueops", REF_OVERRIDE="a" * 40,
+                               YUEBOARD_CONTRACT_REF="b" * 40)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("yueboard_contract_ref=" + "b" * 40, result.outputs)
 
     def test_candidate_builds_still_accept_branch_refs(self) -> None:
         for ref in ("", "master"):

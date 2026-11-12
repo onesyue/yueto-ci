@@ -3964,9 +3964,8 @@ def check_source(value, source, board):
     require(git(board, "rev-parse", "HEAD").decode().strip() == value["board_revision"]
             and not git(board, "status", "--porcelain", "--untracked-files=no"),
             "executing Board fixture differs or is dirty")
-    contract = read_json(ROOT / "native-node-contract.json")
-    require(contract["yueboard_contract_pin"] == value["board_revision"],
-            "Board fixture is not the reviewed policy pin")
+    # The admitted exact revision is the contract identity, not a second policy pin.
+    source_evidence.verify_signed_commit(board, value["board_revision"])
 
 
 def execute(value, source, board, role, output, site):

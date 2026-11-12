@@ -2,9 +2,10 @@
 # Shared by build.yml and ci-check --local; run from the source checkout.
 set -euo pipefail
 export YUEBOARD_MONEY_SCHEMA_FIXTURE=${YUEBOARD_MONEY_SCHEMA_FIXTURE:-$PWD/.ci-yueboard/test/fixtures/schema.sql}
-# Use the reviewed checkout, not an unbound local schema or moving ref.
-board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)
+# Use the immutable admission, shared with every shard and the evidence join.
+board_pin=$(jq -er '.board_revision | select(test("^[0-9a-f]{40}$"))' "${RUNNER_TEMP:?}/ops-admission/ops-admission.json")
 test "$(git -C .ci-yueboard rev-parse HEAD)" = "$board_pin"
+test "$YUEBOARD_MONEY_SCHEMA_FIXTURE" = "$PWD/.ci-yueboard/test/fixtures/schema.sql"
 test -f "$YUEBOARD_MONEY_SCHEMA_FIXTURE"
 test ! -L "$YUEBOARD_MONEY_SCHEMA_FIXTURE"
 git -C .ci-yueboard diff --exit-code "$board_pin" -- test/fixtures/schema.sql
