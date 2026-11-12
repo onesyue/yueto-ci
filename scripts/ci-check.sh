@@ -108,6 +108,7 @@ planner_env() {
   export GITHUB_REPOSITORY=onesyue/yueto-ci
   export RUNNER_OS="${RUNNER_OS:-Linux}"
   export RUNNER_ARCH="${RUNNER_ARCH:-X64}"
+  export ImageVersion="${ImageVersion:-ci-check-local}"
 }
 
 run_expand() {
