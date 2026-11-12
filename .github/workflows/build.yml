@@ -204,7 +204,7 @@ jobs:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
           owner: onesyue
-          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          repositories: yueboard,yue-node,yueops,quic-go
           permission-contents: read
       - name: Preflight planning dependencies
         run: |
@@ -671,7 +671,7 @@ jobs:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
           owner: onesyue
-          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          repositories: yueboard,yue-node,yueops,quic-go
           permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -699,7 +699,7 @@ jobs:
           persist-credentials: false
 
       - name: Checkout immutable central native-node policy
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard' || matrix.validation == 'yuelink'
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueto-ci
@@ -879,7 +879,6 @@ jobs:
             yue-node) tools+=(base64 docker gcc go gpg jq make) ;;
             yueboard) tools+=(buf corepack docker gcc go make node psql) ;;
             yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql sing-box-1.14 uv) ;;
-            yuelink) ;;
             ui-*) tools+=(corepack node npm) ;;
             *)
               echo "::error::unsupported validation kind: $VALIDATION_KIND"
@@ -896,9 +895,7 @@ jobs:
             echo "::error::validated Python interpreter is unavailable"
             exit 1
           }
-          if [ "$VALIDATION_KIND" != yuelink ]; then
-            docker info >/dev/null
-          fi
+          docker info >/dev/null
 
       - name: Plan trusted Go caches
         id: go_cache
@@ -953,7 +950,7 @@ jobs:
             "$source_sha" "$contract_pin" "$PROMOTE"
 
       - name: Validate native-node cross-repository contract
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard' || matrix.validation == 'yuelink'
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard'
         run: >-
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-native-node-contract.py
           --kind '${{ matrix.validation }}' --source .
@@ -1679,7 +1676,7 @@ jobs:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
           owner: onesyue
-          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          repositories: yueboard,yue-node,yueops,quic-go
           permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -2120,7 +2117,7 @@ jobs:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
           owner: onesyue
-          repositories: yueboard,yue-node,yueops,yuelink,quic-go
+          repositories: yueboard,yue-node,yueops,quic-go
           permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

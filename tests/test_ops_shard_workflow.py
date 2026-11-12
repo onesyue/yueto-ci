@@ -893,8 +893,7 @@ class OpsShardWorkflow(unittest.TestCase):
                  {"repo": "onesyue/yue-node", "ref": "c" * 40, "validation": "yue-node",
                   "node_profile": "hy2"},
                  {"repo": "onesyue/yue-node", "ref": "c" * 40, "validation": "yue-node",
-                  "node_profile": "vless"},
-                 {"repo": "onesyue/yuelink", "ref": "d" * 40, "validation": "yuelink"}]
+                  "node_profile": "vless"}]
         targets = copy.deepcopy(self.targets)
         targets["validation_matrix"] = other + targets["validation_matrix"]
         runner = self.base / "plan-runner"
@@ -983,9 +982,9 @@ class OpsShardWorkflow(unittest.TestCase):
                 self.call(self.consumer.join, manual, self.artifacts, state,
                           manual["admission_sha256"])
 
-    def test_no_ops_and_source_only_link_preserve_mandatory_matrix(self):
-        for kind in ("yueboard", "yue-node", "yuelink"):
-            target = {"matrix": [] if kind == "yuelink" else [{"validation": kind}],
+    def test_no_ops_and_source_only_node_preserve_mandatory_matrix(self):
+        for kind, source_only in (("yueboard", False), ("yue-node", False), ("yue-node", True)):
+            target = {"matrix": [] if source_only else [{"validation": kind}],
                       "validation_matrix": [{"validation": kind, "repo": "onesyue/" + kind,
                                              "ref": "b" * 40}]}
             value = self.call(self.consumer.expand, target, None, self.board_sha,

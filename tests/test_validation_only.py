@@ -19,7 +19,7 @@ class ValidationOnlyTest(unittest.TestCase):
     run_plan = hardening.PlanPromotionGateTest.run_plan
 
     def test_exact_candidate_preserves_complete_registered_validation(self):
-        for service, count in [('yueboard', 7), ('yue-node', 2), ('yueops', 1), ('yuelink', 1)]:
+        for service, count in [('yueboard', 7), ('yue-node', 2), ('yueops', 1)]:
             with self.subTest(service=service):
                 result = self.run_plan(SERVICE=service, REF_OVERRIDE='b' * 40, VALIDATION_ONLY='true')
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -39,7 +39,7 @@ class ValidationOnlyTest(unittest.TestCase):
         cases = [dict(REF_OVERRIDE=value) for value in ('', 'master', 'a' * 12, 'A' * 40, 'a' * 41)]
         cases += [dict(MANUAL_PROMOTE='true'), dict(EVENT_NAME='repository_dispatch'),
                   dict(SERVICE='all'), dict(VALIDATION_ONLY='maybe'),
-                  dict(SERVICE='yueops', MIGRATION_BASE=''), dict(SERVICE='unknown')]
+                  dict(SERVICE='yueops', MIGRATION_BASE=''), dict(SERVICE='unknown'), dict(SERVICE='yuelink')]
         for case in cases:
             with self.subTest(case=case):
                 result = self.run_plan(False, **{'REF_OVERRIDE': 'b' * 40, 'VALIDATION_ONLY': 'true', **case})

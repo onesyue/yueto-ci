@@ -50,7 +50,7 @@ PAT_FALLBACKS = (
         r" \|\| secrets\.YUETO_CI_PAT \}\}"
     ),
 )
-SOURCE_REPOS = {"yueboard", "yue-node", "yueops", "yuelink", "quic-go"}
+SOURCE_REPOS = {"yueboard", "yue-node", "yueops", "quic-go"}
 
 
 def _code(text: str) -> str:

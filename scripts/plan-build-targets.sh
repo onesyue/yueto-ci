@@ -14,8 +14,8 @@ repo_root="$(cd -- "$script_dir/.." && pwd)"
 
 # Keep Docker build inputs and source-only validators physically separate.
 # Consumers must use the returned `matrix` for builds and
-# `validation_matrix` for source validation; merging them would make a client
-# such as YueLink look like a container service.
+# `validation_matrix` for source validation; merging them would make source-only
+# validators look like container services.
 builds=$(jq -c --arg service "$service" --arg ref "$ref_override" '
   [
     .[]

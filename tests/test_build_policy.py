@@ -2395,64 +2395,26 @@ class BuildPolicyTest(unittest.TestCase):
             self.native_validator,
         )
 
-    def test_yuelink_is_a_remote_validation_only_target(self) -> None:
-        self.assertEqual(
-            [target for target in self.validation_targets if target["service"] == "yuelink"],
-            [
-                {
-                    "service": "yuelink",
-                    "group": "yuelink",
-                    "repo": "onesyue/yuelink",
-                    "ref": "master",
-                    "validation": "yuelink",
-                }
-            ],
-        )
+    def test_retired_yuelink_target_refuses_without_affecting_native_root_validator(self) -> None:
+        self.assertNotIn("yuelink", {target["service"] for target in self.validation_targets})
         self.assertNotIn("yuelink", {service["service"] for service in self.services})
         self.assertIn("scripts/plan-build-targets.sh", self.workflow)
         self.assertIn("validation-targets.json", self.target_planner)
-        self.assertIn(
-            "validation-only targets cannot be promoted as container images",
-            self.workflow,
-        )
+        self.assertIn("validation-only targets cannot be promoted as container images", self.workflow)
         self.assertIn("has_builds: ${{ steps.plan.outputs.has_builds }}", self.workflow)
-        self.assertIn(
-            "if: needs.plan.outputs.has_builds == 'true'",
-            self.workflow,
-        )
-        self.assertIn("yuelink) ;;", self.workflow)
-        self.assertIn(
-            "matrix.validation == 'yueboard' || matrix.validation == 'yuelink'",
-            self.workflow,
-        )
-        self.assertIn(
-            "-f service=yuelink -f ref=<40-hex-yuelink-sha>",
-            self.readme,
-        )
-
-        exact_ref = "a" * 40
+        self.assertIn("if: needs.plan.outputs.has_builds == 'true'", self.workflow)
+        self.assertNotIn("matrix.validation == 'yuelink'", self.workflow)
+        # The root workspace still invokes this native validator directly.
+        self.assertIn("def validate_yuelink(", self.native_validator)
         result = subprocess.run(
-            ["bash", str(TARGET_PLANNER), "yuelink", exact_ref],
-            cwd=ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
+            ["bash", str(TARGET_PLANNER), "yuelink", "a" * 40],
+            cwd=ROOT, capture_output=True, text=True,
         )
-        plan = json.loads(result.stdout)
-        self.assertEqual(plan["matrix"], [])
-        self.assertFalse(plan["has_builds"])
-        self.assertEqual(
-            plan["validation_matrix"],
-            [
-                {
-                    "repo": "onesyue/yuelink",
-                    "ref": exact_ref,
-                    "validation": "yuelink",
-                }
-            ],
-        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("unknown build service or validation target", result.stderr)
+        self.assertEqual(result.stdout, "")
 
-    def test_all_plan_validates_yuelink_without_building_it(self) -> None:
+    def test_all_plan_preserves_server_validation_without_retired_client_target(self) -> None:
         result = subprocess.run(
             ["bash", str(TARGET_PLANNER), "all"],
             cwd=ROOT,
@@ -2472,9 +2434,11 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(
             {entry["validation"] for entry in plan["validation_matrix"]},
             {
-                "yue-node", "yueops", "yueboard", "yuelink",
+                "yue-node", "yueops", "yueboard",
             },
         )
+        self.assertEqual(len([entry for entry in plan["validation_matrix"]
+                              if entry["validation"] == "yueboard"]), 7)
         node_entries = [entry for entry in plan["validation_matrix"]
                         if entry["validation"] == "yue-node"]
         self.assertEqual(len(node_entries), 2)
@@ -2568,7 +2532,7 @@ class BuildPolicyTest(unittest.TestCase):
             self.assertEqual(target["ref"], "master")
             self.assertNotIn(target["service"], names)
             names.add(target["service"])
-        self.assertEqual(names, {"yuelink", "yue-node-validation"})
+        self.assertEqual(names, {"yue-node-validation"})
         self.assertEqual(
             [target for target in self.validation_targets
              if target["service"] == "yue-node-validation"],
