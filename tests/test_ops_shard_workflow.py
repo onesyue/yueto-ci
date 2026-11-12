@@ -358,12 +358,58 @@ class OpsShardWorkflow(unittest.TestCase):
         return result
 
     def full_bundle(self, extra=None):
-        for role in ("reference", *[a["id"] for a in self.admission["ops_plan"]["assignments"]]):
+        assignments = [a["id"] for a in self.admission["ops_plan"]["assignments"]]
+        for role in (*(f"reference-{assignment}" for assignment in assignments), *assignments):
             result = self.run_role(role, extra)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         result = self.run_role("native")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return self.join()
+
+    def test_reference_parts_union_matches_the_single_collection(self):
+        assignments = self.admission["ops_plan"]["assignments"]
+        self.assertGreaterEqual(len(assignments), 2)
+        parts = []
+        for assignment in assignments:
+            result = self.run_role("reference-" + assignment["id"])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            payload = json.loads((self.artifacts / (
+                self.prefix + "reference-" + assignment["id"]) / "joined.json").read_text())
+            self.assertEqual(payload["parts"], [assignment["id"]])
+            parts.append({"assignment_id": assignment["id"], "nodeids": payload["nodeids"],
+                          "collection_skips": payload["collection_skips"]})
+        oracle = self.run_role("reference")
+        self.assertEqual(oracle.returncode, 0, oracle.stdout + oracle.stderr)
+        single = json.loads((self.artifacts / (self.prefix + "reference") / "joined.json").read_text())
+        joined = self.consumer.join_reference_collections(parts)
+        self.assertGreater(len(joined["nodeids"]), 0)
+        self.assertEqual(set(joined["nodeids"]), set(single["nodeids"]))
+        self.assertEqual(len(joined["nodeids"]), len(set(joined["nodeids"])))
+        self.assertEqual(len(joined["nodeids"]), len(single["nodeids"]))
+        self.assertEqual(joined["collection_skips"], single["collection_skips"])
+        self.assertNotIn("reference", self.consumer.role_order(self.admission["ops_plan"]))
+
+    def test_split_reference_refuses_a_missing_part_or_a_different_context(self):
+        assignments = self.admission["ops_plan"]["assignments"]
+        for assignment in assignments:
+            result = self.run_role("reference-" + assignment["id"])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for assignment in assignments:
+            result = self.run_role(assignment["id"])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.run_role("native").returncode, 0)
+        part = self.artifacts / (self.prefix + "reference-" + assignments[0]["id"])
+        held = part.rename(self.base / "held-reference-part")
+        with self.assertRaisesRegex(ValueError, "missing or unexpected evidence roles"):
+            self.join()
+        held.rename(part)
+        payload_path = part / "joined.json"
+        payload = json.loads(payload_path.read_text())
+        payload["execution_context"] = {"platform": "mutated", "uid": -1}
+        payload_path.write_text(json.dumps(payload) + "\n")
+        with self.assertRaisesRegex(ValueError, "reference part execution context differs"):
+            self.consumer.materialize_split_reference(
+                self.artifacts, self.prefix, assignments, self.base / "mutated-reference")
 
     def join(self, result="success", expected=None):
         return self.call(self.consumer.join, self.admission, self.artifacts, result,
@@ -824,10 +870,14 @@ class OpsShardWorkflow(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         value = json.loads((runner / "ops-admission.json").read_text())
         self.assertEqual(value["max_parallel"], 2)
-        self.assertEqual([m["ops_role"] for m in value["validation_matrix"][:3]],
-                         ["native", "reference", "serial"])
-        self.assertEqual([m for m in value["validation_matrix"] if m["validation"] != "yueops"], other)
-        self.assertEqual(len(value["validation_matrix"]), 11)
+        ops_roles = [m["ops_role"] for m in value["validation_matrix"] if m.get("ops_role")]
+        self.assertEqual(ops_roles, self.consumer.role_order(value["ops_plan"]))
+        self.assertNotIn("reference", ops_roles)
+        self.assertEqual(
+            {role[len("reference-"):] for role in ops_roles if role.startswith("reference-")},
+            {a["id"] for a in value["ops_plan"]["assignments"]},
+        )
+        self.assertEqual(len(value["validation_matrix"]), len(other) + len(ops_roles))
         self.assertEqual(list(self.artifacts.iterdir()), [])
         self.assertIn("admission_sha256=", output.read_text())
 
@@ -1036,9 +1086,9 @@ class OpsShardWorkflow(unittest.TestCase):
     def test_missing_junit_and_reference_collection_disagreement_refuse(self):
         import xml.etree.ElementTree as ET
         self.full_bundle()
-        parts = self.artifacts / (self.prefix + "reference") / "parts"
-        path = next(item for item in parts.glob("*/pytest.xml")
-                    if b"collection skipped" in item.read_bytes())
+        path = next(item for root in self.artifacts.glob(self.prefix + "reference-*")
+                    for item in (root / "parts").glob("*/pytest.xml")
+                    if item.is_file() and b"collection skipped" in item.read_bytes())
         original = path.read_bytes()
         path.unlink()
         with self.assertRaises(ValueError): self.join()

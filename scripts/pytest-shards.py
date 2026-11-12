@@ -16,6 +16,7 @@ import inspect
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import sysconfig
@@ -3217,6 +3218,19 @@ def shard_pythonpath(source, site):
     return os.pathsep.join(str(path.resolve()) for path in (site, source))
 
 
+LOG_LINE_LIMIT = 400
+
+
+def print_reference_listing(part_id, listing, returncode):
+    """Echo a bounded summary; the whole listing is kept as part evidence."""
+    lines = listing.read_text(errors="replace").splitlines()
+    shown = lines[-40:] if returncode not in (0, 5) else lines[-1:]
+    for line in shown:
+        clipped = line if len(line) <= LOG_LINE_LIMIT else (
+            line[:LOG_LINE_LIMIT] + f"... [{len(line)} chars, full text in evidence]")
+        print(f"[{part_id}] {clipped}", flush=True)
+
+
 def _collect_reference_part(expected, source, output, site, actual_runner, timing, assignment):
     part = output / "parts" / assignment["id"]
     site = part / "site"
@@ -3236,10 +3250,18 @@ def _collect_reference_part(expected, source, output, site, actual_runner, timin
     xml = part / "pytest.xml"
     argv = [sys.executable, "-m", "pytest", "--collect-only", "-q",
             *assignment["modules"], "-o", f"cache_dir={cache}", "--junitxml", str(xml)]
+    # The full node-id listing stays in the part's evidence, not the job log:
+    # the hosted runner masks secrets per log line in super-linear time, and a
+    # single ~1 MiB parametrized id held this step for 25+ minutes after every
+    # pytest process had already exited in under a minute.
+    listing = part / "pytest-collect-stdout.txt"
     (part / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
-    result = subprocess.run(argv, cwd=source, env=env, check=False)
+    with listing.open("wb") as sink:
+        result = subprocess.run(argv, cwd=source, env=env, check=False,
+                                stdout=sink, stderr=subprocess.STDOUT)
     (part / "pytest-finish-unix-ns.txt").write_text(str(time.time_ns()))
     (part / "pytest-exit-code.txt").write_text(str(result.returncode))
+    print_reference_listing(assignment["id"], listing, result.returncode)
     require(result.returncode in (0, 5), "reference part failed")
     rows = [json.loads(line) for line in (part / "events.jsonl").read_text().splitlines()]
     corpus = next(row for row in rows if row.get("event") == "collection_corpus")
@@ -3258,16 +3280,21 @@ def _collect_reference_part(expected, source, output, site, actual_runner, timin
             "runner": runner, "execution_context": execution_context}
 
 
-def collect_reference_parts(expected, source, output, site, actual_runner, timing):
-    """Collect-only once per module assignment, in parallel processes.
+def collect_reference_parts(expected, source, output, site, actual_runner, timing, only_id=None):
+    """Collect-only once per module assignment.
 
     Each part is its own interpreter. That is not xdist: workers there reuse
-    one process and the Ops import path then leaks across files. The serial
-    loop made this job the 40-minute critical path after the test shards
-    had already finished.
+    one process and the Ops import path then leaks across files. The workflow
+    schedules `reference-<assignment>` as its own job. Collecting every
+    assignment in one runner stalled for about half an hour after each pytest
+    had already finished in under a minute. `only_id=None` still collects the
+    whole plan so a test can compare that oracle with the split union.
     """
     assignments = expected["assignments"]
-    limit = min(len(assignments), os.cpu_count() or 2)
+    if only_id is not None:
+        assignments = [item for item in assignments if item["id"] == only_id]
+        require(len(assignments) == 1, "unknown reference part")
+    limit = 1 if only_id is not None else min(len(assignments), os.cpu_count() or 2)
     collected = map_bounded([
         (lambda item=item: _collect_reference_part(
             expected, source, output, site, actual_runner, timing, item))
@@ -3366,6 +3393,13 @@ def workflow_identity():
         require(re.fullmatch(r"[1-9][0-9]*", identity[key] or ""), f"invalid {key}")
     require(os.environ.get("GITHUB_REPOSITORY") == "onesyue/yueto-ci",
             "unexpected workflow repository")
+    handoff = os.environ.get("YUETO_HANDOFF_ATTEMPT", "")
+    if handoff:
+        require(re.fullmatch(r"[1-9][0-9]*", handoff) is not None,
+                "invalid handoff attempt")
+        require(int(handoff) <= int(identity["run_attempt"]),
+                "handoff attempt is newer than this job")
+        identity["run_attempt"] = handoff
     return identity
 
 
@@ -3376,7 +3410,8 @@ def seal(value, key):
 
 def role_order(value):
     assignments = [a["id"] for a in value["assignments"]]
-    return ["native", "reference", *[a for a in assignments if a == "serial"],
+    parts = [f"reference-{assignment}" for assignment in assignments]
+    return ["native", *parts, *[a for a in assignments if a == "serial"],
             *[a for a in assignments if a != "serial"]]
 
 
@@ -3558,8 +3593,11 @@ def expand(targets, source, board, runner, capacity, shards):
             # for an all-target dispatch. Other validators keep their order.
             priority = {"native": 0, "reference": 1, "serial": 2}
             value["validation_matrix"].sort(
-                key=lambda row: priority.get(row.get("ops_role"),
-                                             4 if row.get("ops_role") else 3))
+                key=lambda row: priority.get(
+                    row.get("ops_role"),
+                    1 if isinstance(row.get("ops_role"), str)
+                    and row["ops_role"].startswith("reference-")
+                    else 4 if row.get("ops_role") else 3))
     value["max_parallel"] = min(capacity, len(value["validation_matrix"]))
     if runner == "yue-local-release":
         value["max_parallel"] = 1
@@ -3602,7 +3640,9 @@ def execute(value, source, board, role, output, site):
     require(value["mode"] == "sharded", "selection is hosted-only")
     expected = validate_plan(value["ops_plan"])
     assignments = {a["id"]: a for a in expected["assignments"]}
-    require(role == "reference" or role in assignments, "unknown execution role")
+    part_id = role[len("reference-"):] if role.startswith("reference-") else None
+    require(role == "reference" or role in assignments or part_id in assignments,
+            "unknown execution role")
     current = plan(source, expected["context"],
                    sum(a["id"].startswith("ordinary-") for a in expected["assignments"]),
                    serial_modules(source))
@@ -3613,8 +3653,9 @@ def execute(value, source, board, role, output, site):
     require(not os.environ.get("PYTEST_PLUGINS"), "unexpected pytest plugin override")
     timing = load_timing()
     timing.install(output, site)
-    if role == "reference":
-        return collect_reference_parts(expected, source, output, site, actual_runner, timing)
+    if role == "reference" or part_id is not None:
+        return collect_reference_parts(
+            expected, source, output, site, actual_runner, timing, only_id=part_id)
     modules = assignments[role]["modules"]
     selection = {
         "schema": 1, "plan_sha256": expected["plan_sha256"],
@@ -4509,6 +4550,43 @@ def export_source_baseline(source, revision):
             "admission": False}
 
 
+def materialize_split_reference(evidence, prefix, assignments, dest):
+    """Union per-assignment reference parts into the single tree aggregate reads."""
+    dest.mkdir()
+    (dest / "parts").mkdir()
+    payloads = []
+    for assignment in assignments:
+        src = evidence / (prefix + "reference-" + assignment["id"])
+        payload = read_json(src / "joined.json")
+        require(payload.get("parts") == [assignment["id"]],
+                "reference part does not match its assignment")
+        shutil.copytree(src / "parts" / assignment["id"], dest / "parts" / assignment["id"])
+        payloads.append(payload)
+    require(len({item["invocation_id"] for item in payloads}) == len(payloads),
+            "reused reference invocation")
+    require(all(item.get("execution_context") == payloads[0]["execution_context"]
+                for item in payloads),
+            "reference part execution context differs")
+    joined = join_reference_collections([
+        {"assignment_id": item["parts"][0], "nodeids": item["nodeids"],
+         "collection_skips": item["collection_skips"]}
+        for item in payloads
+    ])
+    first = payloads[0]
+    body = {
+        "schema": 1, "assignment_id": "reference",
+        "invocation_id": first["invocation_id"],
+        "nodeids": joined["nodeids"],
+        "collection_skips": joined["collection_skips"],
+        "runner_context": first["runner_context"],
+        "execution_context": first["execution_context"],
+        "junit_sha256": sha(json.dumps(joined, sort_keys=True).encode()),
+        "parts": [item["parts"][0] for item in payloads],
+    }
+    (dest / "joined.json").write_text(json.dumps(body) + "\n")
+    return dest
+
+
 def join(value, evidence, validation_result, expected_sha, source=None):
     envelope(value)
     verify_source_evidence(value, source)
@@ -4524,18 +4602,29 @@ def join(value, evidence, validation_result, expected_sha, source=None):
                 "sharded_corpus_evaluated": False}
     expected = validate_plan(value["ops_plan"])
     prefix = f"ops-shard-{value['identity']['run_id']}-{value['identity']['run_attempt']}-"
-    roles = ["reference", *[a["id"] for a in expected["assignments"]], "native"]
+    assignment_ids = [a["id"] for a in expected["assignments"]]
+    legacy = ["reference", *assignment_ids, "native"]
+    split = [*(f"reference-{assignment}" for assignment in assignment_ids),
+             *assignment_ids, "native"]
     require(evidence.is_dir() and not evidence.is_symlink(), "missing evidence directory")
-    require(sorted(p.name for p in evidence.iterdir()) == sorted(prefix + r for r in roles),
-            "missing or unexpected evidence roles")
+    names = sorted(p.name for p in evidence.iterdir())
+    legacy_names = sorted(prefix + role for role in legacy)
+    split_names = sorted(prefix + role for role in split)
+    require(names in (legacy_names, split_names), "missing or unexpected evidence roles")
     native_directory = evidence / (prefix + "native")
     native = read_json(native_directory / "native.json")
     expected_native = (native_execution_context(value, native_directory)
                        | {"status": "success"} | native_receipts(value, native_directory))
     seal(expected_native, "native_sha256")
     require(native == expected_native, "native/source gate receipt differs")
-    result = aggregate(expected, evidence / (prefix + "reference"),
-                       [evidence / (prefix + a["id"]) for a in expected["assignments"]])
+    shard_dirs = [evidence / (prefix + assignment) for assignment in assignment_ids]
+    if names == legacy_names:
+        result = aggregate(expected, evidence / (prefix + "reference"), shard_dirs)
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            reference = materialize_split_reference(
+                evidence, prefix, expected["assignments"], Path(tmp) / "reference")
+            result = aggregate(expected, reference, shard_dirs)
     runners = {r["assignment_id"]: r["runner_context"]
                for r in [result["reference"], *result["shards"]]}
     runners["native"] = native["runner_context"]
