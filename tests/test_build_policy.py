@@ -1429,7 +1429,9 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("apt-get", validate)
         self.assertIn("ImageVersion: yueops-ci-toolchain", validate)
         self.assertNotIn("postgresql-18", self.workflow)
-        self.assertIn("python-version: '3.13'", self.workflow)
+        self.assertIn("python_bin=/usr/local/bin/python3", validate)
+        self.assertNotIn("uses: actions/setup-python", validate)
+        self.assertNotIn('python_bin="$(command -v python3)"', validate)
         self.assertIn(
             "Set up Python on GitHub-hosted runner",
             self.workflow,

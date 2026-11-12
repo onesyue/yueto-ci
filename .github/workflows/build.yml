@@ -623,21 +623,32 @@ jobs:
 
       - name: Set up Python on GitHub-hosted runner
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release'
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.13'
+        run: |
+          set -euo pipefail
+          # This job always runs in the toolchain image. That Python is
+          # linked with an rpath and starts with an empty library path.
+          # actions/setup-python would put another 3.13 first on PATH, and
+          # product tests drop the LD_LIBRARY_PATH that build needs.
+          python_bin=/usr/local/bin/python3
+          [ -x "$python_bin" ] || {
+            echo "::error::toolchain image is missing $python_bin"
+            exit 1
+          }
+          "$python_bin" -c 'import sys; assert sys.version_info[:2] == (3, 13)'
+          echo "YUE_CI_PYTHON=$python_bin" >> "$GITHUB_ENV"
 
       - name: Select Python on GitHub-hosted runner
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release'
         run: |
           set -euo pipefail
-          python_bin="$(command -v python3)"
+          python_bin="${YUE_CI_PYTHON:?}"
+          [ "$python_bin" = /usr/local/bin/python3 ]
           "$python_bin" -c 'import sys; assert sys.version_info[:2] == (3, 13)'
           echo "YUE_CI_PYTHON=$python_bin" >> "$GITHUB_ENV"
 
-      # setup-python does not publish Debian 13 tool-cache builds. The managed
-      # release runner uses Debian's system Python, verified before any central
-      # policy or source validation is allowed to execute.
+      # The self-hosted path does not use the image selection above. Debian 13
+      # has no setup-python tool-cache build. Verify its own Python 3.13 before
+      # any central policy or source validation is allowed to execute.
       - name: Validate system Python on self-hosted runner
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release'
         run: |
