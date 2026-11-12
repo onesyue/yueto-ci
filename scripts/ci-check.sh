@@ -71,7 +71,7 @@ clone_at() {
     git -C "$destination" cat-file -e "${revision}^{commit}" 2>/dev/null || \
       git -C "$destination" fetch --quiet "https://github.com/onesyue/$repository.git" "$revision"
   else
-    gh repo clone "onesyue/$repository" "$destination" -- --quiet
+    git clone --quiet "https://github.com/onesyue/$repository.git" "$destination"
   fi
   git -C "$destination" remote set-url origin "https://github.com/onesyue/$repository.git"
   # A developer clone is an object cache, never the default-branch authority.

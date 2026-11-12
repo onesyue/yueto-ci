@@ -82,6 +82,12 @@ class PreparedClones(unittest.TestCase):
             self.claim()
 
     def test_real_cli_prepare_does_not_execute_planner_and_consume_has_no_token(self):
+        self.actual_prepare_and_consume(use_local_cache=True)
+
+    def test_real_cli_native_git_clone_prepares_without_source_execution(self):
+        self.actual_prepare_and_consume(use_local_cache=False)
+
+    def actual_prepare_and_consume(self, use_local_cache):
         policy = self.checkouts / 'policy'
         scripts = policy / 'scripts'
         scripts.mkdir()
@@ -110,6 +116,9 @@ class PreparedClones(unittest.TestCase):
                           'YUEOPS_CHECKOUT': str(self.checkouts / 'source'),
                           'YUEBOARD_CHECKOUT': str(self.checkouts / 'board'),
                           'PATH': str(binpath) + os.pathsep + self.env['PATH']}
+        if not use_local_cache:
+            del env['YUEOPS_CHECKOUT']
+            del env['YUEBOARD_CHECKOUT']
         args = ['bash', str(scripts / 'ci-check.sh'), 'yueops', self.identities['source'],
                 '--local', '--board-ref', self.identities['board']]
         prepared = subprocess.run([*args, '--prepare-only'], env=env, capture_output=True, text=True)

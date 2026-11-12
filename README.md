@@ -505,6 +505,12 @@ native/evidence gates cannot produce success. Historical comparison must use the
 same Board contract revision and migration baseline; differences are reported,
 not silently treated as matching failures.
 
+Local `ci-check.sh --local` uses native Git HTTPS cloning. Configure an existing
+Git credential helper or askpass for private repository reads; `gh auth login`
+alone does not necessarily configure Git authentication. The CLI does not
+change the user's global Git configuration. Hosted replay supplies its own
+isolated, temporary askpass as described below.
+
 ### B9-8 Board validation context (requires paired ship change)
 
 Ops dispatches must provide `yueboard_contract_ref`: the exact production Board
@@ -536,11 +542,21 @@ Only one manual local replay runs at a time, independently of PR policy checks.
 Preparation uses `--local --prepare-only` to fetch standalone clones and save
 `prepared.json`. When configured, the App token can read only yueops/yueboard
 and is revoked before execution; issuance, empty token or revocation failure
-stops the job. Without App configuration, the existing `YUETO_CI_PAT` is used
-only in this trusted preparation step and is never revoked. The legacy PAT may
-have broader permissions; no source code executes while either credential is
-available. Empty credentials or temporary Git/gh configuration cleanup failure
-stop execution. Neither credential is saved in receipts, logs or remote URLs.
+stops the job. Without App configuration, only `YUETO_CI_CLONE_PAT` is accepted:
+a dedicated fine-grained token with Contents:read for yueops and yueboard,
+without Actions, Workflows or Admin permissions. The coordinator/owner must
+provision it; the hosted job never uses the legacy publication PAT. Missing
+credentials fail closed and block replay until configured.
+
+The credential is masked and exists only in the trusted preparation step's
+environment. A temporary askpass script reads that environment; its file has no
+token bytes. Git uses HTTPS URLs without embedded credentials, no stored helper,
+and no system/global Git configuration. Persisted checkout HTTP headers are
+rejected before clone, and prepared clones reject any credential configuration.
+App tokens alone are revoked; the dedicated PAT is not revoked. Askpass cleanup
+failure or remaining files stops execution. No source code runs while either
+credential is available; tokens never enter receipts, logs, output variables,
+Git configuration or remote URLs.
 The next step consumes `--prepared <receipt>` without credentials or the
 preparation Git/gh configuration. Input identities, clean clone state, origin,
 default-branch refs and single ownership are checked before source planning.
