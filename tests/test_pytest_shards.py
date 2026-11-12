@@ -166,6 +166,41 @@ class ShardPrimitives(unittest.TestCase):
         self.assertEqual(self.serial["modules"], ["tests/test_c.py"])
         self.assertEqual(SHARDS.validate_plan(self.plan), self.plan)
 
+    def test_measured_weights_rebalance_without_entering_the_plan_digest(self):
+        heavy = {
+            "tests/test_a.py": 100000,
+            "tests/test_b é.py": 1000,
+            "tests/test_skip_module.py": 1000,
+        }
+        weighted = SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"], weights=heavy)
+        stored = SHARDS.detach_ordinary_weights(weighted)
+        self.assertEqual(stored, heavy)
+        self.assertNotIn("ordinary_weights", weighted)
+        self.assertEqual(SHARDS.validate_plan(weighted), weighted)
+        body = {key: value for key, value in weighted.items() if key != "plan_sha256"}
+        self.assertEqual(weighted["plan_sha256"], SHARDS.sha(SHARDS.encoded(body)))
+        groups = {item["id"]: item["modules"] for item in weighted["assignments"]}
+        self.assertEqual(groups["ordinary-000"], ["tests/test_a.py"])
+        self.assertEqual(groups["ordinary-001"], ["tests/test_b é.py", "tests/test_skip_module.py"])
+        again = SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"], weights=stored)
+        SHARDS.detach_ordinary_weights(again)
+        self.assertEqual(again, weighted)
+        ignored = SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"])
+        self.assertEqual(ignored, self.plan)
+        self.assertEqual(
+            [item["modules"] for item in ignored["assignments"] if item["id"] == "ordinary-000"],
+            [["tests/test_a.py", "tests/test_skip_module.py"]],
+        )
+        corrupt = self.base / "corrupt-events.jsonl"
+        corrupt.write_text("{not json\n")
+        self.assertEqual(
+            SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"], timing=corrupt),
+            self.plan)
+        self.assertEqual(
+            SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"],
+                        timing=self.base / "missing-events.jsonl"),
+            self.plan)
+
     def test_plan_rejects_wrong_root_dirty_untracked_and_configuration(self):
         with self.assertRaises(ValueError):
             SHARDS.plan(self.source / "tests", self.context, 2, [])
