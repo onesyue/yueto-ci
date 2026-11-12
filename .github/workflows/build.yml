@@ -603,6 +603,10 @@ jobs:
       # admission rejects a missing identity. OS and architecture still come
       # from the runner; this names the toolchain image.
       ImageVersion: yueops-ci-toolchain
+      # Pytest temp files must live on the mounted work directory. The host
+      # Docker daemon cannot see the container's own /tmp, and a missing
+      # bind source is created as a directory.
+      TMPDIR: /__w/_temp
     strategy:
       # One shard's failure must not cancel its siblings.
       # A test failure still fails that shard immediately: the pytest step

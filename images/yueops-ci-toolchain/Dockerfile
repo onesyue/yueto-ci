@@ -139,10 +139,11 @@ RUN chmod 0755 /usr/local/bin/yueops-ci-toolchain-selfcheck /usr/local/bin/docke
 # dig, zstd and compose are on the GitHub runner image. Identity tests read
 # USER; --user runner does not set it, so an empty value became role "None".
 RUN apt-get update \
- && apt-get install -y --no-install-recommends bind9-dnsutils zstd docker-compose-v2 \
+ && apt-get install -y --no-install-recommends bind9-dnsutils zstd docker-compose-v2 bc \
  && rm -rf /var/lib/apt/lists/* \
  && test -x /usr/bin/dig \
  && test -x /usr/bin/zstd \
+ && test -x /usr/bin/bc \
  && docker compose version
 
 ENV USER=runner \

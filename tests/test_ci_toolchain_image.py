@@ -61,6 +61,7 @@ class CiToolchainImageTest(unittest.TestCase):
             "docker-hostpath.sh",
             "bind9-dnsutils",
             "docker-compose-v2",
+            "test -x /usr/bin/bc",
             "ENV USER=runner",
             "USER runner",
         ):
@@ -73,6 +74,7 @@ class CiToolchainImageTest(unittest.TestCase):
         self.assertIn("pidfd_open", selfcheck)
         self.assertIn("rsync", selfcheck)
         self.assertIn("dig", selfcheck)
+        self.assertIn(" bc", selfcheck)
         self.assertIn('os.environ["USER"] == "runner"', selfcheck)
         self.assertIn("docker compose version", selfcheck)
         rebuild = (ROOT / ".github" / "workflows" / "ci-toolchain.yml").read_text(

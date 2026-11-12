@@ -16,7 +16,7 @@ uv --version | grep -F '0.10.9'
 go version | grep -F 'go1.27.4'
 sing-box-1.14 version | grep -E '^sing-box version 1\.14\.'
 nginx -v 2>&1 | grep -F 'nginx/1.30.5'
-for tool in initdb pg_ctl psql gcc make node npm jq git buf docker corepack ssh-keygen rsync dig zstd; do
+for tool in initdb pg_ctl psql gcc make node npm jq git buf docker corepack ssh-keygen rsync dig zstd bc; do
   command -v "$tool" >/dev/null
 done
 docker compose version >/dev/null
