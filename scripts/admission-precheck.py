@@ -30,6 +30,10 @@ def precheck(source, base, head):
     # Use the production discovery and validator, including mode, ancestry,
     # first-native pins and every cryptographically sealed predecessor.
     try:
+        bound = POLICY.source_evidence.optional(source, head)
+        if bound is not None:
+            POLICY.source_evidence.validate_baseline(bound, {p: blob for p, (_, blob) in after.items()})
+            return True, "owner-signed source inputs bound; runtime admission still required"
         common = POLICY.shared_inputs(source, head)
         baseline = POLICY.skip_baseline()
         successor = POLICY.estate_successor_proof(baseline, source, head)

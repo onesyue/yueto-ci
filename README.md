@@ -511,3 +511,22 @@ projections do not certify native Stash, and structural-only client rows remain
 native-check unavailable. Missing source helpers, incomplete receipt coverage,
 invalid archives, unavailable Docker and failed isolation are failures, not
 optional skips. This gate requires the companion Board offline-helper change.
+
+### Validate an exact candidate without publication
+
+The existing `build.yml` manual dispatch accepts `validation_only: true` with
+`service` selecting one source repository and `ref` set to its full lowercase
+40-hex commit SHA. For example, select `yueboard`, `yue-node`, `yueops`, or
+`yuelink`; `all` is rejected because one SHA cannot identify several repositories.
+YueOps still requires an exact trusted `migration_base`; the existing optional
+`yueboard_contract_ref` retains its ACL validation meaning. Set `promote: false`.
+
+This mode uses the same planner, complete selected validation matrix, Ops
+admission/skip-blob checks, and validation-evidence join as a build. It has its
+own `validate-only` concurrency group. Image builds, signing, registry publication
+and cancellation jobs are skipped, including when planning or validation fails;
+its executable jobs have only `contents: read` workflow permissions. Source
+checkout retains the existing read-only credential mechanism. The evidence join
+runs after failed validation so a failed gate is visible without publication.
+The default remains `validation_only: false`, preserving ordinary candidate builds.
+Validation success is not release approval and does not move any image tag.

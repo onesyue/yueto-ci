@@ -539,10 +539,17 @@ exit 0
     def test_toolchain_failure_makes_validation_evidence_reject_a_skipped_matrix(self):
         workflow = (ROOT / ".github/workflows/build.yml").read_text()
         validate = workflow.split("\n  validate:\n", 1)[1].split("\n  validation-evidence:\n", 1)[0]
-        gate = [line.strip() for line in validate.splitlines() if "yueops-pg18-toolchain.result" in line]
-        self.assertEqual(gate, [
-            "if: always() && needs.plan.result == 'success' && (needs.yueops-pg18-toolchain.result == 'success' || needs.yueops-pg18-toolchain.result == 'skipped')",
-        ])
+        header = validate.split("\n    steps:\n", 1)[0]
+        self.assertNotIn("\n    if:", header)
+        self.assertNotIn("always()", header)
+        toolchain = workflow.split("\n  yueops-pg18-toolchain:\n", 1)[1].split("\n  validate:\n", 1)[0]
+        tool_header, tool_steps = toolchain.split("\n    steps:\n", 1)
+        self.assertNotIn("\n    if:", tool_header)
+        gate = "if: contains(needs.plan.outputs.validation_matrix, '\"validation\":\"yueops\"')"
+        self.assertEqual(
+            [line.strip() for line in tool_steps.splitlines() if line.strip().startswith("if:")],
+            [gate, gate, gate, gate],
+        )
         evidence = workflow.split("\n  validation-evidence:\n", 1)[1].split("\n  build:\n", 1)[0]
         self.assertIn("if: always() && needs.plan.result == 'success'\n", evidence)
         self.assertIn("VALIDATION_RESULT: ${{ needs.validate.result }}", evidence)

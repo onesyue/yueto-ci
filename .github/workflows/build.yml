@@ -26,6 +26,11 @@ on:
         description: 'YueOps: full SHA of trusted previous release/validation baseline (required for SQL coverage)'
         required: false
         type: string
+      validation_only:
+        description: 'validate an exact source SHA without building, signing, or publishing images'
+        required: true
+        type: boolean
+        default: false
       promote:
         description: 'promote verified default-branch HEAD to sha-* and latest'
         required: true
@@ -59,7 +64,7 @@ env:
 # same target no longer evict each other's pending runs. Image publication is
 # still serialized per service by the job-level verified-image-* groups.
 concurrency:
-  group: build-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}-${{ github.event.inputs.ref || 'registry-default' }}
+  group: ${{ inputs.validation_only && 'validate-only' || 'build' }}-${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}-${{ github.event.inputs.ref || 'registry-default' }}
   cancel-in-progress: false
 
 jobs:
@@ -75,6 +80,7 @@ jobs:
       validation_matrix: ${{ steps.ops_plan.outputs.validation_matrix }}
       validation_parallelism: ${{ steps.ops_plan.outputs.max_parallel }}
       ops_mode: ${{ steps.ops_plan.outputs.ops_mode }}
+      ops_source: ${{ steps.plan.outputs.ops_source }}
       admission_sha256: ${{ steps.ops_plan.outputs.admission_sha256 }}
       admission_rejected: ${{ steps.ops_plan.outputs.admission_rejected }}
       has_builds: ${{ steps.plan.outputs.has_builds }}
@@ -116,6 +122,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_ACTOR: ${{ github.actor }}
           WORKFLOW_GIT_REF: ${{ github.ref }}
+          VALIDATION_ONLY: ${{ inputs.validation_only && 'true' || 'false' }}
           MANUAL_PROMOTE: ${{ github.event.inputs.promote || 'false' }}
           DISPATCH_PROMOTE: ${{ github.event.client_payload.promote || 'false' }}
           MANUAL_YUEBOARD_CONTRACT_REF: ${{ github.event.inputs.yueboard_contract_ref || '' }}
@@ -123,6 +130,19 @@ jobs:
         run: |
           set -euo pipefail
           promote=false
+          validation_only="${VALIDATION_ONLY:-false}"
+          case "$validation_only" in
+            true)
+              if [ "$EVENT_NAME" != workflow_dispatch ] ||
+                 [ "$MANUAL_PROMOTE" != false ] ||
+                 ! [[ "$REF_OVERRIDE" =~ ^[0-9a-f]{40}$ ]]; then
+                echo 'validation_only requires manual dispatch, an exact 40-hex source SHA, and promote=false' >&2
+                exit 1
+              fi
+              ;;
+            false) ;;
+            *) echo 'invalid validation_only value' >&2; exit 1 ;;
+          esac
           # The ACL checkout and schema floor are one contract. Reading both
           # from the same reviewed file prevents a new floor from being
           # validated against an older YueBoard tree.
@@ -212,6 +232,13 @@ jobs:
           # validators in separate registries. `all` covers YueLink without
           # ever inventing a Docker target for it.
           target_plan="$(bash scripts/plan-build-targets.sh "$SERVICE" "$REF_OVERRIDE")"
+          if [ "$validation_only" = true ]; then
+            # One SHA cannot identify commits in several independent repositories.
+            jq -e '[.validation_matrix[].repo] | unique | length == 1' <<<"$target_plan" >/dev/null || {
+              echo 'validation_only requires a single source repository target' >&2
+              exit 1
+            }
+          fi
           if jq -e 'any(.validation_matrix[]; .validation == "yueops")' <<<"$target_plan" >/dev/null &&
              ! [[ "$MIGRATION_BASE" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::YueOps validation requires an explicit 40-hex migration_base from a trusted previous release"
@@ -297,6 +324,9 @@ jobs:
               ;;
             *) echo '::error::duplicate Ops validation entries'; exit 1 ;;
           esac
+          if [ "$validation_only" = true ]; then
+            target_plan="$(jq '.matrix = [] | .has_builds = false' <<<"$target_plan")"
+          fi
           # All parallel consumers must judge the same immutable source, including
           # candidate-only Node builds and source-only Link validation.
           target_plan="$(bash scripts/freeze-build-plan.sh <<<"$target_plan")"
@@ -369,19 +399,25 @@ jobs:
     # DNS and transport failures retry inside the installer (3 attempts, 2s
     # then 4s). A package miss, a bad signature, or a partial index is fatal
     # on the first attempt. No yueops shard skips this job.
-    if: contains(needs.plan.outputs.validation_matrix, '"validation":"yueops"')
+    # This job has no if. Without a yueops row the steps below are skipped
+    # and the job succeeds, so validate is not cancelled by a skipped need.
+    # An install failure still fails the job and leaves validate skipped.
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 20
     steps:
       - name: Checkout toolchain scripts
+        if: contains(needs.plan.outputs.validation_matrix, '"validation":"yueops"')
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install native YueOps PostgreSQL 18 test toolchain
+        if: contains(needs.plan.outputs.validation_matrix, '"validation":"yueops"')
         run: bash scripts/install-yueops-pg18-toolchain.sh
       - name: Pack YueOps PostgreSQL 18 toolchain
+        if: contains(needs.plan.outputs.validation_matrix, '"validation":"yueops"')
         run: bash scripts/install-yueops-pg18-toolchain.sh pack "${RUNNER_TEMP}/pg18-toolchain.tar"
       - name: Upload YueOps PostgreSQL 18 toolchain
+        if: contains(needs.plan.outputs.validation_matrix, '"validation":"yueops"')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: yueops-pg18-toolchain-${{ github.run_id }}-${{ github.run_attempt }}
@@ -391,9 +427,9 @@ jobs:
 
   validate:
     needs: [plan, yueops-pg18-toolchain]
-    # A failed toolchain skips this matrix instead of starting shards and
-    # cancelling them. A skipped toolchain (no yueops row) still validates.
-    if: always() && needs.plan.result == 'success' && (needs.yueops-pg18-toolchain.result == 'success' || needs.yueops-pg18-toolchain.result == 'skipped')
+    # No job-level if. A failed toolchain is a failed need and skips this
+    # matrix instead of starting shards. A matrix with no yueops row still
+    # validates, because that toolchain job succeeds without installing.
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     # The 22k-test serial Ops gate reached 96% at the former 60-minute limit.
     # Keep all tests and allow the remaining suite/frontend stages to finish.
@@ -505,10 +541,10 @@ jobs:
         if: matrix.validation == 'yueboard'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          # Board requires the crypto/x509 security fix in Go 1.27.3. The
-          # policy test binds each service to its exact compiler, while the
+          # Board requires the net/http fix in Go 1.27.4 (GO-2026-6859).
+          # The policy test binds each service to its exact compiler, while the
           # workspace toolchain-pin-agreement guard checks repository pins.
-          go-version: '1.27.3'
+          go-version: '1.27.4'
           # Separate module lifetime from source-varying compiler output below.
           # setup-go's dependency-only exact hit would never save new objects.
           cache: false
@@ -517,7 +553,7 @@ jobs:
         if: matrix.validation == 'yue-node'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          # Same crypto/x509 fix as YueBoard. Node binaries link this stdlib.
+          # yue-node go.mod is still toolchain go1.27.3. This job matches that pin.
           go-version: '1.27.3'
           cache: false
 
@@ -1633,6 +1669,25 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Mint read-only source evidence token (GitHub App)
+        id: evidence_source_token
+        if: needs.plan.outputs.ops_mode == 'sharded' && vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueops
+          permission-contents: read
+      - name: Checkout exact Ops objects for independent evidence verification
+        if: needs.plan.outputs.ops_mode == 'sharded'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueops
+          ref: ${{ needs.plan.outputs.ops_source }}
+          token: ${{ vars.YUETO_CI_APP_CLIENT_ID != '' && steps.evidence_source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          path: .admission-source
+          persist-credentials: false
       - name: Download original admission plan
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
@@ -1660,6 +1715,7 @@ jobs:
           python3 scripts/pytest-shards.py join \
             --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
             --expected-sha "$ADMISSION_SHA256" \
+            --source "$GITHUB_WORKSPACE/.admission-source" \
             --evidence "$RUNNER_TEMP/ops-shard-evidence" \
             --validation-result "$VALIDATION_RESULT" > "$report"
           python3 - "$report" "$RUNNER_TEMP/ops-admission/ops-admission.json" <<'PY'
@@ -1702,7 +1758,7 @@ jobs:
     # Job-level `if` is evaluated before strategy expansion.  A source-only
     # target therefore skips this job without asking Actions to expand or run
     # an empty Docker matrix.
-    if: needs.plan.outputs.has_builds == 'true'
+    if: needs.plan.outputs.has_builds == 'true' && !inputs.validation_only
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 120
     permissions:
@@ -2131,7 +2187,7 @@ jobs:
     # Candidate builds overlap validation, but registry publication waits for
     # every required validation and evidence job to succeed for this exact run.
     # Failed, cancelled or skipped prerequisites cannot write publication tags.
-    if: needs.plan.outputs.has_builds == 'true'
+    if: needs.plan.outputs.has_builds == 'true' && !inputs.validation_only
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 30
     permissions:
@@ -2537,7 +2593,7 @@ jobs:
     # Candidate builds deliberately overlap validation. A failed validation
     # prevents publish from starting, so cancel only this failed run's work.
     needs: [plan, validate]
-    if: failure()
+    if: failure() && !inputs.validation_only
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -2559,7 +2615,7 @@ jobs:
     # letting a doomed release keep running. Runs no source code; its only
     # privilege is cancelling this very run. Never runs on success.
     needs: [plan, build]
-    if: failure()
+    if: failure() && !inputs.validation_only
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
