@@ -288,7 +288,7 @@ jobs:
           )"
           case "$board_selection_count" in
             0) ;;
-            1|6)
+            1|7)
               board_repo="$(
                 jq -er '[.validation_matrix[] | select(.validation == "yueboard") | .repo] | unique | if length == 1 then .[0] else error("mixed") end' \
                   <<<"$target_plan"
@@ -297,11 +297,11 @@ jobs:
                 jq -er '[.validation_matrix[] | select(.validation == "yueboard") | .ref] | unique | if length == 1 then .[0] else error("mixed") end' \
                   <<<"$target_plan"
               )"
-              if [ "$board_selection_count" = 6 ]; then
-                expected_roles='["components","e2e","frontends","migration","postgres","quality"]'
+              if [ "$board_selection_count" = 7 ]; then
+                expected_roles='["components","e2e","frontends","migration","postgres","quality","race"]'
                 actual_roles="$(jq -c '[.validation_matrix[] | select(.validation == "yueboard") | .board_role] | sort' <<<"$target_plan")"
                 [ "$actual_roles" = "$expected_roles" ] || {
-                  echo "::error::YueBoard validation roles are not the six reviewed jobs" >&2
+                  echo "::error::YueBoard validation roles are not the seven reviewed jobs" >&2
                   exit 1
                 }
               fi
@@ -695,7 +695,7 @@ jobs:
       # on every path, including a buf already on PATH.
       - name: Set up Buf for YueBoard protocol compatibility
         # Every YueBoard role runs the shared preflight, which requires buf.
-        # Limiting the installer to quality left the other five roles red.
+        # Limiting the installer to quality left the other six roles red.
         if: matrix.validation == 'yueboard'
         uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
         with:
@@ -1010,18 +1010,28 @@ jobs:
           make check-generated
           go vet ./...
           scripts/ci/check-server-error-logging.sh
-          go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
-          go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 run --timeout=6m ./...
+          bash .ci-policy/scripts/install-board-quality-tools.sh \
+            "${RUNNER_TEMP:?}/board-quality-tools"
+          export PATH="${RUNNER_TEMP}/board-quality-tools:${PATH}"
+          govulncheck ./...
+          golangci-lint run --timeout=6m ./...
           go test ./...
+
+      - name: Validate YueBoard protocol compatibility
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'
+        run: scripts/ci/proto-gate.sh
+
+      - name: Validate YueBoard race
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'race'
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          set -euo pipefail
           [ "$(go env CGO_ENABLED)" = "1" ] || {
             echo "::error::YueBoard race validation requires CGO_ENABLED=1"
             exit 1
           }
           go test -race ./...
-
-      - name: Validate YueBoard protocol compatibility
-        if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'
-        run: scripts/ci/proto-gate.sh
 
       - name: Configure YueBoard PostgreSQL lock diagnostics
         if: matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')
