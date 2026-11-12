@@ -143,9 +143,10 @@ jobs:
         timeout-minutes: 20
         env:
           # Configured App with missing output stays empty; it never selects PAT.
-          GH_TOKEN: ${{ vars.YUETO_CI_APP_CLIENT_ID == '' && secrets.YUETO_CI_PAT || steps.source_token.outputs.token }}
+          GH_TOKEN: ${{ vars.YUETO_CI_APP_CLIENT_ID == '' && secrets.YUETO_CI_CLONE_PAT || steps.source_token.outputs.token }}
           REPLAY_APP_CLIENT_ID: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
         run: |
+          set +x
           set -euo pipefail
           auth=""
           cleanup() {
@@ -165,9 +166,30 @@ jobs:
             echo 'hosted local replay requires a source read credential' >&2
             exit 2
           }
+          case "$GH_TOKEN" in
+            *[$'\r\n']*) echo 'source read credential must be single-line' >&2; exit 2 ;;
+          esac
+          printf '::add-mask::%s\n' "$GH_TOKEN"
+          export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null
+          header_status=0
+          git config --local --get-regexp '^http\..*extraheader$' > /dev/null 2>&1 || header_status=$?
+          [ "$header_status" -eq 1 ] || {
+            echo 'checkout has persisted HTTP headers or unreadable Git configuration' >&2
+            exit 2
+          }
           auth=$(mktemp -d "$RUNNER_TEMP/ci-check-auth.XXXXXX")
-          export GH_CONFIG_DIR="$auth/gh" GIT_CONFIG_GLOBAL="$auth/gitconfig"
-          gh auth setup-git --hostname github.com
+          export GH_CONFIG_DIR="$auth/gh" GIT_ASKPASS="$auth/askpass" GIT_TERMINAL_PROMPT=0
+          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0=''
+          # This file contains only variable references, never credential bytes.
+          cat > "$GIT_ASKPASS" <<'ASKPASS'
+          #!/bin/sh
+          case "$1" in
+            *Username*) printf '%s\n' x-access-token ;;
+            *Password*) printf '%s\n' "$GH_TOKEN" ;;
+            *) exit 1 ;;
+          esac
+          ASKPASS
+          chmod 700 "$GIT_ASKPASS"
           bash scripts/ci-check.sh yueops "$SOURCE_REF" --local --board-ref "$BOARD_REF" \
             --prepare-only > "$CI_CHECK_OUTPUT/preparation.log" 2>&1
 

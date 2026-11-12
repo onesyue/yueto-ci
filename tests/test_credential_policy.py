@@ -31,10 +31,6 @@ APP_ACTION = (
 )
 PAT_FALLBACKS = (
     re.compile(
-        r"\$\{\{ vars\.YUETO_CI_APP_CLIENT_ID == '' && secrets\.YUETO_CI_PAT"
-        r" \|\| steps\.source_token\.outputs\.token \}\}"
-    ),
-    re.compile(
         r"\$\{\{ steps\.[a-z_]+\.outputs\.token \|\| secrets\.YUETO_CI_PAT \}\}"
     ),
     re.compile(
@@ -90,17 +86,6 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         # poll x3, rescan, deadman.  A refactor that stops finding them
         # must not read as "no bare PAT left".
         self.assertGreaterEqual(uses, 11)
-
-    def test_clone_only_fallback_requires_absent_app_and_exact_minter(self) -> None:
-        approved = "${{ vars.YUETO_CI_APP_CLIENT_ID == '' && secrets.YUETO_CI_PAT || steps.source_token.outputs.token }}"
-        self.assertTrue(any(pattern.fullmatch(approved) for pattern in PAT_FALLBACKS))
-        for invalid in (
-            approved.replace("== ''", "!= ''"),
-            approved.replace("source_token", "unreviewed_token"),
-            approved.replace("vars.YUETO_CI_APP_CLIENT_ID == ''", "true"),
-        ):
-            with self.subTest(expression=invalid):
-                self.assertFalse(any(pattern.fullmatch(invalid) for pattern in PAT_FALLBACKS))
 
     def test_evidence_source_fallback_requires_exact_switch_and_minter(self) -> None:
         approved = "${{ vars.YUETO_CI_APP_CLIENT_ID != '' && steps.evidence_source_token.outputs.token || secrets.YUETO_CI_PAT }}"
