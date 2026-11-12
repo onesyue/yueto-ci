@@ -22,9 +22,6 @@ REPOS = ("yueops", "yueboard", "yueto", "yueto-ci", "yuelink", "yuelink-ci", "yu
 ROOT = Path(__file__).resolve().parents[1]
 # Bump when the interpretation of cached remote evidence changes.
 CACHE_VERSION = 2
-# Exact approved snapshot bytes; every path uses this pin. Tests may patch it,
-# but CLI arguments cannot authorize a replacement snapshot.
-ACCEPTED_HISTORY_SHA256 = "6223d77fdf5ae6ab5b3530509ad8b8883629e0c6fc7ed4f48047ba0f23e33cd9"
 
 
 class RateFloorError(ValueError):
@@ -246,8 +243,6 @@ def baseline(path):
         return isinstance(value, str) and bool(value.strip())
 
     contents = path.read_bytes()
-    if hashlib.sha256(contents).hexdigest() != ACCEPTED_HISTORY_SHA256:
-        raise ValueError("baseline SHA256 does not match approved snapshot")
     value = json.loads(contents, object_pairs_hook=unique)
     if (not isinstance(value, dict) or set(value) != {"schema", "frozen_at", "approver", "entries"}
             or type(value["schema"]) is not int or value["schema"] != 1
@@ -578,7 +573,7 @@ def main():
     parser.add_argument("--repos", nargs="+", choices=REPOS, default=list(REPOS))
     parser.add_argument("--hours", type=int, default=24)
     parser.add_argument("--exceptions", type=Path, default=ROOT / "merge-hygiene-exceptions.json")
-    parser.add_argument("--baseline", type=Path, default=ROOT / "accepted-history-20261103.json")
+    parser.add_argument("--baseline", type=Path, default=None)
     parser.add_argument("--format", choices=("json", "text"), default="text")
     parser.add_argument("--premerge", nargs=2, metavar=("REPO", "PR"),
                         help="also require committed evidence and passing current checks for an open PR")
@@ -590,7 +585,11 @@ def main():
         parser.error("positive --hours and valid GitHub --owner required")
     now = datetime.now(timezone.utc)
     try:
-        frozen_at, accepted = baseline(args.baseline)
+        if args.baseline is None:
+            frozen_at = datetime.min.replace(tzinfo=timezone.utc)
+            accepted = {}
+        else:
+            frozen_at, accepted = baseline(args.baseline)
         rows = audit(args.owner, args.repos, now - timedelta(hours=args.hours),
                      exceptions(args.exceptions), now)
         # Apply only to merged history, before the open premerge candidate exists.

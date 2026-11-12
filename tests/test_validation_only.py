@@ -19,7 +19,7 @@ class ValidationOnlyTest(unittest.TestCase):
     run_plan = hardening.PlanPromotionGateTest.run_plan
 
     def test_exact_candidate_preserves_complete_registered_validation(self):
-        for service, count in [('yueboard', 6), ('yue-node', 2), ('yueops', 1), ('yuelink', 1)]:
+        for service, count in [('yueboard', 7), ('yue-node', 2), ('yueops', 1), ('yuelink', 1)]:
             with self.subTest(service=service):
                 result = self.run_plan(SERVICE=service, REF_OVERRIDE='b' * 40, VALIDATION_ONLY='true')
                 self.assertEqual(result.returncode, 0, result.stderr)

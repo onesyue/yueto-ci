@@ -201,6 +201,14 @@ def load(repo, revision):
     return _load(repo, revision, ROOT / "policy")
 
 
+def verify_commit(commit, policy_dir=None):
+    """Require one OpenPGP signature by policy/yueops-owner-signers.json.
+
+    ``commit`` is the raw commit object. The keyring is the validator's,
+    never a file from the candidate tree.
+    """
+    _verify(commit, Path(policy_dir) if policy_dir is not None else ROOT / "policy")
+
 def optional(repo, revision):
     """Legacy trees remain on historical policy; partial enrollment is an error."""
     tree = tree_inputs(repo, revision)

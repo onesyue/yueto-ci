@@ -42,15 +42,15 @@ board_builds="$(jq '[.matrix[] | select(.validation == "yueboard")] | length' <<
 board_refs="$(jq '[.validation_matrix[] | select(.validation == "yueboard") | .ref] | unique | length' <<<"$plan")"
 board_repos="$(jq '[.validation_matrix[] | select(.validation == "yueboard") | .repo] | unique | length' <<<"$plan")"
 board_roles="$(jq -c '[.validation_matrix[] | select(.validation == "yueboard") | .board_role] | sort' <<<"$plan")"
-reviewed_roles='["components","e2e","frontends","migration","postgres","quality"]'
+reviewed_roles='["components","e2e","frontends","migration","postgres","quality","race"]'
 if [ "$board_builds" -eq 1 ] && [ "$board_refs" -eq 1 ] && [ "$board_repos" -eq 1 ] && {
   [ "$board_validators" -eq 1 ] || {
-    [ "$board_validators" -eq 6 ] && [ "$board_roles" = "$reviewed_roles" ]
+    [ "$board_validators" -eq 7 ] && [ "$board_roles" = "$reviewed_roles" ]
   }
 }; then
   :
 else
-  echo "::error::selected YueBoard plan must contain one build and either one validator or the six reviewed roles" >&2
+  echo "::error::selected YueBoard plan must contain one build and either one validator or the seven reviewed roles" >&2
   exit 2
 fi
 

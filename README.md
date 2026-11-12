@@ -184,18 +184,17 @@ a pass: host and root skips are not Linux acceptance, and admission never reuses
 a prior successful job or replaces same-run native, reference, serial and ordinary
 execution.
 
-[ops-pytest-skip-baseline.json](ops-pytest-skip-baseline.json) remains the
-shared-input seal database. Envelope and expand still hash its bytes. Deleting
-the file here would make a missing seal look like an open gate. Skip comparison
-no longer treats that file, or the dated `reviews/ops-ordinary-skip-evidence-*.json`
-chain, as an allow-list. Those dated files are deleted.
+Plan admission for a commit without source evidence is an owner signature on the
+default branch: `policy/yueops-owner-signers.json` plus ancestry of `origin/master`.
+Shared-input successor seals are not that gate. A new test helper or conftest does
+not need a yueto-ci seal. Shards still come from the timing file. Hash syntax does
+not authenticate a review; the commit signature does.
 
-Shared-input successor records stay append-only: they bind specific source
-parents, before/after blobs and modes, and prior accepted review/freeze
-identities. Unknown paths/blobs, mixed dependency generations, missing history
-or resealed inconsistent envelopes fail. Hash syntax does not authenticate a
-review; the coordinator verifies its signed source and actual artifacts first.
-Historical skips retain their source/run identity.
+[ops-pytest-skip-baseline.json](ops-pytest-skip-baseline.json) remains hashed by
+envelope and expand. Deleting the file here would make a missing baseline look
+like an open gate. Skip comparison no longer treats that file, or the dated
+`reviews/ops-ordinary-skip-evidence-*.json` chain, as an allow-list. Those dated
+files are deleted.
 
 Before a yueops release, run
 `python3 scripts/pytest-shards.py skip-blob-precheck --ops-checkout <yueops-checkout> --ops-rev <40-character sha>`.
@@ -360,22 +359,19 @@ service-pin removal, mutable replacements and unreviewed digest changes.
 
 ### Admission precheck and merge hygiene
 
-Run shared-input admission from a trusted, reviewed **yueto-ci** checkout before
-requesting a build (the source checkout needs the sealed successor history):
+Run admission from a trusted **yueto-ci** checkout before requesting a build.
+The source checkout must contain the commit and `refs/heads/master` or
+`refs/remotes/origin/master`:
 
 ```sh
 python3 scripts/admission-precheck.py --repo yueops --source ../yueops --base "$BASE_SHA" --head "$HEAD_SHA"
 ```
 
-The precheck reads committed Git trees without checking out or executing Ops
-code. It calls the build planner's exact shared-input selector, ancestry proof
-and admission validator, including `ops-shared-input-successors.json`,
-`ops-first-native-successors.json` and historical reviewed seals. A changed
-packaging file or shared helper is accepted only if the existing sealed policy
-admits that complete tree. Even an unchanged base/head is validated. Exit codes:
-**0** admitted, **1** rejected, **2** invalid input or unavailable local evidence.
-A rejection names the changed inputs and the seal requirement in `reviews/`.
-This checks shared-input admission only; it does not certify all build gates.
+The precheck reads the committed object without executing Ops code. Head is
+admitted when it is an ancestor of the default branch (or the tip) and its
+OpenPGP signature matches `policy/yueops-owner-signers.json`. A new helper or
+conftest is not a seal. Exit codes: **0** admitted, **1** rejected, **2**
+invalid input. This does not certify the rest of the build gates.
 
 The build workflow's `pytest-shards.py expand` emits a single-line
 `ADMISSION_REJECTED: <reason>` Actions error annotation and step summary on
@@ -408,9 +404,9 @@ Remote evidence is cached under `~/.cache/yueto/merge-hygiene/`
 `merge_commit_sha` for immutable file comparisons. Reviews, checks and statuses
 remain mutable after merge, so every audit revalidates each evidence page and
 recomputes findings. Only the file comparison between the same base/head commit
-SHAs can skip its API request. Receipts, exception registrations, accepted-history
-baseline and activation policy are evaluated each run. Version 2 ignores the old
-version 1 verdict snapshots; unavailable evidence exits incomplete even with a
+SHAs can skip its API request. Receipts, exception registrations and the activation
+policy are evaluated each run. There is no committed accepted-history snapshot.
+Version 2 ignores the old version 1 verdict snapshots; unavailable evidence exits incomplete even with a
 warm cache. The cache contains private repository metadata and should remain
 local to the auditing user.
 

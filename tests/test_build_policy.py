@@ -1383,7 +1383,7 @@ class BuildPolicyTest(unittest.TestCase):
 
     def test_policy_ci_runs_pinned_fail_closed_policy_tooling(self) -> None:
         required = (
-            "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+            "python3 scripts/run-policy-tests.py",
             "shellcheck --severity=warning scripts/*.sh",
             "python3 -m compileall -q scripts tests",
             'bash -n "$script"',
@@ -1752,7 +1752,7 @@ class BuildPolicyTest(unittest.TestCase):
     def test_source_and_image_security_gates_are_present(self) -> None:
         required = (
             "scripts/check-vulnerabilities.sh",
-            "golang.org/x/vuln/cmd/govulncheck@v1.8.0",
+            ".ci-policy/scripts/install-board-quality-tools.sh",
             "scripts/security_scan.sh --json",
             "pip-audit",
             "working-directory: frontend",
@@ -1812,10 +1812,10 @@ class BuildPolicyTest(unittest.TestCase):
             "make check-generated",
             "go vet ./...",
             "scripts/ci/check-server-error-logging.sh",
-            "golang.org/x/vuln/cmd/govulncheck@v1.8.0",
-            "golangci-lint@v2.14.0 run --timeout=6m ./...",
+            ".ci-policy/scripts/install-board-quality-tools.sh",
+            "govulncheck ./...",
+            "golangci-lint run --timeout=6m ./...",
             "go test ./...",
-            "go test -race ./...",
         ):
             with self.subTest(backend_gate=gate):
                 self.assertIn(gate, backend)
@@ -1898,7 +1898,7 @@ class BuildPolicyTest(unittest.TestCase):
             cwd=ROOT, check=True, capture_output=True, text=True,
         )
         plan = json.loads(result.stdout)
-        roles = ["quality", "postgres", "migration", "e2e", "components", "frontends"]
+        roles = ["quality", "race", "postgres", "migration", "e2e", "components", "frontends"]
         self.assertEqual(
             [(entry["validation"], entry["board_role"], entry["ref"])
              for entry in plan["validation_matrix"]],
@@ -1915,7 +1915,7 @@ class BuildPolicyTest(unittest.TestCase):
             [(role, exact_ref) for role in roles],
         )
         self.assertEqual(len(authorized["matrix"]), 1)
-        self.assertIn("1|6)", self.workflow)
+        self.assertIn("1|7)", self.workflow)
         buf_setup = self.workflow[
             self.workflow.index("- name: Set up Buf for YueBoard protocol compatibility"):
             self.workflow.index("- name: Restore npm cache (yueops frontends)")
@@ -1928,7 +1928,24 @@ class BuildPolicyTest(unittest.TestCase):
         ]
         self.assertIn("matrix.board_role == 'quality'", quality)
         self.assertIn("go test ./...", quality)
-        self.assertIn("go test -race ./...", quality)
+        self.assertNotIn("go test -race", quality)
+        self.assertNotIn("go run ", quality)
+        race = self.workflow[
+            self.workflow.index("- name: Validate YueBoard race"):
+            self.workflow.index("- name: Configure YueBoard PostgreSQL lock diagnostics")
+        ]
+        self.assertIn("matrix.board_role == 'race'", race)
+        self.assertIn("go test -race ./...", race)
+        self.assertIn("CGO_ENABLED: '1'", race)
+        self.assertNotIn("govulncheck", race)
+        tools = (ROOT / "scripts" / "install-board-quality-tools.sh").read_text()
+        self.assertIn("golang.org/x/vuln/cmd/govulncheck@v1.8.0", tools)
+        self.assertIn("golangci-lint-2.14.0-linux-amd64.tar.gz", tools)
+        self.assertIn(
+            "ab90aeb7b066f92a33415b638a50fe5344bbb75a0d32ad30cc248d88f81032ab",
+            tools,
+        )
+        self.assertNotIn("go run ", tools)
         self.assertNotIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET", quality)
         mutated = quality.replace(
             "go test ./...",
@@ -1949,6 +1966,7 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow.index("- name: Validate YueBoard clean PostgreSQL lifecycle")
         ]
         self.assertIn("matrix.board_role == 'postgres'", postgres)
+        self.assertNotIn("matrix.board_role == 'migration'", postgres)
         self.assertNotIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET", postgres)
     def assert_release_jobs_are_bounded(self, workflow: str) -> None:
         """Every release job carries an explicit timeout and a UTC clock.

@@ -99,22 +99,11 @@ def _historical_native_source(source):
             "def reviewed_board139_native_successor(baseline, value, native):",
         ),
         (
-            "def reviewed_first_native_successor(baseline, value, native, *, require_native=True):",
-            "def reviewed_first_native_successor(baseline, value, native):",
-        ),
-        (
             "    if require_native:\n"
             "        passed = native[\"obligations\"].get(module, {}).get(\"passed\", [])\n"
             "        require(set(passed) == expected and len(passed) == len(expected), message)\n",
             "    passed = native[\"obligations\"].get(module, {}).get(\"passed\", [])\n"
             "    require(set(passed) == expected and len(passed) == len(expected), message)\n",
-        ),
-        (
-            "        if require_native:\n"
-            "            require(nodeid in native[\"obligations\"].get(module, {}).get(\"passed\", []),\n"
-            "                    \"first native successor lacks exact same-run call: \" + nodeid)\n",
-            "        require(nodeid in native[\"obligations\"].get(module, {}).get(\"passed\", []),\n"
-            "                \"first native successor lacks exact same-run call: \" + nodeid)\n",
         ),
     )
     for old, new in replacements:
