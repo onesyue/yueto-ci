@@ -1,5 +1,5 @@
 #!/bin/bash
-# Proves the image can initdb and find sing-box 1.14 without apt.
+# Proves the image can initdb, find sing-box 1.14, and compile against libpq without apt.
 # Run as the non-root runner user: docker run --rm --user runner IMAGE yueops-ci-toolchain-selfcheck
 set -euo pipefail
 if [ "$(id -u)" -eq 0 ]; then
@@ -8,6 +8,7 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 test -e /usr/lib/postgresql/18/lib/plpgsql.so
 test -e /usr/lib/postgresql/18/lib/dict_snowball.so
+test -f "$(pg_config --includedir)/pg_config.h"
 python3 -c 'import sys; assert sys.version_info[:2] == (3, 13), sys.version'
 uv --version | grep -F '0.10.9'
 go version | grep -F 'go1.27.4'

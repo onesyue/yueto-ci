@@ -33,9 +33,10 @@ RUN curl --fail --silent --show-error --location \
       'Signed-By: /usr/share/keyrings/postgresql.gpg' \
       > /etc/apt/sources.list.d/pgdg.sources \
  && apt-get update \
- && apt-get install -y --no-install-recommends postgresql-18 postgresql-client-18 \
+ && apt-get install -y --no-install-recommends postgresql-18 postgresql-client-18 libpq-dev \
  && test -e /usr/lib/postgresql/18/lib/plpgsql.so \
  && test -e /usr/lib/postgresql/18/lib/dict_snowball.so \
+ && test -f "$(pg_config --includedir)/pg_config.h" \
  && postgres --version | grep -E '\(PostgreSQL\) 18[.]' \
  && rm -rf /var/lib/apt/lists/* /tmp/pgdg.asc
 
