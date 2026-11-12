@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Read-only shared-input admission: 0 admitted, 1 rejected, 2 invalid invocation/input.
+"""Read-only admission: 0 admitted, 1 rejected, 2 invalid invocation/input.
 
 Run from the trusted yueto-ci checkout; --source is the local yueops checkout.
 Only committed trees are examined. No checkout, source execution or network calls.
-This is shared-input admission, not a substitute for full build validation.
+Shared-input admission and pytest-shards.skip_blob_precheck both have to pass.
+This is not a substitute for full build validation.
 """
 import argparse
 import importlib.util
@@ -20,6 +21,14 @@ POLICY = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(POLICY)
 
 
+def skip_baseline_rejection(source, head):
+    """Replay the shard skip rule. Join and this precheck share that function."""
+    lines = POLICY.skip_blob_precheck(source, head)
+    if not lines:
+        return None
+    return False, "skip baseline rejects the head: " + " ".join(lines)
+
+
 def precheck(source, base, head):
     for revision in (base, head):
         if not re.fullmatch(r"[0-9a-f]{40}", revision):
@@ -33,6 +42,9 @@ def precheck(source, base, head):
         bound = POLICY.source_evidence.optional(source, head)
         if bound is not None:
             POLICY.source_evidence.validate_baseline(bound, {p: blob for p, (_, blob) in after.items()})
+            rejected = skip_baseline_rejection(source, head)
+            if rejected is not None:
+                return rejected
             return True, "owner-signed source inputs bound; runtime admission still required"
         common = POLICY.shared_inputs(source, head)
         baseline = POLICY.skip_baseline()
@@ -63,6 +75,9 @@ def precheck(source, base, head):
         prefix = (f"shared inputs changed ({paths}) without an applicable reviewed seal in reviews/; "
                   if paths else "shared-input tree lacks an applicable reviewed seal in reviews/; ")
         return False, prefix + str(error)
+    rejected = skip_baseline_rejection(source, head)
+    if rejected is not None:
+        return rejected
     return True, "shared-input tree accepted by the build admission policy"
 
 

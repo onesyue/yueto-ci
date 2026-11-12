@@ -1,5 +1,6 @@
 import contextlib
 import importlib.util
+import inspect
 import io
 import json
 import os
@@ -30,7 +31,17 @@ class AdmissionPrecheck(unittest.TestCase):
         # Small historical fixture; discovery, Git trees and the entire production
         # admission chain remain real. No production policy/seal is changed.
         self.baseline = {"common_inputs": PRE.POLICY.shared_inputs(self.source, self.base)}
-        patched = patch.object(PRE.POLICY, "skip_baseline", return_value=self.baseline)
+        real_skip_baseline = PRE.POLICY.skip_baseline
+
+        def skip_baseline():
+            # The fixture baseline only satisfies shared-input admission.
+            # The skip binder must keep the production catalog, or this
+            # precheck would not see the cases join rejects.
+            if any(frame.function == "prepare_skip_bindings" for frame in inspect.stack()):
+                return real_skip_baseline()
+            return self.baseline
+
+        patched = patch.object(PRE.POLICY, "skip_baseline", skip_baseline)
         patched.start()
         self.addCleanup(patched.stop)
 
@@ -63,6 +74,39 @@ class AdmissionPrecheck(unittest.TestCase):
     def test_ordinary_source_change_accepted(self):
         (self.source / "app.py").write_text("raise RuntimeError('must never execute')\n")
         self.assertTrue(PRE.precheck(self.source, self.base, self.commit())[0])
+
+    def test_changed_catalog_skip_uses_the_shard_precheck(self):
+        # Run 43210004432 rejected this nodeid after admission-precheck had
+        # accepted the range. The module blob moved and the case still skips.
+        module = self.source / "tests" / "test_runtime_release_holds_20261009.py"
+        module.parent.mkdir()
+        module.write_text(
+            "import pytest\n\n"
+            "def test_native_dns_apply_noop_rollback_hold_lock_and_unknown_state():\n"
+            "    pytest.skip('changed fixture skip')\n"
+        )
+        head = self.commit()
+        lines = PRE.POLICY.skip_blob_precheck(self.source, head)
+        self.assertTrue(lines)
+        self.assertTrue(all(
+            "test_native_dns_apply_noop_rollback_hold_lock_and_unknown_state" in line
+            for line in lines))
+        accepted, reason = PRE.precheck(self.source, self.base, head)
+        self.assertFalse(accepted)
+        for line in lines:
+            self.assertIn(line, reason)
+
+    def test_skip_rejection_is_the_shard_function_result(self):
+        sentinel = (
+            "tests/test_runtime_release_holds_20261009.py  old -> new  "
+            "(tests/test_runtime_release_holds_20261009.py::"
+            "test_native_dns_apply_noop_rollback_hold_lock_and_unknown_state)"
+        )
+        with patch.object(PRE.POLICY, "skip_blob_precheck", return_value=[sentinel]) as called:
+            accepted, reason = PRE.precheck(self.source, self.base, self.base)
+        called.assert_called_once_with(self.source, self.base)
+        self.assertFalse(accepted)
+        self.assertIn(sentinel, reason)
 
     def test_invalid_sha_and_missing_object_are_input_errors(self):
         for revision in ("HEAD", "f" * 40):

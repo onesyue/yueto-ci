@@ -699,8 +699,10 @@ jobs:
         if: matrix.validation == 'yue-node'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          # yue-node go.mod is still toolchain go1.27.3. This job matches that pin.
-          go-version: '1.27.3'
+          # yue-node requires the net/http fix in Go 1.27.4 (GO-2026-6859).
+          # The policy test binds each service to its exact compiler, while the
+          # workspace toolchain-pin-agreement guard checks repository pins.
+          go-version: '1.27.4'
           cache: false
 
       - name: Set up Python on GitHub-hosted runner
@@ -1469,6 +1471,9 @@ jobs:
             .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-finish-unix-ns.txt"
             if [ "$pytest_rc" -ne 0 ]; then exit "$pytest_rc"; fi
           fi
+          # PATH-first doubles live under /run. A noexec mount makes execve
+          # fail and Python then runs the real docker or systemctl.
+          sudo -n env PATH="$PATH" bash .ci-policy/scripts/prepare-native-run-exec.sh
           sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py
 
       # Provider JSON is diagnostic only. Never put it in native/shard evidence.
