@@ -363,8 +363,37 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  validate:
+  yueops-pg18-toolchain:
     needs: plan
+    # One install for the whole run. Shards unpack this archive and never apt.
+    # DNS and transport failures retry inside the installer (3 attempts, 2s
+    # then 4s). A package miss, a bad signature, or a partial index is fatal
+    # on the first attempt. No yueops shard skips this job.
+    if: contains(needs.plan.outputs.validation_matrix, '"validation":"yueops"')
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout toolchain scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install native YueOps PostgreSQL 18 test toolchain
+        run: bash scripts/install-yueops-pg18-toolchain.sh
+      - name: Pack YueOps PostgreSQL 18 toolchain
+        run: bash scripts/install-yueops-pg18-toolchain.sh pack "${RUNNER_TEMP}/pg18-toolchain.tar"
+      - name: Upload YueOps PostgreSQL 18 toolchain
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: yueops-pg18-toolchain-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pg18-toolchain.tar
+          if-no-files-found: error
+          retention-days: 1
+
+  validate:
+    needs: [plan, yueops-pg18-toolchain]
+    # A failed toolchain skips this matrix instead of starting shards and
+    # cancelling them. A skipped toolchain (no yueops row) still validates.
+    if: always() && needs.plan.result == 'success' && (needs.yueops-pg18-toolchain.result == 'success' || needs.yueops-pg18-toolchain.result == 'skipped')
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     # The 22k-test serial Ops gate reached 96% at the former 60-minute limit.
     # Keep all tests and allow the remaining suite/frontend stages to finish.
@@ -376,9 +405,11 @@ jobs:
     env:
       TZ: UTC
     strategy:
-      # The first red shard already decides the release; stop the siblings
-      # instead of burning up to 120 runner-minutes each on a doomed run.
-      fail-fast: true
+      # One shard's runner DNS or apt failure must not cancel its siblings.
+      # A test failure still fails that shard immediately: the pytest step
+      # does not ignore a non-zero status. abort-on-validate-failure cancels
+      # overlapping builds only after this matrix is red.
+      fail-fast: false
       max-parallel: ${{ fromJSON(needs.plan.outputs.validation_parallelism) }}
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.validation_matrix) }}
@@ -644,73 +675,20 @@ jobs:
           gcc --version
           psql --version
 
-      # Ops migration/row-lock fixtures create isolated clusters, so the
-      # service container and psql client alone do not satisfy this dependency.
-      # Pin the stable server major instead of Ubuntu's default meta-package.
-      - name: Install native YueOps PostgreSQL 18 test toolchain
+      # Shards unpack the one-time archive under RUNNER_TEMP and symlink only
+      # the PostgreSQL prefix. System libraries stay untouched. A missing
+      # archive fails closed and does not fall back to apt.
+      - name: Download YueOps PostgreSQL 18 toolchain
         if: matrix.validation == 'yueops'
-        run: |
-          set -euo pipefail
-          pg_bin=/usr/lib/postgresql/18/bin
-          if [ ! -x "$pg_bin/postgres" ]; then
-            elevate=(env)
-            if [ "$(id -u)" -ne 0 ]; then
-              elevate=(sudo -n)
-            fi
-            . /etc/os-release
-            [ "${ID:-}" = ubuntu ]
-            [ "${VERSION_ID:-}" = 24.04 ]
-            [ "${VERSION_CODENAME:-}" = noble ]
-            [ "$(dpkg --print-architecture)" = amd64 ]
-            ubuntu_key=/usr/share/keyrings/ubuntu-archive-keyring.gpg
-            [ -s "$ubuntu_key" ]
-            [ -r "$ubuntu_key" ]
-            # Use only reviewed Ubuntu and PGDG sources, including fresh list
-            # state; unrelated runner repositories must not enter this install.
-            apt_dir=$(mktemp -d /tmp/yueops-pg18-apt.XXXXXX)
-            trap '"${elevate[@]}" rm -rf -- "$apt_dir"' EXIT
-            chmod 0755 "$apt_dir"
-            mkdir -m0755 "$apt_dir/sources.list.d" "$apt_dir/lists"
-            printf '%s\n' \
-              'Types: deb' 'URIs: https://archive.ubuntu.com/ubuntu' \
-              'Suites: noble noble-updates' 'Components: main universe' \
-              "Signed-By: $ubuntu_key" '' \
-              'Types: deb' 'URIs: https://security.ubuntu.com/ubuntu' \
-              'Suites: noble-security' 'Components: main universe' \
-              "Signed-By: $ubuntu_key" > "$apt_dir/ubuntu.sources"
-            apt=("${elevate[@]}" apt-get \
-              -o "Dir::Etc::sourcelist=$apt_dir/ubuntu.sources" \
-              -o "Dir::Etc::sourceparts=$apt_dir/sources.list.d" \
-              -o "Dir::State::lists=$apt_dir/lists" \
-              -o 'Dir::Cache::pkgcache=' -o 'Dir::Cache::srcpkgcache=' \
-              -o APT::Update::Error-Mode=any \
-              -o Acquire::AllowInsecureRepositories=false \
-              -o Acquire::AllowDowngradeToInsecureRepositories=false \
-              -o APT::Get::AllowUnauthenticated=false)
-            "${apt[@]}" update
-            "${apt[@]}" install -y --no-install-recommends ca-certificates curl gnupg
-            pg_key="$apt_dir/pgdg.asc"
-            curl --fail --silent --show-error --location \
-              --retry 5 --retry-all-errors --retry-delay 2 \
-              --proto '=https' --proto-redir '=https' --tlsv1.2 \
-              https://www.postgresql.org/media/keys/ACCC4CF8.asc --output "$pg_key"
-            fingerprint=$(gpg --batch --show-keys --with-colons "$pg_key" | awk -F: '$1 == "fpr" && !seen {print $10; seen=1}')
-            [ "$fingerprint" = B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 ]
-            chmod 0644 "$pg_key"
-            printf '%s\n' \
-              'Types: deb' 'URIs: https://apt.postgresql.org/pub/repos/apt' \
-              "Suites: ${VERSION_CODENAME}-pgdg" 'Components: main' \
-              "Signed-By: $pg_key" > "$apt_dir/sources.list.d/pgdg.sources"
-            "${apt[@]}" update
-            "${apt[@]}" install -y --no-install-recommends postgresql-18 postgresql-client-18
-          fi
-          for tool in postgres initdb pg_ctl psql; do
-            [ -x "$pg_bin/$tool" ]
-            "$pg_bin/$tool" --version | grep -E '\(PostgreSQL\) 18[.]'
-          done
-          # These fixtures use initdb as the runner user, never a production DB.
-          [ "$(id -u)" -ne 0 ] || { echo '::error::native PostgreSQL fixtures require a non-root runner'; exit 1; }
-          echo "$pg_bin" >> "$GITHUB_PATH"
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: yueops-pg18-toolchain-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/yueops-pg18-toolchain
+          digest-mismatch: error
+
+      - name: Activate YueOps PostgreSQL 18 toolchain
+        if: matrix.validation == 'yueops'
+        run: bash .ci-policy/scripts/activate-yueops-pg18-toolchain.sh "${RUNNER_TEMP}/yueops-pg18-toolchain/pg18-toolchain.tar"
 
       - name: Install native YueOps NGINX test toolchain
         if: matrix.validation == 'yueops'
