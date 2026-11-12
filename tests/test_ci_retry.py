@@ -197,32 +197,11 @@ exit 22
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(len(self.lines("calls")), 2)
 
-    def test_vendored_cosign_and_gitleaks_match_the_reviewed_pins(self):
-        import gzip
-        root = ROOT / "third_party"
-        gitleaks = (root / "gitleaks_8.30.1_linux_x64.tar.gz").read_bytes()
-        self.assertEqual(
-            hashlib.sha256(gitleaks).hexdigest(),
-            "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb")
-        raw = gzip.decompress((root / "cosign-v3.1.3-linux-amd64.gz").read_bytes())
-        self.assertEqual(
-            hashlib.sha256(raw).hexdigest(),
-            "4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71")
-
-    def test_vendored_buildx_matches_the_reviewed_pin(self):
-        script = (ROOT / "scripts/install-verified-buildx.sh").read_text()
-        pin = "9447199cdb435f25880548343c128a4b6650e8891ee598905d8d29d39a8e359b"
-        self.assertIn(f"BUILDX_SHA256='{pin}'", script)
-        binary = ROOT / "third_party/buildx-v0.37.1.linux-amd64"
-        digest = hashlib.sha256(binary.read_bytes()).hexdigest()
-        self.assertEqual(digest, pin)
-        self.assertIn("third_party/buildx-", script)
-
     def test_buildx_download_uses_a_runner_temp_directory(self):
         script = (ROOT / "scripts/install-verified-buildx.sh").read_text()
         assignment = 'download_dir=$(mktemp -d "$RUNNER_TEMP/yueto-buildx.XXXXXXXX")'
         self.assertIn(assignment, script)
-        self.assertLess(script.index(assignment), script.index('cp "$vendor"'))
+        self.assertLess(script.index(assignment), script.index('ci_download 4 --fail'))
 
     def test_syft_installer_keeps_the_reviewed_archive(self):
         script = (ROOT / "scripts/install-verified-syft.sh").read_text()
@@ -336,6 +315,61 @@ exit 97
                 else:
                     self.assertNotEqual(result.returncode, 0)
                     self.assertFalse(github_path.exists())
+
+    def test_gitleaks_download_is_verified_before_install(self):
+        import tarfile
+        import shutil
+        source = (ROOT / "scripts/ops-validation-gitleaks.sh").read_text()
+        reviewed = "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        self.assertIn(reviewed, source)
+        workspace = self.base / "workspace"
+        scripts = workspace / ".ci-policy/scripts"
+        scripts.mkdir(parents=True)
+        (scripts / "ci-retry.sh").write_text(HELPER.read_text())
+        destination = self.base / "installed"
+        destination.mkdir()
+        artifact = self.base / "gitleaks"
+        artifact.write_text("#!/bin/sh\necho 8.30.1\n")
+        artifact.chmod(0o755)
+        archive = self.base / "artifact.tar.gz"
+        with tarfile.open(archive, "w:gz") as tar:
+            tar.add(artifact, arcname="gitleaks")
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        # Redirect only the install destination and trust this fixture's bytes;
+        # retain the real checksum, extraction, ownership and version checks.
+        installer = scripts / "gitleaks.sh"
+        candidate = source.replace("/usr/local/bin", str(destination))
+        self.shim("curl", '''
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = --output ]; then cp "$ARTIFACT" "$2"; exit 0; fi
+  shift
+done
+exit 97
+''')
+        if os.uname().sysname == "Darwin":
+            for command, gnu_command in (("stat", "gstat"), ("sha256sum", "gsha256sum")):
+                tool = shutil.which(gnu_command)
+                if tool is None:
+                    self.fail(f"{gnu_command} required for the Linux installer fixture")
+                (self.base / command).symlink_to(tool)
+        for corrupt in (False, True):
+            with self.subTest(corrupt=corrupt):
+                installed = destination / "gitleaks"
+                installed.unlink(missing_ok=True)
+                installer.write_text(candidate.replace(reviewed, "0" * 64 if corrupt else digest))
+                result = subprocess.run(
+                    ["bash", str(installer)],
+                    env={**self.env, "RUNNER_TEMP": str(self.base),
+                         "GITHUB_WORKSPACE": str(workspace), "ARTIFACT": str(archive)},
+                    capture_output=True, text=True, timeout=15)
+                if corrupt:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(installed.exists())
+                    self.assertIn("FAILED", result.stdout)
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(installed.stat().st_uid, os.getuid())
+                    self.assertEqual(installed.stat().st_mode & 0o777, 0o755)
 
     def test_cosign_bad_digest_stops_before_install_or_execution(self):
         self.shim("curl", """
