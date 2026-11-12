@@ -19,7 +19,7 @@ class ValidationOnlyTest(unittest.TestCase):
     run_plan = hardening.PlanPromotionGateTest.run_plan
 
     def test_exact_candidate_preserves_complete_registered_validation(self):
-        for service, count in [('yueboard', 6), ('yue-node', 2), ('yueops', 1), ('yuelink', 1)]:
+        for service, count in [('yueboard', 7), ('yue-node', 2), ('yueops', 1), ('yuelink', 1)]:
             with self.subTest(service=service):
                 result = self.run_plan(SERVICE=service, REF_OVERRIDE='b' * 40, VALIDATION_ONLY='true')
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -66,12 +66,18 @@ class ValidationOnlyTest(unittest.TestCase):
                 condition = expression.replace('!inputs.validation_only', str(not validation_only).lower())
                 condition = condition.replace("needs.plan.outputs.has_builds == 'true'", str(has_builds).lower())
                 condition = condition.replace('failure()', str(failed).lower())
-                status = subprocess.run(['bash', '-c', condition], capture_output=True).returncode
+                condition = condition.replace("needs.plan.outputs.resume != 'true'", 'true')
+                condition = condition.replace("needs.plan.outputs.resume == 'true'", 'false')
+                condition = condition.replace('always()', 'true')
+                for dependency in ('plan', 'build', 'validate', 'validation-evidence'):
+                    condition = condition.replace("needs." + dependency + ".result == 'success'", 'true')
+                    condition = condition.replace("needs." + dependency + ".result == 'skipped'", 'false')
+                status = subprocess.run(['bash', '-c', condition], capture_output=True, check=False).returncode
                 expected = not validation_only and (failed if name.startswith('abort-') else has_builds)
                 self.assertEqual(status == 0, expected)
         self.assertEqual(workflow['permissions'], {'contents': 'read'})
         for name in ('plan', 'validate', 'validation-evidence'):
-            self.assertNotIn('permissions', jobs[name])
+            self.assertTrue(all(value == 'read' for value in jobs[name].get('permissions', {}).values()))
             self.assertNotIn('concurrency', jobs[name])
         self.assertIn("inputs.validation_only && 'validate-only' || 'build'", workflow['concurrency']['group'])
         self.assertEqual(jobs['validate']['strategy']['matrix']['include'], '${{ fromJSON(needs.plan.outputs.validation_matrix) }}')

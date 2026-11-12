@@ -1,6 +1,0 @@
-test_actual_mixed_runner_allocations_reach_source_native_and_complete_join (test_ops_shard_workflow.OpsShardWorkflow.test_actual_mixed_runner_allocations_reach_source_native_and_complete_join) ... ok
-
-----------------------------------------------------------------------
-Ran 1 test in 6.082s
-
-OK

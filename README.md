@@ -177,17 +177,32 @@ publication needs a fresh attempt, rather than reusing a prior candidate receipt
 
 ### Ops corpus and timing
 
-[ops-pytest-skip-baseline.json](ops-pytest-skip-baseline.json) and
-[pytest-shards.py](scripts/pytest-shards.py) own exact collection, skip and shared-
-input contracts. Reviewed successor records are append-only: they bind specific
-source parents, before/after blobs and modes, and prior accepted review/freeze
-identities. Unknown paths/blobs, mixed dependency generations, missing history
-or resealed inconsistent envelopes fail. Hash syntax does not authenticate a
-review; the coordinator verifies its signed source and actual artifacts first.
-Historical skips retain their source/run identity. Admission never reuses prior
-successful jobs or replaces same-run native, reference, serial and ordinary
-execution. Host/root skips are not Linux acceptance.
-Before a yueops release, run `python3 scripts/pytest-shards.py skip-blob-precheck --ops-checkout <yueops-checkout> --ops-rev <40-character sha>` and stop if it exits 1: a skip module whose blob changed without a successor seal is what validation-evidence rejects. A yueops commit may carry `tests/admission/ordinary-skip-evidence.json` (schema 1, with non-empty `updates` or `additions`). That commit is the seal: each admitted skip nodeid in the changed module has `before_blob` equal to its admitted blob and `after_blob` equal to the new module blob. One nodeid does not cover its siblings. A missing path adds no successor. Malformed JSON fails the precheck. The SHA-pinned files under `reviews/` remain the historical chain.
+[pytest-shards.py](scripts/pytest-shards.py) admits a skip or xfail when pytest
+recorded a non-empty reason, and it reports that skip. validation-evidence fails
+when a selected shard did not run, or when a skip has no reason. A reason is not
+a pass: host and root skips are not Linux acceptance, and admission never reuses
+a prior successful job or replaces same-run native, reference, serial and ordinary
+execution.
+
+Plan admission for a commit without source evidence is an owner signature on the
+default branch: `policy/yueops-owner-signers.json` plus ancestry of `origin/master`.
+Shared-input successor seals are not that gate. A new test helper or conftest does
+not need a yueto-ci seal. Shards still come from the timing file. Hash syntax does
+not authenticate a review; the commit signature does.
+
+[ops-pytest-skip-baseline.json](ops-pytest-skip-baseline.json) remains hashed by
+envelope and expand. Deleting the file here would make a missing baseline look
+like an open gate. Skip comparison no longer treats that file, or the dated
+`reviews/ops-ordinary-skip-evidence-*.json` chain, as an allow-list. Those dated
+files are deleted.
+
+Before a yueops release, run
+`python3 scripts/pytest-shards.py skip-blob-precheck --ops-checkout <yueops-checkout> --ops-rev <40-character sha>`.
+A moved test-module blob is not a rejection. Exit 2 means the commit is
+unreadable, a requested historical policy commit is missing, or
+`tests/admission/ordinary-skip-evidence.json` is malformed or does not succeed
+an admitted skip. A missing evidence path adds no successor. Malformed JSON
+fails the precheck.
 The owner's 2026-11-03 Nezha retirement removes two active skip IDs. Historical
 seal verification reconstructs their exact predecessor bytes; admission rejects
 skips from the retired module, and historical review artifacts stay unchanged.
@@ -344,22 +359,19 @@ service-pin removal, mutable replacements and unreviewed digest changes.
 
 ### Admission precheck and merge hygiene
 
-Run shared-input admission from a trusted, reviewed **yueto-ci** checkout before
-requesting a build (the source checkout needs the sealed successor history):
+Run admission from a trusted **yueto-ci** checkout before requesting a build.
+The source checkout must contain the commit and `refs/heads/master` or
+`refs/remotes/origin/master`:
 
 ```sh
 python3 scripts/admission-precheck.py --repo yueops --source ../yueops --base "$BASE_SHA" --head "$HEAD_SHA"
 ```
 
-The precheck reads committed Git trees without checking out or executing Ops
-code. It calls the build planner's exact shared-input selector, ancestry proof
-and admission validator, including `ops-shared-input-successors.json`,
-`ops-first-native-successors.json` and historical reviewed seals. A changed
-packaging file or shared helper is accepted only if the existing sealed policy
-admits that complete tree. Even an unchanged base/head is validated. Exit codes:
-**0** admitted, **1** rejected, **2** invalid input or unavailable local evidence.
-A rejection names the changed inputs and the seal requirement in `reviews/`.
-This checks shared-input admission only; it does not certify all build gates.
+The precheck reads the committed object without executing Ops code. Head is
+admitted when it is an ancestor of the default branch (or the tip) and its
+OpenPGP signature matches `policy/yueops-owner-signers.json`. A new helper or
+conftest is not a seal. Exit codes: **0** admitted, **1** rejected, **2**
+invalid input. This does not certify the rest of the build gates.
 
 The build workflow's `pytest-shards.py expand` emits a single-line
 `ADMISSION_REJECTED: <reason>` Actions error annotation and step summary on
@@ -392,9 +404,9 @@ Remote evidence is cached under `~/.cache/yueto/merge-hygiene/`
 `merge_commit_sha` for immutable file comparisons. Reviews, checks and statuses
 remain mutable after merge, so every audit revalidates each evidence page and
 recomputes findings. Only the file comparison between the same base/head commit
-SHAs can skip its API request. Receipts, exception registrations, accepted-history
-baseline and activation policy are evaluated each run. Version 2 ignores the old
-version 1 verdict snapshots; unavailable evidence exits incomplete even with a
+SHAs can skip its API request. Receipts, exception registrations and the activation
+policy are evaluated each run. There is no committed accepted-history snapshot.
+Version 2 ignores the old version 1 verdict snapshots; unavailable evidence exits incomplete even with a
 warm cache. The cache contains private repository metadata and should remain
 local to the auditing user.
 
@@ -526,3 +538,33 @@ checkout retains the existing read-only credential mechanism. The evidence join
 runs after failed validation so a failed gate is visible without publication.
 The default remains `validation_only: false`, preserving ordinary candidate builds.
 Validation success is not release approval and does not move any image tag.
+
+### Evidence-only promotion resume
+
+An explicit resume dispatch uses `ref` for the replacement signed Ops evidence
+source and `resume_build_run_id`, `resume_build_attempt`, `resume_build_source`
+for the original image build. It requires `promote=true`, `validation_only=false`,
+hosted Linux and an explicit Ops service/group. The existing planner and all
+validation roles run against the new source. The build job is skipped only on
+this path; promotion still requires successful complete validation and join.
+
+`scripts/resume-binding.py inspect` verifies exact GitHub run/attempt/jobs,
+immutable artifact archive digests, original image provenance, Board/migration
+context and actual Docker input/recipe equality. A candidate artifact includes
+its unchanged schema-1 receipt plus `candidate-context.json`; older artifacts
+without this context are refused rather than reconstructed from local claims.
+Evidence files are not unconditionally excluded: if Docker consumes them, their
+change invalidates reuse. The original image source revision remains unchanged.
+
+The trusted policy can be exported without `.git` and invoked using `python -I`
+with explicit `--policy-sha`. `prepare` binds a new validation run; `resolve`
+checks its canonical join before publication; `publication` reads back the
+registry digest/revision and retains an immutable per-service receipt.
+`verify-publication` independently reads those exact API artifacts and returns
+both original build and new publication identities. The protocol marker is
+`resume-protocol.json`. No helper dispatches or publishes on its own.
+
+This protocol does not relax existing default-branch, fingerprint, signature,
+SBOM or rollback rules. The root caller currently restricts resume to the Ops
+group with `--no-deploy`; deployment consumers must separately validate the old
+image/new evidence identity binding before deployment resume can be enabled.

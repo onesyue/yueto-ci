@@ -1,9 +1,0 @@
-test_absent_helper_keeps_historical_inputs_unchanged (test_ops_p015_offline_helper.P015OfflineHelper.test_absent_helper_keeps_historical_inputs_unchanged) ... ok
-test_changed_blob_mode_tree_and_revision_rejected (test_ops_p015_offline_helper.P015OfflineHelper.test_changed_blob_mode_tree_and_revision_rejected) ... ok
-test_exact_helper_full_chain_and_inputs_unchanged (test_ops_p015_offline_helper.P015OfflineHelper.test_exact_helper_full_chain_and_inputs_unchanged) ... ok
-test_other_new_helpers_reach_unchanged_mode_rejection (test_ops_p015_offline_helper.P015OfflineHelper.test_other_new_helpers_reach_unchanged_mode_rejection) ... ok
-
-----------------------------------------------------------------------
-Ran 4 tests in 0.993s
-
-OK

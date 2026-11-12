@@ -1,7 +1,0 @@
-{
-  "scripts/pytest-shards.py": "Pyright checked new helper lines: {}",
-  "tests/test_ops_p015_offline_helper.py": "Pyright: {}",
-  "reviews/ops-p015-20261105/qualification-driver.py": "Pyright: {}",
-  "py_compile": "PASS",
-  "git_diff_check": "PASS"
-}

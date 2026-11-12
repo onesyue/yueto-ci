@@ -636,7 +636,7 @@ class PolicyCiRunsEveryTestFileTest(unittest.TestCase):
         files = sorted(p.name for p in (ROOT / "tests").glob("test_*.py"))
         self.assertIn("test_hardening_20260927.py", files)
         self.assertIn("test_policy_discovery_contract.py", files)
-        self.assertIn("python3 -m unittest discover -s tests -p 'test_*.py'", policy)
+        self.assertIn("python3 scripts/run-policy-tests.py", policy)
 
 
 if __name__ == "__main__":
