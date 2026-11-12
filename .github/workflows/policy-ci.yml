@@ -61,10 +61,11 @@ jobs:
         run: |
           set -euo pipefail
           # Discovery, not a hand-kept list: a new tests/test_*.py runs the
-          # moment it lands. tests/test_policy_discovery_contract.py keeps
-          # every case reachable by this runner (TestCase or load_tests), and
-          # a module that fails to import is a failing test, never a skip.
-          python3 -m unittest discover -s tests -p 'test_*.py' -v
+          # moment it lands. scripts/run-policy-tests.py runs each discovered
+          # module in its own process. tests/test_policy_discovery_contract.py
+          # keeps every case reachable (TestCase or load_tests), and a module
+          # that fails to import is a failing test, never a skip.
+          python3 scripts/run-policy-tests.py
           python3 -m compileall -q scripts tests
           for script in scripts/*.sh; do
             bash -n "$script"

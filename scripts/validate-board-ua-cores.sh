@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Prepare only verified public archives online; execute every parser offline.
 set -euo pipefail
-readonly UA_GO_VERSION=go1.27.3
-readonly UA_GO_IMAGE='golang@sha256:c292963ad0e5f51e843c726edc204a4e4c26a859ba1e4d736d91028aa3633048'
+readonly UA_GO_VERSION=go1.27.4
+readonly UA_GO_IMAGE='golang@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea'
 
 fail() { echo "::error::$1" >&2; exit 1; }
 for tool in docker go python3 timeout; do
@@ -66,7 +66,7 @@ if ! container_id=$(docker create --network none --cpus 2 --memory 4g \
     -w /source "$UA_GO_IMAGE" bash -c '
       set -euo pipefail
       mkdir -p "$HOME"
-      [ "$(go env GOVERSION)" = go1.27.3 ]
+      [ "$(go env GOVERSION)" = go1.27.4 ]
       bash scripts/ci/ua-core-gate.sh --cache-dir /cores
     ' 2>"$state/create.stderr"); then
   container_id=''

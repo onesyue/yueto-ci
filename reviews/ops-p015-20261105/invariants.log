@@ -1,3 +1,0 @@
-PASS: all existing function ASTs unchanged except one exact-helper admission call
-PASS: first-native policy changes only source_revision
-PASS: historical skip baseline unchanged

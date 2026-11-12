@@ -92,6 +92,10 @@ class ActualReferenceCollectorTest(unittest.TestCase):
                 "        time.sleep(0.01)\n"
                 "if os.environ.get('REFERENCE_FAILURE') == name:\n"
                 "    raise RuntimeError('actual collection failure')\n"
+                "if os.environ.get('REFERENCE_LONG_ID') == name:\n"
+                "    @pytest.mark.parametrize('blob', [0], ids=['x' * 200000])\n"
+                "    def test_long_id(blob):\n"
+                "        pass\n"
                 "if os.environ.get('REFERENCE_SKIP') == name:\n"
                 "    pytest.skip('fixture collection skip', allow_module_level=True)\n"
                 f"def test_{name}():\n"
@@ -185,10 +189,28 @@ raise SystemExit(module.collect_reference_parts(expected, source, output, site, 
         self.assertEqual(joined["invocation_id"], invocations[0])
         self.assertEqual(len(set(invocations)), 2)
 
+    def test_job_log_stays_bounded_while_evidence_keeps_full_listing(self):
+        # The hosted runner masks each log line in super-linear time; one
+        # ~1 MiB parametrized id once held the reference step for 25 minutes.
+        result = self.collect(REFERENCE_LONG_ID="a")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        longest = max(len(line) for line in result.stdout.splitlines())
+        self.assertLessEqual(longest, SHARDS.LOG_LINE_LIMIT + 120)
+        self.assertNotIn("x" * (SHARDS.LOG_LINE_LIMIT + 1), result.stdout)
+        joined = json.loads((self.output / "joined.json").read_text())
+        long_ids = [n for n in joined["nodeids"] if "test_long_id" in n]
+        self.assertEqual(len(long_ids), 1)
+        self.assertGreater(len(long_ids[0]), 200000)
+        listings = "".join(p.read_text() for p in self.output.glob(
+            "parts/*/pytest-collect-stdout.txt"))
+        self.assertIn(long_ids[0], listings)
+        self.assertIn("tests collected", result.stdout)
+
     def test_actual_collection_failure_does_not_publish_join(self):
         result = self.collect(REFERENCE_FAILURE="b")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("reference part failed", result.stderr)
+        self.assertIn("actual collection failure", result.stdout)
         self.assertTrue((self.observations / "b.json").is_file())
         exits = [int(p.read_text()) for p in self.output.glob("parts/*/pytest-exit-code.txt")]
         self.assertTrue(any(code not in (0, 5) for code in exits))

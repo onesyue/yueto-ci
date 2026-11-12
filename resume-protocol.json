@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "protocol": "ops-resume-publication-v1",
+  "dispatch_inputs": [
+    "resume_build_run_id",
+    "resume_build_attempt",
+    "resume_build_source"
+  ],
+  "inspect_entry": "scripts/resume-binding.py"
+}

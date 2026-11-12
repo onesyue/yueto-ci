@@ -194,6 +194,7 @@ class GoCachePolicyTest(unittest.TestCase):
                          "matrix.validation == 'yue-node'")
         board_roles = {
             "Validate YueBoard backend quality gates": "quality",
+            "Validate YueBoard race": "race",
             "Validate YueBoard protocol compatibility": "quality",
             "Validate YueBoard PostgreSQL integration": "postgres",
             "Validate YueBoard clean PostgreSQL lifecycle": "postgres",
@@ -209,10 +210,7 @@ class GoCachePolicyTest(unittest.TestCase):
             "Validate YueBoard end-to-end suite",
         }
         for name, role in board_roles.items():
-            expected = ("matrix.validation == 'yueboard' && "
-                        "(matrix.board_role == 'postgres' || matrix.board_role == 'migration')"
-                        if name == "Validate YueBoard PostgreSQL integration"
-                        else f"matrix.validation == 'yueboard' && matrix.board_role == '{role}'")
+            expected = f"matrix.validation == 'yueboard' && matrix.board_role == '{role}'"
             if name in workspace_steps:
                 expected += " && steps.board_frontend.outputs.layout == 'workspace'"
             self.assertEqual(scalar(step(name), "if"), expected)

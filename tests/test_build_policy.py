@@ -396,7 +396,21 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
         '''))
         uv.chmod(0o755)
         sudo = bindir / "sudo"
-        sudo.write_text('#!/bin/sh\nprintf "later-native\\n" >> "$AUDIT_FIXTURE_ROOT/calls"\n')
+        sudo.write_text(
+            "#!/bin/sh\n"
+            "token=\n"
+            "for arg in \"$@\"; do\n"
+            "  case $arg in\n"
+            "    *prepare-native-run-exec.sh) token=later-native-exec ;;\n"
+            "    *run-native-nginx-tests.py) token=later-native ;;\n"
+            "  esac\n"
+            "done\n"
+            "if [ -z \"$token\" ]; then\n"
+            "  printf 'unexpected-sudo\\n' >> \"$AUDIT_FIXTURE_ROOT/calls\"\n"
+            "  exit 1\n"
+            "fi\n"
+            "printf '%s\\n' \"$token\" >> \"$AUDIT_FIXTURE_ROOT/calls\"\n"
+        )
         sudo.chmod(0o755)
         env = dict(os.environ, PATH=str(bindir) + os.pathsep + os.environ["PATH"],
                    RUNNER_TEMP=str(runner), OPS_ROLE=role, GITHUB_RUN_ID="12345",
@@ -437,7 +451,7 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
             with self.subTest(role=role):
                 result, root, runner, calls = self.run_backend(role=role)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(calls, ["lock", "pypi", "osv", "later-ruff", "later-native"])
+                self.assertEqual(calls, ["lock", "pypi", "osv", "later-ruff", "later-native-exec", "later-native"])
                 self.assert_retained(root, runner, ["pypi", "osv"])
         for behavior, provider, expected, providers in (
                 ("pre-audit", "pypi", 12, []), ("error", "pypi", 7, []),
@@ -869,7 +883,7 @@ class BuildPolicyTest(unittest.TestCase):
         ]
         expected = {
             "name: Set up YueBoard Go": ("yueboard", "1.27.4"),
-            "name: Set up Go": ("yue-node", "1.27.3"),
+            "name: Set up Go": ("yue-node", "1.27.4"),
         }
         self.assertCountEqual([step.splitlines()[0] for step in setup], expected)
         for step in setup:
@@ -902,7 +916,7 @@ class BuildPolicyTest(unittest.TestCase):
         mutations = {
             "swapped-versions": self.workflow.replace(
                 board, board.replace("'1.27.4'", "'1.27.2'")
-            ).replace(node, node.replace("'1.27.3'", "'1.27.2'")),
+            ).replace(node, node.replace("'1.27.4'", "'1.27.2'")),
             "swapped-services": self.workflow.replace(
                 board, board.replace("== 'yueboard'", "== 'yue-node'")
             ).replace(node, node.replace("== 'yue-node'", "== 'yueboard'")),
@@ -1369,7 +1383,7 @@ class BuildPolicyTest(unittest.TestCase):
 
     def test_policy_ci_runs_pinned_fail_closed_policy_tooling(self) -> None:
         required = (
-            "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+            "python3 scripts/run-policy-tests.py",
             "shellcheck --severity=warning scripts/*.sh",
             "python3 -m compileall -q scripts tests",
             'bash -n "$script"',
@@ -1738,7 +1752,7 @@ class BuildPolicyTest(unittest.TestCase):
     def test_source_and_image_security_gates_are_present(self) -> None:
         required = (
             "scripts/check-vulnerabilities.sh",
-            "golang.org/x/vuln/cmd/govulncheck@v1.8.0",
+            ".ci-policy/scripts/install-board-quality-tools.sh",
             "scripts/security_scan.sh --json",
             "pip-audit",
             "working-directory: frontend",
@@ -1798,10 +1812,10 @@ class BuildPolicyTest(unittest.TestCase):
             "make check-generated",
             "go vet ./...",
             "scripts/ci/check-server-error-logging.sh",
-            "golang.org/x/vuln/cmd/govulncheck@v1.8.0",
-            "golangci-lint@v2.14.0 run --timeout=6m ./...",
+            ".ci-policy/scripts/install-board-quality-tools.sh",
+            "govulncheck ./...",
+            "golangci-lint run --timeout=6m ./...",
             "go test ./...",
-            "go test -race ./...",
         ):
             with self.subTest(backend_gate=gate):
                 self.assertIn(gate, backend)
@@ -1884,7 +1898,7 @@ class BuildPolicyTest(unittest.TestCase):
             cwd=ROOT, check=True, capture_output=True, text=True,
         )
         plan = json.loads(result.stdout)
-        roles = ["quality", "postgres", "migration", "e2e", "components", "frontends"]
+        roles = ["quality", "race", "postgres", "migration", "e2e", "components", "frontends"]
         self.assertEqual(
             [(entry["validation"], entry["board_role"], entry["ref"])
              for entry in plan["validation_matrix"]],
@@ -1901,7 +1915,7 @@ class BuildPolicyTest(unittest.TestCase):
             [(role, exact_ref) for role in roles],
         )
         self.assertEqual(len(authorized["matrix"]), 1)
-        self.assertIn("1|6)", self.workflow)
+        self.assertIn("1|7)", self.workflow)
         buf_setup = self.workflow[
             self.workflow.index("- name: Set up Buf for YueBoard protocol compatibility"):
             self.workflow.index("- name: Restore npm cache (yueops frontends)")
@@ -1914,7 +1928,24 @@ class BuildPolicyTest(unittest.TestCase):
         ]
         self.assertIn("matrix.board_role == 'quality'", quality)
         self.assertIn("go test ./...", quality)
-        self.assertIn("go test -race ./...", quality)
+        self.assertNotIn("go test -race", quality)
+        self.assertNotIn("go run ", quality)
+        race = self.workflow[
+            self.workflow.index("- name: Validate YueBoard race"):
+            self.workflow.index("- name: Configure YueBoard PostgreSQL lock diagnostics")
+        ]
+        self.assertIn("matrix.board_role == 'race'", race)
+        self.assertIn("go test -race ./...", race)
+        self.assertIn("CGO_ENABLED: '1'", race)
+        self.assertNotIn("govulncheck", race)
+        tools = (ROOT / "scripts" / "install-board-quality-tools.sh").read_text()
+        self.assertIn("golang.org/x/vuln/cmd/govulncheck@v1.8.0", tools)
+        self.assertIn("golangci-lint-2.14.0-linux-amd64.tar.gz", tools)
+        self.assertIn(
+            "ab90aeb7b066f92a33415b638a50fe5344bbb75a0d32ad30cc248d88f81032ab",
+            tools,
+        )
+        self.assertNotIn("go run ", tools)
         self.assertNotIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET", quality)
         mutated = quality.replace(
             "go test ./...",
@@ -1935,6 +1966,7 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow.index("- name: Validate YueBoard clean PostgreSQL lifecycle")
         ]
         self.assertIn("matrix.board_role == 'postgres'", postgres)
+        self.assertNotIn("matrix.board_role == 'migration'", postgres)
         self.assertNotIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET", postgres)
     def assert_release_jobs_are_bounded(self, workflow: str) -> None:
         """Every release job carries an explicit timeout and a UTC clock.

@@ -13,7 +13,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'scripts/validate-board-ua-cores.sh'
-IMAGE = 'golang@sha256:c292963ad0e5f51e843c726edc204a4e4c26a859ba1e4d736d91028aa3633048'
+IMAGE = 'golang@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea'
 CONTAINER = 'a' * 64
 
 
@@ -26,7 +26,7 @@ class BoardOfflineCoreGateTest(unittest.TestCase):
         self.bin = self.base / 'bin'
         self.bin.mkdir()
         (self.source / 'scripts/ci').mkdir(parents=True)
-        (self.source / 'go.mod').write_text('module fixture\n\ngo 1.27.0\ntoolchain go1.27.3\n')
+        (self.source / 'go.mod').write_text('module fixture\n\ngo 1.27.0\ntoolchain go1.27.4\n')
         (self.source / 'scripts/ci/core-assets.json').write_text('{}\n')
         (self.source / 'scripts/ci/ua-core-gate.sh').write_text('echo unexpected-host-core-execution >&2; exit 97\n')
         (self.source / 'scripts/ci/prepare-ua-cores.py').write_text('''import json, os, sys
@@ -36,7 +36,7 @@ sys.exit(int(os.environ.get('PREPARE_EXIT', '0')))
 ''')
         self.shim('uname', 'echo Linux')
         self.shim('go', '''case "$*" in
-"env GOVERSION") echo "${FIXTURE_GO_VERSION:-go1.27.3}";;
+"env GOVERSION") echo "${FIXTURE_GO_VERSION:-go1.27.4}";;
 "env GOMODCACHE") echo "$FIXTURE_BASE/modules";;
 "env GOCACHE") echo "$FIXTURE_BASE/compiler";;
 *) exit 98;; esac''')
@@ -112,7 +112,7 @@ if args[0] == 'inspect': print(os.environ.get('DOCKER_STATE', 'exited 0'))
                 self.assertEqual(any(row[0] == 'rm' for row in commands), owns)
 
     def test_missing_source_mismatched_toolchain_and_invalid_mount_refuse(self):
-        for overrides in [{'FIXTURE_GO_VERSION': 'go1.27.4'}, {'UA_CORE_CACHE': 'relative'},
+        for overrides in [{'FIXTURE_GO_VERSION': 'go1.27.3'}, {'UA_CORE_CACHE': 'relative'},
                           {'UA_CORE_CACHE': str(self.base / 'comma,cache')}]:
             with self.subTest(overrides=overrides):
                 self.assertNotEqual(self.run_wrapper(**overrides).returncode, 0)
@@ -137,6 +137,9 @@ if args[0] == 'inspect': print(os.environ.get('DOCKER_STATE', 'exited 0'))
     def test_workflow_gate_is_mandatory_quality_only_after_existing_warmup(self):
         jobs = yaml.safe_load((ROOT / '.github/workflows/build.yml').read_text())['jobs']
         steps = jobs['validate']['steps']
+        compiler = next(s for s in steps if s.get('name') == 'Set up YueBoard Go')['with']['go-version']
+        self.assertIn(f'readonly UA_GO_VERSION=go{compiler}\n', SCRIPT.read_text())
+        self.assertIn(f'[ "$(go env GOVERSION)" = go{compiler} ]', SCRIPT.read_text())
         index = next(i for i, step in enumerate(steps) if step.get('name') == 'Validate YueBoard UA parsers without network access')
         gate = steps[index]
         self.assertEqual(gate['if'], "matrix.validation == 'yueboard' && matrix.board_role == 'quality'")
