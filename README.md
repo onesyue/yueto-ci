@@ -544,3 +544,29 @@ This protocol does not relax existing default-branch, fingerprint, signature,
 SBOM or rollback rules. The root caller currently restricts resume to the Ops
 group with `--no-deploy`; deployment consumers must separately validate the old
 image/new evidence identity binding before deployment resume can be enabled.
+
+### Reproduce a signed YueOps validation (B9-9)
+
+`scripts/ci-check.sh yueops <sha>` dispatches validation only from the current
+pushed policy branch. The source can be any owner-signed branch commit. The
+command verifies the policy head and binds the new run by a unique nonce, then
+prints failing pytest node IDs from all job logs. It never selects an image build
+or publication. `CI_CHECK_MIGRATION_BASE` can supply the exact historical baseline;
+otherwise the source commit's first parent is used.
+
+Add `--local` to use the same planner, immutable toolchain image, locked dependency
+installation, owned pytest selection, native obligations and final evidence join.
+Each admitted role gets an isolated container and complete Git clones. Source,
+Board and policy clones retain exact revisions; they are removed at exit. Set
+`YUEOPS_CHECKOUT` / `YUEBOARD_CHECKOUT` to existing clones to avoid downloading their
+history again. The local Docker engine must support privileged Linux amd64 containers. Each
+role starts its own disposable Docker daemon; the shared host daemon socket is
+never passed to test code. The command does
+not build a replacement toolchain image.
+
+Receipts, role logs, planner output and `failures.txt` remain under
+`.lane/ci-check-<time>-<pid>/` (or `CI_CHECK_OUTPUT`). A failing role does not cancel
+its siblings. Missing logs, incomplete execution, unsigned sources and failed
+native/evidence gates cannot produce success. Historical comparison must use the
+same Board contract revision and migration baseline; differences are reported,
+not silently treated as matching failures.

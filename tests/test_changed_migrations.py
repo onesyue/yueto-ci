@@ -1,4 +1,5 @@
 """Real Git histories exercise the same selector used by public validation."""
+from workflow_source import workflow_text
 import os
 from pathlib import Path
 import subprocess
@@ -83,7 +84,7 @@ class ChangedMigrationsTest(unittest.TestCase):
         self.assertIn(b"0 changed", result.stderr)
 
     def test_workflow_invokes_selector_before_reading_output(self):
-        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        workflow = workflow_text()
         sql = workflow.split("- name: Lint changed YueOps SQL migrations", 1)[1].split("\n  build:", 1)[0]
         self.assertIn('python3 .ci-policy/scripts/changed-migrations.py --base "$MIGRATION_BASE" > "$migration_list"', sql)
         self.assertIn("mapfile -d '' -t migrations <", sql)

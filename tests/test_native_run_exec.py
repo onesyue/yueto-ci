@@ -1,6 +1,7 @@
 """The native runner must execute PATH-first doubles, not the next real binary."""
 from __future__ import annotations
 
+from workflow_source import workflow_text
 from pathlib import Path
 import stat
 import subprocess
@@ -24,7 +25,7 @@ class NativeRunExec(unittest.TestCase):
         self.assertEqual(result.stdout, "")
 
     def test_workflow_prepares_run_exec_before_native_nginx(self):
-        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        workflow = workflow_text()
         backend = workflow.index("      - name: Validate yueops backend\n")
         prepare = workflow.index(
             'sudo -n env PATH="$PATH" bash .ci-policy/scripts/prepare-native-run-exec.sh',

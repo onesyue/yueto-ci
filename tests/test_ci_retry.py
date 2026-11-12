@@ -1,5 +1,6 @@
 """I32-E R4/R7: execute real retry helpers with failing external commands."""
 
+from workflow_source import workflow_text
 import hashlib
 import os
 from pathlib import Path
@@ -230,7 +231,7 @@ exit 22
         self.assertIn("SYFT_VERSION='1.51.1'", script)
         self.assertIn("ci_release_asset_api 4", script)
         self.assertIn("sha256sum --check --strict", script)
-        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        workflow = workflow_text()
         self.assertIn("install-verified-syft.sh", workflow)
         self.assertNotIn("anchore/sbom-action@", workflow)
 
@@ -302,7 +303,7 @@ exit 0
         reviewed = "4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71"
         self.assertIn(reviewed, source)
         self.assertIn("readonly COSIGN_VERSION='v3.1.3'", source)
-        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        workflow = workflow_text()
         self.assertEqual(workflow.count("run: bash .ci-policy/scripts/install-cosign.sh"), 2)
         self.assertNotIn("sigstore/cosign-installer@", workflow)
         (self.base / "ci-retry.sh").write_text(HELPER.read_text())

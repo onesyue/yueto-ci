@@ -1,5 +1,6 @@
 """Execute the native installer boundary and its fail-closed input contract."""
 from __future__ import annotations
+from workflow_source import workflow_text
 
 import hashlib
 import json
@@ -203,7 +204,7 @@ else: sys.exit(24)
         self.assertFalse(any(row[0]=='apt-get' for row in self.calls()))
 
     def test_validate_uses_image_nginx_instead_of_apt(self):
-        workflow = (ROOT/'.github/workflows/build.yml').read_text()
+        workflow = workflow_text()
         start = workflow.index('      - name: Require the toolchain NGINX and sing-box\n')
         step = workflow[start:workflow.index('\n      - name:', start+1)]
         self.assertIn("if: matrix.validation == 'yueops'", step)

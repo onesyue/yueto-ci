@@ -1,6 +1,7 @@
 """Decoupling S2: the YueBoard→YueOps notices wire contract runs inside validate."""
 from __future__ import annotations
 
+from workflow_source import workflow_text
 import unittest
 from pathlib import Path
 
@@ -11,7 +12,7 @@ STEP = "- name: Validate YueBoard→YueOps notices wire contract"
 
 class NoticesContractGateTest(unittest.TestCase):
     def setUp(self):
-        self.text = WORKFLOW.read_text(encoding="utf-8")
+        self.text = workflow_text(WORKFLOW)
         start = self.text.index(STEP)
         end = self.text.index("\n      - name:", start + len(STEP))
         self.step = self.text[start:end]

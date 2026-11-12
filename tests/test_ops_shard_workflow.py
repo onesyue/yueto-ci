@@ -1,6 +1,7 @@
 """Execute the real workflow shell, source-entry protocol and artifact join."""
 from __future__ import annotations
 
+from workflow_source import workflow_text
 import copy
 import hashlib
 import importlib.util
@@ -635,7 +636,7 @@ class OpsShardWorkflow(unittest.TestCase):
                        body + "        if: false\n"):
             with self.subTest(contract=broken), self.assertRaises(AssertionError):
                 required_artifact(broken)
-        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        workflow = workflow_text()
         join_job = workflow.split("  validation-evidence:\n", 1)[1].split("  build:\n", 1)[0]
         self.assertNotIn("continue-on-error", join_job)
         self.assertIn("timeout-minutes: 10", join_job)
@@ -1019,7 +1020,7 @@ class OpsShardWorkflow(unittest.TestCase):
             self.join()
 
     def test_build_and_each_original_required_gate_keep_actual_role_owner(self):
-        text = (ROOT / ".github/workflows/build.yml").read_text()
+        text = workflow_text()
         build_job = text.split("\n  build:\n", 1)[1].split("\n  publish:\n", 1)[0]
         publish = text.split("\n  publish:\n", 1)[1]
         self.assertTrue(build_job.startswith("    needs: [plan]\n"))
