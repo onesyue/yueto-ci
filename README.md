@@ -503,30 +503,6 @@ runs after failed validation so a failed gate is visible without publication.
 The default remains `validation_only: false`, preserving ordinary candidate builds.
 Validation success is not release approval and does not move any image tag.
 
-### Browser origin authority in validation
-
-Every Board and Ops validation row checks generated origin projections against
-root commit `d5f2b6b25477a2a3913bf7affef4bd6a822eec2a`. The reviewed workflow
-literal controls the root checkout and `--authority-ref`; dispatch inputs and
-candidate-provided digests cannot select another authority. Only the validator's
-existing source token gains contents-read access to the root `yueto` repository;
-plan, image build, publication, polling and signing permissions stay unchanged.
-The App switch retains its fail-closed behavior and existing PAT fallback.
-
-The sparse root checkout contains the source and entire zero-dependency
-Node generator. After Node setup, the mandatory check compares root HEAD and
-source/generator Git object bytes, then the component's actual generated files
-and marked blocks. Missing files, authority mismatch and drift fail validation;
-no missing-input skip or credential fallback is added. The source-owned tests
-remain responsible for runtime CSP/CORS/widget/nginx behavior.
-
-This contract targets the frozen Board consumer candidate
-`0d008951c61596c9e20d1c42dfe39404059920ee` and Ops PR532 at
-`7c65f6b196f0ac153324f9e3db1edea8bd7bb997`. Earlier source candidates without
-those projections fail intentionally. Updating the authority requires a reviewed
-literal-pin change and compatible component projections. This does not authorize
-merging, deploying or modifying runtime configuration.
-
 ### Offline Board UA parser gate
 
 The Board `quality` validation row runs the source-owned UA matrix after the
