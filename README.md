@@ -76,35 +76,17 @@ Ops builds require `migration_base=<full40-characterSHA>`, an existing ancestor.
 SQL lint covers baseline through candidate and rejects deleted/renamed SQL;
 there is no `HEAD^` or full-history fallback. Workspace `scripts/ship.sh yueops`
 derives the predecessor from verified signed `release.yaml`. Manual validation
-must use the same trusted basis, never the candidate itself. Poll derives a
-published ancestor from verified master provenance and OCI revision, choosing
-the earliest group member when versions differ; missing evidence fails. Squawk
+must use the same trusted basis, never the candidate itself. Squawk
 version/digest, PG15 and rule exclusions remain pinned in the workflow.
 
-## Polling and cache reuse
+## Explicit validation and cache reuse
 
-[poll-sources.yml](.github/workflows/poll-sources.yml) checks private default
-branches on a nominal 20-minute schedule. Product groups dispatch candidate
-builds only (`promote=false`).
-GitHub scheduling is not a delivery guarantee. Root `scripts/kick-builds.sh`
-provides an immediate authorized poll after a source push.
-
-The `rearm` job is disabled by default. Enabling it requires `poll-rearm` with
-a 20-minute wait and master-only deployment branches, plus repository variable
-`YUETO_CI_POLL_REARM=true`; remove that variable to disable it. The script rejects
-dispatch before 900 seconds and permits only the newest noncancelled poll to
-rearm. It dispatches only poll-sources, preventing duplicate chains; the next poll
-retains the product-candidate and static-UI promotion rules above. The environment
-wait does not occupy a runner.
-
-The poller groups images from `services.json` and verifies every group member.
-Markers use full source SHAs; transitional seven-character markers require an
-exact OCI revision match. Registry/network failures cannot masquerade as missing
-images. A missing marker avoids a build only when promoted `:latest` has identical
-inputs, verified GitHub provenance, the same service/build-job recipe, an ancestral
-revision and no floating Dockerfile frontend. Unknown facts cause a normal build,
-subject to the SQL baseline. A skip creates no marker or new artifact identity.
-See [poll-skip-decision.py](scripts/poll-skip-decision.py).
+The disabled source-poll workflow and its self-rearm chain are retired.
+Use `scripts/ci-check.sh` for validation-only runs, or the root workspace's
+signed `scripts/ship.sh` flow for an authorized release. A source push alone
+is not a promise that validation or publication will run automatically.
+The obsolete root `kick-builds.sh` poll caller is retired in the paired root PR.
+No replacement unattended publication trigger is introduced.
 
 Go installs use pinned compilers with `setup-go`'s combined cache disabled.
 Explicit module/compiler caches are available only to hosted master runs whose

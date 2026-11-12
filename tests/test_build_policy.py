@@ -678,7 +678,6 @@ class VerifiedBuildxTest(unittest.TestCase):
         self.assertEqual(set(consumers), {
             ("build.yml", "build:"),
             ("build.yml", "publish:"),
-            ("poll-sources.yml", "poll:"),
             ("image-rescan.yml", "scan:"),
         })
 
@@ -986,80 +985,10 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("postgres://postgres:ci@127.0.0.1", self.workflow)
         self.assertIn("postgres://postgres:ci@postgres:5432/", self.workflow)
 
-    def test_source_poller_is_unconditional(self) -> None:
-        """poller 不许有路径过滤——「每个提交都被中央验证」靠的就是这一点。
-
-        它接替的是三个源仓里那个 `trigger-build.yml`，那个是**按路径过滤**的
-        （只有碰了 `scripts/**` / `services/**` 之类才派发）。而且它 428 次运行
-        零成功，从来没派发过。改成拉取式之后判据是「HEAD 变没变」，与改了哪些
-        文件无关，所以「policy-only 的改动继承了一份早先验过的镜像」这种形态
-        结构上不可能再发生——前提是这里永远不要给它加回路径过滤。
-
-        yueops 侧原本断言那份路径过滤的测试
-        （test_npm_audit_waiver_scope_20260730）已指向这一条。
-        """
-        poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
-        trigger = poll.split("jobs:", 1)[0]
-        self.assertIn("schedule:", trigger)
-        self.assertIn("workflow_dispatch:", trigger)
-        self.assertNotIn("paths:", trigger)
-        self.assertNotIn("paths-ignore:", trigger)
-        # 拉取式的判据只能是 HEAD 与产物，不能是 push 事件本身。
-        self.assertNotIn("on:\n  push:", poll)
-
-    def test_source_poller_probes_every_image_in_a_group(self) -> None:
-        """「已构建」必须以 group 内每个镜像都有 built- 标签为准。
-
-        只探「代表镜像」时，一次部分失败的构建（代表推上去了、其余没有）会让
-        缺的镜像永远不被补——下一轮 poll 看到代表标签即跳过，且无任何重试。
-        同时组表必须从 services.json 派生而不是手写：手写表时代的注释声称有
-        测试钉住对应关系，那条测试从未存在过，这条就是补上的那条。
-        """
-        poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
-        poll_code = "\n".join(
-            line for line in poll.splitlines() if not line.lstrip().startswith("#")
-        )
-        # 组表从 services.json 派生（group_by 才能把一仓多镜像折成一组）。
-        self.assertIn("services.json", poll_code)
-        self.assertIn("group_by(.group)", poll_code)
-        # 探测的是全部 probes，不是单个代表。
-        self.assertIn("probes: map(.service)", poll_code)
-        self.assertIn('jq -r \'.probes[]\'', poll_code)
-        # 手写代表镜像的形态不许回来。
-        self.assertNotIn('"probe":', poll_code)
-
-    def test_poll_defers_dispatch_while_any_build_is_active(self) -> None:
-        """2026-09-28: build.yml keeps one queued run per service group, so a new
-        dispatch cancels the queued one. With the 20-minute re-arm chain, poll kept
-        re-dispatching a not-yet-built image and cancelled ship.sh's queued
-        build+promote (run 36396848037). Poll must yield while anything is queued or running,
-        and must yield (not dispatch) when it cannot read the run list."""
-        poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
-        trigger = poll[poll.index("- name: Trigger builds"):]
-        trigger = trigger[: trigger.index("\n  rearm:")] if "\n  rearm:" in trigger else trigger
-        list_at = trigger.index("gh run list")
-        dispatch_at = trigger.index("gh workflow run build.yml")
-        self.assertLess(list_at, dispatch_at, "the queued check must run before any dispatch")
-        for status in ("in_progress", "queued", "pending", "waiting", "requested"):
-            self.assertIn(f'.status == "{status}"', trigger)
-        guard_at = trigger.index("if ! active=")
-        self.assertLess(guard_at, list_at, "an unreadable run list must defer, not dispatch")
-        guard = trigger[guard_at:dispatch_at]
-        self.assertGreaterEqual(guard.count("exit 0"), 2, "both the unreadable and the queued branch must yield")
 
     def test_built_markers_use_exact_source_identity_and_registry_errors_fail_closed(
         self,
     ) -> None:
-        poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
-        poll_code = "\n".join(
-            line for line in poll.splitlines() if not line.lstrip().startswith("#")
-        )
-        self.assertIn('marker_ref="${image}:built-${sha}"', poll_code)
-        self.assertIn('legacy_ref="${image}:built-${short}"', poll_code)
-        self.assertIn('if [ "$legacy_rev" = "$sha" ]', poll_code)
-        self.assertIn('"org.opencontainers.image.revision"', poll_code)
-        self.assertNotIn("no such manifest|denied", poll_code)
-
         marker_start = self.workflow.index("- name: Mark this source revision as built")
         promotion_start = self.workflow.index(
             "- name: Authorize and promote verified default-branch digest"
@@ -1233,7 +1162,6 @@ class BuildPolicyTest(unittest.TestCase):
                 "ci-toolchain.yml",
                 "image-rescan.yml",
                 "policy-ci.yml",
-                "poll-sources.yml",
             ],
         )
 
@@ -1273,28 +1201,6 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("assert len(files) == 4", capture_code)
         for forbidden in ("build-push-action", "imagetools create", "cosign", "promote=true", "packages: write"):
             self.assertNotIn(forbidden, capture_code)
-
-        # poll-sources.yml 只允许**请求**构建。产品镜像永远 promote=false。
-        # 静态 UI 单元是唯一的 promote=true 派发，而且只在 ui-* 分支里。
-        # 它是定时跑的、无人看着的，所以这条边界必须由门禁钉住。
-        poll = (WORKFLOW_DIR / "poll-sources.yml").read_text(encoding="utf-8")
-        # 「不许做」的几条只能看**可执行内容**：注释里解释「为什么这里不签名」
-        # 本身是有价值的，不该被自己的门禁判违规。
-        poll_code = "\n".join(
-            line for line in poll.splitlines() if not line.lstrip().startswith("#")
-        )
-        self.assertIn("-f promote=false", poll_code)
-        self.assertEqual(poll_code.count("-f promote=true"), 1)
-        ui_promote = poll_code.index("-f promote=true")
-        self.assertIn("ui-*)", poll_code[max(0, ui_promote - 600):ui_promote])
-        product_promote = poll_code.index("-f promote=false")
-        self.assertNotIn("ui-*)", poll_code[max(0, product_promote - 400):product_promote])
-        self.assertNotIn("build-push-action", poll_code)
-        self.assertNotIn("imagetools create", poll_code)
-        self.assertNotIn("cosign", poll_code)
-        self.assertIn("permissions:\n  contents: read", poll)
-        # 漏跑一轮只是晚 20 分钟；两轮叠在一起会对同一个 commit 派两次构建。
-        self.assertIn("concurrency:", poll)
 
         # The public dead-man receiver is operational control, never another
         # unattended product delivery path.

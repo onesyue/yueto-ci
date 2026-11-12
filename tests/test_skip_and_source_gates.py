@@ -1,12 +1,7 @@
-"""P3 build skip (design §3 step 8) and the P2 #11 promote source gate (step 9), 2026-09-24.
+"""Promote-source admission uses real input fingerprints and fake remote evidence.
 
-Both tools are driven with a fake GitHub API (trees, blobs, compare, branches) over the
-real input-fingerprint implementation, and a fake ``gh`` for verified provenance.  Every
-leg that authorizes a skip or a promotion is broken on its own and must refuse; every
-"cannot measure" must build / refuse, never skip / authorize.  The workflow wiring is
-pinned too: poll-sources still requests ``promote=false`` for product images
-(the only ``promote=true`` is the static UI unit branch), and the promote
-step runs the gate twice — once at authorization and once immediately before the tags move.
+Every leg authorizing promotion must refuse when its source or provenance is
+unknown. The workflow invokes the gate both before authorization and tag moves.
 """
 
 from __future__ import annotations
@@ -23,7 +18,6 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
-POLL = ROOT / ".github" / "workflows" / "poll-sources.yml"
 
 
 def load(name: str, filename: str):
@@ -33,7 +27,6 @@ def load(name: str, filename: str):
     return module
 
 
-SKIP = load("poll_skip_under_test", "poll-skip-decision.py")
 GATE = load("promote_gate_under_test", "promote-source-gate.py")
 PIN = "@sha256:" + "a" * 64
 ENTRY = {"service": "svc", "group": "g", "repo": "onesyue/x", "ref": "master", "validation": "x",
@@ -137,123 +130,7 @@ class PromoteSourceGateTest(unittest.TestCase):
                                     "--source", "abc", "--latest-revision", "none"]), GATE.EXIT_USAGE)
 
 
-class FakeFP:
-    """The real fingerprint module with ghcr_latest / workflow_at replaced (no network)."""
-
-    def __init__(self, real, *, latest=(("sha256:" + "d" * 64), R_OLD), old_workflow=BUILD_TEXT,
-                 latest_error=False):
-        self._real = real
-        self._latest, self._old_workflow, self._latest_error = latest, old_workflow, latest_error
-        self.Unknown = real.Unknown
-
-    def __getattr__(self, name):
-        return getattr(self._real, name)
-
-    def ghcr_latest(self, service, user, password):
-        if self._latest_error:
-            raise self.Unknown("GHCR down")
-        return self._latest
-
-    def workflow_at(self, commit, token):
-        return self._old_workflow, {"svc": dict(ENTRY)}
-
-
-class PollSkipDecisionTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.real = SKIP._fingerprint()
-        self.tmp = Path(tempfile.mkdtemp(prefix="poll-skip-"))
-        self.gh = self.tmp / "gh"
-        self.set_gh(ok=True)
-
-    def set_gh(self, *, ok: bool, builders=("b" * 40,)) -> None:
-        payload = [{"verificationResult": {"statement": {
-            "subject": [{"digest": {"sha256": "d" * 64}}],
-            "predicate": {"runDetails": {"builder": {"id": SKIP.BUILDER_PREFIX + "refs/heads/master"}},
-                          "buildDefinition": {"resolvedDependencies": [{"digest": {"gitCommit": b}}]}}}}}
-            for b in builders]
-        # a failed verification that still prints a plausible statement must not count
-        self.gh.write_text(f"#!{sys.executable}\nimport sys\n"
-                           + "print(" + repr(json.dumps(payload)) + ")\n" + ("" if ok else "sys.exit(1)\n"))
-        self.gh.chmod(0o755)
-
-    def decide(self, *, head=R_MID, api=None, fp=None, workflow=BUILD_TEXT, bases=None):
-        fp = fp or FakeFP(self.real)
-        api = api or FakeAPI(self.real)
-        return SKIP.decide("svc", head, dict(ENTRY), fp=fp, api=api, ci_token="t", ghcr_user="u",
-                           ghcr_password="p", gh=str(self.gh), current_workflow=workflow, migration_bases=bases)
-
-    def test_sql_baseline_survives_recipe_change_but_requires_verified_ancestry(self):
-        bases = {}
-        self.assertEqual(self.decide(workflow=BUILD_TEXT.replace("steps: []", "steps: [x]"), bases=bases)[0], "build")
-        self.assertEqual(bases, {"svc": R_OLD})
-        for valid, latest in ((False, R_OLD), (True, R_SIDE)):
-            self.set_gh(ok=valid)
-            bases = {}
-            self.decide(bases=bases, fp=FakeFP(self.real, latest=("sha256:" + "d" * 64, latest)))
-            self.assertEqual(bases, {})
-
-    def test_sql_baseline_selects_oldest_and_refuses_missing_or_divergent(self):
-        args = dict(api=FakeAPI(self.real), repo="onesyue/x", fp=self.real)
-        self.assertEqual(SKIP.migration_base(["a", "b"], {"a": R_MID, "b": R_OLD}, **args), R_OLD)
-        for bases in ({"a": R_MID}, {"a": R_MID, "b": R_SIDE}, {"a": "HEAD^", "b": R_OLD}):
-            with self.assertRaises(self.real.Unknown):
-                SKIP.migration_base(["a", "b"], bases, **args)
-
-    def test_unchanged_inputs_with_verified_provenance_are_skipped(self) -> None:
-        verdict, reason = self.decide(head=R_MID)
-        self.assertEqual(verdict, "skip", reason)
-        self.assertIn("provenance verified", reason)
-
-    def test_changed_inputs_build(self) -> None:
-        verdict, reason = self.decide(head=R_HEAD)
-        self.assertEqual(verdict, "build")
-        self.assertIn("app/main.py", reason)
-
-    def test_unverified_or_ambiguous_provenance_builds(self) -> None:
-        self.set_gh(ok=False)
-        self.assertEqual(self.decide()[0], "build")
-        self.set_gh(ok=True, builders=("b" * 40, "c" * 40))
-        self.assertEqual(self.decide()[0], "build")
-
-    def test_recipe_change_builds(self) -> None:
-        verdict, reason = self.decide(workflow=BUILD_TEXT.replace("steps: []", "steps: [x]"))
-        self.assertEqual(verdict, "build")
-        self.assertIn("recipe", reason)
-
-    def test_promoted_revision_not_on_the_branch_builds(self) -> None:
-        fp = FakeFP(self.real, latest=("sha256:" + "d" * 64, R_SIDE))
-        verdict, reason = self.decide(fp=fp)
-        self.assertEqual(verdict, "build")
-        self.assertIn("not an ancestor", reason)
-
-    def test_floating_frontend_vetoes_a_skip(self) -> None:
-        api = FakeAPI(self.real, dockerfile=f"# syntax=docker/dockerfile:1\nFROM python:3.13{PIN}\nCOPY app/ ./app/\n")
-        verdict, reason = self.decide(api=api)
-        self.assertEqual(verdict, "build")
-        self.assertIn("floating", reason)
-
-    def test_anything_unmeasurable_builds(self) -> None:
-        self.assertEqual(self.decide(fp=FakeFP(self.real, latest_error=True))[0], "build")
-        api = FakeAPI(self.real)
-        api.broken = True
-        self.assertEqual(self.decide(api=api)[0], "build")
-
-
 class WorkflowWiringTest(unittest.TestCase):
-    def test_poll_sources_asks_the_decision_and_still_only_requests_builds(self) -> None:
-        poll = POLL.read_text(encoding="utf-8")
-        code = "\n".join(line for line in poll.splitlines() if not line.lstrip().startswith("#"))
-        self.assertIn("python3 scripts/poll-skip-decision.py", code)
-        self.assertIn("-f promote=false", code)
-        self.assertEqual(code.count("-f promote=true"), 1)
-        self.assertIn("ui-*)", code[max(0, code.index("-f promote=true") - 600):code.index("-f promote=true")])
-        self.assertNotIn("imagetools create", code)
-        self.assertIn("attestations: read", poll.split("jobs:", 1)[0])
-        # a crashed / malformed decision falls back to building every missing image
-        self.assertIn('build=("${missing[@]}")', code)
-        self.assertIn("P3 skip decision unavailable", code)
-        # skipping never writes a built- marker for the unbuilt HEAD
-        self.assertNotIn("built-${sha}\" \"", code)
 
     def test_promote_step_runs_the_gate_at_authorization_and_before_the_tags_move(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
