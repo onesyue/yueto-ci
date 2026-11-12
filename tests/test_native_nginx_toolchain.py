@@ -213,7 +213,10 @@ else: sys.exit(24)
         validate = workflow.split('\n  validate:\n', 1)[1].split('\n  validation-evidence:\n', 1)[0]
         self.assertNotIn('install-native-nginx.sh', validate)
         self.assertIn('ref: ${{ github.sha }}\n          path: .ci-policy', workflow)
-        self.assertIn('sudo -n env PATH="$PATH" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py', workflow)
+        self.assertIn('sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC "$PWD/.venv/bin/python" scripts/run-native-nginx-tests.py', workflow)
+        kept = 'sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC'
+        self.assertEqual(validate.count(kept), 5)
+        self.assertNotIn('sudo -n env PATH="$PATH" TZ=UTC', validate)
 
     def test_canonical_inputs_have_two_official_exact_version_pins(self):
         manifest = json.loads((ROOT/'scripts/native-nginx-toolchain.json').read_text())

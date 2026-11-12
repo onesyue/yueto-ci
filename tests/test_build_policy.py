@@ -1441,6 +1441,7 @@ class BuildPolicyTest(unittest.TestCase):
                 self.assertIn(invariant, image)
         validate = self.workflow.split("\n  validate:\n", 1)[1].split("\n  validation-evidence:\n", 1)[0]
         self.assertNotIn("apt-get", validate)
+        self.assertIn("ImageVersion: yueops-ci-toolchain", validate)
         self.assertNotIn("postgresql-18", self.workflow)
         self.assertIn("python-version: '3.13'", self.workflow)
         self.assertIn(
