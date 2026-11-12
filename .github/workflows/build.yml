@@ -1684,6 +1684,7 @@ jobs:
           ref: ${{ needs.plan.outputs.ops_source }}
           token: ${{ vars.YUETO_CI_APP_CLIENT_ID != '' && steps.evidence_source_token.outputs.token || secrets.YUETO_CI_PAT }}
           path: .admission-source
+          # Case-scoped skip admission reads earlier blobs of a test module.
           fetch-depth: 0
           persist-credentials: false
 
