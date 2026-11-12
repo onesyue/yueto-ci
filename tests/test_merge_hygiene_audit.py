@@ -194,8 +194,6 @@ class AcceptedHistory(unittest.TestCase):
 
     def write_baseline(self, contents=None):
         self.path.write_text(json.dumps(self.value) if contents is None else contents)
-        self.enterContext(patch.object(AUDIT, "ACCEPTED_HISTORY_SHA256",
-                                       hashlib.sha256(self.path.read_bytes()).hexdigest()))
 
     def run_cli(self, mode="full", output_format="text", default_path=False):
         import contextlib
@@ -258,9 +256,10 @@ class AcceptedHistory(unittest.TestCase):
         self.assertEqual(result["accepted_history"], 1)
         self.assertEqual(result["unregistered"], 1)
 
-    def test_default_baseline_path(self):
-        with patch.object(AUDIT, "ROOT", self.path.parent):
-            self.assertEqual(self.run_cli(default_path=True)[0], 0)
+    def test_default_audit_has_no_accepted_history_file(self):
+        rc, output = self.run_cli(default_path=True)
+        self.assertEqual(rc, 1)
+        self.assertIn("UNREGISTERED", output)
 
     def test_merge_after_frozen_at_is_unregistered(self):
         for merged_at in ("2026-11-03T02:00:00.000001Z", "2026-11-03T03:00:00Z",
@@ -285,28 +284,25 @@ class AcceptedHistory(unittest.TestCase):
                     self.assertEqual(rc, 0)
                     self.assertEqual(json.loads(output)["accepted_history"], 1)
 
-    def test_tampered_baseline_bytes_are_incomplete(self):
+    def test_schema_valid_bytes_are_not_pinned(self):
         original = self.path.read_bytes()
-        for contents in (original + b"\n", original.replace(b"2026-11-03T02", b"2026-11-04T02")):
-            self.path.write_bytes(contents)
-            with self.subTest(contents=contents):
-                with self.assertRaises(ValueError):
-                    AUDIT.baseline(self.path)
-                for default_path in (True, False):
-                    for mode in ("full", "premerge"):
-                        with patch.object(AUDIT, "ROOT", self.path.parent):
-                            rc, output = self.run_cli(mode, "json", default_path=default_path)
-                        self.assertEqual(rc, 2)
-                        self.assertFalse(json.loads(output)["complete"])
+        self.path.write_bytes(original + b"\n")
+        frozen_at, accepted = AUDIT.baseline(self.path)
+        self.assertEqual(frozen_at, AUDIT.timestamp(self.value["frozen_at"]))
+        self.assertEqual(len(accepted), 1)
+        self.path.write_bytes(original[:10])
+        with self.assertRaises(ValueError):
+            AUDIT.baseline(self.path)
+        self.assertEqual(self.run_cli()[0], 2)
 
-    def test_cli_cannot_override_snapshot_with_another_path(self):
-        import subprocess
-        import sys
-        result = subprocess.run([sys.executable, str(ROOT / "scripts/merge-hygiene-audit.py"),
-                                 "--baseline", str(self.path), "--format", "json"],
-                                capture_output=True, text=True, check=False)
-        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-        self.assertFalse(json.loads(result.stdout)["complete"])
+    def test_another_path_is_schema_checked_not_pinned(self):
+        other = self.path.with_name("other-history.json")
+        other.write_bytes(self.path.read_bytes())
+        self.path = other
+        rc, output = self.run_cli("full", "json")
+        result = json.loads(output)
+        self.assertEqual(rc, 0)
+        self.assertEqual(result["accepted_history"], 1)
 
     def test_empty_baseline_does_not_accept_history(self):
         self.value["entries"] = []
@@ -406,23 +402,23 @@ class FrozenAcceptedHistoryExtension(unittest.TestCase):
     def run_cli(self, rows):
         import contextlib
         import io
-        with patch("sys.argv", ["audit", "--format", "json"]), patch.object(
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "baseline.json"
+        path.write_text(json.dumps({
+            "schema": 1, "frozen_at": "2026-11-04T19:38:41Z",
+            "approver": "explicit test baseline",
+            "entries": [{"repo": row["repo"], "pr": row["pr"], "head": row["head"],
+                         "findings": row["findings"],
+                         "reason": "historical merge accepted by an explicit baseline"}
+                        for row in self.rows],
+        }))
+        with patch("sys.argv", ["audit", "--format", "json", "--baseline", str(path)]), patch.object(
                 AUDIT, "audit", return_value=rows), patch.object(
                 AUDIT, "exceptions", return_value={}), contextlib.redirect_stdout(io.StringIO()) as output:
             rc = AUDIT.main()
         return rc, json.loads(output.getvalue())
 
-    def test_frozen_cutoff_matches_latest_verified_merge(self):
-        path = ROOT / "accepted-history-20261103.json"
-        frozen_at, accepted = AUDIT.baseline(path)
-        self.assertEqual(frozen_at, max(AUDIT.timestamp(row["merged_at"]) for row in self.rows))
-        self.assertEqual(json.loads(path.read_text())["approver"],
-                         "coordinator (owner mandate t497u) 2026-11-03; owner instruction t658s4004 2026-11-05 (yueboard #142)")
-        self.assertEqual(len(accepted), 32)
-        for row in self.rows:
-            with self.subTest(repo=row["repo"], pr=row["pr"]):
-                entry = accepted[(row["repo"], row["pr"], row["head"])]
-                self.assertEqual(entry["findings"], row["findings"])
 
     def test_verified_historical_rows_are_accepted(self):
         rc, result = self.run_cli(self.rows)
@@ -552,8 +548,7 @@ class MergeReceipts(unittest.TestCase):
                 AUDIT.subprocess, "run", return_value=subprocess.CompletedProcess(
                     [], 0, self.path.read_text(), "")), patch.object(AUDIT, "exceptions", return_value={
                         ("yueops", 203): {"reason": "exception"}}), patch(
-                            "sys.argv", ["audit", "--format", "json", "--baseline",
-                                         str(ROOT / "accepted-history-20261103.json")]), patch.object(AUDIT, "datetime") as dt:
+                            "sys.argv", ["audit", "--format", "json"]), patch.object(AUDIT, "datetime") as dt:
             from datetime import datetime
             dt.fromisoformat.side_effect = datetime.fromisoformat
             dt.now.return_value = AUDIT.timestamp("2026-11-02T12:00:00Z")

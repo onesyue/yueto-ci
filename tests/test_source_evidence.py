@@ -362,11 +362,8 @@ class SourceEvidence(unittest.TestCase):
         files = {n.split("::", 1)[0]: {"mode": "100644", "kind": "blob",
                                       "git_blob": case["module_blob"]}
                  for n, case in approved.items()}
-        files.update({module: {"mode": "100644", "kind": "blob", "git_blob": blob}
-                      for module, blob in P.first_native_policy()["module_blobs"].items()})
-        with patch.object(P.source_evidence, "tree_inputs", return_value=files), \
-                patch.object(P, "release_pin_is_ancestor", return_value=False):
-            exported = P.export_source_baseline(self.repo, P.release_pin())
+        with patch.object(P.source_evidence, "tree_inputs", return_value=files):
+            exported = P.export_source_baseline(self.repo, "a" * 40)
         baseline = exported["baseline"]
         expected_count = sum(P.NATIVE_TARGETS[module][0] for module in modules)
         self.assertEqual(sum(n.split("::", 1)[0] in modules for n in baseline["cases"]), expected_count)
@@ -386,7 +383,7 @@ class SourceEvidence(unittest.TestCase):
                      "junit_sha256": "a" * 64, "collection_skips": {}, "nonpassing_outcomes": []}
         result = {"reference": reference, "shards": [reference | {
             "assignment_id": "ordinary-000", "nonpassing_outcomes": outcomes}]}
-        bound = {"baseline": baseline, "source_revision": P.release_pin(),
+        bound = {"baseline": baseline, "source_revision": "a" * 40,
                  "evidence": {E.BASELINE: {"sha256": "b" * 64}}}
         blobs = {module: row["git_blob"] for module, row in files.items()}
         native = {"obligations": obligations}

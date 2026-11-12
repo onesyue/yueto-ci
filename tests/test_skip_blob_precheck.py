@@ -24,7 +24,6 @@ BOARD = "tests/test_board139_schema_acl_native_20261018.py"
 BOARD_RENEWAL = "0509528f81cd39c6e308e130650670a874b1b3df"
 REJECTED_CI = "3e50d18a19aad788a7c86bc34ba3ba7885d7397d"
 ACCEPTED_CI = "5b0f22c339c0b23a2952df7eb873cc42a1da0ded"
-OPS_REV = "4ffbac5644f398473d95b4f19434949ce34a89c5"
 OPS_CHECKOUT = Path("/Users/j/Projects/yueto/yueops")
 
 CDN_SOURCE = (
@@ -99,22 +98,11 @@ def _historical_native_source(source):
             "def reviewed_board139_native_successor(baseline, value, native):",
         ),
         (
-            "def reviewed_first_native_successor(baseline, value, native, *, require_native=True):",
-            "def reviewed_first_native_successor(baseline, value, native):",
-        ),
-        (
             "    if require_native:\n"
             "        passed = native[\"obligations\"].get(module, {}).get(\"passed\", [])\n"
             "        require(set(passed) == expected and len(passed) == len(expected), message)\n",
             "    passed = native[\"obligations\"].get(module, {}).get(\"passed\", [])\n"
             "    require(set(passed) == expected and len(passed) == len(expected), message)\n",
-        ),
-        (
-            "        if require_native:\n"
-            "            require(nodeid in native[\"obligations\"].get(module, {}).get(\"passed\", []),\n"
-            "                    \"first native successor lacks exact same-run call: \" + nodeid)\n",
-            "        require(nodeid in native[\"obligations\"].get(module, {}).get(\"passed\", []),\n"
-            "                \"first native successor lacks exact same-run call: \" + nodeid)\n",
         ),
     )
     for old, new in replacements:
@@ -280,19 +268,34 @@ class SkipBlobPrecheck(unittest.TestCase):
             self.assertEqual(passed.stdout.strip(), "skip-blob-precheck ok")
 
     def test_replay_rejected_pair_and_sealed_pair(self):
-        if not OPS_CHECKOUT.is_dir():
-            self.skipTest("local yueops checkout is not present")
+        """Historical policy still classifies the sealed restore blob.
+
+        The tree is only that module. A full ops revision also carries later
+        ordinary-skip blobs whose evidence no longer chains from the current
+        baseline, and the retired first-native seal is not part of this check.
+        """
         if not (_object_present(REJECTED_CI) and _object_present(ACCEPTED_CI)):
             self.skipTest("historical yueto-ci commits are not in this clone")
-        rejected = self._command(OPS_CHECKOUT, OPS_REV, REJECTED_CI)
-        self.assertEqual(rejected.returncode, 1, rejected.stderr)
-        self.assertIn(RESTORE, rejected.stdout)
-        self.assertIn(RESTORE_NODE, rejected.stdout)
-        self.assertIn(RESTORE_BEFORE, rejected.stdout)
-        self.assertIn(RESTORE_AFTER, rejected.stdout)
-        accepted = self._command(OPS_CHECKOUT, OPS_REV, ACCEPTED_CI)
-        self.assertEqual(accepted.returncode, 0, accepted.stderr)
-        self.assertEqual(accepted.stdout.strip(), "skip-blob-precheck ok")
+        if not OPS_CHECKOUT.is_dir():
+            self.skipTest("local yueops checkout is not present")
+        blob_bytes = subprocess.run(
+            ["git", "-C", str(OPS_CHECKOUT), "cat-file", "blob", RESTORE_AFTER],
+            capture_output=True, check=False)
+        if blob_bytes.returncode != 0:
+            self.skipTest("sealed restore blob is not in the local yueops history")
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            commit = _ops_commit(repo, {RESTORE: blob_bytes.stdout.decode()})
+            self.assertEqual(_git(repo, "rev-parse", f"{commit}:{RESTORE}"), RESTORE_AFTER)
+            rejected = self._command(repo, commit, REJECTED_CI)
+            self.assertEqual(rejected.returncode, 1, rejected.stderr)
+            self.assertIn(RESTORE, rejected.stdout)
+            self.assertIn(RESTORE_NODE, rejected.stdout)
+            self.assertIn(RESTORE_BEFORE, rejected.stdout)
+            self.assertIn(RESTORE_AFTER, rejected.stdout)
+            accepted = self._command(repo, commit, ACCEPTED_CI)
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            self.assertEqual(accepted.stdout.strip(), "skip-blob-precheck ok")
 
     def test_ops_commit_evidence_accepts_only_the_sealed_restore_blob(self):
         with tempfile.TemporaryDirectory() as directory:

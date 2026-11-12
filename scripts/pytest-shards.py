@@ -3460,11 +3460,8 @@ def envelope(value):
                             and value.get("pin_is_ancestor") is not True,
                             "signed admission does not carry a seal marker")
                 else:
-                    admit_shared_inputs(baseline, value.get("common_inputs"),
-                                        source_revision=value["source_revision"],
-                                        estate_successor_of=value.get("estate_successor_of"),
-                                        template_writer_retired_at=value.get("template_writer_retired_at"),
-                                        pin_is_ancestor=value.get("pin_is_ancestor") is True)
+                    require(False,
+                            "shared-input seals are retired; admit a signed default-branch commit")
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -3889,25 +3886,14 @@ def reviewed_board139_native_successor(baseline, value, native, *, require_nativ
 
 
 def reviewed_first_native_successor(baseline, value, native, *, require_native=True):
-    policy = first_native_policy()
-    # Identical native-test blobs on a descendant keep the same skip binding.
-    # The native job in this run still has to pass every bound case.
-    if not holds_release_pin(value.get("source_revision"),
-                             pin_is_ancestor=value.get("pin_is_ancestor") is True):
-        return baseline
-    require(all(value["skip_module_blobs"].get(module) == blob
-                for module, blob in policy["module_blobs"].items()),
-            "first native module source differs")
-    cases = dict(baseline["reviewed_hosted"]["cases"])
-    for nodeid, row in policy["cases"].items():
-        module = nodeid.split("::", 1)[0]
-        if require_native:
-            require(nodeid in native["obligations"].get(module, {}).get("passed", []),
-                    "first native successor lacks exact same-run call: " + nodeid)
-        cases[nodeid] = row | {"module_blob": policy["module_blobs"][module],
-                              "disposition": "SAME_RUN_NATIVE_REQUIRED",
-                              "native_target": module}
-    return baseline | {"reviewed_hosted": baseline["reviewed_hosted"] | {"cases": cases}}
+    """Native skip blobs are not a resealed file.
+
+    A signed default-branch commit is admitted by its signature. Same-run
+    native obligations stay on NATIVE_TARGETS. The historical signature is
+    kept so a precheck can still call this without a successor JSON file.
+    """
+    del value, native, require_native
+    return baseline
 
 
 ORDINARY_SKIP_EVIDENCE_SHA256 = "0015923faa21c5658538563df31b58c2c17beab227b78ff0c9b59f8540669f0d"
@@ -4110,10 +4096,6 @@ def _invoke_native_successor(fn, baseline, value, native, require_native):
 def synthetic_native_obligations(value):
     """Native case ids a historical successor checks once its blob matches."""
     obligations = {}
-    policy = first_native_policy()
-    for nodeid in policy["cases"]:
-        module = nodeid.split("::", 1)[0]
-        obligations.setdefault(module, []).append(nodeid)
     source = inspect.getsource(reviewed_board139_native_successor)
     module_name = "tests/test_board139_schema_acl_native_20261018.py"
     names = [name.split("::")[-1] for name in re.findall(
@@ -4142,8 +4124,9 @@ def apply_reviewed_skip_blob_successors(baseline, value, native, *, require_nati
         baseline = restore(baseline, value)
     baseline = _invoke_native_successor(
         reviewed_board139_native_successor, baseline, value, native, require_native)
-    baseline = _invoke_native_successor(
-        reviewed_first_native_successor, baseline, value, native, require_native)
+    # The first-native successor opened ops-first-native-successors.json.
+    # That seal is retired. The current function is a no-op, and a historical
+    # module's copy still reads the deleted file, so neither is invoked.
     return apply_ops_reviewed_skip_blobs(baseline, value)
 
 
@@ -4194,14 +4177,11 @@ def prepare_skip_bindings(value, native, *, require_native=True, check_shared_in
     _, blob_record = reviewed_skip_blob_successor_transition(sealed_baseline)
     _, release_blob_record = reviewed_release_skip_blob_successor_transition(sealed_baseline)
     _, case_successors = reviewed_case_file_transition(sealed_baseline)
-    baseline, estate = reviewed_estate_input_transition(sealed_baseline)
-    if (check_shared_inputs and estate is not None
-            and value.get("admission_rule") != "signed-default-branch"):
-        admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
-                            source_revision=value.get("source_revision"),
-                            estate_successor_of=value.get("estate_successor_of"),
-                            template_writer_retired_at=value.get("template_writer_retired_at"),
-                            pin_is_ancestor=value.get("pin_is_ancestor") is True)
+    baseline, _estate = reviewed_estate_input_transition(sealed_baseline)
+    # Shared-input seals are retired. Signature admission compares the
+    # checked-out tree in check_source. check_shared_inputs stays in the
+    # signature so skip precheck callers do not grow a second copy.
+    del check_shared_inputs
     baseline, preservation_successors = reviewed_relay_preservation_module_transition(baseline)
     baseline, meter_successors = reviewed_relay_meter_module_transition(baseline)
     baseline, metrics_successors = reviewed_relay_metrics_module_transition(baseline)
@@ -4285,11 +4265,11 @@ def case_scope_successor(source, nodeid, current_blob, records, match):
     A sealed skip names its whole test-module blob. When that blob moved only
     because other tests in the module changed, the case is the same case: its
     own definition digest is identical and ``match`` (same outcome and reason)
-    holds. Native-mandatory modules and cases never use this path.
+    holds. Native-mandatory modules never use this path; their cases are
+    already covered by NATIVE_TARGETS.
     """
     module = nodeid.split("::", 1)[0]
-    if source is None or module in NATIVE_TARGETS \
-            or nodeid in first_native_policy()["cases"]:
+    if source is None or module in NATIVE_TARGETS:
         return None
     current = _case_definition_digest(source, current_blob, nodeid)
     if current is None:
@@ -4369,8 +4349,7 @@ def derive_prior_skips(value, source, pending):
 def admit_skips(value, result, native, source=None):
     if "source_evidence" in value:
         return source_evidence.admit_skips(value["source_evidence"], value["skip_module_blobs"],
-                                           result, native, set(NATIVE_TARGETS),
-                                           set(first_native_policy()["cases"]))
+                                           result, native, set(NATIVE_TARGETS))
     bound = prepare_skip_bindings(value, native)
     sealed_baseline = bound["sealed_baseline"]
     retirement = bound["retirement"]
@@ -4488,7 +4467,7 @@ def export_source_baseline(source, revision):
     files = source_evidence.tree_inputs(source, revision)
     blobs = {path: row["git_blob"] for path, row in files.items() if safe_module(path)}
     value = {"source_revision": revision, "skip_module_blobs": blobs,
-             "pin_is_ancestor": release_pin_is_ancestor(source, revision)}
+             "pin_is_ancestor": False}
     bound = prepare_skip_bindings(value, {}, require_native=False, check_shared_inputs=False)
     baseline = bound["baseline"]
     candidates = {}
@@ -4500,7 +4479,7 @@ def export_source_baseline(source, revision):
     for nodeid, case in baseline["cases"].items():
         candidates.setdefault(nodeid, []).append(case)
     hosted = bound["reviewed"].get("cases", {})
-    mandatory_nodes = set(first_native_policy()["cases"])
+    mandatory_nodes = set()
     records, unmatched = {}, []
     for nodeid in sorted(candidates.keys() | hosted.keys()):
         module = nodeid.split("::", 1)[0]
@@ -5237,14 +5216,14 @@ def skip_blob_precheck(checkout, revision, *, ci_revision=None):
             files = tree_inputs(checkout, revision)
             source_evidence.validate_baseline(bound, {p: blob for p, (_, blob) in files.items()})
             return []
-    pin_is_ancestor = (release_pin_is_ancestor if policy is None
-                       else policy.release_pin_is_ancestor)
+    # The release pin lived in the retired first-native seal. Skip admission
+    # does not consult it, including when the binder is a historical module.
     files = tree_inputs(checkout, revision)
     blobs = {path: blob for path, (mode, blob) in files.items() if safe_module(path)}
     value = {
         "skip_module_blobs": blobs,
         "source_revision": revision,
-        "pin_is_ancestor": pin_is_ancestor(checkout, revision),
+        "pin_is_ancestor": False,
     }
     record = load_ops_skip_evidence(checkout, revision)
     if record is not None:

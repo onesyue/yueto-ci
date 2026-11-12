@@ -153,7 +153,7 @@ class IndirectMergeSource(unittest.TestCase):
                 AUDIT, "enforcement_cutoff", return_value=AUDIT.timestamp("2026-11-01T00:00:00Z")), patch.object(
                 AUDIT, "baseline", return_value=(AUDIT.timestamp("2026-11-03T00:00:00Z"), accepted or {})), patch.object(
                 AUDIT, "exceptions", return_value={}), patch(
-                "sys.argv", ["audit", "--repos", "yueto-ci", "--format", "json"]), contextlib.redirect_stdout(output):
+                "sys.argv", ["audit", "--repos", "yueto-ci", "--baseline", "baseline.json", "--format", "json"]), contextlib.redirect_stdout(output):
             code = AUDIT.main()
         return code, json.loads(output.getvalue())
 

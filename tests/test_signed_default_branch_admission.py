@@ -108,3 +108,12 @@ class SignedDefaultBranchAdmission(unittest.TestCase):
         with self.assertRaises(ValueError) as caught:
             self.admit(head)
         self.assertIn("default branch ref is missing", str(caught.exception))
+
+    def test_native_successor_does_not_read_a_seal_file(self):
+        baseline = {"reviewed_hosted": {"cases": {}}}
+        value = {"admission_rule": "signed-default-branch", "source_revision": "a" * 40,
+                 "skip_module_blobs": {}}
+        self.assertIs(
+            POLICY.reviewed_first_native_successor(
+                baseline, value, {"obligations": {}}),
+            baseline)

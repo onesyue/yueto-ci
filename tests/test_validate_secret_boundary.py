@@ -53,7 +53,17 @@ def secret_findings(workflow):
         findings.append("workflow permissions are not contents: read only")
     for name in ("validate", "validation-evidence"):
         job = _job(workflow, name)
-        if re.search(r"^    permissions:\n", job, re.M):
+        override = re.search(r"^    permissions:\n(?:      .+\n)+", job, re.M)
+        # The evidence job lists this run's artifacts. candidate-artifact.py
+        # select calls the Actions API, so that job's token is contents: read
+        # plus actions: read. A wider override, including contents: write, fails.
+        allowed = (
+            "    permissions:\n"
+            "      contents: read\n"
+            "      actions: read\n"
+        )
+        if override is not None and not (
+                name == "validation-evidence" and override.group(0) == allowed):
             findings.append(f"{name} overrides workflow permissions")
         for step_name, body in _steps(job):
             if "secrets." not in body:
@@ -92,6 +102,14 @@ def publish_script_findings(workflow):
 class ValidateSecretBoundary(unittest.TestCase):
     def test_validate_jobs_do_not_hand_secrets_to_product_code(self):
         self.assertEqual(secret_findings(WORKFLOW), [])
+
+    def test_evidence_write_permission_is_rejected(self):
+        job = _job(WORKFLOW, "validation-evidence")
+        mutated_job = job.replace("      actions: read\n", "      contents: write\n", 1)
+        mutated = WORKFLOW.replace(job, mutated_job, 1)
+        self.assertNotEqual(mutated, WORKFLOW)
+        findings = secret_findings(mutated)
+        self.assertIn("validation-evidence overrides workflow permissions", findings)
 
     def test_a_secret_in_a_product_step_is_rejected(self):
         mutated = WORKFLOW.replace(

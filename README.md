@@ -388,9 +388,9 @@ Remote evidence is cached under `~/.cache/yueto/merge-hygiene/`
 `merge_commit_sha` for immutable file comparisons. Reviews, checks and statuses
 remain mutable after merge, so every audit revalidates each evidence page and
 recomputes findings. Only the file comparison between the same base/head commit
-SHAs can skip its API request. Receipts, exception registrations, accepted-history
-baseline and activation policy are evaluated each run. Version 2 ignores the old
-version 1 verdict snapshots; unavailable evidence exits incomplete even with a
+SHAs can skip its API request. Receipts, exception registrations and the activation
+policy are evaluated each run. There is no committed accepted-history snapshot.
+Version 2 ignores the old version 1 verdict snapshots; unavailable evidence exits incomplete even with a
 warm cache. The cache contains private repository metadata and should remain
 local to the auditing user.
 

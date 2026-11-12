@@ -94,11 +94,6 @@ class ShardPrimitives(unittest.TestCase):
         for name in ("lens_report.py", "lens-report-source.json", "pytest-timing.py",
                      "pytest-shards.py", "admission_diagnostics.py", "source_evidence.py"):
             shutil.copyfile(ROOT / "scripts" / name, self.policy / "scripts" / name)
-        shutil.copyfile(ROOT / "ops-first-native-successors.json",
-                        self.policy / "ops-first-native-successors.json")
-        helper_policy = Path("reviews/ops-native-protocol-helper-20261106/helper-policy.json")
-        (self.policy / helper_policy).parent.mkdir(parents=True)
-        shutil.copyfile(ROOT / helper_policy, self.policy / helper_policy)
         self.env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", TZ="UTC",
                         PYTEST_ADDOPTS="", PYTHONPATH=str(self.site),
                         GITHUB_REPOSITORY="onesyue/yueto-ci", GITHUB_RUN_ID="42",
