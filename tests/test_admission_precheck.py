@@ -23,7 +23,7 @@ class AdmissionPrecheck(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.source = Path(temporary.name)
-        self.git("init", "-q")
+        self.git("init", "-q", "-b", "master")
         (self.source / "pytest.ini").write_text("[pytest]\n")
         (self.source / "pyproject.toml").write_text("# dependencies\n")
         self.base = self.commit()
@@ -39,30 +39,24 @@ class AdmissionPrecheck(unittest.TestCase):
 
     def commit(self):
         self.git("add", ".")
-        self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture")
+        self.git("-c", "commit.gpgsign=false", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture", "--no-gpg-sign")
         return self.git("rev-parse", "HEAD")
 
-    def test_unchanged_tree_accepted_and_worktree_ignored(self):
-        (self.source / "pyproject.toml").write_text("uncommitted change")
-        self.assertTrue(PRE.precheck(self.source, self.base, self.base)[0])
-
-    def test_dependency_helper_and_deletion_rejected(self):
-        for path in ("pyproject.toml", "uv.lock", "tests/_shared.py"):
-            with self.subTest(path=path):
-                target = self.source / path
-                target.parent.mkdir(exist_ok=True)
-                target.write_text("changed\n")
-                head = self.commit()
-                accepted, reason = PRE.precheck(self.source, self.base, head)
-                self.assertFalse(accepted)
-                self.assertIn(path, reason)
-                self.assertIn("reviewed seal in reviews/", reason)
-        (self.source / "pytest.ini").unlink()
-        self.assertFalse(PRE.precheck(self.source, self.base, self.commit())[0])
-
-    def test_ordinary_source_change_accepted(self):
+    def test_unsigned_commit_on_master_is_rejected(self):
+        (self.source / "tests").mkdir()
+        (self.source / "tests" / "_helper.py").write_text("HELPER = 1\n")
+        (self.source / "conftest.py").write_text("def pytest_configure(config):\n    return None\n")
         (self.source / "app.py").write_text("raise RuntimeError('must never execute')\n")
-        self.assertTrue(PRE.precheck(self.source, self.base, self.commit())[0])
+        head = self.commit()
+        accepted, reason = PRE.precheck(self.source, self.base, head)
+        self.assertFalse(accepted)
+        self.assertIn("unauthorized source signature", reason)
+
+    def test_worktree_dirt_is_ignored(self):
+        (self.source / "pyproject.toml").write_text("uncommitted change")
+        accepted, reason = PRE.precheck(self.source, self.base, self.base)
+        self.assertFalse(accepted)
+        self.assertIn("unauthorized source signature", reason)
 
     def test_invalid_sha_and_missing_object_are_input_errors(self):
         for revision in ("HEAD", "f" * 40):
@@ -71,17 +65,14 @@ class AdmissionPrecheck(unittest.TestCase):
                 with contextlib.redirect_stderr(io.StringIO()):
                     self.assertEqual(PRE.main(), 2)
 
-    def test_present_commits_missing_sealed_predecessor_are_input_error(self):
-        # Use the actual sealed baseline and real Git: base/head exist, but
-        # this isolated repository has none of the sealed predecessor objects.
-        baseline = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
-        with patch.object(PRE.POLICY, "skip_baseline", return_value=baseline):
-            with patch("sys.argv", ["precheck", "--repo", "yueops", "--source", str(self.source),
-                                    "--base", self.base, "--head", self.base]):
-                with contextlib.redirect_stderr(io.StringIO()) as output:
-                    self.assertEqual(PRE.main(), 2)
-                self.assertIn("ADMISSION_ERROR:", output.getvalue())
-                self.assertNotIn("ADMISSION_REJECTED:", output.getvalue())
+    def test_missing_default_branch_is_a_rejection_not_a_seal_error(self):
+        self.git("update-ref", "-d", "refs/heads/master")
+        with patch("sys.argv", ["precheck", "--repo", "yueops", "--source", str(self.source),
+                                "--base", self.base, "--head", self.base]):
+            with contextlib.redirect_stderr(io.StringIO()) as output:
+                self.assertEqual(PRE.main(), 1)
+            self.assertIn("ADMISSION_REJECTED:", output.getvalue())
+            self.assertIn("default branch ref is missing", output.getvalue())
 
     def test_available_nonancestor_remains_policy_rejection(self):
         self.git("checkout", "--orphan", "unrelated")

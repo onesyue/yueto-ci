@@ -28,6 +28,7 @@ TAIL = ["tests/test_telegram_locale_ordering_20260821.py",
 class OpsShardWorkflow(unittest.TestCase):
     def setUp(self):
         self.fixture = fixture.ShardPrimitives()
+        self.fixture.sign_commits = True
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
         self.source, self.policy, self.base = (self.fixture.source, self.fixture.policy,
@@ -106,6 +107,8 @@ class OpsShardWorkflow(unittest.TestCase):
         self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json")
         self.fixture.commit(self.policy)
         self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
+        # The evidence join step reads the source at $GITHUB_WORKSPACE/.admission-source.
+        (self.policy / ".admission-source").symlink_to(self.source, target_is_directory=True)
         self.targets = {
             "matrix": [{"service": s, "repo": "onesyue/yueops", "validation": "yueops",
                         "ref": self.source_sha} for s in ("yueops-web", "yue-bot", "checkin-api")],
@@ -124,19 +127,13 @@ class OpsShardWorkflow(unittest.TestCase):
             return function(*args)
 
     def reviewed_lock_transition(self):
-        """Prepare two real Git lock blobs and a source-bound policy fixture."""
+        """A signed master commit that changes a lockfile is admitted."""
         lock = self.source / "frontend/package-lock.json"
         lock.parent.mkdir()
         value = {"packages": {"first": {"version": "1.0"}, "second": {"version": "1.0"}}}
         lock.write_text(json.dumps(value))
         self.fixture.git(self.source, "add", "frontend/package-lock.json")
         self.fixture.commit(self.source)
-        before = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
-        baseline = copy.deepcopy(self.baseline)
-        baseline["source_revision"] = before
-        baseline["common_inputs"] = self.consumer.shared_inputs(self.source, before)
-        raw = (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()
-        files = self.consumer.tree_inputs(self.source, before)
         value["packages"]["first"]["version"] = "1.1"
         lock.write_text(json.dumps(value))
         self.fixture.git(self.source, "add", "frontend/package-lock.json")
@@ -144,26 +141,11 @@ class OpsShardWorkflow(unittest.TestCase):
         after = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
         for row in self.targets["matrix"] + self.targets["validation_matrix"]:
             row["ref"] = after
-        policy = self.policy / "ops-pytest-skip-baseline.json"
-        policy.write_bytes(raw)
-        with self.assertRaisesRegex(ValueError, "shared collection/dependency inputs changed"):
-            self.call(self.consumer.expand, self.targets, self.source,
-                      self.board_sha, "ubuntu-24.04", 4, 4)
-        baseline["reviewed_shared_input_transition"] = {
-            "schema": 1, "original_baseline_sha256": self.consumer.sha(raw),
-            "source_before": before, "source_after": after,
-            "independent_review_sha256": "a" * 64, "source_freeze_sha256": "b" * 64,
-            "path": "frontend/package-lock.json",
-            "before_blob": files["frontend/package-lock.json"][1],
-            "after_blob": self.consumer.tree_inputs(self.source, after)["frontend/package-lock.json"][1],
-            "common_input_modes": {p: files[p][0] for p in baseline["common_inputs"]},
-        }
-        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
-        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json")
-        self.fixture.commit(self.policy)
-        self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
         self.admission = self.call(self.consumer.expand, self.targets, self.source,
                                    self.board_sha, "ubuntu-24.04", 4, 4)
+        self.assertEqual(self.admission["admission_rule"], "signed-default-branch")
+        self.assertEqual(self.admission["common_inputs"],
+                         self.consumer.shared_inputs(self.source, after))
         return after
 
     def test_reviewed_lock_reaches_actual_source_native_and_join_without_waiving_evidence(self):
@@ -175,8 +157,8 @@ class OpsShardWorkflow(unittest.TestCase):
         wrong["common_inputs"]["frontend/package-lock.json"] = "c" * 40
         del wrong["admission_sha256"]
         self.consumer.seal(wrong, "admission_sha256")
-        with self.assertRaisesRegex(ValueError, "shared collection/dependency inputs changed"):
-            self.call(self.consumer.envelope, wrong)
+        with self.assertRaisesRegex(ValueError, "shared inputs differ from the signed commit"):
+            self.call(self.consumer.check_source, wrong, self.source, self.board)
         (self.artifacts / (self.prefix + "native") / "native.json").unlink()
         with self.assertRaises(ValueError):
             self.join()
@@ -190,43 +172,12 @@ class OpsShardWorkflow(unittest.TestCase):
             path.write_text(content)
         self.fixture.git(self.source, "add", *inputs)
         self.fixture.commit(self.source)
-        frontend_source = self.reviewed_lock_transition()
-        policy = self.policy / "ops-pytest-skip-baseline.json"
-        baseline = json.loads(policy.read_text())
-        frontend = baseline["reviewed_shared_input_transition"]
-        before = self.consumer.tree_inputs(self.source, frontend_source)
         for name in inputs:
             path = self.source / name
             path.write_text(path.read_text().replace("before", "after"))
         self.fixture.git(self.source, "add", *inputs)
         self.fixture.commit(self.source)
-        python_source = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
-        after = self.consumer.tree_inputs(self.source, python_source)
-        python_record = {
-            "schema": 1, "original_baseline_sha256": frontend["original_baseline_sha256"],
-            "prior_frontend_transition_sha256": self.consumer.sha(self.consumer.encoded(frontend)),
-            "source_before": frontend_source, "source_after": python_source,
-            "independent_review_sha256": "c" * 64, "source_freeze_sha256": "d" * 64,
-            "changes": {name: {"before_blob": before[name][1], "after_blob": after[name][1],
-                                "mode": "100644"} for name in inputs},
-        }
-        baseline["reviewed_python_input_transition"] = python_record
-        lock = self.source / "frontend/package-lock.json"
-        lock.write_text(lock.read_text().replace('"1.1"', '"1.2"'))
-        self.fixture.git(self.source, "add", "frontend/package-lock.json")
-        self.fixture.commit(self.source)
         security_source = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
-        security = {
-            "schema": 1, "original_baseline_sha256": frontend["original_baseline_sha256"],
-            "prior_transition_chain_sha256": self.consumer.sha(self.consumer.encoded({
-                "reviewed_shared_input_transition": frontend,
-                "reviewed_python_input_transition": python_record})),
-            "source_before": python_source, "source_after": security_source,
-            "independent_review_sha256": "e" * 64, "source_freeze_sha256": "f" * 64,
-            "path": "frontend/package-lock.json", "before_blob": frontend["after_blob"],
-            "after_blob": self.consumer.tree_inputs(self.source, security_source)[
-                "frontend/package-lock.json"][1], "mode": "100644",
-        }
         for row in self.targets["matrix"] + self.targets["validation_matrix"]:
             row["ref"] = security_source
         targets = self.base / "security-targets.json"
@@ -235,50 +186,37 @@ class OpsShardWorkflow(unittest.TestCase):
                    "--targets", str(targets), "--source", str(self.source),
                    "--board", self.board_sha, "--runner", "ubuntu-24.04",
                    "--capacity", "4", "--shards", "4"]
-        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
-        rejected = subprocess.run(command, env=self.env, capture_output=True, text=True)
-        self.assertEqual(rejected.returncode, 1, rejected.stdout + rejected.stderr)
-        self.assertIn("shared collection/dependency inputs changed", rejected.stderr)
-        baseline["reviewed_frontend_security_transition"] = security
-        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
-        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json")
-        self.fixture.commit(self.policy)
-        self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
         admitted = subprocess.run(command, env=self.env, capture_output=True, text=True)
         self.assertEqual(admitted.returncode, 0, admitted.stdout + admitted.stderr)
         self.admission = json.loads(admitted.stdout)
-        self.assertEqual(self.admission["common_inputs"][security["path"]], security["after_blob"])
+        self.assertEqual(self.admission["admission_rule"], "signed-default-branch")
+        self.assertEqual(self.admission["common_inputs"],
+                         self.consumer.shared_inputs(self.source, security_source))
         ran = self.run_role("reference")
         self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
         wrong = copy.deepcopy(self.admission)
-        wrong["common_inputs"]["uv.lock"] = before["uv.lock"][1]
+        wrong["common_inputs"]["uv.lock"] = "c" * 40
         del wrong["admission_sha256"]
         self.consumer.seal(wrong, "admission_sha256")
-        with self.assertRaisesRegex(ValueError, "shared collection/dependency inputs changed"):
-            self.call(self.consumer.envelope, wrong)
+        with self.assertRaisesRegex(ValueError, "shared inputs differ from the signed commit"):
+            self.call(self.consumer.check_source, wrong, self.source, self.board)
 
     def test_miniapp_successor_reaches_expand_cli_reference_and_resealed_refusals(self):
         miniapp_path = "telegram-bot/yue/miniapp/package-lock.json"
+        self.test_security_successor_reaches_expand_cli_and_reference_envelope()
+        (self.base / "runner-reference").rename(self.base / "runner-reference-frontend")
+        prior_reference = self.artifacts / (self.prefix + "reference")
+        if prior_reference.exists():
+            prior_reference.rename(self.artifacts / (self.prefix + "frontend-reference"))
         lock = self.source / miniapp_path
         lock.parent.mkdir(parents=True)
         lock.write_text('{"controlled_miniapp": "before"}\n')
         self.fixture.git(self.source, "add", miniapp_path)
         self.fixture.commit(self.source)
-        # Preserve and execute the preceding transition's actual CLI/reference
-        # controls before adding the separately admitted MiniApp-only commit.
-        self.test_security_successor_reaches_expand_cli_and_reference_envelope()
-        (self.base / "runner-reference").rename(self.base / "runner-reference-frontend")
-        prior_reference = self.artifacts / (self.prefix + "reference")
-        prior_reference.rename(self.artifacts / (self.prefix + "frontend-reference"))
-        policy = self.policy / "ops-pytest-skip-baseline.json"
-        baseline = json.loads(policy.read_text())
-        security = baseline["reviewed_frontend_security_transition"]
-        before = self.consumer.tree_inputs(self.source, security["source_after"])
         lock.write_text('{"controlled_miniapp": "after"}\n')
         self.fixture.git(self.source, "add", miniapp_path)
         self.fixture.commit(self.source)
         after_source = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
-        after = self.consumer.tree_inputs(self.source, after_source)
         for row in self.targets["matrix"] + self.targets["validation_matrix"]:
             row["ref"] = after_source
         targets = self.base / "miniapp-targets.json"
@@ -287,61 +225,19 @@ class OpsShardWorkflow(unittest.TestCase):
                    "--targets", str(targets), "--source", str(self.source),
                    "--board", self.board_sha, "--runner", "ubuntu-24.04",
                    "--capacity", "4", "--shards", "4"]
-        rejected = subprocess.run(command, env=self.env, capture_output=True, text=True)
-        self.assertEqual(rejected.returncode, 1, rejected.stdout + rejected.stderr)
-        self.assertIn("shared collection/dependency inputs changed", rejected.stderr)
-        key = "reviewed_miniapp_security_transition"
-        baseline[key] = {
-            "schema": 1, "original_baseline_sha256": security["original_baseline_sha256"],
-            "prior_transition_chain_sha256": self.consumer.sha(self.consumer.encoded({
-                name: baseline[name] for name in ("reviewed_shared_input_transition",
-                    "reviewed_python_input_transition", "reviewed_frontend_security_transition")})),
-            "source_before": security["source_after"], "source_after": after_source,
-            "independent_review_sha256": "1" * 64, "source_freeze_sha256": "2" * 64,
-            "path": miniapp_path, "before_blob": before[miniapp_path][1],
-            "after_blob": after[miniapp_path][1], "mode": "100644",
-        }
-        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
-        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json")
-        self.fixture.commit(self.policy)
-        self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
         admitted = subprocess.run(command, env=self.env, capture_output=True, text=True)
         self.assertEqual(admitted.returncode, 0, admitted.stdout + admitted.stderr)
         self.admission = json.loads(admitted.stdout)
+        after = self.consumer.tree_inputs(self.source, after_source)
         self.assertEqual(self.admission["common_inputs"][miniapp_path], after[miniapp_path][1])
         ran = self.run_role("reference")
         self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
-        self.call(self.consumer.envelope, self.admission)
-        frontend = baseline["reviewed_shared_input_transition"]
-        for path, blob in (("uv.lock", baseline["common_inputs"]["uv.lock"]),
-                           ("frontend/package-lock.json", frontend["after_blob"]),
-                           (miniapp_path, "0" * 40)):
-            wrong = copy.deepcopy(self.admission)
-            wrong["common_inputs"][path] = blob
-            del wrong["admission_sha256"]
-            self.consumer.seal(wrong, "admission_sha256")
-            with self.subTest(resealed_path=path), self.assertRaisesRegex(ValueError, "inputs changed"):
-                self.call(self.consumer.envelope, wrong)
-        for mutation in ("omit", "null", "changed_predecessor_review", "changed_parent"):
-            wrong_baseline = copy.deepcopy(baseline)
-            if mutation == "omit":
-                del wrong_baseline[key]
-            elif mutation == "null":
-                wrong_baseline[key] = None
-            elif mutation == "changed_predecessor_review":
-                wrong_baseline["reviewed_frontend_security_transition"]["independent_review_sha256"] = "0" * 64
-            else:
-                wrong_baseline[key]["source_before"] = "0" * 40
-            policy.write_text(json.dumps(wrong_baseline, indent=2, ensure_ascii=False) + "\n")
-            wrong = copy.deepcopy(self.admission)
-            wrong["skip_baseline_sha256"] = self.consumer.sha(policy.read_bytes())
-            del wrong["admission_sha256"]
-            self.consumer.seal(wrong, "admission_sha256")
-            with self.subTest(resealed_policy=mutation), self.assertRaises(ValueError):
-                self.call(self.consumer.envelope, wrong)
-            rejected = subprocess.run(command, env=self.env, capture_output=True, text=True)
-            self.assertEqual(rejected.returncode, 1, rejected.stdout + rejected.stderr)
-        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
+        wrong = copy.deepcopy(self.admission)
+        wrong["common_inputs"][miniapp_path] = "0" * 40
+        del wrong["admission_sha256"]
+        self.consumer.seal(wrong, "admission_sha256")
+        with self.assertRaisesRegex(ValueError, "shared inputs differ from the signed commit"):
+            self.call(self.consumer.check_source, wrong, self.source, self.board)
 
     def test_reviewed_lock_does_not_waive_actual_new_skip(self):
         self.reviewed_lock_transition()
@@ -378,13 +274,16 @@ class OpsShardWorkflow(unittest.TestCase):
                 revision = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
                 for row in self.targets["matrix"] + self.targets["validation_matrix"]:
                     row["ref"] = revision
-                reason = ("symlink shared test input" if change == "symlink" else
-                          "shared collection/dependency input modes changed"
-                          if change in ("added", "missing", "lock-mode", "other-mode") else
-                          "shared collection/dependency inputs changed")
-                with self.assertRaisesRegex(ValueError, reason):
-                    self.call(self.consumer.expand, self.targets, self.source,
-                              self.board_sha, "ubuntu-24.04", 4, 4)
+                if change == "symlink":
+                    with self.assertRaisesRegex(ValueError, "symlink shared test input"):
+                        self.call(self.consumer.expand, self.targets, self.source,
+                                  self.board_sha, "ubuntu-24.04", 4, 4)
+                else:
+                    admitted = self.call(self.consumer.expand, self.targets, self.source,
+                                         self.board_sha, "ubuntu-24.04", 4, 4)
+                    self.assertEqual(admitted["admission_rule"], "signed-default-branch")
+                    self.assertEqual(admitted["common_inputs"],
+                                     self.consumer.shared_inputs(self.source, revision))
 
     def reviewed_python_transition(self):
         """Keep real dependency blobs in both sides of the Git fixture history."""
@@ -406,23 +305,6 @@ class OpsShardWorkflow(unittest.TestCase):
         after = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
         for row in self.targets["matrix"] + self.targets["validation_matrix"]:
             row["ref"] = after
-        with self.assertRaisesRegex(ValueError, "shared collection/dependency inputs changed"):
-            self.call(self.consumer.expand, self.targets, self.source,
-                      self.board_sha, "ubuntu-24.04", 4, 4)
-        new_files = self.consumer.tree_inputs(self.source, after)
-        predecessor = baseline["reviewed_shared_input_transition"]
-        baseline["reviewed_python_input_transition"] = {
-            "schema": 1, "original_baseline_sha256": predecessor["original_baseline_sha256"],
-            "prior_frontend_transition_sha256": self.consumer.sha(self.consumer.encoded(predecessor)),
-            "source_before": before, "source_after": after,
-            "independent_review_sha256": "c" * 64, "source_freeze_sha256": "d" * 64,
-            "changes": {p: {"before_blob": old_files[p][1], "after_blob": new_files[p][1],
-                            "mode": old_files[p][0]} for p in paths},
-        }
-        policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
-        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json")
-        self.fixture.commit(self.policy)
-        self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
         self.admission = self.call(self.consumer.expand, self.targets, self.source,
                                    self.board_sha, "ubuntu-24.04", 4, 4)
         self.assertEqual(self.admission["common_inputs"],
@@ -434,12 +316,13 @@ class OpsShardWorkflow(unittest.TestCase):
         self.assertFalse(joined["skip_admission"]["skips_are_passes"])
         self.call(self.consumer.envelope, self.admission)
         for path in ("pyproject.toml", "uv.lock", "telegram-bot/yue/requirements.txt"):
-            with self.subTest(path=path), self.assertRaisesRegex(ValueError, "inputs changed"):
+            with self.subTest(path=path), self.assertRaisesRegex(
+                    ValueError, "shared inputs differ from the signed commit"):
                 wrong = copy.deepcopy(self.admission)
                 wrong["common_inputs"][path] = "e" * 40
                 del wrong["admission_sha256"]
                 self.consumer.seal(wrong, "admission_sha256")
-                self.call(self.consumer.envelope, wrong)
+                self.call(self.consumer.check_source, wrong, self.source, self.board)
         (self.artifacts / (self.prefix + "native") / "native.json").unlink()
         with self.assertRaises(ValueError):
             self.join()
@@ -484,7 +367,7 @@ class OpsShardWorkflow(unittest.TestCase):
 
     def join(self, result="success", expected=None):
         return self.call(self.consumer.join, self.admission, self.artifacts, result,
-                         expected or self.admission["admission_sha256"])
+                         expected or self.admission["admission_sha256"], self.source)
 
     def test_subprocess_imports_from_bot_cwd_in_reference_ordinary_and_serial(self):
         self.check_subprocess_imports(ambient_path=True)
@@ -772,9 +655,11 @@ class OpsShardWorkflow(unittest.TestCase):
             revision = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
             for row in self.targets["matrix"] + self.targets["validation_matrix"]:
                 row["ref"] = revision
-            with self.assertRaisesRegex(ValueError, "shared collection/dependency inputs"):
-                self.call(self.consumer.expand, self.targets, self.source,
-                          self.board_sha, "ubuntu-24.04", 4, 4)
+            admitted = self.call(self.consumer.expand, self.targets, self.source,
+                                  self.board_sha, "ubuntu-24.04", 4, 4)
+            self.assertEqual(admitted["admission_rule"], "signed-default-branch")
+            self.assertEqual(admitted["common_inputs"],
+                             self.consumer.shared_inputs(self.source, revision))
 
     def reviewed_ssh_skip_transition(self, *, original_source=False):
         """Run real skips, then pin the isolated policy to exactly two successors."""

@@ -3419,11 +3419,17 @@ def envelope(value):
                 require(value.get("skip_baseline_sha256") == sha((ROOT / SKIP_BASELINE).read_bytes())
                         and isinstance(value.get("skip_module_blobs"), dict),
                         "skip baseline or shared collection inputs differ")
-                admit_shared_inputs(baseline, value.get("common_inputs"),
-                                    source_revision=value["source_revision"],
-                                    estate_successor_of=value.get("estate_successor_of"),
-                                    template_writer_retired_at=value.get("template_writer_retired_at"),
-                                    pin_is_ancestor=value.get("pin_is_ancestor") is True)
+                if value.get("admission_rule") == "signed-default-branch":
+                    require(value.get("estate_successor_of") is None
+                            and value.get("template_writer_retired_at") is None
+                            and value.get("pin_is_ancestor") is not True,
+                            "signed admission does not carry a seal marker")
+                else:
+                    admit_shared_inputs(baseline, value.get("common_inputs"),
+                                        source_revision=value["source_revision"],
+                                        estate_successor_of=value.get("estate_successor_of"),
+                                        template_writer_retired_at=value.get("template_writer_retired_at"),
+                                        pin_is_ancestor=value.get("pin_is_ancestor") is True)
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -3442,6 +3448,56 @@ def serial_modules(source):
             and isinstance(description["serial_modules"], list)
             and description["serial_modules"], "invalid source serial declaration")
     return description["serial_modules"]
+
+
+def _commit_ref(source, ref):
+    try:
+        return git(source, "rev-parse", "--verify", "--end-of-options",
+                   ref + "^{commit}").decode().strip()
+    except subprocess.CalledProcessError:
+        return ""
+
+
+def on_default_branch(source, revision):
+    """True when revision is the default branch tip or its ancestor.
+
+    The plan checkout of a SHA does not create origin/master by itself.
+    The workflow fetches refs/remotes/origin/master first. A local fixture
+    may use refs/heads/master. A missing ref fails closed.
+    """
+    require(isinstance(revision, str) and SHA.fullmatch(revision),
+            "exact source SHA required")
+    found = False
+    for ref in ("refs/remotes/origin/master", "refs/heads/master"):
+        tip = _commit_ref(source, ref)
+        if not tip:
+            continue
+        found = True
+        if tip == revision:
+            return True
+        try:
+            git(source, "merge-base", "--is-ancestor", revision, ref)
+            return True
+        except subprocess.CalledProcessError:
+            continue
+    require(found, "default branch ref is missing")
+    return False
+
+
+def admit_signed_default_branch(source, revision, policy_dir=None):
+    """Admit a source SHA that is on the default branch and owner-signed.
+
+    Timing shards are chosen by the caller. File lists, helper additions and
+    conftest edits are not a separate seal. policy_dir defaults to the
+    validator's policy directory.
+    """
+    require(on_default_branch(source, revision),
+            "source SHA is not on the default branch")
+    try:
+        source_evidence.verify_commit(
+            git(source, "cat-file", "commit", revision), policy_dir)
+    except source_evidence.Rejected as error:
+        raise ValueError("unauthorized source signature") from error
 
 
 def expand(targets, source, board, runner, capacity, shards):
@@ -3485,22 +3541,11 @@ def expand(targets, source, board, runner, capacity, shards):
                              source_evidence=bound, skip_module_blobs=blobs,
                              skip_baseline_sha256=bound["evidence"][source_evidence.BASELINE]["sha256"])
             else:
-                baseline = skip_baseline()
+                admit_signed_default_branch(source, ops["ref"])
                 common = shared_inputs(source, ops["ref"])
                 files = tree_inputs(source, ops["ref"])
-                successor_of = estate_successor_proof(baseline, source, ops["ref"])
-                retired_at = template_writer_retirement_proof(source, ops["ref"])
-                ancestor = release_pin_is_ancestor(source, ops["ref"])
-                admit_shared_inputs(baseline, common, files, source_revision=ops["ref"],
-                                    estate_successor_of=successor_of, template_writer_retired_at=retired_at,
-                                    pin_is_ancestor=ancestor)
-                if ancestor and ops["ref"] != release_pin():
-                    value["pin_is_ancestor"] = True
-                if retired_at is not None:
-                    value["template_writer_retired_at"] = retired_at
-                if successor_of is not None:
-                    value["estate_successor_of"] = successor_of
                 value.update(mode="sharded", ops_plan=expected, common_inputs=common,
+                             admission_rule="signed-default-branch",
                              skip_baseline_sha256=sha((ROOT / SKIP_BASELINE).read_bytes()),
                              skip_module_blobs={p: files[p][1] for p in expected["modules"]})
             roles = role_order(expected)
@@ -3535,6 +3580,11 @@ def verify_source_evidence(value, source):
 def check_source(value, source, board):
     envelope(value)
     verify_source_evidence(value, source)
+    if (value.get("mode") == "sharded"
+            and value.get("admission_rule") == "signed-default-branch"):
+        admit_signed_default_branch(source, value["source_revision"])
+        require(shared_inputs(source, value["source_revision"]) == value.get("common_inputs"),
+                "shared inputs differ from the signed commit")
     require(git(source, "rev-parse", "HEAD").decode().strip() == value["source_revision"]
             and not git(source, "status", "--porcelain", "--untracked-files=no"),
             "executing source differs or is dirty")
@@ -4104,7 +4154,8 @@ def prepare_skip_bindings(value, native, *, require_native=True, check_shared_in
     _, release_blob_record = reviewed_release_skip_blob_successor_transition(sealed_baseline)
     _, case_successors = reviewed_case_file_transition(sealed_baseline)
     baseline, estate = reviewed_estate_input_transition(sealed_baseline)
-    if check_shared_inputs and estate is not None:
+    if (check_shared_inputs and estate is not None
+            and value.get("admission_rule") != "signed-default-branch"):
         admit_shared_inputs(sealed_baseline, value.get("common_inputs"),
                             source_revision=value.get("source_revision"),
                             estate_successor_of=value.get("estate_successor_of"),
@@ -4307,6 +4358,10 @@ def export_source_baseline(source, revision):
 def join(value, evidence, validation_result, expected_sha, source=None):
     envelope(value)
     verify_source_evidence(value, source)
+    if (value.get("mode") == "sharded"
+            and value.get("admission_rule") == "signed-default-branch"):
+        require(source is not None, "source checkout required")
+        admit_signed_default_branch(source, value["source_revision"])
     require(value["admission_sha256"] == expected_sha, "plan job admission digest differs")
     require(validation_result == "success", "selected validation matrix did not succeed")
     if value["mode"] != "sharded":
