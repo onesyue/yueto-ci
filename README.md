@@ -534,9 +534,14 @@ admission and the final join; it does not replace the run with a smoke test.
 Only one manual local replay runs at a time, independently of PR policy checks.
 
 Preparation uses `--local --prepare-only` to fetch standalone clones and save
-`prepared.json`. The App token can read only yueops/yueboard, is scoped to that
-step, and is explicitly revoked before execution. Revocation failure stops the
-job. The next step consumes `--prepared <receipt>` without credentials or the
+`prepared.json`. When configured, the App token can read only yueops/yueboard
+and is revoked before execution; issuance, empty token or revocation failure
+stops the job. Without App configuration, the existing `YUETO_CI_PAT` is used
+only in this trusted preparation step and is never revoked. The legacy PAT may
+have broader permissions; no source code executes while either credential is
+available. Empty credentials or temporary Git/gh configuration cleanup failure
+stop execution. Neither credential is saved in receipts, logs or remote URLs.
+The next step consumes `--prepared <receipt>` without credentials or the
 preparation Git/gh configuration. Input identities, clean clone state, origin,
 default-branch refs and single ownership are checked before source planning.
 

@@ -115,8 +115,6 @@ jobs:
           python-version: '3.13'
 
       - name: Validate replay inputs and host tools
-        env:
-          REPLAY_APP_CLIENT_ID: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
         run: |
           set -euo pipefail
           export CI_CHECK_OUTPUT="$RUNNER_TEMP/ci-check-replay"
@@ -125,10 +123,6 @@ jobs:
           for value in "$SOURCE_REF" "$BOARD_REF" "$CI_CHECK_MIGRATION_BASE"; do
             [[ "$value" =~ ^[0-9a-f]{40}$ ]] || { echo 'exact source/Board/base SHAs required' >&2; exit 2; }
           done
-          [ -n "$REPLAY_APP_CLIENT_ID" ] || {
-            echo 'hosted local replay requires configured GitHub App credentials; no PAT fallback' >&2
-            exit 2
-          }
           for tool in gh git jq python3 docker gpgv; do command -v "$tool"; done
           docker info > "$CI_CHECK_OUTPUT/docker-info.txt"
           df -Pk > "$CI_CHECK_OUTPUT/disk-before.txt"
@@ -145,21 +139,32 @@ jobs:
           permission-contents: read
           skip-token-revoke: true # Explicitly revoked before any source execution.
 
-      - name: Prepare exact standalone clones and revoke credential
+      - name: Prepare exact standalone clones and clear credential
         timeout-minutes: 20
         env:
-          GH_TOKEN: ${{ steps.source_token.outputs.token }}
+          # Configured App with missing output stays empty; it never selects PAT.
+          GH_TOKEN: ${{ vars.YUETO_CI_APP_CLIENT_ID == '' && secrets.YUETO_CI_PAT || steps.source_token.outputs.token }}
+          REPLAY_APP_CLIENT_ID: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
         run: |
           set -euo pipefail
           auth=""
           cleanup() {
             status=$?
-            gh api --method DELETE /installation/token > /dev/null || status=2
-            if [ -n "$auth" ]; then rm -rf -- "$auth"; fi
+            if [ -n "$REPLAY_APP_CLIENT_ID" ] && [ -n "$GH_TOKEN" ]; then
+              gh api --method DELETE /installation/token > /dev/null || status=2
+            fi
+            if [ -n "$auth" ]; then
+              rm -rf -- "$auth" || status=2
+              [ ! -e "$auth" ] || status=2
+            fi
             printf '{"exit_code":%s,"credential_scope":"clone-only","phase":"preparation"}\n' "$status" > "$CI_CHECK_OUTPUT/preparation-status.json"
             exit "$status"
           }
           trap cleanup EXIT
+          [ -n "$GH_TOKEN" ] || {
+            echo 'hosted local replay requires a source read credential' >&2
+            exit 2
+          }
           auth=$(mktemp -d "$RUNNER_TEMP/ci-check-auth.XXXXXX")
           export GH_CONFIG_DIR="$auth/gh" GIT_CONFIG_GLOBAL="$auth/gitconfig"
           gh auth setup-git --hostname github.com
