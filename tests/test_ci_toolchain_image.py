@@ -37,6 +37,7 @@ class CiToolchainImageTest(unittest.TestCase):
         self.assertNotIn("install-yueops-pg18", validate)
         self.assertNotIn("install-native-nginx.sh", validate)
         self.assertIn("sing-box-1.14 version", validate)
+        self.assertIn("shell: bash", validate)
 
     def test_image_build_pins_uv_and_the_runtime_tools(self) -> None:
         digest = (IMAGE / "uv.sha256").read_text(encoding="utf-8").strip()
