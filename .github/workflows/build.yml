@@ -399,6 +399,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Read previous ordinary shard weights
+        if: steps.plan.outputs.ops_source != '' && github.event.inputs.runner != 'yue-local-release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/pytest-shards.py previous-ordinary-weights \
+            --output "${RUNNER_TEMP:?}/previous-ordinary-weights.json" \
+            --timing-output "${RUNNER_TEMP:?}/previous-ops-timing"
       - name: Plan complete Ops jobs before collection
         id: ops_plan
         env:
@@ -412,11 +421,18 @@ jobs:
           OPS_CAPACITY: ${{ vars.YUEOPS_VALIDATION_PARALLELISM || '20' }}
         run: |
           set -euo pipefail
-          python3 scripts/pytest-shards.py expand \
-            --targets "${RUNNER_TEMP:?}/build-target-plan.json" \
-            --source "$PWD/.ops-shard-source" --board "$OPS_BOARD" \
-            --runner "$OPS_RUNNER" --shards "$OPS_SHARDS" --capacity "$OPS_CAPACITY" \
-            > "$RUNNER_TEMP/ops-admission.json"
+          expand_args=(
+            python3 scripts/pytest-shards.py expand
+            --targets "${RUNNER_TEMP:?}/build-target-plan.json"
+            --source "$PWD/.ops-shard-source" --board "$OPS_BOARD"
+            --runner "$OPS_RUNNER" --shards "$OPS_SHARDS" --capacity "$OPS_CAPACITY"
+          )
+          if [[ -f "${RUNNER_TEMP:?}/previous-ordinary-weights.json" ]]; then
+            expand_args+=(--weights "${RUNNER_TEMP}/previous-ordinary-weights.json")
+          elif [[ -f "${RUNNER_TEMP:?}/previous-ops-timing/events.jsonl" ]]; then
+            expand_args+=(--timing "${RUNNER_TEMP}/previous-ops-timing/events.jsonl")
+          fi
+          "${expand_args[@]}" > "$RUNNER_TEMP/ops-admission.json"
           {
             echo "validation_matrix=$(jq -c '.validation_matrix' "$RUNNER_TEMP/ops-admission.json")"
             echo "max_parallel=$(jq -er '.max_parallel' "$RUNNER_TEMP/ops-admission.json")"
@@ -1834,6 +1850,23 @@ jobs:
           print(line)
           PY
 
+      - name: Publish ordinary shard weights
+        if: needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
+        run: |
+          set -euo pipefail
+          python3 scripts/pytest-shards.py publish-ordinary-weights \
+            --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
+            --evidence "${RUNNER_TEMP:?}/ops-shard-evidence" \
+            --output "${RUNNER_TEMP:?}/ordinary-weights.json"
+
+      - name: Upload ordinary shard weights
+        if: needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ops-ordinary-weights-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ordinary-weights.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Retain complete validation verdict
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

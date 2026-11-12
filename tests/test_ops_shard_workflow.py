@@ -1018,6 +1018,36 @@ class OpsShardWorkflow(unittest.TestCase):
         self.assertEqual(list(self.artifacts.iterdir()), [])
         self.assertIn("admission_sha256=", output.read_text())
 
+    def test_plan_yaml_applies_duration_weights_outside_the_plan(self):
+        ordinary = sorted(module for item in self.admission["ops_plan"]["assignments"]
+                          if item["id"].startswith("ordinary-") for module in item["modules"])
+        self.assertGreaterEqual(len(ordinary), 2)
+        weights = {module: 1000 for module in ordinary}
+        weights[ordinary[-1]] = 100000
+        runner = self.base / "weighted-plan-runner"
+        runner.mkdir()
+        (runner / "build-target-plan.json").write_text(json.dumps(self.targets))
+        (runner / "previous-ordinary-weights.json").write_text(json.dumps(weights))
+        (self.policy / ".ops-shard-source").symlink_to(self.source, target_is_directory=True)
+        output = self.base / "weighted-plan-output"
+        env = self.env | {"RUNNER_TEMP": str(runner), "GITHUB_OUTPUT": str(output),
+                          "OPS_BOARD": self.board_sha, "OPS_RUNNER": "ubuntu-24.04",
+                          "OPS_SHARDS": "4", "OPS_CAPACITY": "2"}
+        _, script = yaml_consumer.step("Plan complete Ops jobs before collection")
+        self.assertNotIn("gh ", script)
+        result = subprocess.run(["bash", "-c", script], cwd=self.policy, env=env,
+                                capture_output=True, text=True, timeout=20, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        value = json.loads((runner / "ops-admission.json").read_text())
+        self.assertNotIn("ordinary_weights", value["ops_plan"])
+        self.assertEqual(value["ordinary_weights"], weights)
+        self.consumer.validate_plan(value["ops_plan"])
+        self.assertEqual(value["ops_plan"]["assignments"][0]["modules"], [ordinary[-1]])
+        ignored = self.call(self.consumer.plan, self.source, value["ops_plan"]["context"], 4, TAIL)
+        self.consumer.detach_ordinary_weights(ignored)
+        self.assertEqual(ignored["assignments"][0]["modules"], [ordinary[0]])
+        self.assertNotEqual(ignored["assignments"], value["ops_plan"]["assignments"])
+
     def test_matrix_selection_capacity_and_upfront_manual_compatibility(self):
         for count in (0, -1):
             with self.subTest(count=count), self.assertRaises(ValueError):
