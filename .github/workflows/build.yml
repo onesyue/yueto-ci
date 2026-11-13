@@ -1208,7 +1208,6 @@ jobs:
       - name: Validate YueBoard→YueOps notices wire contract
         if: matrix.validation == 'yueops' && matrix.ops_role == 'native'
         env:
-          YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard
           YUEOPS_REQUIRE_PRODUCER_CONTRACT: "1"
           UV_PYTHON_DOWNLOADS: never
         run: |
@@ -1217,8 +1216,6 @@ jobs:
       - name: Execute owned Ops pytest selection
         if: matrix.validation == 'yueops' && matrix.ops_role != 'legacy' && matrix.ops_role != 'native'
         env:
-          YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard
-          YUETO_CI_REPO_PATH: ${{ github.workspace }}/.ci-policy
           PYTEST_ADDOPTS: --durations=25
           UV_PYTHON_DOWNLOADS: never
           OPS_ROLE: ${{ matrix.ops_role }}
@@ -1235,8 +1232,6 @@ jobs:
       - name: Validate yueops backend
         if: matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
         env:
-          YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard
-          YUETO_CI_REPO_PATH: ${{ github.workspace }}/.ci-policy
           UV_PYTHON_DOWNLOADS: never
           OPS_ROLE: ${{ matrix.ops_role }}
           # Surface the slowest tests in the log so a 640-second run can be

@@ -45,9 +45,7 @@ run_step() {
     esac
     case "$step" in
       selection|backend)
-        export YUEBOARD_REPO_PATH=$board_checkout YUETO_CI_REPO_PATH=$policy_checkout
         export PYTEST_ADDOPTS=--durations=25 ;;
-      notices) export YUEBOARD_REPO_PATH=$board_checkout ;;
     esac
     bash "$policy_checkout/scripts/ops-validation-$step.sh"
   )

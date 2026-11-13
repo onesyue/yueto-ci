@@ -20,7 +20,7 @@ class NoticesContractGateTest(unittest.TestCase):
     def test_step_runs_once_in_native_ops_validation_with_both_repos(self):
         self.assertEqual(self.text.count(STEP), 1)
         self.assertIn("if: matrix.validation == 'yueops' && matrix.ops_role == 'native'", self.step)
-        self.assertIn("YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard", self.step)
+        self.assertIn('export YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"', self.step)
         self.assertIn('YUEOPS_REQUIRE_PRODUCER_CONTRACT: "1"', self.step)
         self.assertIn('test -d "$YUEBOARD_REPO_PATH/.git"', self.step)
         self.assertIn("set -euo pipefail", self.step)
