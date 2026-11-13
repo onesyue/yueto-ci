@@ -1755,15 +1755,16 @@ class BuildPolicyTest(unittest.TestCase):
         ):
             with self.subTest(integration_package=package):
                 self.assertIn(package, runner)
-        self.assertIn("validate-yueboard-postgres.py", integration)
-        self.assertIn("--phase domain", integration)
-        self.assertIn("--phase remaining", integration)
+        self.assertIn("validate-yueboard-postgres.py", executor)
+        self.assertIn("board-validation.sh postgres", integration)
+        self.assertIn("board-validation.sh migration", integration)
         self.assertNotIn("go test ./...", integration)
 
         module_start = self.workflow.index("- name: Validate YueBoard PostgreSQL module and migration integration")
         clean = self.workflow[clean_start:module_start]
         self.assertIn("yueboard_clean_gate", clean)
-        self.assertIn("scripts/ci/clean-pg-gate.sh", clean)
+        self.assertIn("board-validation.sh postgres-clean", clean)
+        self.assertIn("scripts/ci/clean-pg-gate.sh", executor)
         self.assertNotIn("/yueboard_test", clean)
 
         frontend = self.workflow[frontend_start:design_start]

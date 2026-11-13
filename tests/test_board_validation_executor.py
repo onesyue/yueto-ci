@@ -172,3 +172,175 @@ if name == 'gofmt' and os.getenv('UNFORMATTED'):
         self.assertEqual(rows[-1]['baseline'], 'original-baseline')
         self.assertEqual(rows[-1]['path'], self.env['PATH'])
         self.assertTrue(rows[-2]['path'].startswith(str(self.temp / 'board-quality-tools') + os.pathsep))
+
+class PostgresExecutor(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name).resolve()
+        self.source, self.policy, self.temp, self.bin = [self.root / name for name in ('source', 'policy', 'temp', 'bin')]
+        for directory in (self.source / 'scripts/ci', self.policy / 'scripts', self.temp, self.bin):
+            directory.mkdir(parents=True)
+        (self.source / 'go.mod').write_text('module fixture\n')
+        (self.policy / 'scripts/install-board-quality-tools.sh').write_text('unused\n')
+        (self.policy / 'scripts/pg_validation_address.py').write_text((ROOT / 'scripts/pg_validation_address.py').read_text())
+        self.log = self.root / 'calls.jsonl'
+        self.environment = dict(os.environ, PATH=str(self.bin) + os.pathsep + os.environ['PATH'],
+                                YUE_CI_PYTHON=sys.executable, CALL_LOG=str(self.log),
+                                KEY_COUNT=str(self.root / 'key-count'),
+                                YUEBOARD_ADMIN_DATABASE_URL='postgres://postgres:ci@postgres:5432/postgres',
+                                CLEAN_PG_DSN='postgres://postgres:ci@postgres:5432/yueboard_clean_gate')
+        for key in ('YUEBOARD_TOKEN_ENC_KEYS', 'YUEBOARD_TOKEN_BIDX_KEY'):
+            self.environment.pop(key, None)
+        phase = self.policy / 'scripts/validate-yueboard-postgres.py'
+        phase.write_text('''import json, os, sys
+from pathlib import Path
+record = {'name': 'phase', 'args': sys.argv[1:], 'cwd': os.getcwd(),
+          'clean_env': bool(os.getenv('CLEAN_PG_DSN') or os.getenv('YUEBOARD_ADMIN_DATABASE_URL')),
+          'keys': bool(os.getenv('YUEBOARD_TOKEN_ENC_KEYS') or os.getenv('YUEBOARD_TOKEN_BIDX_KEY'))}
+with open(os.environ['CALL_LOG'], 'a') as f: f.write(json.dumps(record) + '\\n')
+if os.getenv('FAIL_STAGE') == 'phase': sys.exit(23)
+Path(sys.argv[sys.argv.index('--receipt') + 1]).write_text('native fixture receipt')
+''')
+        stub = self.bin / 'stub'
+        stub.write_text('#!' + sys.executable + '\n' + '''import json, os, sys
+from pathlib import Path
+name = Path(sys.argv[0]).name
+stage = name
+if name == 'openssl':
+    count = Path(os.environ['KEY_COUNT'])
+    number = int(count.read_text()) + 1 if count.exists() else 1
+    count.write_text(str(number))
+    stage += str(number)
+with open(os.environ['CALL_LOG'], 'a') as f:
+    f.write(json.dumps({'name': stage, 'args': sys.argv[1:],
+        'keys_valid': os.getenv('YUEBOARD_TOKEN_ENC_KEYS') == '1:fixture-one-time-key'
+         and os.getenv('YUEBOARD_TOKEN_BIDX_KEY') == 'fixture-one-time-key'}) + '\\n')
+if os.getenv('FAIL_STAGE') == stage: sys.exit(23)
+if name == 'openssl': print('fixture-one-time-key')
+''')
+        stub.chmod(0o755)
+        for name in ('psql', 'openssl'):
+            (self.bin / name).symlink_to(stub)
+        (self.source / 'scripts/ci/clean-pg-gate.sh').symlink_to(stub)
+
+    def execute(self, role, options, **extra):
+        self.log.unlink(missing_ok=True)
+        (self.root / 'key-count').unlink(missing_ok=True)
+        result = subprocess.run(['bash', str(EXECUTOR), role, str(self.source), str(self.policy),
+                                 str(self.temp), *options], env=self.environment | extra,
+                                capture_output=True, text=True)
+        rows = [json.loads(line) for line in self.log.read_text().splitlines()] if self.log.exists() else []
+        return result, rows
+
+    def test_phase_argv_and_receipt_are_delegated_without_clean_environment(self):
+        for role, phase in (('postgres', 'domain'), ('migration', 'remaining')):
+            receipt = self.temp / (role + '.json')
+            for failure in ('', 'phase'):
+                receipt.unlink(missing_ok=True)
+                result, rows = self.execute(role, ['--database-adapter', 'github-service', '--receipt', str(receipt)],
+                                            YUEBOARD_ADMIN_DATABASE_URL='', CLEAN_PG_DSN='', FAIL_STAGE=failure)
+                self.assertEqual(result.returncode, 23 if failure else 0, result.stderr)
+                self.assertEqual(len(rows), 1)
+                self.assertEqual(rows[0], {'name': 'phase', 'args': ['--phase', phase, '--database-adapter',
+                    'github-service', '--receipt', str(receipt)], 'cwd': str(self.source),
+                    'clean_env': False, 'keys': False})
+                self.assertEqual(receipt.exists(), not failure)
+
+    def test_clean_validates_then_creates_and_keeps_keys_out_of_output(self):
+        result, rows = self.execute('postgres-clean', ['--database-adapter', 'github-service'])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([r['name'] for r in rows], ['psql', 'openssl1', 'openssl2', 'clean-pg-gate.sh'])
+        self.assertEqual(rows[0]['args'], ['-v', 'ON_ERROR_STOP=1', self.environment['YUEBOARD_ADMIN_DATABASE_URL'],
+                                         '-c', 'CREATE DATABASE yueboard_clean_gate'])
+        self.assertTrue(rows[-1]['keys_valid'])
+        self.assertTrue(all(not row['keys_valid'] for row in rows[:-1]))
+        self.assertNotIn('fixture-one-time-key', result.stdout + result.stderr)
+        self.assertNotIn('YUEBOARD_TOKEN_ENC_KEYS', self.environment)
+        self.assertFalse(list(self.temp.glob('*.json')))
+
+    def test_each_clean_failure_stops_later_commands(self):
+        sequence = ['psql', 'openssl1', 'openssl2', 'clean-pg-gate.sh']
+        for index, stage in enumerate(sequence):
+            with self.subTest(stage=stage):
+                result, rows = self.execute('postgres-clean', ['--database-adapter', 'github-service'], FAIL_STAGE=stage)
+                self.assertEqual(result.returncode, 23, result.stderr)
+                self.assertEqual([r['name'] for r in rows], sequence[:index + 1])
+                self.assertNotIn('fixture-one-time-key', result.stdout + result.stderr)
+
+    def test_clean_bad_addresses_and_environment_stop_before_psql(self):
+        changes = [
+            {'YUEBOARD_ADMIN_DATABASE_URL': 'postgres://postgres:ci@postgres:5432/production'},
+            {'CLEAN_PG_DSN': 'postgres://postgres:ci@postgres:5432/yueboard_test'},
+            {'CLEAN_PG_DSN': 'postgres://postgres:ci@example.invalid:5432/yueboard_clean_gate'},
+            {'CLEAN_PG_DSN': self.environment['CLEAN_PG_DSN'] + '?hostaddr=192.0.2.1'},
+            {'YUEBOARD_ADMIN_DATABASE_URL': ''}, {'CLEAN_PG_DSN': ''},
+            {'PGHOSTADDR': '192.0.2.1'}, {'PGSERVICE': 'untrusted'}, {'PGOPTIONS': '-csearch_path=other'},
+        ]
+        for change in changes:
+            with self.subTest(change=change):
+                result, rows = self.execute('postgres-clean', ['--database-adapter', 'github-service'], **change)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(rows, [])
+
+    def test_argument_mismatch_is_refused_before_any_execution(self):
+        for role, options in [
+            ('quality', ['--database-adapter', 'loopback']), ('quality', ['--database-adapter', '']),
+            ('postgres-clean', ['--database-adapter', 'github-service', '--receipt', '']), ('race', ['--receipt', str(self.temp / 'a')]),
+            ('postgres', ['--database-adapter', 'github-service']),
+            ('migration', ['--receipt', str(self.temp / 'a')]),
+            ('postgres-clean', []),
+            ('postgres-clean', ['--database-adapter', 'github-service', '--receipt', str(self.temp / 'a')]),
+        ]:
+            with self.subTest(role=role, options=options):
+                result, rows = self.execute(role, options)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertEqual(rows, [])
+        result, rows = self.execute('postgres-clean', ['--database-adapter', 'github-service'], YUE_CI_PYTHON='')
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(rows, [])
+
+    def test_pg_roles_reject_inherited_source_credentials(self):
+        for role in ('postgres', 'migration', 'postgres-clean'):
+            options = ['--database-adapter', 'github-service']
+            if role != 'postgres-clean':
+                options += ['--receipt', str(self.temp / 'receipt.json')]
+            with self.subTest(role=role):
+                result, rows = self.execute(role, options, GH_TOKEN='private-test-token')
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(rows, [])
+                self.assertNotIn('private-test-token', result.stdout + result.stderr)
+
+    def test_clean_loopback_uses_shared_rules(self):
+        env = {'YUEBOARD_ADMIN_DATABASE_URL': 'postgres://postgres:ci@127.0.0.1:55434/postgres?sslmode=disable',
+               'CLEAN_PG_DSN': 'postgres://postgres:ci@127.0.0.1:55434/yueboard_clean_gate?sslmode=disable'}
+        result, rows = self.execute('postgres-clean', ['--database-adapter', 'loopback'], **env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(rows[-1]['name'], 'clean-pg-gate.sh')
+        for uri in (env['CLEAN_PG_DSN'] + '&hostaddr=192.0.2.1',
+                    env['CLEAN_PG_DSN'].replace('127.0.0.1:55434', 'localhost:5432,example.invalid:5432')):
+            result, rows = self.execute('postgres-clean', ['--database-adapter', 'loopback'], **(env | {'CLEAN_PG_DSN': uri}))
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(rows, [])
+
+    def test_clean_requires_same_connection_identity_before_psql(self):
+        admin = 'postgres://postgres:ci@127.0.0.1:55434/postgres?sslmode=disable'
+        clean = admin.replace('/postgres?', '/yueboard_clean_gate?')
+        for changed in (clean.replace(':55434/', ':5432/'), clean.replace(':55434/', '/'),
+                        clean.replace('@127.0.0.1', '@localhost'),
+                        clean.replace('postgres:ci@', 'other:ci@'),
+                        clean.replace('postgres:ci@', 'postgres:other@'),
+                        clean.replace('sslmode=disable', 'sslmode=require'),
+                        clean + '&application_name=other'):
+            with self.subTest(changed=changed):
+                result, rows = self.execute('postgres-clean', ['--database-adapter', 'loopback'],
+                                            YUEBOARD_ADMIN_DATABASE_URL=admin, CLEAN_PG_DSN=changed)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('identity mismatch', result.stderr)
+                self.assertNotIn(changed, result.stdout + result.stderr)
+                self.assertEqual(rows, [])
+        result, rows = self.execute('postgres-clean', ['--database-adapter', 'loopback'],
+                                    YUEBOARD_ADMIN_DATABASE_URL=admin,
+                                    CLEAN_PG_DSN=clean.replace('postgres:', 'postgresql:', 1))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(rows[-1]['name'], 'clean-pg-gate.sh')

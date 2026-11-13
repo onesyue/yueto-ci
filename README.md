@@ -612,3 +612,13 @@ parameters, but rejects query parameters or nonempty `PG*` variables that can
 redirect the target, credentials or session. Neither adapter relaxes the
 production-scale or explicit migration-reset requirements. Fixture validation
 does not establish actual PostgreSQL 18 integration success.
+
+The Board executor also delegates `postgres` and `migration` to the existing
+PostgreSQL phase engine, with explicit adapter and receipt arguments. The
+separate `postgres-clean` invocation validates its fixed admin/clean database
+addresses with the same address checker, requires matching connection identity
+(only database names may differ), creates the clean database and keeps
+throwaway keys inside its child environment. Clean rejects integration receipt
+arguments because it has no such receipt contract. The workflow retains three
+separate steps and environment scopes, plus job-owned service teardown and
+failure diagnostics; no new DROP cleanup or local-equivalence claim is added.

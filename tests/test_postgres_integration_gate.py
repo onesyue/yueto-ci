@@ -20,6 +20,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'scripts' / 'validate-yueboard-postgres.py'
+sys.path.insert(0, str(SCRIPT.parent))
 SPEC = importlib.util.spec_from_file_location('postgres_gate', SCRIPT)
 assert SPEC and SPEC.loader
 GATE = importlib.util.module_from_spec(SPEC)
@@ -106,7 +107,9 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
 
     def group_process(self, row):
         # Capture the Python parent's stderr too: Go's inherited diagnostics must remain visible.
-        driver = ('import json, runpy, sys; gate = runpy.run_path(sys.argv[1]); '
+        driver = ('import json, runpy, sys; from pathlib import Path; '
+                  'sys.path.insert(0, str(Path(sys.argv[1]).parent)); '
+                  'gate = runpy.run_path(sys.argv[1]); '
                   'row = json.loads(sys.argv[2]); gate["run_group"]([row["path"]], [row])')
         return subprocess.run([sys.executable, '-c', driver, str(SCRIPT), json.dumps(row)],
                               cwd=self.root, env=self.environment, capture_output=True, text=True, timeout=90,
@@ -191,7 +194,8 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
                     raise RuntimeError('unsupported role condition: ' + condition[1])
                 if not eval(compile(tree, '<workflow role>', 'eval'), {'__builtins__': {}}, {}):
                     continue
-                environment = dict(self.environment, RUNNER_TEMP=runner_temp, YUE_CI_PYTHON=sys.executable)
+                environment = dict(self.environment, RUNNER_TEMP=runner_temp, YUE_CI_PYTHON=sys.executable,
+                                   GITHUB_WORKSPACE=str(self.root))
                 # Exercise the actual workflow address contract, not a loopback substitute.
                 for key in GATE.DSNS:
                     match = re.search(r'^          ' + key + r": (.+)$", block, re.M)
@@ -205,7 +209,8 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
                 if reset:
                     environment['YUEBOARD_MIGRATION_TEST_ALLOW_RESET'] = reset[1]
                 run = textwrap.dedent(block.split('        run: |\n', 1)[1])
-                step_phases = re.findall(r'--phase (domain|remaining)\b', run)
+                step_roles = re.findall(r'board-validation\.sh (postgres|migration)\s', run)
+                step_phases = [{'postgres': 'domain', 'migration': 'remaining'}[item] for item in step_roles]
                 if 'domain' in step_phases and reset:
                     raise RuntimeError('domain inherited reset acknowledgement')
                 run = run.replace('${{ github.run_id }}', '123').replace('${{ github.run_attempt }}', '1')
@@ -261,11 +266,12 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
 
     def test_moving_domain_into_reset_step_loses_postgres_and_reset_isolation(self):
         workflow = (ROOT / '.github/workflows/build.yml').read_text()
-        command = ('"$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \\\n'
-                   '            --phase domain --database-adapter github-service --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"')
+        command = ('bash .ci-policy/scripts/board-validation.sh postgres \\\n'
+                   '            "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.ci-policy" "$RUNNER_TEMP" \\\n'
+                   '            --database-adapter github-service --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"')
         self.assertIn(command, workflow)
         workflow = workflow.replace(command, 'echo "domain runs in migration"', 1)
-        remaining = '          "$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \\\n            --phase remaining'
+        remaining = '          bash .ci-policy/scripts/board-validation.sh migration'
         workflow = workflow.replace(remaining, '          ' + command + '\n' + remaining, 1)
         for role, diagnostic in [('postgres', 'expected local phases'), ('migration', 'domain inherited reset')]:
             with self.subTest(role=role), self.assertRaisesRegex(RuntimeError, diagnostic):
@@ -747,16 +753,22 @@ class PostgresWorkflowWiringTest(unittest.TestCase):
                 self.assertEqual(len(set(values.values())), 1)
                 self.assertIn('@postgres:5432/yueboard_test', next(iter(values.values())))
                 self.assertNotIn('127.0.0.1', next(iter(values.values())))
-                self.assertIn('"$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py', block)
-                self.assertIn('--phase ' + phase, block)
+                self.assertIn('board-validation.sh ' + {'domain': 'postgres', 'remaining': 'migration'}[phase], block)
                 self.assertIn('--database-adapter github-service', block)
+                self.assertNotIn('YUEBOARD_ADMIN_DATABASE_URL:', block)
+                self.assertNotIn('CLEAN_PG_DSN:', block)
                 self.assertIn('github.run_id', block)
                 self.assertIn('github.run_attempt', block)
                 self.assertIn("YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE: '1'", block)
         lifecycle = workflow[clean:remaining]
-        self.assertIn('CREATE DATABASE yueboard_clean_gate', lifecycle)
-        self.assertIn('scripts/ci/clean-pg-gate.sh', lifecycle)
+        self.assertIn('board-validation.sh postgres-clean', lifecycle)
+        executor = (ROOT / 'scripts/board-validation.sh').read_text()
+        self.assertIn('CREATE DATABASE yueboard_clean_gate', executor)
+        self.assertIn('scripts/ci/clean-pg-gate.sh', executor)
         self.assertNotIn('DROP DATABASE', lifecycle)
+        for key in GATE.DSNS:
+            self.assertNotIn(key + ':', lifecycle)
+        self.assertNotIn('--receipt', lifecycle)
 
 
 if __name__ == '__main__':
