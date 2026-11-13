@@ -135,7 +135,9 @@ def run(report: dict) -> int:
         status = 2
         print(f'ci-check: Board infrastructure failure: {error}', file=sys.stderr)
     finally:
-        report['complete'] = validation_started
+        # Shared executors reserve exit 2 for failed prerequisites/contracts.
+        # A source command can also return 2; conservatively keep it incomplete.
+        report['complete'] = validation_started and status != 2
         report['validation_exit_code'] = status if validation_started else None
         errors = []
         if e2e_failed:

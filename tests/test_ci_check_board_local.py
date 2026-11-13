@@ -1,5 +1,7 @@
 """Board local lifecycle negative controls; never contacts Docker or databases."""
 import copy
+import contextlib
+import io
 import hashlib
 import importlib
 import json
@@ -85,16 +87,18 @@ class BoardLocal(unittest.TestCase):
                 source.mkdir(); policy.mkdir()
                 roles = ['quality', 'race', 'postgres', 'migration', 'frontends', 'components', 'e2e']
                 commands = []
+                stdout = io.StringIO()
+                diagnostic = 'internal/platform/entrysalt/delivery.go:168:3: redundant nil check (S1009)'
                 def execute(command, log, receipt):
                     commands.append(command)
                     role = log.parent.name
-                    if mode != 'missing-log': log.write_text('role executed\n')
+                    if mode != 'missing-log': log.write_text(diagnostic + '\n' + diagnostic + '\n' if mode == 'source-fail' and role == 'quality' else 'role executed\n')
                     code = 17 if mode == 'source-fail' and role == 'quality' else 2 if mode == 'infra' else 0
                     if mode != 'missing-result':
                         (log.parent/'role-result.json').write_text(json.dumps({'role': 'other' if mode == 'wrong-result' else role,
                             'source': 'a'*40, 'policy': 'b'*40, 'complete': mode != 'infra', 'exit_code': code}))
                     return code
-                with patch.object(LOCAL, 'checkout'), patch.object(LOCAL, 'plan', return_value=roles), patch.object(LOCAL, 'workflow_contract', return_value={}), patch.object(LOCAL, 'execute_container', side_effect=execute), patch.object(LOCAL.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)):
+                with contextlib.redirect_stdout(stdout), patch.object(LOCAL, 'checkout'), patch.object(LOCAL, 'plan', return_value=roles), patch.object(LOCAL, 'workflow_contract', return_value={}), patch.object(LOCAL, 'execute_container', side_effect=execute), patch.object(LOCAL.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)):
                     if mode.startswith('missing') or mode == 'wrong-result':
                         with self.assertRaises((OSError, ValueError)): LOCAL.run(source, policy, 'a'*40, 'b'*40, output)
                     else:
@@ -103,6 +107,9 @@ class BoardLocal(unittest.TestCase):
                         self.assertEqual(len(commands), 7)
                         state = json.loads((output/'execution.json').read_text())
                         self.assertEqual(state['complete'], mode != 'infra')
+                        expected_failures = diagnostic + '\n' if mode == 'source-fail' else ''
+                        self.assertEqual(stdout.getvalue(), expected_failures)
+                        self.assertEqual((output/'failures.txt').read_text(), expected_failures)
                 for command in commands:
                     text = ' '.join(command)
                     self.assertNotIn('/var/run/docker.sock', text)
@@ -139,6 +146,8 @@ class BoardRole(unittest.TestCase):
             if mode == 'start' and command[:2] == ['docker', 'start']: raise subprocess.CalledProcessError(23, command)
             if mode == 'logs' and command[:2] == ['docker', 'logs']: raise subprocess.CalledProcessError(29, command)
             if mode == 'rm' and command[:2] == ['docker', 'rm']: raise subprocess.CalledProcessError(31, command)
+            if mode == 'executor-infra' and any(name in command[1] for name in ('board-validation.sh', 'board-validation-output.py')):
+                raise subprocess.CalledProcessError(2, command)
             if 'board-validation-output.py' in command[1]:
                 phase = command[command.index('--frontend-phase')+1]
                 if phase == 'prepare': Path(env['GITHUB_OUTPUT']).write_text('layout='+layout+'\n')
@@ -199,6 +208,16 @@ class BoardRole(unittest.TestCase):
         self.assertEqual(receipt['validation_exit_code'], 17)
         self.assertIn(['docker', 'rm', '--force', 'f'*64], [c for c,e in calls])
 
+    def test_executor_infrastructure_exit_is_incomplete(self):
+        for role in ('quality', 'postgres', 'frontends', 'e2e'):
+            with self.subTest(role=role):
+                status, calls, receipt, _ = self.fixture(role, 'executor-infra')
+                self.assertEqual(status, 2)
+                self.assertFalse(receipt['complete'])
+                self.assertEqual(receipt['validation_exit_code'], 2)
+                if role in ('postgres', 'e2e'):
+                    self.assertIn(['docker', 'rm', '--force', 'f'*64], [c for c,e in calls])
+
     def test_legacy_retains_original_phase_conditions(self):
         for role in ('frontends', 'components', 'e2e'):
             status, calls, receipt, job = self.fixture(role, layout='legacy')
@@ -223,3 +242,87 @@ class BoardRole(unittest.TestCase):
                     if mode=='ok': ROLE.toolchain(expected, {})
                     else:
                         with self.assertRaises(ValueError): ROLE.toolchain(expected, {})
+
+
+class BoardBoundary(unittest.TestCase):
+    def test_real_checkout_identity_and_credential_rejections(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def git(*args):
+                return subprocess.check_output(['git', '-C', str(root), *args], text=True).strip()
+            git('init', '-q')
+            (root/'source').write_text('fixture')
+            git('add', 'source')
+            git('-c', 'user.name=fixture', '-c', 'user.email=fixture@example.invalid',
+                '-c', 'commit.gpgsign=false', 'commit', '-qm', 'fixture')
+            sha = git('rev-parse', 'HEAD')
+            git('remote', 'add', 'origin', 'https://github.com/onesyue/yueboard.git')
+            git('update-ref', 'refs/remotes/origin/master', sha)
+            LOCAL.checkout(root, 'yueboard', sha)
+            with self.assertRaises(ValueError): LOCAL.checkout(root, 'yueboard', 'f'*40)
+            with self.assertRaises(ValueError): LOCAL.checkout(root, 'yueops', sha)
+            (root/'source').write_text('dirty')
+            with self.assertRaises(ValueError): LOCAL.checkout(root, 'yueboard', sha)
+            git('checkout', '--', 'source')
+            for key in ('credential.helper', 'http.https://github.com/.extraheader', 'include.path'):
+                git('config', '--local', key, '/nonexistent-fixture')
+                with self.assertRaises(ValueError): LOCAL.checkout(root, 'yueboard', sha)
+                git('config', '--local', '--unset-all', key)
+            git('update-ref', '-d', 'refs/remotes/origin/master')
+            with self.assertRaises(subprocess.CalledProcessError): LOCAL.checkout(root, 'yueboard', sha)
+
+    def test_real_cli_routes_only_board_and_preserves_failure_cleanup(self):
+        for status in (0, 23):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); binpath = root/'bin'; binpath.mkdir()
+                log = root/'calls'
+                for tool in ('git', 'docker', 'python3'):
+                    program = binpath/tool
+                    program.write_text('#!' + sys.executable + '\n' + '''import json, os, sys
+from pathlib import Path
+name=Path(sys.argv[0]).name; args=sys.argv[1:]
+with open(os.environ['FIXTURE_LOG'],'a') as f: f.write(json.dumps([name,args])+'\\n')
+if name=='git':
+ if args[0]=='clone': Path(args[-1]).mkdir(parents=True)
+ elif 'rev-parse' in args: print('b'*40)
+elif name=='python3':
+ assert args[0].endswith('/scripts/ci_check_board_local.py'), args
+ sys.exit(int(os.environ['FIXTURE_EXIT']))
+''')
+                    program.chmod(0o755)
+                env = dict(os.environ, PATH=str(binpath)+os.pathsep+os.environ['PATH'],
+                           FIXTURE_LOG=str(log), FIXTURE_EXIT=str(status), CI_CHECK_OUTPUT=str(root/'output'))
+                env.pop('CI_CHECK_MIGRATION_BASE', None)
+                result = subprocess.run(['bash', str(ROOT/'scripts/ci-check.sh'), 'yueboard', 'a'*40, '--local'],
+                                        env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, status, result.stderr)
+                calls = [json.loads(line) for line in log.read_text().splitlines()]
+                clones = [args for name,args in calls if name=='git' and args[0]=='clone']
+                self.assertEqual(len(clones), 2)
+                self.assertFalse(any('yueops' in ' '.join(args) for name,args in calls))
+                args = next(args for name,args in calls if name=='python3')
+                self.assertEqual(args[args.index('--source-sha')+1], 'a'*40)
+                self.assertEqual(args[args.index('--policy-sha')+1], 'b'*40)
+                self.assertEqual(list((root/'output').glob('checkouts.*')), [])
+
+    def test_real_private_daemon_shell_stops_only_owned_fixture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sudo = root/'sudo'
+            sudo.write_text('#!' + sys.executable + '\n' + '''import os, signal, sys, time
+from pathlib import Path
+with open(os.environ['FIXTURE_LOG'],'a') as f: f.write(' '.join(sys.argv[1:])+'\\n')
+if sys.argv[1]=='dockerd': time.sleep(30)
+else:
+ assert sys.argv[1:3]==['kill','-TERM']
+ os.kill(int(sys.argv[3]), signal.SIGTERM)
+''')
+            sudo.chmod(0o755)
+            timeout = root/'timeout'; timeout.write_text('#!/bin/sh\nexit 0\n'); timeout.chmod(0o755)
+            env = dict(os.environ, PATH=str(root)+os.pathsep+os.environ['PATH'], RUNNER_TEMP=str(root), FIXTURE_LOG=str(root/'calls'))
+            body = 'set -euo pipefail\nsource "$1"\ntrap ci_check_daemon_stop EXIT\nci_check_daemon_start\nprintf "%s\\n" "$daemon_pid" > "$RUNNER_TEMP/owned-pid"\n'
+            result = subprocess.run(['bash', '-c', body, '--', str(ROOT/'scripts/ci-check-private-daemon.sh')], env=env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            pid = int((root/'owned-pid').read_text())
+            self.assertIn('kill -TERM '+str(pid), (root/'calls').read_text())
+            with self.assertRaises(ProcessLookupError): os.kill(pid, 0)

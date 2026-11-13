@@ -163,7 +163,10 @@ def run(source: Path, policy: Path, source_sha: str, policy_sha: str, output: Pa
         summary.write_text(json.dumps({'complete': False, 'roles': roles, 'exit_codes': statuses}) + '\n')
     complete = len(outcomes) == len(roles) and all(row['complete'] for row in outcomes.values())
     summary.write_text(json.dumps({'complete': complete, 'roles': roles, 'exit_codes': statuses, 'outcomes': outcomes}) + '\n')
-    (output / 'failures.txt').write_text(''.join(s + '\n' for s in dict.fromkeys(failures)))
+    unique_failures = list(dict.fromkeys(failures))
+    (output / 'failures.txt').write_text(''.join(s + '\n' for s in unique_failures))
+    for diagnostic in unique_failures:
+        print(diagnostic)
     return 2 if not complete else int(any(statuses.values()) or bool(failures))
 
 
