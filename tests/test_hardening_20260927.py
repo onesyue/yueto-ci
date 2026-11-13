@@ -64,7 +64,7 @@ CREDENTIAL_MARKERS = (
 )
 # Anything that executes third-party (dependency) code.
 DEPENDENCY_CODE_MARKERS = ("go test", "make test", "make build", "go run ", "check-vulnerabilities.sh",
-                           "validate-yueboard-postgres.py")
+                           "validate-yueboard-postgres.py", "board-validation.sh")
 
 
 def credential_leaks(job_text: str) -> list[str]:
@@ -87,11 +87,12 @@ class ForkTokenIsolationTest(unittest.TestCase):
         self.assertEqual(credential_leaks(self.validate), [])
         # Scan floor: the checker really looked at the Go test steps.
         runners = [s for s in steps(self.validate)
-                   if "go test" in s or "validate-yueboard-postgres.py" in s]
+                   if "go test" in s or "validate-yueboard-postgres.py" in s or "board-validation.sh" in s]
         self.assertGreaterEqual(len(runners), 4)
 
-    def test_wrapped_postgres_test_steps_still_reject_credentials(self) -> None:
-        for name in ("Validate YueBoard PostgreSQL integration",
+    def test_wrapped_test_steps_still_reject_credentials(self) -> None:
+        for name in ("Validate YueBoard backend quality gates", "Validate YueBoard race",
+                     "Validate YueBoard PostgreSQL integration",
                      "Validate YueBoard PostgreSQL module and migration integration"):
             with self.subTest(name=name):
                 original = step_named(self.validate, name)

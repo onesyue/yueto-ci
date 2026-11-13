@@ -1663,7 +1663,7 @@ class BuildPolicyTest(unittest.TestCase):
     def test_source_and_image_security_gates_are_present(self) -> None:
         required = (
             "scripts/check-vulnerabilities.sh",
-            ".ci-policy/scripts/install-board-quality-tools.sh",
+            ".ci-policy/scripts/board-validation.sh",
             "scripts/security_scan.sh --json",
             "pip-audit",
             "working-directory: frontend",
@@ -1701,8 +1701,8 @@ class BuildPolicyTest(unittest.TestCase):
         backend_start = self.workflow.index(
             "- name: Validate YueBoard backend quality gates"
         )
-        proto_start = self.workflow.index(
-            "- name: Validate YueBoard protocol compatibility"
+        race_start = self.workflow.index(
+            "- name: Validate YueBoard race"
         )
         integration_start = self.workflow.index(
             "- name: Validate YueBoard PostgreSQL integration"
@@ -1716,24 +1716,26 @@ class BuildPolicyTest(unittest.TestCase):
         )
         yueops_start = self.workflow.index("- name: Install yueops dependencies")
 
-        backend = self.workflow[backend_start:proto_start]
+        backend = self.workflow[backend_start:race_start]
+        executor = (ROOT / "scripts" / "board-validation.sh").read_text()
+        self.assertIn("board-validation.sh quality", backend)
         for gate in (
             "go build ./...",
             "gofmt -l",
             "make check-generated",
             "go vet ./...",
             "scripts/ci/check-server-error-logging.sh",
-            ".ci-policy/scripts/install-board-quality-tools.sh",
+            'bash "$policy/scripts/install-board-quality-tools.sh"',
             "govulncheck ./...",
             "golangci-lint run --timeout=6m ./...",
             "go test ./...",
         ):
             with self.subTest(backend_gate=gate):
-                self.assertIn(gate, backend)
-        self.assertIn("CGO_ENABLED: '1'", backend)
+                self.assertIn(gate, executor)
+        self.assertIn("export CGO_ENABLED=1", executor)
+        self.assertNotIn("CGO_ENABLED:", backend)
 
-        proto = self.workflow[proto_start:integration_start]
-        self.assertIn("run: scripts/ci/proto-gate.sh", proto)
+        self.assertIn("scripts/ci/proto-gate.sh", executor)
         self.assertIn("bufbuild/buf-action@", self.workflow)
         self.assertNotIn("bufbuild/buf-setup-action@", self.workflow)
         self.assertIn("version: '1.72.0'", self.workflow)
@@ -1835,20 +1837,24 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("matrix.board_role == 'quality'", buf_setup)
         quality = self.workflow[
             self.workflow.index("- name: Validate YueBoard backend quality gates"):
-            self.workflow.index("- name: Validate YueBoard protocol compatibility")
+            self.workflow.index("- name: Validate YueBoard race")
         ]
         self.assertIn("matrix.board_role == 'quality'", quality)
-        self.assertIn("go test ./...", quality)
-        self.assertNotIn("go test -race", quality)
-        self.assertNotIn("go run ", quality)
+        self.assertIn("board-validation.sh quality", quality)
+        executor = (ROOT / "scripts" / "board-validation.sh").read_text()
+        quality_body, race_body = executor.split("  race)\n")
+        self.assertIn("go test ./...", quality_body)
+        self.assertNotIn("go test -race", quality_body)
+        self.assertNotIn("go run ", quality_body)
         race = self.workflow[
             self.workflow.index("- name: Validate YueBoard race"):
             self.workflow.index("- name: Configure YueBoard PostgreSQL lock diagnostics")
         ]
         self.assertIn("matrix.board_role == 'race'", race)
-        self.assertIn("go test -race ./...", race)
+        self.assertIn("board-validation.sh race", race)
+        self.assertIn("go test -race ./...", race_body)
         self.assertIn("CGO_ENABLED: '1'", race)
-        self.assertNotIn("govulncheck", race)
+        self.assertNotIn("govulncheck", race_body)
         tools = (ROOT / "scripts" / "install-board-quality-tools.sh").read_text()
         self.assertIn("golang.org/x/vuln/cmd/govulncheck@v1.8.0", tools)
         self.assertIn("golangci-lint-2.14.0-linux-amd64.tar.gz", tools)
@@ -1858,7 +1864,8 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertNotIn("go run ", tools)
         self.assertNotIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET", quality)
-        mutated = quality.replace(
+        self.assertNotIn("YUEBOARD_MIGRATION_TEST_ALLOW_RESET", quality_body)
+        mutated = quality_body.replace(
             "go test ./...",
             "go test ./...\n          YUEBOARD_MIGRATION_TEST_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE",
             1,

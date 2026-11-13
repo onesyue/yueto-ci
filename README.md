@@ -508,6 +508,13 @@ Board/Node local execution is not implemented: `--local` is rejected before any
 network request. Board context, migration base and prepared execution options
 remain YueOps-only. This interface does not establish local/remote equivalence.
 
+The hosted Board quality and race roles execute `scripts/board-validation.sh`
+with explicit source, policy and temporary directories. This shared executor
+contains the existing backend/protocol and race commands; workflow admission,
+checkout, toolchain and cache setup still run before it. The other five Board
+roles and local CLI support are unchanged. Extracting these commands alone does
+not establish a complete local/remote validation engine.
+
 ### Reproduce a signed YueOps validation (B9-9)
 
 `scripts/ci-check.sh yueops <sha>` dispatches validation only from the current
