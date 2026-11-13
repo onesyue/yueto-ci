@@ -111,6 +111,7 @@ case "$role" in
         exit 1
       fi
       make check-generated
+      make check-antifreeze
       make check-http-contract "HTTP_CONTRACT_BASE=$http_base"
       go vet ./...
       scripts/ci/check-server-error-logging.sh
