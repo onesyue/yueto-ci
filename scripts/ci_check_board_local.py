@@ -60,7 +60,7 @@ def workflow_contract(policy: Path) -> dict:
             raise ValueError('workflow step missing or duplicated: ' + name)
         return selected[0]
 
-    def env_value(value: str) -> str:
+    def env_value(value: str, role: str) -> str:
         if not isinstance(value, str):
             raise ValueError('workflow environment must be strings')
         if value == '${{ github.workspace }}/test/fixtures':
@@ -68,9 +68,17 @@ def workflow_contract(policy: Path) -> dict:
         if '${{' not in value:
             return value
         match = re.fullmatch(r"\$\{\{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '([^']+)' \|\| '([^']+)' \}\}", value)
-        if not match or match[1] != match[2] or not match[1].startswith('postgres://postgres:ci@postgres:5432/'):
-            raise ValueError('unsupported workflow environment expression')
-        return match[1].replace('@postgres:5432/', '@127.0.0.1:5432/', 1)
+        if match:
+            if match[1] == match[2] and match[1].startswith('postgres://postgres:ci@postgres:5432/'):
+                return match[1].replace('@postgres:5432/', '@127.0.0.1:5432/', 1)
+            # Host e2e uses different published ports on hosted/manual runners.
+            # Local replay owns port 5432; recognize only these literal pairs.
+            if role == 'e2e' and match[2] in {
+                    'postgres://postgres:ci@127.0.0.1:5432/postgres',
+                    'postgres://postgres:ci@127.0.0.1:5432/yueboard_e2e?sslmode=disable'}:
+                if match[1] == match[2].replace(':5432/', ':55434/', 1):
+                    return match[2]
+        raise ValueError('unsupported workflow environment expression')
 
     service = job['services']['postgres']
     if not re.fullmatch(r'postgres:18@sha256:[a-f0-9]{64}', service['image']):
@@ -85,7 +93,7 @@ def workflow_contract(policy: Path) -> dict:
         raw = step(name)['env']
         if any(not re.fullmatch(r'(?:YUEBOARD_[A-Z0-9_]+|CLEAN_PG_DSN)', key) for key in raw):
             raise ValueError('unexpected workflow phase environment key')
-        environments[role] = {k: env_value(v) for k, v in raw.items()}
+        environments[role] = {k: env_value(v, role) for k, v in raw.items()}
     go = step('Set up YueBoard Go')['with']['go-version']
     node = step('Set up Node')['with']['node-version']
     buf = step('Set up Buf for YueBoard protocol compatibility')['with']

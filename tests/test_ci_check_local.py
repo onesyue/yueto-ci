@@ -19,6 +19,22 @@ SPEC.loader.exec_module(LOCAL)
 
 
 class LocalReplay(unittest.TestCase):
+    def test_conditional_image_rejects_mutable_or_other_role_expressions(self):
+        import yaml
+
+        original = yaml.safe_load((ROOT / '.github/workflows/build.yml').read_text())
+        image = original['jobs']['validate']['container']['image']
+        for value in [image.replace("!= 'e2e'", "== 'e2e'"),
+                      image.replace("!= 'e2e'", "!= 'quality'"),
+                      "${{ inputs.image }}", "ghcr.io/onesyue/yueops-ci-toolchain:latest", ""]:
+            original['jobs']['validate']['container']['image'] = value
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / '.github/workflows').mkdir(parents=True)
+                (root / '.github/workflows/build.yml').write_text(yaml.safe_dump(original))
+                with patch.object(LOCAL, 'ROOT', root), self.assertRaises(ValueError):
+                    LOCAL.image_from_workflow()
+
     def test_existing_output_is_preserved_when_clone_fails(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -104,7 +120,7 @@ class LocalReplay(unittest.TestCase):
     def test_image_is_read_from_the_hosted_workflow(self):
         image = LOCAL.image_from_workflow()
         self.assertRegex(image, r'^ghcr.io/onesyue/yueops-ci-toolchain@sha256:[0-9a-f]{64}$')
-        self.assertIn('image: ' + image, (ROOT / '.github/workflows/build.yml').read_text())
+        self.assertIn(image, (ROOT / '.github/workflows/build.yml').read_text())
 
     def test_every_shared_workflow_step_is_used_locally(self):
         workflow = (ROOT / '.github/workflows/build.yml').read_text()

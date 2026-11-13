@@ -55,6 +55,29 @@ class BoardLocal(unittest.TestCase):
                 (root / '.github/workflows/build.yml').write_text(yaml.safe_dump(value))
                 with self.assertRaises(ValueError): LOCAL.workflow_contract(root)
 
+    def test_host_e2e_ports_normalize_without_allowing_redirects(self):
+        contract = LOCAL.workflow_contract(ROOT)
+        self.assertEqual(contract['environments']['e2e']['YUEBOARD_ADMIN_DATABASE_URL'],
+                         'postgres://postgres:ci@127.0.0.1:5432/postgres')
+        self.assertEqual(contract['environments']['e2e']['YUEBOARD_E2E_DATABASE_URL'],
+                         'postgres://postgres:ci@127.0.0.1:5432/yueboard_e2e?sslmode=disable')
+        workflow = yaml.safe_load((ROOT / '.github/workflows/build.yml').read_text())
+        for old, new in [('127.0.0.1:55434', 'remote:55434'),
+                         ('127.0.0.1:55434', '127.0.0.1:5433'),
+                         ('/yueboard_e2e?', '/another_database?')]:
+            value = copy.deepcopy(workflow)
+            step = next(s for s in value['jobs']['validate']['steps']
+                        if s.get('name') == LOCAL.STEPS['e2e'])
+            original = step['env']['YUEBOARD_E2E_DATABASE_URL']
+            self.assertIn(old, original)
+            step['env']['YUEBOARD_E2E_DATABASE_URL'] = original.replace(old, new, 1)
+            with self.subTest(mutation=new), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / '.github/workflows').mkdir(parents=True)
+                (root / '.github/workflows/build.yml').write_text(yaml.safe_dump(value))
+                with self.assertRaises(ValueError):
+                    LOCAL.workflow_contract(root)
+
     def test_planner_never_inherits_preparation_credentials(self):
         with patch.dict(os.environ, {'GH_TOKEN': 'secret', 'GITHUB_TOKEN': 'secret', 'GIT_CONFIG_COUNT': '1',
                                      'GIT_CONFIG_KEY_0': 'credential.helper', 'PGOPTIONS': 'redirect'}):

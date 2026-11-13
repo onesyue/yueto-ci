@@ -18,12 +18,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def image_from_workflow() -> str:
-    text = (ROOT / '.github/workflows/build.yml').read_text()
-    match = re.search(r'^  validate:\n(?:(?!^  [a-z]).*\n)*?    container:\n'
-                      r'      image: (ghcr.io/onesyue/yueops-ci-toolchain@sha256:[a-f0-9]{64})\n', text, re.M)
-    if not match:
-        raise ValueError('workflow must declare one immutable validation toolchain image')
-    return match.group(1)
+    import yaml
+
+    job = yaml.safe_load((ROOT / '.github/workflows/build.yml').read_text())['jobs']['validate']
+    image = job['container']['image']
+    digest = r"ghcr\.io/onesyue/yueops-ci-toolchain@sha256:[a-f0-9]{64}"
+    if isinstance(image, str):
+        if re.fullmatch(digest, image):
+            return image
+        match = re.fullmatch(
+            r"\$\{\{ matrix.board_role != 'e2e' && '(" + digest + r")' \|\| '' \}\}", image)
+        if match:
+            return match[1]
+    raise ValueError('workflow must declare one immutable validation toolchain image')
+
 
 
 def execute_container(command: list[str], log: Path, receipt: Path) -> int:
