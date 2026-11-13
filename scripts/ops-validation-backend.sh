@@ -1,6 +1,9 @@
 #!/bin/bash
 # Shared by build.yml and ci-check --local; run from the source checkout.
 set -euo pipefail
+# Resolve checkout paths inside the executing namespace, including container jobs.
+export YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"
+export YUETO_CI_REPO_PATH="$PWD/.ci-policy"
 security_report=$(mktemp "${RUNNER_TEMP:?}/security-scan.XXXXXX.json")
 python_lock_audit=$(mktemp "${RUNNER_TEMP:?}/python-lock-audit.XXXXXX.txt")
 python_audit_cache=$(mktemp -d "${RUNNER_TEMP:?}/python-audit-cache.XXXXXX")

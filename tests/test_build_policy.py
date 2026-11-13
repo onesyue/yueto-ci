@@ -2062,7 +2062,7 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow,
         )
         self.assertIn(
-            "YUEBOARD_REPO_PATH: ${{ github.workspace }}/.ci-yueboard",
+            'export YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"',
             self.workflow,
         )
         self.assertIn(
