@@ -596,3 +596,19 @@ separate join. Its native job failed early, so this is not proof that the full
 local replay fits the limit. Role counts always come from admission. Compare
 local and remote failures only at identical policy/source/Board/baseline SHAs;
 actual full local execution remains required for B9-9 acceptance.
+
+### Board PostgreSQL address adapters
+
+The hosted PostgreSQL phase calls explicitly select `--database-adapter github-service`.
+It accepts only `postgres://postgres:ci@postgres:5432/yueboard_test` (or the
+`postgresql` scheme), with all five integration DSNs identical. This describes
+the existing disposable service address; it is not physical ownership proof.
+The workflow still provisions a fresh PostgreSQL 18 service per role and runs
+health and exact service-ID lock-diagnostic checks before source execution.
+
+The default adapter remains loopback; `GITHUB_ACTIONS=true` never broadens it.
+Loopback supports normal `sslmode`, connection timeout and application-name
+parameters, but rejects query parameters or nonempty `PG*` variables that can
+redirect the target, credentials or session. Neither adapter relaxes the
+production-scale or explicit migration-reset requirements. Fixture validation
+does not establish actual PostgreSQL 18 integration success.

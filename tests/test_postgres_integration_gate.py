@@ -192,6 +192,14 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
                 if not eval(compile(tree, '<workflow role>', 'eval'), {'__builtins__': {}}, {}):
                     continue
                 environment = dict(self.environment, RUNNER_TEMP=runner_temp, YUE_CI_PYTHON=sys.executable)
+                # Exercise the actual workflow address contract, not a loopback substitute.
+                for key in GATE.DSNS:
+                    match = re.search(r'^          ' + key + r": (.+)$", block, re.M)
+                    assert match is not None
+                    uris = re.findall(r"'(postgres(?:ql)?://[^']+)'", match[1])
+                    if not uris or len(set(uris)) != 1:
+                        raise RuntimeError('ambiguous workflow disposable DSN')
+                    environment[key] = uris[0]
                 environment.pop('YUEBOARD_MIGRATION_TEST_ALLOW_RESET', None)
                 reset = re.search(r'^          YUEBOARD_MIGRATION_TEST_ALLOW_RESET: (.+)$', block, re.M)
                 if reset:
@@ -254,7 +262,7 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
     def test_moving_domain_into_reset_step_loses_postgres_and_reset_isolation(self):
         workflow = (ROOT / '.github/workflows/build.yml').read_text()
         command = ('"$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \\\n'
-                   '            --phase domain --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"')
+                   '            --phase domain --database-adapter github-service --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"')
         self.assertIn(command, workflow)
         workflow = workflow.replace(command, 'echo "domain runs in migration"', 1)
         remaining = '          "$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \\\n            --phase remaining'
@@ -608,6 +616,102 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         self.assertEqual(result['top_level_passed'], 1)
         self.assertNotIn('TestOptionalBinary', output)
 
+class PostgresAddressContractTest(unittest.TestCase):
+    def environment(self, uri):
+        return {**{key: uri for key in GATE.DSNS},
+                'YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE': '1',
+                'YUEBOARD_MIGRATION_TEST_ALLOW_RESET': 'YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE'}
+
+    def validate(self, uri, adapter='loopback', **extra):
+        with mock.patch.dict(os.environ, self.environment(uri) | extra, clear=True):
+            GATE.check_environment('remaining', adapter)
+
+    def test_explicit_service_adapter_accepts_only_canonical_uris(self):
+        for scheme in ('postgres', 'postgresql'):
+            uri = f'{scheme}://postgres:ci@postgres:5432/yueboard_test'
+            self.validate(uri, 'github-service')
+            with self.assertRaisesRegex(RuntimeError, 'loopback disposable'):
+                self.validate(uri, GITHUB_ACTIONS='true')
+        with self.assertRaisesRegex(RuntimeError, 'unsupported database adapter'):
+            self.validate('postgres://postgres:ci@postgres:5432/yueboard_test', 'automatic')
+
+    def test_service_rejects_noncanonical_identity_and_redirects(self):
+        canonical = 'postgres://postgres:ci@postgres:5432/yueboard_test'
+        cases = [canonical.replace('postgres:5432', host) for host in
+                 ('127.0.0.1:5432', 'example.invalid:5432', 'postgres:55434',
+                  'postgres', 'postgres,example.invalid:5432', '%70ostgres:5432')]
+        cases += [canonical.replace('postgres:ci@', credentials) for credentials in
+                  ('postgres:wrong@', 'other:ci@', 'postgres@', '', '%70ostgres:ci@')]
+        cases += [canonical.replace('/yueboard_test', '/production'),
+                  canonical.replace('/yueboard_test', '/%79ueboard_test'),
+                  canonical + '/', canonical + '#fragment', canonical + '?sslmode=disable',
+                  canonical + '?hostaddr=192.0.2.1', canonical + '?service=production',
+                  canonical + '?options=-csearch_path=other', canonical + '\n',
+                  canonical.replace('@postgres', '@post\tgres')]
+        for uri in cases:
+            with self.subTest(uri=uri), self.assertRaisesRegex(RuntimeError, 'canonical github-service'):
+                self.validate(uri, 'github-service', GITHUB_ACTIONS='true')
+
+    def test_loopback_keeps_sslmode_and_rejects_encoded_redirect_keys(self):
+        base = 'postgres://postgres:ci@127.0.0.1:55434/yueboard_test'
+        self.validate(base + '?sslmode=disable&connect_timeout=5&application_name=integration')
+        for key in ('host', 'hostaddr', 'port', 'dbname', 'database', 'user', 'password',
+                    'passfile', 'service', 'servicefile', 'options', 'target_session_attrs',
+                    'search_path', 'role', 'session_authorization', '%68ostaddr', 'HOSTADDR'):
+            with self.subTest(key=key), self.assertRaisesRegex(RuntimeError, 'redirect option'):
+                self.validate(base + '?sslmode=disable&' + key + '=untrusted')
+        for uri in (base + '#other', base + '\n', base.replace('@127', '@\t127')):
+            with self.subTest(uri=uri), self.assertRaises(RuntimeError):
+                self.validate(uri)
+
+    def test_environment_redirects_rejected_without_value_disclosure(self):
+        # Explicit inventory protects against dropping an entry from the production guard.
+        keys = ('PGHOST', 'PGHOSTADDR', 'PGPORT', 'PGDATABASE', 'PGUSER', 'PGPASSWORD',
+                'PGPASSFILE', 'PGSERVICE', 'PGSERVICEFILE', 'PGSYSCONFDIR', 'PGOPTIONS',
+                'PGTARGETSESSIONATTRS')
+        for adapter, uri in [('loopback', 'postgres://postgres:ci@localhost:5432/yueboard_test'),
+                             ('github-service', 'postgres://postgres:ci@postgres:5432/yueboard_test')]:
+            for key in keys:
+                with self.subTest(adapter=adapter, key=key):
+                    with self.assertRaises(RuntimeError) as error:
+                        self.validate(uri, adapter, **{key: 'private-value-never-print'})
+                    self.assertIn(key, str(error.exception))
+                    self.assertNotIn('private-value-never-print', str(error.exception))
+                    self.validate(uri, adapter, **{key: ''})
+
+    def test_service_retains_identity_scale_and_reset_requirements(self):
+        uri = 'postgres://postgres:ci@postgres:5432/yueboard_test'
+        for key in GATE.DSNS:
+            with self.subTest(missing=key), self.assertRaisesRegex(RuntimeError, 'required'):
+                self.validate(uri, 'github-service', **{key: ''})
+        with self.assertRaisesRegex(RuntimeError, 'same disposable'):
+            self.validate(uri, 'github-service', YUEBOARD_TEMPLATE_TEST_DATABASE_URL=uri.replace('postgres:', 'postgresql:', 1))
+        for key in ('YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE', 'YUEBOARD_MIGRATION_TEST_ALLOW_RESET'):
+            with self.subTest(key=key), self.assertRaises(RuntimeError):
+                self.validate(uri, 'github-service', **{key: ''})
+
+    def test_actual_cli_rejects_before_source_discovery(self):
+        service = 'postgres://postgres:ci@postgres:5432/yueboard_test'
+        loopback = service.replace('@postgres:', '@127.0.0.1:')
+        cases = [([], service, {}), (['--database-adapter', 'unknown'], loopback, {}),
+                 (['--database-adapter', 'github-service'], service + '?hostaddr=192.0.2.1', {}),
+                 ([], loopback + '?%68ostaddr=192.0.2.1', {}),
+                 (['--database-adapter', 'github-service'], service, {'PGSERVICE': 'untrusted'}),
+                 ([], loopback, {'PGOPTIONS': '-csearch_path=untrusted'})]
+        with tempfile.TemporaryDirectory() as directory:
+            receipt = Path(directory) / 'receipt.json'
+            for args, uri, extra in cases:
+                with self.subTest(args=args, uri=uri, extra=extra):
+                    env = self.environment(uri) | extra | {'PATH': '', 'GITHUB_ACTIONS': 'true'}
+                    result = subprocess.run([sys.executable, str(SCRIPT), '--phase', 'remaining',
+                                             '--receipt', str(receipt), *args], cwd=directory,
+                                            env=env, capture_output=True, text=True)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertNotIn('No such file', result.stderr)  # No attempt to execute go.
+                    self.assertNotIn('Integration discovery', result.stdout)
+                    self.assertFalse(receipt.exists())
+
+
 class PostgresWorkflowWiringTest(unittest.TestCase):
     def test_two_phase_real_consumer_wraps_existing_clean_lifecycle(self):
         workflow = (ROOT / '.github/workflows/build.yml').read_text()
@@ -628,6 +732,7 @@ class PostgresWorkflowWiringTest(unittest.TestCase):
                 self.assertNotIn('127.0.0.1', next(iter(values.values())))
                 self.assertIn('"$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py', block)
                 self.assertIn('--phase ' + phase, block)
+                self.assertIn('--database-adapter github-service', block)
                 self.assertIn('github.run_id', block)
                 self.assertIn('github.run_attempt', block)
                 self.assertIn("YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE: '1'", block)
