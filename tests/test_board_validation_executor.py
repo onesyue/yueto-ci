@@ -51,6 +51,9 @@ if name == 'gofmt' and os.getenv('UNFORMATTED'):
         installer = self.policy / 'scripts/install-board-quality-tools.sh'
         installer.write_text('#!/bin/bash\nexec "' + str(self.bin / 'installer') + '" "$@"\n')
         (self.bin / 'installer').symlink_to(self.stub)
+        ua = self.policy / 'scripts/validate-board-ua-cores.sh'
+        ua.write_text('#!/bin/bash\nexec "' + str(self.bin / 'ua-gate') + '" "$@"\n')
+        (self.bin / 'ua-gate').symlink_to(self.stub)
         (self.source / 'go.mod').write_text('module fixture\n')
         (self.source / 'main.go').write_text('package fixture\n')
         (self.source / 'internal/gen').mkdir(parents=True)
@@ -80,7 +83,7 @@ if name == 'gofmt' and os.getenv('UNFORMATTED'):
     def quality_commands(self):
         return ['go build ./...', 'gofmt -l main.go', 'make check-generated', f'make check-http-contract HTTP_CONTRACT_BASE={self.first}', 'go vet ./...',
                 'check-server-error-logging.sh ', 'installer ' + str(self.temp / 'board-quality-tools'),
-                'govulncheck ./...', 'golangci-lint run --timeout=6m ./...', 'go test ./...', 'proto-gate.sh ']
+                'govulncheck ./...', 'golangci-lint run --timeout=6m ./...', 'go test ./...', 'ua-gate ', 'proto-gate.sh ']
 
     def keys(self, rows):
         return [row['name'] + ' ' + ' '.join(row['args']) for row in rows]
@@ -89,7 +92,9 @@ if name == 'gofmt' and os.getenv('UNFORMATTED'):
         result, rows = self.execute()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.keys(rows), self.quality_commands())
-        self.assertTrue(all(row['baseline'] == self.first and row['cgo'] == '1' for row in rows[:-1]))
+        self.assertTrue(all(row['baseline'] == self.first and row['cgo'] == '1' for row in rows[:-2]))
+        self.assertIsNone(rows[-2]['baseline'])
+        self.assertEqual(rows[-2]['cgo'], self.env.get('CGO_ENABLED'))
         self.assertIsNone(rows[-1]['baseline'])
         self.assertEqual(rows[-1]['cgo'], self.env.get('CGO_ENABLED'))
         self.assertEqual(rows[-1]['path'], self.env['PATH'])
@@ -184,12 +189,15 @@ if name == 'gofmt' and os.getenv('UNFORMATTED'):
     def test_protocol_receives_original_environment_after_quality_subshell(self):
         result, rows = self.execute(CGO_ENABLED='original-cgo', YUEBOARD_CONTRACT_BASELINE='original-baseline')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue(all(row['cgo'] == '1' for row in rows[:-1]))
+        self.assertTrue(all(row['cgo'] == '1' for row in rows[:-2]))
         self.assertEqual(rows[-1]['name'], 'proto-gate.sh')
         self.assertEqual(rows[-1]['cgo'], 'original-cgo')
         self.assertEqual(rows[-1]['baseline'], 'original-baseline')
         self.assertEqual(rows[-1]['path'], self.env['PATH'])
-        self.assertTrue(rows[-2]['path'].startswith(str(self.temp / 'board-quality-tools') + os.pathsep))
+        self.assertEqual(rows[-2]['name'], 'ua-gate')
+        self.assertEqual(rows[-2]['path'], self.env['PATH'])
+        self.assertEqual(rows[-2]['cgo'], 'original-cgo')
+        self.assertTrue(rows[-3]['path'].startswith(str(self.temp / 'board-quality-tools') + os.pathsep))
 
 class PostgresExecutor(unittest.TestCase):
     def setUp(self):

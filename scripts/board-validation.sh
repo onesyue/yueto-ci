@@ -121,6 +121,9 @@ case "$role" in
       golangci-lint run --timeout=6m ./...
       go test ./...
     )
+    UA_CORE_CACHE="$temp/yueboard-ua-cores" RUNNER_TEMP="$temp" \
+      timeout --signal=TERM --kill-after=60s 30m \
+        bash "$policy/scripts/validate-board-ua-cores.sh"
     scripts/ci/proto-gate.sh
     ;;
   race)

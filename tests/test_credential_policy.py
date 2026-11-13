@@ -69,6 +69,11 @@ def _mint_steps(text: str) -> list[str]:
     return [step for step in steps if "create-github-app-token@" in step]
 
 
+def _jobs(text: str) -> dict[str, str]:
+    parts = re.split(r"(?m)^  ([A-Za-z0-9_-]+):\s*$", text.split("\njobs:\n", 1)[1])
+    return {parts[i]: parts[i + 1] for i in range(1, len(parts), 2)}
+
+
 class CredentialSwitchPolicyTest(unittest.TestCase):
     def test_pat_is_only_ever_a_switch_fallback(self) -> None:
         uses = 0
@@ -100,12 +105,13 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
 
     def test_every_app_token_is_switched_pinned_and_least_privilege(self) -> None:
         steps = [
-            (name, step)
+            (name, job, step)
             for name, text in _workflows().items()
-            for step in _mint_steps(text)
+            for job, body in _jobs(text).items()
+            for step in _mint_steps(body)
         ]
         self.assertGreaterEqual(len(steps), 5)
-        for name, step in steps:
+        for name, job, step in steps:
             with self.subTest(workflow=name, step=step.splitlines()[0]):
                 self.assertIn(APP_ACTION, step)
                 self.assertIn("vars.YUETO_CI_APP_CLIENT_ID != ''", step)
@@ -116,7 +122,9 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
                 self.assertIn("owner: onesyue", step)
                 repos = re.search(r"repositories: ([A-Za-z0-9_.,-]+)", step)
                 self.assertIsNotNone(repos, "token must name its repositories")
-                self.assertLessEqual(set(repos.group(1).split(",")), SOURCE_REPOS)
+                assert repos is not None
+                allowed = SOURCE_REPOS | ({"yueto"} if name == "build.yml" and job == "validate" else set())
+                self.assertLessEqual(set(repos.group(1).split(",")), allowed)
                 permissions = re.findall(r"permission-([a-z-]+): (\w+)", step)
                 self.assertEqual(len(permissions), 1, permissions)
                 self.assertEqual(permissions[0], ("contents", "read"))
