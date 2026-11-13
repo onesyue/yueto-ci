@@ -259,7 +259,7 @@ case "$role" in
         node scripts/ci/verify-page-consistency.mjs
         [ -f test/a11y/a11y-smoke.mjs ] || fail 'source-owned accessibility smoke gate is missing'
         [ "${YUEBOARD_A11Y_SKIP:-0}" != 1 ] || fail 'accessibility smoke cannot be skipped in validation'
-        node scripts/ci/pnpm-audit-gate.mjs test/a11y
+        node scripts/ci/pnpm-audit-gate.mjs test/a11y test/e2e
         if [ ! -f pnpm-workspace.yaml ]; then
           a11y_pm=$(node -p "require('./test/a11y/package.json').packageManager || ''")
           web_pm=$(node -p "require('./web/package.json').packageManager || ''")

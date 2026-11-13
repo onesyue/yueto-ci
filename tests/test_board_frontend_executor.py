@@ -147,7 +147,7 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
                 result, rows, output = self.run_phase(phase='design', **extra)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 keys = [row['key'] for row in rows]
-                self.assertEqual(keys[-3], 'node scripts/ci/pnpm-audit-gate.mjs test/a11y')
+                self.assertEqual(keys[-3], 'node scripts/ci/pnpm-audit-gate.mjs test/a11y test/e2e')
                 self.assertEqual(keys[-2], 'pnpm --dir test/a11y exec playwright-core install ' + ('--with-deps ' if with_deps else '') + 'chromium')
                 self.assertEqual(keys[-1], 'node test/a11y/a11y-smoke.mjs')
                 self.assertEqual(output, '')
@@ -163,6 +163,18 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
         result, rows, _ = self.run_phase(phase='design')
         self.assertEqual(result.returncode, 2)
         self.assertFalse(any('playwright-core' in row['key'] for row in rows))
+
+    def test_tooling_audit_blocks_accessibility_for_advisory_or_infrastructure_failure(self):
+        audit = 'node scripts/ci/pnpm-audit-gate.mjs test/a11y test/e2e'
+        for status in (1, 2):
+            with self.subTest(status=status):
+                result, rows, output = self.run_phase('frontends', 'design',
+                    FAIL_COMMAND=audit, FAIL_STATUS=str(status))
+                self.assertEqual(result.returncode, status)
+                self.assertEqual(rows[-1]['key'], audit)
+                self.assertFalse(any('playwright-core' in row['key'] or 'a11y-smoke' in row['key']
+                                     for row in rows))
+                self.assertEqual(output, '')
 
     def test_layout_missing_entries_and_source_audit_fail_closed(self):
         for extra in ({'MISSING_PM': '1'},):
