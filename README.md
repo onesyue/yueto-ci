@@ -708,3 +708,14 @@ Offline lifecycle and shell controls do not establish actual Board validation
 parity. A real complete local run and matching hosted run at identical source
 and policy inputs remain required for B10-2 acceptance; PostgreSQL/browser and
 historical S1009 replay evidence remain outstanding.
+
+
+Node dependency and cross-repository contract checks use
+`node-validation-preflight.sh dependencies|contract SOURCE POLICY BOARD` at their
+original hosted positions. The Board argument is the separately reviewed canonical
+checkout. Go test-cache clearing remains its own step after cache restoration;
+private fork signature verification remains a separate credential-bearing step.
+The shared preflight rejects inherited credentials and Git configuration variables,
+then uses the original tool inventory, Docker health check and native validator.
+This extraction does not enable Node local execution or establish access to its
+private source/forks; those preparation and identity boundaries remain required.

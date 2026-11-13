@@ -1268,7 +1268,7 @@ class BuildPolicyTest(unittest.TestCase):
             "ghcr.io/onesyue/yueops-ci-toolchain@sha256:",
             "Use the runner Docker daemon",
             "Preflight validation dependencies",
-            "yue-node) tools+=(base64 docker gcc go gpg jq make)",
+            "node-validation-preflight.sh dependencies",
             "YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}",
             "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \\\n",
             "            make verify-fork-tags\n",
