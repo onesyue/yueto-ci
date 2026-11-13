@@ -49,11 +49,11 @@ jobs:
           cache: false # Public policy has no go.mod/go.sum dependency cache.
 
       - name: Install pinned actionlint
-        env:
-          ACTIONLINT_VERSION: '1.7.12'
-          ACTIONLINT_ARCHIVE_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
         run: |
           set -euo pipefail
+          unset LINT_TOOL_VERSIONS_READY
+          source scripts/lint-tool-versions.sh
+          [ "${LINT_TOOL_VERSIONS_READY:-}" = 1 ] || exit 2
           archive="$RUNNER_TEMP/actionlint.tar.gz"
           destination="$RUNNER_TEMP/actionlint-bin"
           source scripts/ci-retry.sh

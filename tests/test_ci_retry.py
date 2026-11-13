@@ -398,6 +398,10 @@ exit 97
         self.assertEqual(list(self.base.glob("yueto-cosign.*")), [])
 
     def test_actionlint_bad_digest_stops_before_extraction(self):
+        import shutil
+        checksum = shutil.which("gsha256sum") or shutil.which("sha256sum")
+        self.assertIsNotNone(checksum, "GNU checksum tool is required for installer fixture")
+        (self.base / "sha256sum").symlink_to(str(checksum))
         policy = (ROOT / ".github/workflows/policy-ci.yml").read_text()
         body = policy.split("      - name: Install pinned actionlint\n", 1)[1]
         body = body.split("        run: |\n", 1)[1].split("\n      - name:", 1)[0]
@@ -412,7 +416,7 @@ exit 97
         self.shim("tar", 'echo unexpected-extraction >> "$CALLS"; exit 97\n')
         result = subprocess.run(["bash", "-c", body], cwd=ROOT,
                                 env={**self.env, "RUNNER_TEMP": str(self.base),
-                                     "ACTIONLINT_VERSION": "fixture",
+                                     "ACTIONLINT_VERSION": "ignored-environment",
                                      "ACTIONLINT_ARCHIVE_SHA256": "0" * 64},
                                 capture_output=True, text=True, timeout=15)
         self.assertNotEqual(result.returncode, 0)

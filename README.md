@@ -525,6 +525,16 @@ vulnerability scan. The scan may bootstrap govulncheck and fetch advisories;
 vendored tests do not make the whole executor network-free. Results remain
 stdout/stderr and exit status; there is no new receipt or local CLI mode.
 
+Standalone lint versions and existing archive digests live in
+`scripts/lint-tool-versions.sh`: golangci-lint, govulncheck, Squawk and actionlint.
+The Board installer, shared Ops migration phase (CI and local), and Policy
+workflow consume that exact policy file; Go cache identity includes its bytes.
+Future Board local execution must use the same shared installer. This moves
+existing pins without upgrading tools or enabling a new local adapter. Ruff and
+frontend tools retain source lockfile authority; gitleaks/cosign/buildx retain
+their existing verified installers. ShellCheck still uses the runner's tool;
+this change does not establish a new ShellCheck pin or complete B10-2 parity.
+
 ### Reproduce a signed YueOps validation (B9-9)
 
 `scripts/ci-check.sh yueops <sha>` dispatches validation only from the current
