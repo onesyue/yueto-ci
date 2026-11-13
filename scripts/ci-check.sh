@@ -25,7 +25,7 @@ done
 case "$repo" in
   yueops) ;;
   yueboard|yue-node)
-    [ "$mode" = remote ] || fail "$repo local validation is not implemented"
+    [ "$repo" = yueboard ] || [ "$mode" = remote ] || fail "$repo local validation is not implemented"
     [ "$prepare_only" = false ] && [ -z "$prepared" ] && [ -z "$board_sha" ] &&
       [ -z "${CI_CHECK_MIGRATION_BASE:-}" ] || fail 'Board/base/prepared options apply only to yueops'
     ;;
@@ -95,6 +95,16 @@ clone_at() {
   fi
   git -C "$destination" checkout --quiet --detach "$revision"
 }
+if [ "$repo" = yueboard ]; then
+  command -v docker >/dev/null || fail 'docker is required for --local'
+  checkouts=$(mktemp -d "$output/checkouts.XXXXXX")
+  clone_at yueboard "$full_sha" "$checkouts/source" "${YUEBOARD_CHECKOUT:-}"
+  clone_at yueto-ci "$policy_sha" "$checkouts/policy" "$ROOT"
+  python3 "$checkouts/policy/scripts/ci_check_board_local.py" \
+    --source "$checkouts/source" --policy "$checkouts/policy" \
+    --source-sha "$full_sha" --policy-sha "$policy_sha" --output "$output/local"
+  exit
+fi
 identity_args=(--source "$full_sha" --board "$board_sha" --policy "$policy_sha" --base "$base")
 if [ -n "$prepared" ]; then
   # The execution phase must never inherit the preparation credential.
