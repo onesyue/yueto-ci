@@ -36,7 +36,7 @@ assert os.getcwd() == os.environ['EXPECT_SOURCE']
 with open(os.environ['CALL_LOG'], 'a') as f:
     f.write(json.dumps({'name': name, 'args': args, 'baseline': os.getenv('YUEBOARD_CONTRACT_BASELINE'), 'cgo': os.getenv('CGO_ENABLED'), 'path': os.getenv('PATH')}) + '\\n')
 if os.getenv('FAIL_COMMAND') == key:
-    sys.exit(19)
+    sys.exit(int(os.getenv('FAIL_STATUS', '19')))
 if key == 'go env CGO_ENABLED':
     print(os.getenv('GO_CGO_RESULT', '1'))
 if name == 'gofmt' and os.getenv('UNFORMATTED'):
@@ -78,7 +78,7 @@ if name == 'gofmt' and os.getenv('UNFORMATTED'):
         return result, rows
 
     def quality_commands(self):
-        return ['go build ./...', 'gofmt -l main.go', 'make check-generated', f'make check-http-contract HTTP_CONTRACT_BASE={self.first}', 'go vet ./...',
+        return ['go build ./...', 'gofmt -l main.go', 'make check-generated', 'make check-antifreeze', f'make check-http-contract HTTP_CONTRACT_BASE={self.first}', 'go vet ./...',
                 'check-server-error-logging.sh ', 'installer ' + str(self.temp / 'board-quality-tools'),
                 'govulncheck ./...', 'golangci-lint run --timeout=6m ./...', 'go test ./...', 'proto-gate.sh ']
 
@@ -101,6 +101,15 @@ if name == 'gofmt' and os.getenv('UNFORMATTED'):
                 result, rows = self.execute(FAIL_COMMAND=command)
                 self.assertEqual(result.returncode, 19, result.stderr)
                 self.assertEqual(self.keys(rows), expected[:index + 1])
+
+    def test_source_antifreeze_rejection_stops_later_quality_gates(self):
+        expected = self.quality_commands()
+        gate = 'make check-antifreeze'
+        for status in (1, 2):
+            with self.subTest(status=status):
+                result, rows = self.execute(FAIL_COMMAND=gate, FAIL_STATUS=str(status))
+                self.assertEqual(result.returncode, status)
+                self.assertEqual(self.keys(rows), expected[:expected.index(gate) + 1])
 
     def test_explicit_and_branch_baselines_preserved(self):
         result, rows = self.execute(YUEBOARD_CONTRACT_BASELINE='reviewed-baseline')
