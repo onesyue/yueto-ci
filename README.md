@@ -515,6 +515,16 @@ checkout, toolchain and cache setup still run before it. The other five Board
 roles and local CLI support are unchanged. Extracting these commands alone does
 not establish a complete local/remote validation engine.
 
+The hosted Node `hy2` and `vless` roles execute
+`scripts/node-validation.sh PROFILE SOURCE` with `CGO_ENABLED=1` and
+`GOFLAGS=-mod=vendor`. Native contract validation, canonical Board context,
+Go/cache setup and the separate signed-fork credential gate remain outside this
+credential-free executor. It preserves each profile's full race suite and Linux
+subset; only vless runs the default selector/both-profile bundle build and
+vulnerability scan. The scan may bootstrap govulncheck and fetch advisories;
+vendored tests do not make the whole executor network-free. Results remain
+stdout/stderr and exit status; there is no new receipt or local CLI mode.
+
 ### Reproduce a signed YueOps validation (B9-9)
 
 `scripts/ci-check.sh yueops <sha>` dispatches validation only from the current

@@ -1280,7 +1280,6 @@ class BuildPolicyTest(unittest.TestCase):
             "for tool in bash curl docker envsubst git jq",
             "docker buildx version >/dev/null",
             "CGO_ENABLED: '1'",
-            "Go race validation requires CGO_ENABLED=1",
         )
         for invariant in required:
             with self.subTest(invariant=invariant):
@@ -1349,7 +1348,8 @@ class BuildPolicyTest(unittest.TestCase):
             "short commit refs are not reproducible; pass the exact 40-hex source SHA",
             self.workflow,
         )
-        self.assertIn("make build", self.workflow)
+        self.assertIn("Go race validation requires CGO_ENABLED=1", (ROOT / "scripts/node-validation.sh").read_text())
+        self.assertIn("make build", (ROOT / "scripts/node-validation.sh").read_text())
         node_start = self.workflow.index("- name: Validate yue-node")
         board_start = self.workflow.index(
             "- name: Validate YueBoard backend quality gates"
@@ -1604,7 +1604,6 @@ class BuildPolicyTest(unittest.TestCase):
 
     def test_source_and_image_security_gates_are_present(self) -> None:
         required = (
-            "scripts/check-vulnerabilities.sh",
             ".ci-policy/scripts/board-validation.sh",
             "scripts/security_scan.sh --json",
             "pip-audit",
@@ -1633,6 +1632,7 @@ class BuildPolicyTest(unittest.TestCase):
         for gate in required:
             with self.subTest(gate=gate):
                 self.assertIn(gate, self.workflow)
+        self.assertIn("bash scripts/check-vulnerabilities.sh", (ROOT / "scripts/node-validation.sh").read_text())
         self.assertNotIn("npm install --global squawk", self.workflow)
         self.assertIn('board-validation-output.py', self.workflow)
         frontend = (ROOT / 'scripts/board-validation.sh').read_text()
@@ -2457,6 +2457,8 @@ class BuildPolicyTest(unittest.TestCase):
             self.workflow.index("- name: Validate yue-node") :
             self.workflow.index("- name: Validate YueBoard backend quality gates")
         ]
+        self.assertIn('bash .ci-policy/scripts/node-validation.sh "$NODE_PROFILE" "$GITHUB_WORKSPACE"', node_step)
+        node_step = (ROOT / "scripts/node-validation.sh").read_text()
         self.assertIn("go test -race -count=1 -timeout 30m", node_step)
         self.assertIn("./internal/kernel/hysteria/compatobfs/", node_step)
         self.assertIn("-run 'Splice|VendoredVisionReality' ./internal/kernel/xray/", node_step)
