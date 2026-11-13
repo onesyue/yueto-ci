@@ -672,7 +672,7 @@ jobs:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
           owner: onesyue
-          repositories: yueboard,yue-node,yueops,quic-go
+          repositories: yueboard,yue-node,yueops,quic-go,yueto
           permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -815,6 +815,39 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
+
+      - name: Checkout the pinned yueto root
+        if: matrix.validation == 'yueboard' || matrix.validation == 'yueops'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueto
+          ref: master
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          path: .ci-origin-authority
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /design/build-sources.mjs
+            /design/sources/brand.json
+
+      - name: Require exact browser origin projections
+        if: matrix.validation == 'yueboard' || matrix.validation == 'yueops'
+        env:
+          ORIGIN_COMPONENT: ${{ matrix.validation }}
+        run: |
+          set -euo pipefail
+          case "$ORIGIN_COMPONENT" in
+            yueboard|yueops) ;;
+            *) echo 'unsupported browser origin component' >&2; exit 1 ;;
+          esac
+          authority=$(git -C .ci-origin-authority rev-parse HEAD)
+          case "$authority" in
+            *[!0-9a-f]*|'') echo 'pinned root HEAD is not a commit' >&2; exit 1 ;;
+          esac
+          [ "${#authority}" -eq 40 ]
+          node .ci-origin-authority/design/build-sources.mjs \
+            --authority-ref="$authority" --scope=security \
+            --repo="$ORIGIN_COMPONENT=$GITHUB_WORKSPACE" --check
 
       # Keep the protocol owner as the policy owner: central CI installs the
       # compiler, then executes YueBoard's checked-in lint + breaking script.
@@ -1002,6 +1035,14 @@ jobs:
           NODE_PROFILE: ${{ matrix.node_profile }}
         run: |
           bash .ci-policy/scripts/node-validation.sh "$NODE_PROFILE" "$GITHUB_WORKSPACE"
+
+      - name: Restore verified public UA core archives
+        if: matrix.validation == 'yueboard' && matrix.board_role == 'quality' && steps.go_cache.outputs.enabled == 'true'
+        continue-on-error: true
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/yueboard-ua-cores
+          key: ua-cores-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/ci/core-assets.json', 'scripts/ci/prepare-ua-cores.py') }}
 
       - name: Validate YueBoard backend quality gates
         if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'
