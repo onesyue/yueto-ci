@@ -35,7 +35,7 @@ class FrontendExecutor(unittest.TestCase):
         self.bin = self.root / 'bin'
         for path in (self.source, self.policy / 'scripts', self.temp, self.bin,
                      self.source / 'scripts/ci', self.source / 'web', self.source / 'web-admin',
-                     self.source / 'test/e2e/specs/__screenshots__'):
+                     self.source / 'test/e2e/specs/__screenshots__', self.source / 'test/a11y'):
             path.mkdir(parents=True, exist_ok=True)
         for file in ('board-validation.sh', 'pg_validation_address.py', 'install-board-quality-tools.sh'):
             shutil.copy(ROOT / 'scripts' / file, self.policy / 'scripts')
@@ -43,6 +43,7 @@ class FrontendExecutor(unittest.TestCase):
                      'test/e2e/specs/__screenshots__/fixture-linux.png'):
             (self.source / file).touch()
         self.log = self.root / 'calls'
+        (self.source / 'test/a11y/a11y-smoke.mjs').touch()
         self.output = self.root / 'github-output'
         self.env = os.environ | {'PATH': str(self.bin) + os.pathsep + os.environ['PATH'],
                                  'CALL_LOG': str(self.log), 'YUE_CI_PYTHON': sys.executable,
@@ -50,7 +51,8 @@ class FrontendExecutor(unittest.TestCase):
         for key in ('GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN',
                     'YUEBOARD_ADMIN_DATABASE_URL', 'YUEBOARD_E2E_DATABASE_URL', 'YUEBOARD_E2E_ALLOW_RESET',
                     'PGHOST', 'PGHOSTADDR', 'PGPORT', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGPASSFILE',
-                    'PGSERVICE', 'PGSERVICEFILE', 'PGSYSCONFDIR', 'PGOPTIONS', 'PGTARGETSESSIONATTRS'):
+                    'PGSERVICE', 'PGSERVICEFILE', 'PGSYSCONFDIR', 'PGOPTIONS', 'PGTARGETSESSIONATTRS',
+                    'YUEBOARD_A11Y_SKIP'):
             self.env.pop(key, None)
         stub = self.bin / 'stub'
         stub.write_text('#!' + sys.executable + '\n' + '''import json, os, pathlib, sys
@@ -63,6 +65,8 @@ with rows.open('a') as f:
  f.write(json.dumps({'key': key, 'cwd': os.getcwd(), 'db': bool(os.getenv('YUEBOARD_ADMIN_DATABASE_URL')),
                      'reset': bool(os.getenv('YUEBOARD_E2E_ALLOW_RESET')), 'output': bool(os.getenv('GITHUB_OUTPUT'))}) + '\\n')
 if str(index) == os.getenv('FAIL_INDEX') or key == os.getenv('FAIL_COMMAND'): sys.exit(int(os.getenv('FAIL_STATUS', '19')))
+if name == 'node' and args and args[0] == '-p' and 'test/a11y' in args[1] and os.getenv('A11Y_NO_PM'):
+ print(''); sys.exit(0)
 if name == 'node' and args and args[0] == '-p':
  print('' if os.getenv('MISSING_PM') else ('pnpm@other' if os.getenv('DIVERGED_PM') and 'web-admin' in args[1] else 'pnpm@fixture'))
 if name == 'node' and args and args[0] == '-e' and os.getenv('MISSING_SCRIPT'): sys.exit(1)
@@ -137,6 +141,29 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
                     if role == 'e2e' and index == len(expected) - 1:
                         self.assertEqual(output, 'visual=compared\n')
 
+    def test_accessibility_reaches_source_gate_and_cannot_skip(self):
+        for extra, with_deps in (({}, False), ({'TEST_SUDO': '0'}, True), ({'TEST_UID': '0'}, True)):
+            with self.subTest(extra=extra):
+                result, rows, output = self.run_phase(phase='design', **extra)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                keys = [row['key'] for row in rows]
+                self.assertEqual(keys[-3], 'node scripts/ci/pnpm-audit-gate.mjs test/a11y')
+                self.assertEqual(keys[-2], 'pnpm --dir test/a11y exec playwright-core install ' + ('--with-deps ' if with_deps else '') + 'chromium')
+                self.assertEqual(keys[-1], 'node test/a11y/a11y-smoke.mjs')
+                self.assertEqual(output, '')
+                self.assertTrue(all(not row['db'] and not row['reset'] for row in rows))
+        for status in (1, 2, 3):
+            result, _, output = self.run_phase(phase='design', FAIL_COMMAND='node test/a11y/a11y-smoke.mjs', FAIL_STATUS=str(status))
+            self.assertEqual(result.returncode, status)
+            self.assertEqual(output, '')
+        result, rows, _ = self.run_phase(phase='design', YUEBOARD_A11Y_SKIP='1')
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse(any('playwright-core' in row['key'] for row in rows))
+        (self.source / 'test/a11y/a11y-smoke.mjs').unlink()
+        result, rows, _ = self.run_phase(phase='design')
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse(any('playwright-core' in row['key'] for row in rows))
+
     def test_layout_missing_entries_and_source_audit_fail_closed(self):
         for extra in ({'MISSING_PM': '1'},):
             result, _, output = self.run_phase(**extra)
@@ -158,7 +185,22 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
         self.assertFalse(any(row['key'].startswith('pnpm ') for row in rows))
         result, rows, _ = self.run_phase('frontends', 'design')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(rows), 3)
+        keys = [row['key'] for row in rows]
+        self.assertEqual(keys[:3], ['node scripts/ci/verify-responsive.mjs',
+                                    'node scripts/ci/verify-design-tokens.mjs',
+                                    'node scripts/ci/verify-page-consistency.mjs'])
+        self.assertEqual(keys[-1], 'node test/a11y/a11y-smoke.mjs')
+        result, _, _ = self.run_phase('frontends', 'design', A11Y_NO_PM='1')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        install = 'pnpm --dir test/a11y install --frozen-lockfile --ignore-scripts'
+        browser = 'pnpm --dir test/a11y exec playwright-core install chromium'
+        self.assertLess(keys.index(install), keys.index(browser))
+        result, rows, _ = self.run_phase('frontends', 'design', FAIL_COMMAND=install)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(any('playwright-core' in row['key'] for row in rows))
+        result, rows, _ = self.run_phase('frontends', 'design', MISSING_PM='1')
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse(any('playwright-core' in row['key'] for row in rows))
         for role, phase in [('frontends', 'lint'), ('components', 'test'), ('e2e', 'test')]:
             result, rows, _ = self.run_phase(role, phase)
             self.assertNotEqual(result.returncode, 0)

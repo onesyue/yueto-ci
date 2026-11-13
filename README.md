@@ -738,3 +738,12 @@ passed to Make as a commit ID. Missing baseline history fails closed. This adds
 the existing snapshot/prior-deprecation compatibility gate; it does not replace
 the remaining migration-number allocation or accessibility checks required
 before retiring the disabled Board workflow.
+
+
+The shared Board frontend design phase also runs the source accessibility smoke
+gate after both SPA builds, audits its locked tooling and installs the source
+lock's playwright-core Chromium. Browser system dependencies follow the same
+root/sudo policy as component/E2E phases. The smoke script retains its existing
+serious/critical checks and baseline ratchet; source failure, missing browser,
+missing script or an explicit skip cannot succeed. This wiring is shared by
+hosted and local execution, but actual browser results still require a full run.

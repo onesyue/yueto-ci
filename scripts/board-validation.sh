@@ -257,6 +257,23 @@ case "$role" in
         node scripts/ci/verify-responsive.mjs
         node scripts/ci/verify-design-tokens.mjs
         node scripts/ci/verify-page-consistency.mjs
+        [ -f test/a11y/a11y-smoke.mjs ] || fail 'source-owned accessibility smoke gate is missing'
+        [ "${YUEBOARD_A11Y_SKIP:-0}" != 1 ] || fail 'accessibility smoke cannot be skipped in validation'
+        node scripts/ci/pnpm-audit-gate.mjs test/a11y
+        if [ ! -f pnpm-workspace.yaml ]; then
+          a11y_pm=$(node -p "require('./test/a11y/package.json').packageManager || ''")
+          web_pm=$(node -p "require('./web/package.json').packageManager || ''")
+          [ -n "$web_pm" ] || fail 'built frontend package-manager is missing'
+          if [ -n "$a11y_pm" ] && [ "$a11y_pm" != "$web_pm" ]; then
+            fail 'a11y package-manager differs from built frontends'
+          fi
+          pnpm --dir test/a11y install --frozen-lockfile --ignore-scripts
+        fi
+        # Use the source lock's playwright-core browser, as in the original gate.
+        deps=()
+        if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then deps=(--with-deps); fi
+        pnpm --dir test/a11y exec playwright-core install "${deps[@]}" chromium
+        node test/a11y/a11y-smoke.mjs
         ;;
     esac
     ;;
