@@ -996,46 +996,7 @@ jobs:
           GOFLAGS: -mod=vendor
           NODE_PROFILE: ${{ matrix.node_profile }}
         run: |
-          set -euo pipefail
-          case "$NODE_PROFILE" in
-            hy2|vless) ;;
-            *) echo "::error::invalid yue-node validation profile" >&2; exit 2 ;;
-          esac
-          [ "$(go env CGO_ENABLED)" = "1" ] || {
-            echo "::error::Go race validation requires CGO_ENABLED=1"
-            exit 1
-          }
-          [ -f vendor/modules.txt ] || {
-            echo "::error::yue-node must stay vendored: the credential-free test step cannot fetch private forks"
-            exit 1
-          }
-          # Two independent Linux jobs run the same race suite and Linux-only
-          # data-path subset that `make test` previously ran sequentially.
-          # The signed fork gate ran in the step above; keep the
-          # dependency-closure gate in both jobs.
-          make check-profile-deps
-          bash scripts/test-check-vulnerabilities.sh
-          common_tags='with_quic with_utls with_wireguard with_clash_api'
-          go test -race -count=1 -timeout 30m \
-            -tags "$common_tags yue_profile_$NODE_PROFILE" ./...
-          case "$NODE_PROFILE" in
-            hy2)
-              go test -race -count=1 -timeout 30m \
-                -tags "$common_tags yue_profile_hy2" \
-                ./internal/kernel/hysteria/compatobfs/
-              ;;
-            vless)
-              go test -race -count=1 -timeout 30m \
-                -tags "$common_tags yue_profile_vless" \
-                -run 'Splice|VendoredVisionReality' ./internal/kernel/xray/
-              ;;
-          esac
-          if [ "$NODE_PROFILE" = vless ]; then
-            # One job verifies the exact selector + dependency-pruned bundle
-            # and both vulnerability views after both source suites complete.
-            make build
-            bash scripts/check-vulnerabilities.sh
-          fi
+          bash .ci-policy/scripts/node-validation.sh "$NODE_PROFILE" "$GITHUB_WORKSPACE"
 
       - name: Validate YueBoard backend quality gates
         if: matrix.validation == 'yueboard' && matrix.board_role == 'quality'

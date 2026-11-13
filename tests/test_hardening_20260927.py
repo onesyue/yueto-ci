@@ -64,7 +64,7 @@ CREDENTIAL_MARKERS = (
 )
 # Anything that executes third-party (dependency) code.
 DEPENDENCY_CODE_MARKERS = ("go test", "make test", "make build", "go run ", "check-vulnerabilities.sh",
-                           "validate-yueboard-postgres.py", "board-validation.sh", "board-validation-output.py")
+                           "validate-yueboard-postgres.py", "board-validation.sh", "board-validation-output.py", "node-validation.sh")
 
 
 def credential_leaks(job_text: str) -> list[str]:
@@ -87,7 +87,7 @@ class ForkTokenIsolationTest(unittest.TestCase):
         self.assertEqual(credential_leaks(self.validate), [])
         # Scan floor: the checker really looked at the Go test steps.
         runners = [s for s in steps(self.validate)
-                   if "go test" in s or "validate-yueboard-postgres.py" in s or "board-validation" in s]
+                   if "go test" in s or "validate-yueboard-postgres.py" in s or "board-validation" in s or "node-validation.sh" in s]
         self.assertGreaterEqual(len(runners), 4)
 
     def test_wrapped_test_steps_still_reject_credentials(self) -> None:
@@ -140,6 +140,8 @@ class ForkTokenIsolationTest(unittest.TestCase):
     def test_test_step_is_vendored_and_keeps_its_gates(self) -> None:
         test_step = step_named(self.validate, "Validate yue-node")
         self.assertIn("          GOFLAGS: -mod=vendor\n", test_step)
+        self.assertIn('bash .ci-policy/scripts/node-validation.sh "$NODE_PROFILE" "$GITHUB_WORKSPACE"', test_step)
+        test_step = (ROOT / "scripts/node-validation.sh").read_text()
         self.assertIn("[ -f vendor/modules.txt ]", test_step)
         self.assertIn("make check-profile-deps", test_step)
         self.assertNotIn("verify-fork-tags", test_step)
