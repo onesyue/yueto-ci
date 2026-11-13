@@ -764,3 +764,33 @@ root/sudo policy as component/E2E phases. The smoke script retains its existing
 serious/critical checks and baseline ratchet; source failure, missing browser,
 missing script or an explicit skip cannot succeed. This wiring is shared by
 hosted and local execution, but actual browser results still require a full run.
+
+### Offline Board migration allocation preparation (integration pending)
+
+`python3 scripts/prepare_board_allocation.py --candidate <full-sha> --output <new-directory>`
+is a trusted preparation prerequisite for YueBoard's offline allocation gate.
+It uses a caller-provided `GH_TOKEN` that must already have authorized read-only
+access to Board contents and private pull-request metadata. It does not mint a
+token, widen App permissions, use a PAT fallback, or enable any workflow. The
+current clone-only App contract does not establish metadata permission, and
+the required App configuration is not yet provisioned; real hosted acceptance
+remains blocked.
+
+The producer enumerates every open PR (rejecting the existing 500-entry limit),
+fetches exact master/candidate/PR objects into a fresh standalone checkout, and
+checks both fetched identities and the complete metadata set again. A changed
+head or enumeration fails; fork heads use PR refs rather than branch names.
+Migration trees and their blobs must exist. Only after these checks does it
+atomically expose the external read-only `allocation-receipt.json` required by
+the Board consumer. The candidate is named explicitly even when it is absent
+from the open PR list. Allocation rules remain solely in Board.
+
+No candidate process runs during preparation. The token is confined to the
+trusted command environment, never URLs, Git configuration, files, logs or the
+receipt. The caller must revoke its ephemeral token and remove all credential
+environment/helpers **before** running Board's source-owned gate against
+`<output>/source` with `YUEBOARD_MIGRATION_ALLOCATION_RECEIPT` set to the external
+receipt path. Producer success alone does not prove credential cleanup, source
+validation, or hosted/local wiring. Existing disabled Board workflows remain
+until the full replacement is exercised. Failures retain isolated object data
+for diagnosis but do not expose a completed receipt.
