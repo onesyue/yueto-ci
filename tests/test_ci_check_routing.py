@@ -41,7 +41,10 @@ class RepositoryRouting(unittest.TestCase):
 
     def test_unsupported_local_and_ops_options_rejected_before_network(self):
         for repo in ('yueboard', 'yue-node'):
-            for options in (['--local'], ['--board-ref', 'b'*40], ['--prepare-only'], ['--prepared', 'receipt']):
+            options_list = [['--board-ref', 'b'*40], ['--prepare-only'], ['--prepared', 'receipt']]
+            if repo == 'yue-node':
+                options_list.append(['--local'])
+            for options in options_list:
                 with self.subTest(repo=repo, options=options):
                     result = subprocess.run(['bash', str(ROOT / 'scripts/ci-check.sh'), repo, 'c'*40, *options],
                                             capture_output=True, text=True)

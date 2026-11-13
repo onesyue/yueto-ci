@@ -19,6 +19,7 @@ ENTRIES = ['Validate YueBoard PostgreSQL integration',
 def validate(steps):
     names = [step.get('name') for step in steps]
     setup, collect = (steps[names.index(name)] for name in (SETUP, COLLECT))
+    assert setup['run'] == 'bash .ci-policy/scripts/board-postgres-diagnostics.sh'
     assert setup['if'] == ROLES
     assert collect['if'] == 'failure() && ' + ROLES
     assert not setup.get('continue-on-error') and not collect.get('continue-on-error')
@@ -61,7 +62,9 @@ else: assert sql.startswith('ALTER SYSTEM SET ')
             docker.chmod(0o755)
             sleep = root / 'sleep'
             sleep.write_text('#!/bin/sh\nexit 0\n'); sleep.chmod(0o755)
-            result = subprocess.run(['bash', '-c', step['run']], text=True, capture_output=True,
+            script = str(ROOT / 'scripts/board-postgres-diagnostics.sh')
+            body = step['run'].replace('.ci-policy/scripts/board-postgres-diagnostics.sh', script)
+            result = subprocess.run(['bash', '-c', body], text=True, capture_output=True,
                 timeout=15, env={**os.environ, 'PATH': str(root) + ':' + os.environ['PATH'],
                                 'PG_SERVICE': 'exact-service-id', 'RUNNER_TEMP': str(root), 'MODE': mode})
             return result, (root / 'calls').read_text()

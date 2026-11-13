@@ -22,11 +22,10 @@ cp -a --no-preserve=ownership "$CI_CHECK_SOURCE/." "$GITHUB_WORKSPACE/"
 cp -a --no-preserve=ownership "$CI_CHECK_BOARD/." "$board_checkout/"
 cp -a --no-preserve=ownership "$CI_CHECK_POLICY/." "$policy_checkout/"
 daemon_pid=
+# shellcheck source=scripts/ci-check-private-daemon.sh
+source "$policy_checkout/scripts/ci-check-private-daemon.sh"
 cleanup() {
-  if [ -n "$daemon_pid" ]; then
-    sudo kill -TERM "$daemon_pid" 2>/dev/null || true
-    wait "$daemon_pid" 2>/dev/null || true
-  fi
+  ci_check_daemon_stop
   # Match the artifact names consumed by the same join as hosted CI.
   if [ -d "$RUNNER_TEMP/ops-shard-evidence" ]; then
     mv "$RUNNER_TEMP/ops-shard-evidence" "$CI_CHECK_EVIDENCE/ops-shard-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$OPS_ROLE"
@@ -65,20 +64,7 @@ if [ "$OPS_ROLE" = join ]; then
 fi
 # Each GitHub role owns a runner daemon. Local roles likewise get a private
 # daemon; fixture cleanup must never reach another lane's Docker containers.
-# The log intentionally belongs to the unprivileged invoking runner.
-# shellcheck disable=SC2024
-sudo dockerd --host unix:///var/run/docker.sock --group runner \
-  --data-root /var/lib/ci-check-docker --exec-root /run/ci-check-docker \
-  --pidfile /run/ci-check-docker.pid --storage-driver vfs \
-  > "$RUNNER_TEMP/docker-daemon.log" 2>&1 &
-daemon_pid=$!
-ready=false
-for ((attempt = 0; attempt < 60; attempt++)); do
-  if timeout 3 docker info >/dev/null 2>&1; then ready=true; break; fi
-  kill -0 "$daemon_pid" 2>/dev/null || break
-  sleep 1
-done
-[ "$ready" = true ] || { cat "$RUNNER_TEMP/docker-daemon.log" >&2; exit 1; }
+ci_check_daemon_start
 run_step node-toolchain
 run_step dependencies
 run_step gitleaks
