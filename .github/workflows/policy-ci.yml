@@ -167,10 +167,10 @@ jobs:
             exit "$status"
           }
           trap cleanup EXIT
-          [ -n "$REPLAY_APP_CLIENT_ID" ] && [ -n "$GH_TOKEN" ] || {
+          if [ -z "$REPLAY_APP_CLIENT_ID" ] || [ -z "$GH_TOKEN" ]; then
             echo 'hosted local replay requires a configured App and minted source read token' >&2
             exit 2
-          }
+          fi
           case "$GH_TOKEN" in
             *[$'\r\n']*) echo 'source read credential must be single-line' >&2; exit 2 ;;
           esac
