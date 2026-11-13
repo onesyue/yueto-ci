@@ -145,24 +145,56 @@ jobs:
           permission-contents: read
           skip-token-revoke: true # Explicitly revoked before any source execution.
 
-      - name: Prepare exact standalone clones and revoke credential
+      - name: Prepare exact standalone clones and clear credential
         timeout-minutes: 20
         env:
           GH_TOKEN: ${{ steps.source_token.outputs.token }}
+          REPLAY_APP_CLIENT_ID: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
         run: |
+          set +x
           set -euo pipefail
           auth=""
           cleanup() {
             status=$?
-            gh api --method DELETE /installation/token > /dev/null || status=2
-            if [ -n "$auth" ]; then rm -rf -- "$auth"; fi
+            if [ -n "$REPLAY_APP_CLIENT_ID" ] && [ -n "$GH_TOKEN" ]; then
+              gh api --method DELETE /installation/token > /dev/null || status=2
+            fi
+            if [ -n "$auth" ]; then
+              rm -rf -- "$auth" || status=2
+              [ ! -e "$auth" ] || status=2
+            fi
             printf '{"exit_code":%s,"credential_scope":"clone-only","phase":"preparation"}\n' "$status" > "$CI_CHECK_OUTPUT/preparation-status.json"
             exit "$status"
           }
           trap cleanup EXIT
+          [ -n "$REPLAY_APP_CLIENT_ID" ] && [ -n "$GH_TOKEN" ] || {
+            echo 'hosted local replay requires a configured App and minted source read token' >&2
+            exit 2
+          }
+          case "$GH_TOKEN" in
+            *[$'\r\n']*) echo 'source read credential must be single-line' >&2; exit 2 ;;
+          esac
+          printf '::add-mask::%s\n' "$GH_TOKEN"
+          export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null
+          header_status=0
+          git config --local --get-regexp '^http\..*extraheader$' > /dev/null 2>&1 || header_status=$?
+          [ "$header_status" -eq 1 ] || {
+            echo 'checkout has persisted HTTP headers or unreadable Git configuration' >&2
+            exit 2
+          }
           auth=$(mktemp -d "$RUNNER_TEMP/ci-check-auth.XXXXXX")
-          export GH_CONFIG_DIR="$auth/gh" GIT_CONFIG_GLOBAL="$auth/gitconfig"
-          gh auth setup-git --hostname github.com
+          export GH_CONFIG_DIR="$auth/gh" GIT_ASKPASS="$auth/askpass" GIT_TERMINAL_PROMPT=0
+          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0=''
+          # This file contains only variable references, never credential bytes.
+          cat > "$GIT_ASKPASS" <<'ASKPASS'
+          #!/bin/sh
+          case "$1" in
+            *Username*) printf '%s\n' x-access-token ;;
+            *Password*) printf '%s\n' "$GH_TOKEN" ;;
+            *) exit 1 ;;
+          esac
+          ASKPASS
+          chmod 700 "$GIT_ASKPASS"
           bash scripts/ci-check.sh yueops "$SOURCE_REF" --local --board-ref "$BOARD_REF" \
             --prepare-only > "$CI_CHECK_OUTPUT/preparation.log" 2>&1
 

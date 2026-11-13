@@ -561,6 +561,12 @@ native/evidence gates cannot produce success. Historical comparison must use the
 same Board contract revision and migration baseline; differences are reported,
 not silently treated as matching failures.
 
+Local `ci-check.sh --local` uses native Git HTTPS cloning. Configure an existing
+Git credential helper or askpass for private repository reads; `gh auth login`
+alone does not necessarily configure Git authentication. The CLI does not
+change the user's global Git configuration. Hosted replay supplies its own
+isolated, temporary askpass as described below.
+
 ### B9-8 Board validation context (requires paired ship change)
 
 Ops dispatches must provide `yueboard_contract_ref`: the exact production Board
@@ -590,9 +596,20 @@ admission and the final join; it does not replace the run with a smoke test.
 Only one manual local replay runs at a time, independently of PR policy checks.
 
 Preparation uses `--local --prepare-only` to fetch standalone clones and save
-`prepared.json`. The App token can read only yueops/yueboard, is scoped to that
-step, and is explicitly revoked before execution. Revocation failure stops the
-job. The next step consumes `--prepared <receipt>` without credentials or the
+`prepared.json`. A configured GitHub App is required, with Contents:read only
+for yueops/yueboard. The job accepts only its newly minted token and revokes it
+before execution. Missing App configuration, issuance, empty token or revocation
+failure stops the job. There is no PAT fallback, including dedicated clone PATs.
+
+The credential is masked and exists only in the trusted preparation step's
+environment. A temporary askpass script reads that environment; its file has no
+token bytes. Git uses HTTPS URLs without embedded credentials, no stored helper,
+and no system/global Git configuration. Persisted checkout HTTP headers are
+rejected before clone, and prepared clones reject any credential configuration.
+The App token is revoked before execution. Askpass cleanup failure or remaining
+files stops execution. No source code runs while the credential is available; tokens never enter receipts, logs, output variables,
+Git configuration or remote URLs.
+The next step consumes `--prepared <receipt>` without credentials or the
 preparation Git/gh configuration. Input identities, clean clone state, origin,
 default-branch refs and single ownership are checked before source planning.
 

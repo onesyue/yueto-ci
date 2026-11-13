@@ -281,49 +281,119 @@ class ManualWorkflow(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     self.test_manual_only_read_only_complete_runner_has_reserved_upload_time()
 
-    def test_missing_app_configuration_refuses_before_any_clone_or_docker(self):
-        preflight = next(step for step in self.job['steps'] if step.get('name') == 'Validate replay inputs and host tools')
-        self.assertEqual(preflight['env']['REPLAY_APP_CLIENT_ID'], '${{ vars.YUETO_CI_APP_CLIENT_ID }}')
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            marker = root / 'docker-invoked'
-            docker = root / 'docker'
-            docker.write_text(f'#!/bin/sh\ntouch {str(marker)!r}\n')
-            docker.chmod(0o755)
-            env = os.environ | {'RUNNER_TEMP': str(root), 'GITHUB_ENV': str(root / 'github-env'),
-                                'SOURCE_REF': 'a' * 40, 'BOARD_REF': 'b' * 40,
-                                'CI_CHECK_MIGRATION_BASE': 'c' * 40, 'REPLAY_APP_CLIENT_ID': '',
-                                'PATH': str(root) + os.pathsep + os.environ['PATH']}
-            result = subprocess.run(['/bin/bash', '-c', preflight['run']], env=env, capture_output=True, text=True)
-            self.assertEqual(result.returncode, 2)
-            self.assertIn('requires configured GitHub App credentials; no PAT fallback', result.stderr)
-            self.assertFalse(marker.exists())
+    def test_credential_selection_and_step_scope_are_fail_closed(self):
+        steps = self.job['steps']
+        prepare = next(step for step in steps if step.get('name', '').startswith('Prepare exact'))
+        self.assertEqual(prepare['env']['GH_TOKEN'],
+                         "${{ steps.source_token.outputs.token }}")
+        self.assertEqual(prepare['env']['REPLAY_APP_CLIENT_ID'], '${{ vars.YUETO_CI_APP_CLIENT_ID }}')
+        mint = next(step for step in steps if step.get('id') == 'source_token')
+        self.assertNotIn('continue-on-error', mint)
+        self.assertNotIn('if', prepare)  # Default success() blocks after mint failure.
+        for step in steps[steps.index(prepare) + 1:]:
+            self.assertNotIn('secrets.', str(step))
+            self.assertNotIn('source_token.outputs.token', str(step))
+        self.assertNotIn('GH_TOKEN', self.job['env'])
+        self.assertNotIn('secrets.YUETO_CI_PAT', str(self.job))
+        self.assertNotIn('secrets.YUETO_CI_CLONE_PAT', str(self.job))
+        self.assertIn('set +x', prepare['run'])
+        self.assertNotIn('gh auth setup-git', prepare['run'])
+        self.assertIn('GIT_ASKPASS', prepare['run'])
+        self.assertNotIn('$GH_TOKEN', prepare['run'].split('ASKPASS\n')[-1])
+        self.assertNotIn('gh repo clone', (ROOT / 'scripts/ci-check.sh').read_text())
 
-    def test_real_preparation_shell_always_revokes_before_credential_free_step(self):
+    def test_real_preparation_shell_requires_app_and_cleans_then_revokes(self):
         preparation = next(step for step in self.job['steps'] if step.get('name', '').startswith('Prepare exact'))
-        for clone_code, revoke_code, expected in [(0, 0, 0), (17, 0, 17), (0, 1, 2)]:
-            with self.subTest(clone_code=clone_code, revoke_code=revoke_code), tempfile.TemporaryDirectory() as directory:
+        cases = [
+            ('app', 'fixture-secret', 0, 0, 0, 0),
+            ('app', 'fixture-secret', 17, 0, 0, 17),
+            ('app', 'fixture-secret', 0, 1, 0, 2),
+            ('app', 'fixture-secret', 0, 0, 1, 2),
+            ('', 'fixture-secret', 0, 0, 0, 2),
+            ('', 'fixture-secret', 17, 0, 0, 2),
+            ('', 'fixture-secret', 0, 0, 1, 2),
+            ('', 'fixture-secret', 0, 0, 3, 2),
+            ('', '', 0, 0, 0, 2),
+            ('app', '', 0, 0, 0, 2),
+        ]
+        for app, token, clone_code, revoke_code, remove_code, expected in cases:
+            with self.subTest(app=bool(app), token=bool(token), clone=clone_code, revoke=revoke_code, remove=remove_code), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 binpath = root / 'bin'
                 binpath.mkdir()
                 output = root / 'output'
                 output.mkdir()
                 calls = root / 'calls'
-                (binpath / 'gh').write_text('#!/bin/bash\necho "gh $*" >> "$CALLS"\n'
-                                          'if [ "$1" = api ]; then exit "$REVOKE_CODE"; fi\n')
-                (binpath / 'bash').write_text('#!/bin/bash\n'
+                subprocess.run(['git', 'init', '--quiet', str(root)], check=True)
+                helper_marker = root / 'stored-helper-ran'
+                subprocess.run(['git', '-C', str(root), 'config', 'credential.helper',
+                                f'!touch {helper_marker}'], check=True)
+                (binpath / 'gh').write_text('#!/bin/bash\nset -eu\necho "gh $*" >> "$CALLS"\n'
+                                          '[ "$1" = api ]\nexit "$REVOKE_CODE"\n')
+                (binpath / 'bash').write_text('#!/bin/bash\nset -eu\n'
                                             '[ "$GH_TOKEN" = fixture-secret ]\n'
                                             '[ "${!#}" = --prepare-only ]\n'
+                                            '[ "$GIT_CONFIG_GLOBAL" = /dev/null ]\n'
+                                            '[ "$GIT_TERMINAL_PROMPT" = 0 ]\n'
+                                            'credentials=$(printf "protocol=https\\nhost=github.com\\n\\n" | git credential fill)\n'
+                                            '[[ "$credentials" == *"password=$GH_TOKEN"* ]]\n'
+                                            '[[ "$credentials" == *"username=x-access-token"* ]]\n'
+                                            '! grep -rFq -- "$GH_TOKEN" "$RUNNER_TEMP"/ci-check-auth.*\n'
                                             'echo prepare >> "$CALLS"\nexit "$CLONE_CODE"\n')
+                (binpath / 'rm').write_text('#!/bin/bash\n'
+                                          'if [ "$REMOVE_CODE" = 3 ]; then exit 0; fi\n'
+                                          'if [ "$REMOVE_CODE" != 0 ]; then exit "$REMOVE_CODE"; fi\n'
+                                          'exec /bin/rm "$@"\n')
                 for path in binpath.iterdir():
                     path.chmod(0o755)
                 env = os.environ | {'PATH': str(binpath) + os.pathsep + os.environ['PATH'],
                                     'RUNNER_TEMP': str(root), 'CI_CHECK_OUTPUT': str(output),
                                     'CALLS': str(calls), 'CLONE_CODE': str(clone_code), 'REVOKE_CODE': str(revoke_code),
-                                    'GH_TOKEN': 'fixture-secret', 'SOURCE_REF': 'a' * 40, 'BOARD_REF': 'b' * 40}
-                result = subprocess.run(['/bin/bash', '-c', preparation['run']], env=env, capture_output=True, text=True)
+                                    'REMOVE_CODE': str(remove_code), 'REPLAY_APP_CLIENT_ID': app,
+                                    'GH_TOKEN': token, 'SOURCE_REF': 'a' * 40, 'BOARD_REF': 'b' * 40}
+                result = subprocess.run(['/bin/bash', '-c', preparation['run']], cwd=root, env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, expected, result.stderr)
-                self.assertEqual(calls.read_text().splitlines(), ['gh auth setup-git --hostname github.com',
-                                                                 'prepare', 'gh api --method DELETE /installation/token'])
+                expected_calls = []
+                if token and app:
+                    expected_calls = ['prepare']
+                    if app:
+                        expected_calls.append('gh api --method DELETE /installation/token')
+                self.assertEqual(calls.read_text().splitlines() if calls.exists() else [], expected_calls)
+                self.assertEqual(bool(list(root.glob('ci-check-auth.*'))), bool(remove_code and token and app))
+                receipt = (output / 'preparation-status.json').read_text()
+                self.assertEqual(json.loads(receipt)['exit_code'], expected)
+                mask_command = '::add-mask::fixture-secret\n'
+                self.assertEqual(result.stdout.count(mask_command), 1 if token and app else 0)
+                # GitHub consumes the mask command; no other output may contain it.
+                self.assertNotIn('fixture-secret', receipt + result.stdout.replace(mask_command, '') + result.stderr)
+                self.assertFalse(helper_marker.exists())
+                for path in root.rglob('*'):
+                    if path.is_file() and path.name not in ('bash',):
+                        self.assertNotIn(b'fixture-secret', path.read_bytes(), str(path))
+                log = output / 'preparation.log'
+                if log.exists():
+                    self.assertNotIn('fixture-secret', log.read_text())
+
+    def test_real_persisted_headers_and_unreadable_config_refuse_before_clone(self):
+        preparation = next(step for step in self.job['steps'] if step.get('name', '').startswith('Prepare exact'))
+        for key in ('http.extraheader', 'http.https://github.com/.extraheader', 'unreadable'):
+            with self.subTest(key=key), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                output = root / 'output'
+                output.mkdir()
+                if key != 'unreadable':
+                    subprocess.run(['git', 'init', '--quiet', str(root)], check=True)
+                    subprocess.run(['git', '-C', str(root), 'config', key, 'redacted-fixture'], check=True)
+                binpath = root / 'bin'; binpath.mkdir()
+                gh = binpath / 'gh'; gh.write_text('#!/bin/sh\nexit 0\n'); gh.chmod(0o755)
+                env = os.environ | {'PATH': str(binpath) + os.pathsep + os.environ['PATH'],
+                                    'RUNNER_TEMP': str(root), 'CI_CHECK_OUTPUT': str(output),
+                                    'REPLAY_APP_CLIENT_ID': 'app', 'GH_TOKEN': 'fixture-secret'}
+                result = subprocess.run(['/bin/bash', '-c', preparation['run']], cwd=root, env=env,
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn('persisted HTTP headers or unreadable', result.stderr)
                 self.assertEqual(list(root.glob('ci-check-auth.*')), [])
-                self.assertEqual(json.loads((output / 'preparation-status.json').read_text())['exit_code'], expected)
+                self.assertFalse((output / 'preparation.log').exists())
+                self.assertNotIn('redacted-fixture', result.stdout + result.stderr)
+                self.assertNotIn('fixture-secret', (output / 'preparation-status.json').read_text())

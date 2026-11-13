@@ -302,10 +302,9 @@ elif name=='python3':
                 self.assertEqual(result.returncode, status, result.stderr)
                 calls = [json.loads(line) for line in log.read_text().splitlines()]
                 clones = [args for name,args in calls if name=='git' and args[0]=='clone']
-                self.assertEqual(len(clones), 1)
+                self.assertEqual(len(clones), 2)
                 gh_calls = [args for name,args in calls if name=='gh']
-                self.assertEqual(len(gh_calls), 1)
-                self.assertEqual(gh_calls[0][:3], ['repo', 'clone', 'onesyue/yueboard'])
+                self.assertEqual(gh_calls, [])
                 self.assertFalse(any('yueops' in ' '.join(args) for name,args in calls))
                 args = next(args for name,args in calls if name=='python3')
                 self.assertEqual(args[args.index('--source-sha')+1], 'a'*40)
