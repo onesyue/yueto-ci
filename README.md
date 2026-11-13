@@ -764,3 +764,38 @@ root/sudo policy as component/E2E phases. The smoke script retains its existing
 serious/critical checks and baseline ratchet; source failure, missing browser,
 missing script or an explicit skip cannot succeed. This wiring is shared by
 hosted and local execution, but actual browser results still require a full run.
+
+### Root native validation executor (integration pending)
+
+`scripts/ci_check_root.py --source <full-root-sha> --workspace <root-checkout> --output <new-directory>`
+provides the shared execution boundary for a future `ci-check yueto` target.
+It does **not** enable that CLI target or a hosted workflow yet. Both callers
+must first acquire their authorized private inputs and remove their credentials;
+the executor has no fetch authority, PAT fallback, publication or promotion path.
+
+The executor copies committed Git objects into fresh standalone snapshots. It
+authenticates the root commit with central policy's owner keyring before running
+any source code. A non-root, networkless container calls the source's
+`release-yaml.py` verified-desired interface. Only exact Ops, Board and Node
+revisions cross back to the controller. Those objects must already exist in
+`<root-checkout>/<repo>`. A desired Ops group with mixed revisions that cannot
+prove ancestry is rejected, never guessed. No working files, ignored auth files,
+Git credential configuration, host socket or host home directory enter the
+container.
+
+The second container uses disposable writable copies and invokes the source's
+complete `scripts/gate-root-selftests.sh` entry with its exact Ops/context refs.
+It also runs Bash syntax and ShellCheck on all tracked shell files. It does not
+copy the root test inventory or use the smaller unclaimed-test ledger as a
+replacement. Empty pytest collection, skipped/xfail cases, missing tools,
+missing reports and incomplete native runs return nonzero; a pytest test failure
+remains a failure. `result.json`, `context.json`, native JUnit and container logs
+retain the evidence. The output directory must be new for each invocation.
+
+This is an executor prerequisite, **not root target acceptance**. The current
+workflow toolchain digest is reused without modification and must provide
+pytest and ShellCheck; missing tools fail closed. Root's additional sibling and
+submodule closure, immutable dependency preparation, authorized root acquisition,
+and actual local/hosted wiring remain outstanding. Fixture tests prove execution
+and rejection behavior only; they do not establish that the real root suite or
+the public runner has passed. Existing App repository scope is unchanged.
