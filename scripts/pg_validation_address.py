@@ -78,12 +78,36 @@ def check_clean_environment(adapter: str) -> None:
         fail('clean database connection identity mismatch')
 
 
+def check_e2e_environment(adapter: str) -> None:
+    check_address_environment(adapter)
+    identities = []
+    for key, database in (('YUEBOARD_ADMIN_DATABASE_URL', 'postgres'),
+                          ('YUEBOARD_E2E_DATABASE_URL', 'yueboard_e2e')):
+        value = os.environ.get(key, '')
+        # The hosted admin URI has no SSL option; the browser server explicitly
+        # disables SSL for its disposable service. Do not normalize other options.
+        base = value.removesuffix('?sslmode=disable')
+        check_address(key, base, adapter, database)
+        parsed = urlsplit(base)
+        if parsed.query or (key == 'YUEBOARD_E2E_DATABASE_URL' and base == value):
+            fail('e2e database requires only the explicit sslmode=disable option')
+        identities.append(parsed.netloc)
+    if identities[0] != identities[1]:
+        fail('e2e database connection identity mismatch')
+    if os.environ.get('YUEBOARD_E2E_ALLOW_RESET') != 'YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE':
+        fail('e2e database reset requires explicit disposable acknowledgement')
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--database-adapter', choices=['loopback', 'github-service'], required=True)
+    parser.add_argument('--phase', choices=['clean', 'e2e'], default='clean')
     args = parser.parse_args()
     try:
-        check_clean_environment(args.database_adapter)
+        if args.phase == 'e2e':
+            check_e2e_environment(args.database_adapter)
+        else:
+            check_clean_environment(args.database_adapter)
     except (RuntimeError, ValueError) as error:
         print(f'::error::{error}', file=sys.stderr)
         return 1

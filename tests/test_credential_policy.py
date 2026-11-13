@@ -163,7 +163,9 @@ class DependencyLifecycleScriptPolicyTest(unittest.TestCase):
 
     def test_every_locked_install_skips_lifecycle_scripts(self) -> None:
         found = 0
-        for name, text in _workflows().items():
+        sources = _workflows() | {"board-validation.sh": (ROOT / "scripts/board-validation.sh").read_text()}
+        self.assertIn('board-validation-output.py', sources['build.yml'])
+        for name, text in sources.items():
             for match in self.INSTALL.finditer(_code(text)):
                 found += 1
                 with self.subTest(workflow=name, command=match.group(0)):
@@ -175,7 +177,10 @@ class DependencyLifecycleScriptPolicyTest(unittest.TestCase):
         workflow = (WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8")
         start = workflow.index("- name: Validate yueboard frontends")
         end = workflow.index("- name: Validate YueBoard responsive and design contracts")
-        step = workflow[start:end]
+        wiring = workflow[start:end]
+        self.assertIn('board-validation-output.py', wiring)
+        self.assertIn('--frontend-phase prepare', wiring)
+        step = (ROOT / 'scripts/board-validation.sh').read_text().rsplit('case "$role:$frontend_phase" in', 1)[1]
         self.assertIn('audit_gate="scripts/ci/pnpm-audit-gate.mjs"', step)
         guard = step.index('[ -f "$audit_gate" ] || {')
         call = step.index('node "$audit_gate" web web-admin')

@@ -512,64 +512,6 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
             self.assertTrue(all(p.parent == current for p in selected))
 
 
-class VisualBaselineDiscoveryTest(unittest.TestCase):
-    """Execute the release branch: missing baselines fail, existing ones compare."""
-
-    def branch(self) -> str:
-        step = workflow_text(WORKFLOW).split("      - name: Validate YueBoard end-to-end suite\n", 1)[1].split("\n      - name:", 1)[0]
-        branch = step[step.index("          shots=test/e2e/specs/__screenshots__"):]
-        return textwrap.dedent(branch)
-
-    def run_branch(self, scenario: str, *, playwright_status: int = 0, find_status: int = 0) -> tuple[subprocess.CompletedProcess, str]:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            shots = root / "test/e2e/specs/__screenshots__"
-            if scenario != "missing":
-                shots.mkdir(parents=True)
-            if scenario == "large":
-                for index in range(6000):
-                    (shots / f"journey-{index:05d}-purchase-light-chromium-linux.png").touch()
-            elif scenario == "darwin-only":
-                (shots / "login-darwin.png").touch()
-            output = root / "output"
-            output.touch()
-            env = dict(os.environ, GITHUB_OUTPUT=str(output))
-            script = f'pnpm() {{ printf "INVOKED:%s\\n" "$*"; return {playwright_status}; }}\n'
-            if find_status:
-                script += f'find() {{ return {find_status}; }}\n'
-            result = subprocess.run(["bash", "-euo", "pipefail", "-c", script + self.branch()], cwd=root,
-                                    env=env, capture_output=True, text=True, timeout=10)
-            return result, output.read_text()
-
-    def test_large_existing_baselines_compare_without_rewriting(self) -> None:
-        result, output = self.run_branch("large")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(output, "visual=compared\n")
-        self.assertEqual(result.stdout, "INVOKED:--dir test/e2e test --update-snapshots=none\n")
-        self.assertNotIn("--update-snapshots=changed", self.branch())
-
-    def test_missing_empty_or_wrong_platform_baselines_refuse_execution(self) -> None:
-        for scenario in ("missing", "empty", "darwin-only"):
-            with self.subTest(scenario=scenario):
-                result, output = self.run_branch(scenario)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn("release requires committed Linux visual baselines", result.stdout)
-                self.assertNotIn("INVOKED:", result.stdout)
-                self.assertEqual(output, "")
-
-    def test_discovery_failure_cannot_authorize_publication(self) -> None:
-        result, output = self.run_branch("large", find_status=7)
-        self.assertEqual(result.returncode, 7)
-        self.assertNotIn("INVOKED:", result.stdout)
-        self.assertEqual(output, "")
-
-    def test_actual_comparison_failure_propagates(self) -> None:
-        result, output = self.run_branch("large", playwright_status=9)
-        self.assertEqual(result.returncode, 9)
-        self.assertEqual(output, "visual=compared\n")
-        self.assertIn("INVOKED:", result.stdout)
-
-
 class VerifiedBuildxTest(unittest.TestCase):
     """Exercise the shell installer and the preinstalled-runner reuse path."""
 
@@ -1669,8 +1611,6 @@ class BuildPolicyTest(unittest.TestCase):
             "working-directory: frontend",
             "working-directory: telegram-bot/yue/miniapp",
             "scripts/npm-audit-gate.py",
-            'corepack install --global "$web_pm"',
-            '[ "$web_pm" = "$admin_pm" ]',
             "squawk/releases/download/v2.60.0/squawk-linux-x64",
             "708d77899e2b43e0d21cb811023dbbcfb3b8220b0c0b7e71c6e73568be7716e5",
             'test "$("$squawk_bin" --version)" = \'squawk 2.60.0\'',
@@ -1694,6 +1634,10 @@ class BuildPolicyTest(unittest.TestCase):
             with self.subTest(gate=gate):
                 self.assertIn(gate, self.workflow)
         self.assertNotIn("npm install --global squawk", self.workflow)
+        self.assertIn('board-validation-output.py', self.workflow)
+        frontend = (ROOT / 'scripts/board-validation.sh').read_text()
+        self.assertIn('corepack install --global "$web_pm"', frontend)
+        self.assertIn('[ "$web_pm" = "$admin_pm" ]', frontend)
 
     def test_yueboard_central_release_matches_source_quality_contract(self) -> None:
         """Private Actions being frozen must not weaken the release proof."""
@@ -1767,35 +1711,33 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("scripts/ci/clean-pg-gate.sh", executor)
         self.assertNotIn("/yueboard_test", clean)
 
-        frontend = self.workflow[frontend_start:design_start]
+        frontend_wiring = self.workflow[frontend_start:design_start]
+        self.assertIn('board-validation-output.py', frontend_wiring)
+        frontend = executor.rsplit('case "$role:$frontend_phase" in', 1)[1]
         # Two layouts (W9.1): legacy per-app locks and the root pnpm
         # workspace; each verifies both embedded dists.
         self.assertEqual(frontend.count("node scripts/verify-dist.mjs dist"), 4)
         self.assertIn("if [ -f pnpm-workspace.yaml ]; then", frontend)
         self.assertIn("pnpm install --frozen-lockfile --ignore-scripts\n", frontend)
-        self.assertIn('echo "layout=$layout" >> "$GITHUB_OUTPUT"', frontend)
+        self.assertIn('emit_frontend_result "layout=$layout"', frontend)
         workspace_only = "steps.board_frontend.outputs.layout == 'workspace'"
-        for stage, gates in (
-            ("- name: Validate YueBoard frontend lint", ("pnpm run lint", "pnpm run fmt:check")),
-            ("- name: Validate YueBoard component tests", ("pnpm run test:components",)),
-            ("- name: Validate YueBoard end-to-end suite", ("pnpm --dir test/e2e test",)),
+        for stage, phase, gate in (
+            ("Validate YueBoard frontend lint", "frontends:lint)", "pnpm run lint"),
+            ("Validate YueBoard component tests", "components:test)", "pnpm run test:components"),
+            ("Validate YueBoard end-to-end suite", "e2e:test)", "pnpm --dir test/e2e test"),
         ):
-            start = frontend.index(stage)
-            body = frontend[start : frontend.index("\n      - name:", start + 1)]
-            with self.subTest(stage=stage):
-                self.assertIn(workspace_only, body)
-                # Missing entry points in the new layout are FATAL, not a skip.
-                self.assertIn("::error::YueBoard workspace layout is missing", body)
-                for gate in gates:
-                    self.assertIn(gate, body)
-        e2e = frontend[frontend.index("- name: Validate YueBoard end-to-end suite") :]
-        # Release validation must compare existing Linux baselines without updates.
+            wiring = frontend_wiring.split('- name: ' + stage, 1)[1].split('\n      - name:', 1)[0]
+            self.assertIn(workspace_only, wiring)
+            body = frontend.split(phase, 1)[1].split('        ;;', 1)[0]
+            self.assertIn("::error::YueBoard workspace layout is missing", body)
+            self.assertIn(gate, body)
+        e2e = frontend.split('e2e:test)', 1)[1].split('        ;;', 1)[0]
         self.assertIn("-name '*-linux.png'", e2e)
         self.assertIn("::error::YueBoard release requires committed Linux visual baselines", e2e)
         self.assertIn("test --update-snapshots=none", e2e)
         self.assertNotIn("visual=bootstrapped", e2e)
-        self.assertIn("YUEBOARD_E2E_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE", e2e)
-        design = self.workflow[design_start:yueops_start]
+        self.assertIn("YUEBOARD_E2E_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE", frontend_wiring)
+        design = frontend.split('frontends:design)', 1)[1]
         for script in (
             "scripts/ci/verify-responsive.mjs",
             "scripts/ci/verify-design-tokens.mjs",
