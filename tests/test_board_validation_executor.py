@@ -26,6 +26,7 @@ class BoardExecutor(unittest.TestCase):
         self.env = dict(os.environ, PATH=str(self.bin) + os.pathsep + os.environ['PATH'],
                         CALL_LOG=str(self.log), EXPECT_SOURCE=str(self.source))
         self.env.pop('YUEBOARD_CONTRACT_BASELINE', None)
+        self.env.pop('HTTP_CONTRACT_BASE', None)
         self.stub = self.bin / 'stub'
         self.stub.write_text('#!' + sys.executable + '\n' + '''import json, os, pathlib, sys
 name = pathlib.Path(sys.argv[0]).name
@@ -77,7 +78,7 @@ if name == 'gofmt' and os.getenv('UNFORMATTED'):
         return result, rows
 
     def quality_commands(self):
-        return ['go build ./...', 'gofmt -l main.go', 'make check-generated', 'go vet ./...',
+        return ['go build ./...', 'gofmt -l main.go', 'make check-generated', f'make check-http-contract HTTP_CONTRACT_BASE={self.first}', 'go vet ./...',
                 'check-server-error-logging.sh ', 'installer ' + str(self.temp / 'board-quality-tools'),
                 'govulncheck ./...', 'golangci-lint run --timeout=6m ./...', 'go test ./...', 'proto-gate.sh ']
 
@@ -116,6 +117,23 @@ if name == 'gofmt' and os.getenv('UNFORMATTED'):
         result, rows = self.execute()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(all(row['baseline'] is None for row in rows))
+
+    def test_http_contract_uses_branch_merge_base_and_explicit_commit(self):
+        self.git('update-ref', 'refs/remotes/origin/master', self.first)
+        result, rows = self.execute()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(f'make check-http-contract HTTP_CONTRACT_BASE={self.first}', self.keys(rows))
+        head = self.git('rev-parse', 'HEAD').stdout.strip()
+        result, rows = self.execute(HTTP_CONTRACT_BASE=head)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(f'make check-http-contract HTTP_CONTRACT_BASE={head}', self.keys(rows))
+        self.git('update-ref', '-d', 'refs/remotes/origin/master')
+        result, rows = self.execute()
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(rows, [])
+        result, rows = self.execute(HTTP_CONTRACT_BASE='missing-contract-reference')
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(rows, [])
 
     def test_empty_or_unformatted_sources_stop_before_generated_gate(self):
         result, rows = self.execute(UNFORMATTED='1')
