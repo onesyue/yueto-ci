@@ -1102,7 +1102,7 @@ jobs:
           # The migration role does not repeat this phase. It runs module and
           # migration coverage on its own fresh service.
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \
-            --phase domain --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"
+            --phase domain --database-adapter github-service --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"
 
       - name: Validate YueBoard clean PostgreSQL lifecycle
         if: matrix.validation == 'yueboard' && matrix.board_role == 'postgres'
@@ -1148,7 +1148,7 @@ jobs:
           # Non-destructive modules first; deviceidentity/nodesync reset public.
           # Full migration + nativeproto suites run last, with scale cases on.
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-yueboard-postgres.py \
-            --phase remaining --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"
+            --phase remaining --database-adapter github-service --receipt "$RUNNER_TEMP/yueboard-pg-${{ github.run_id }}-${{ github.run_attempt }}.json"
 
       - name: Collect YueBoard PostgreSQL failure diagnostics
         if: failure() && matrix.validation == 'yueboard' && (matrix.board_role == 'postgres' || matrix.board_role == 'migration')

@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 import subprocess
 import sys
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 DOMAIN = ['./test/integration']
 COMMANDS = ['./cmd/yueboard']
@@ -53,15 +53,44 @@ def fail(message: str) -> None:
     raise RuntimeError(message)
 
 
-def check_environment(phase: str) -> None:
+# Explicit address contract for the already provisioned workflow service, not
+# proof of physical ownership. The workflow retains its service-ID diagnostics.
+SERVICE_DSNS = {f'{scheme}://postgres:ci@postgres:5432/yueboard_test'
+                for scheme in ('postgres', 'postgresql')}
+REDIRECT_OPTIONS = {'host', 'hostaddr', 'port', 'dbname', 'database', 'user',
+                    'password', 'passfile', 'service', 'servicefile', 'options',
+                    'target_session_attrs', 'search_path', 'role', 'session_authorization'}
+REDIRECT_ENV = ('PGHOST', 'PGHOSTADDR', 'PGPORT', 'PGDATABASE', 'PGUSER',
+                'PGPASSWORD', 'PGPASSFILE', 'PGSERVICE', 'PGSERVICEFILE',
+                'PGSYSCONFDIR', 'PGOPTIONS', 'PGTARGETSESSIONATTRS')
+
+
+def check_environment(phase: str, adapter: str = 'loopback') -> None:
+    if adapter not in ('loopback', 'github-service'):
+        fail('unsupported database adapter')
+    for key in REDIRECT_ENV:
+        if os.environ.get(key):
+            fail(f'{key} may redirect the disposable connection; unset it before execution')
     values = []
     for key in DSNS:
         value = os.environ.get(key, '')
         if not value:
             fail(f'{key} is required; refusing a silently skipped integration suite')
-        parsed = urlsplit(value)
-        if parsed.scheme not in ('postgres', 'postgresql') or parsed.hostname not in ('127.0.0.1', 'localhost') or parsed.path != '/yueboard_test':
-            fail(f'{key} must point at the loopback disposable yueboard_test service')
+        if adapter == 'github-service':
+            if value not in SERVICE_DSNS:
+                fail(f'{key} must be a canonical github-service disposable yueboard_test URI')
+        else:
+            # urlsplit strips some control characters; reject before parsing.
+            if any(ord(char) < 32 or ord(char) == 127 for char in value):
+                fail(f'{key} contains control characters')
+            parsed = urlsplit(value)
+            if parsed.scheme not in ('postgres', 'postgresql') or parsed.hostname not in ('127.0.0.1', 'localhost') or parsed.path != '/yueboard_test':
+                fail(f'{key} must point at the loopback disposable yueboard_test service')
+            if parsed.fragment:
+                fail(f'{key} must not contain a URI fragment')
+            # Decode parameter names before checking: %68ostaddr is hostaddr.
+            if any(name.lower() in REDIRECT_OPTIONS for name, _ in parse_qsl(parsed.query, keep_blank_values=True)):
+                fail(f'{key} contains a connection/session redirect option')
         values.append(value)
     if len(set(values)) != 1:
         fail('all integration DSNs must address the same disposable service/database')
@@ -196,8 +225,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--phase', choices=['domain', 'remaining'], required=True)
     parser.add_argument('--receipt', type=Path, required=True)
+    parser.add_argument('--database-adapter', choices=['loopback', 'github-service'], default='loopback')
     args = parser.parse_args()
-    check_environment(args.phase)
+    check_environment(args.phase, args.database_adapter)
     entries = discover()
     manifest = hashlib.sha256(json.dumps(entries, sort_keys=True).encode()).hexdigest()
     if args.phase == 'domain':
