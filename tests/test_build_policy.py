@@ -1175,7 +1175,8 @@ class BuildPolicyTest(unittest.TestCase):
             "permissions:\n  contents: read\n  packages: write",
             toolchain,
         )
-        self.assertIn("context: images/yueops-ci-toolchain", toolchain_code)
+        self.assertIn("context: .\n          file: images/yueops-ci-toolchain/Dockerfile", toolchain_code)
+        self.assertTrue((ROOT / "images/yueops-ci-toolchain/Dockerfile.dockerignore").is_file())
         self.assertIn(
             "ghcr.io/onesyue/yueops-ci-toolchain:${{ github.sha }}",
             toolchain_code,
@@ -1187,8 +1188,11 @@ class BuildPolicyTest(unittest.TestCase):
                 image.startswith("ghcr.io/onesyue/yueops-ci-toolchain"),
                 image,
             )
+        # A rebuild path filter names the installer; executing cosign or adding
+        # product publication permissions remains forbidden in this workflow.
+        toolchain_operations = toolchain_code.replace("      - scripts/install-cosign.sh\n", "")
         for forbidden in ("cosign", "imagetools", "promote", "id-token: write"):
-            self.assertNotIn(forbidden, toolchain_code)
+            self.assertNotIn(forbidden, toolchain_operations)
 
         capture = (WORKFLOW_DIR / "board-visual-capture.yml").read_text()
         capture_code = "\n".join(
