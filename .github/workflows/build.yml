@@ -879,9 +879,12 @@ jobs:
             exec bash .ci-policy/scripts/board-validation-preflight.sh dependencies \
               "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.ci-policy"
           fi
+          if [ "$VALIDATION_KIND" = yue-node ]; then
+            exec bash .ci-policy/scripts/node-validation-preflight.sh dependencies \
+              "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.ci-policy" "$GITHUB_WORKSPACE/.ci-yueboard"
+          fi
           tools=(bash git)
           case "$VALIDATION_KIND" in
-            yue-node) tools+=(base64 docker gcc go gpg jq make) ;;
             yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql sing-box-1.14 uv) ;;
             ui-*) tools+=(corepack node npm) ;;
             *)
@@ -952,10 +955,15 @@ jobs:
 
       - name: Validate native-node cross-repository contract
         if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'
-        run: >-
-          "$YUE_CI_PYTHON" .ci-policy/scripts/validate-native-node-contract.py
-          --kind '${{ matrix.validation }}' --source .
-          ${{ (matrix.validation == 'yue-node' || matrix.validation == 'yueops') && '--yueboard-contract-source .ci-yueboard' || '' }}
+        env:
+          VALIDATION_KIND: ${{ matrix.validation }}
+        run: |
+          if [ "$VALIDATION_KIND" = yue-node ]; then
+            exec bash .ci-policy/scripts/node-validation-preflight.sh contract \
+              "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.ci-policy" "$GITHUB_WORKSPACE/.ci-yueboard"
+          fi
+          "$YUE_CI_PYTHON" .ci-policy/scripts/validate-native-node-contract.py \
+            --kind '${{ matrix.validation }}' --source . --yueboard-contract-source .ci-yueboard
 
       # C1 (2026-09-27): the private-fork read credential lives ONLY in this
       # step. It verifies the signed fork tags and nothing else; the step's env
