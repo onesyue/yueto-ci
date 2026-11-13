@@ -16,3 +16,10 @@ scratch=$(mktemp -d)
 trap 'rm -rf -- "$scratch"' EXIT
 actual=$(HOME="$scratch" DOCKER_CONFIG="$scratch" docker buildx version)
 [[ "$actual" == "github.com/docker/buildx $buildx_version "* ]]
+# Board lint tools use the same authority as hosted and local executors.
+unset LINT_TOOL_VERSIONS_READY
+# shellcheck source=scripts/lint-tool-versions.sh
+source "$scripts/lint-tool-versions.sh"
+[ "${LINT_TOOL_VERSIONS_READY:-}" = 1 ]
+/usr/local/bin/govulncheck -version | grep -qF "$GOVULNCHECK_VERSION"
+/usr/local/bin/golangci-lint version | grep -qF "$GOLANGCI_LINT_VERSION"

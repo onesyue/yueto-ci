@@ -149,7 +149,7 @@ RUN apt-get update \
 ENV USER=runner \
     LOGNAME=runner
 
-COPY scripts/ci-retry.sh scripts/ops-validation-gitleaks.sh scripts/install-cosign.sh scripts/install-verified-buildx.sh /opt/yueops-ci-tools/.ci-policy/scripts/
+COPY scripts/ci-retry.sh scripts/ops-validation-gitleaks.sh scripts/install-cosign.sh scripts/install-verified-buildx.sh scripts/install-board-quality-tools.sh scripts/lint-tool-versions.sh /opt/yueops-ci-tools/.ci-policy/scripts/
 COPY images/yueops-ci-toolchain/install-verified-tools.sh /opt/yueops-ci-tools/install-verified-tools.sh
 COPY images/yueops-ci-toolchain/check-verified-tools.sh /usr/local/bin/yueops-ci-check-verified-tools
 RUN chmod 0755 /usr/local/bin/yueops-ci-check-verified-tools
