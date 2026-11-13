@@ -719,3 +719,12 @@ The shared preflight rejects inherited credentials and Git configuration variabl
 then uses the original tool inventory, Docker health check and native validator.
 This extraction does not enable Node local execution or establish access to its
 private source/forks; those preparation and identity boundaries remain required.
+
+
+The validation image recipe also invokes the shared Board quality installer during
+image assembly, then installs its verified govulncheck and golangci-lint outputs
+system-wide. The image selfcheck reads `lint-tool-versions.sh`, the same authority
+used by hosted/local Board validation. Runtime setup can reuse those binaries
+without rebuilding govulncheck. This recipe change does not publish an image or
+advance the consumer digest; a real image build/selfcheck and product validation
+remain required before switching consumers.

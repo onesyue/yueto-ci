@@ -16,6 +16,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE = ROOT / 'images/yueops-ci-toolchain'
 INSTALLERS = ('ops-validation-gitleaks.sh', 'install-cosign.sh', 'install-verified-buildx.sh')
+BOARD_INPUTS = ('install-board-quality-tools.sh', 'lint-tool-versions.sh')
 
 
 class VerifiedImageTools(unittest.TestCase):
@@ -65,6 +66,22 @@ class VerifiedImageTools(unittest.TestCase):
             actual = hashlib.sha256(artifact.read_bytes()).hexdigest()
             source = source.replace(digest, '0' * 64 if name == corrupt else actual)
             (scripts / name).write_text(source.replace('/usr/local/bin', str(destination)))
+        authority = (ROOT / 'scripts/lint-tool-versions.sh').read_text()
+        lint_version = self.capture(r"GOLANGCI_LINT_VERSION='([^']+)'", authority)
+        vuln_version = self.capture(r"GOVULNCHECK_VERSION='([^']+)'", authority)
+        lint = artifacts / 'golangci-lint'
+        lint.write_text(f'#!/bin/sh\necho "golangci-lint version {lint_version}"\n')
+        lint.chmod(0o755)
+        lint_archive = artifacts / 'golangci-lint.tgz'
+        with tarfile.open(lint_archive, 'w:gz') as handle:
+            handle.add(lint, arcname=f'golangci-lint-{lint_version}-linux-amd64/golangci-lint')
+        digest = self.capture(r"GOLANGCI_LINT_SHA256='([^']+)'", authority)
+        authority = authority.replace(digest, '0'*64 if corrupt == 'install-board-quality-tools.sh' else hashlib.sha256(lint_archive.read_bytes()).hexdigest())
+        (scripts / 'lint-tool-versions.sh').write_text(authority)
+        shutil.copy(ROOT / 'scripts/install-board-quality-tools.sh', scripts)
+        vuln = artifacts / 'govulncheck'
+        vuln.write_text(f'#!/bin/sh\necho "govulncheck {vuln_version}"\n')
+        vuln.chmod(0o755)
         for name in ('install-verified-tools.sh', 'check-verified-tools.sh'):
             body = (IMAGE / name).read_text().replace('/opt/yueops-ci-tools', str(policy))
             body = body.replace('/usr/local/bin', str(destination)).replace('/usr/local/lib/docker/cli-plugins', str(plugins))
@@ -81,9 +98,15 @@ case "$url" in
  */gitleaks/*) artifact=gitleaks.tgz;;
  */cosign/*) artifact=cosign;;
  */buildx/*) artifact=buildx;;
+ */golangci-lint/*) artifact=golangci-lint.tgz;;
  *) exit 97;;
 esac
 cp "$ARTIFACTS/$artifact" "$output"''',
+            'govulncheck': 'echo fixture-uninstalled',
+            'golangci-lint': 'echo fixture-uninstalled',
+            'go': '''[ "$1" = install ] || exit 95
+[ "$2" = "golang.org/x/vuln/cmd/govulncheck@$EXPECTED_VULN" ] || exit 94
+cp "$ARTIFACTS/govulncheck" "$GOBIN/govulncheck"''',
             'docker': '''[ "$1 $2" = 'buildx version' ] || exit 98
 printf '%s|%s\\n' "$HOME" "${DOCKER_CONFIG:-}" >> "$LOOKUPS"
 plugin="${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-buildx"
@@ -104,7 +127,7 @@ exec "$plugin" version''',
                 (shims / command).symlink_to(gnu)
         env = os.environ | {'PATH': os.pathsep.join((str(shims), str(destination), os.environ['PATH'])),
                             'TMPDIR': str(scratch) + '/', 'ARTIFACTS': str(artifacts),
-                            'SYSTEM_PLUGIN': str(plugins / 'docker-buildx'), 'LOOKUPS': str(root / 'lookups')}
+                            'SYSTEM_PLUGIN': str(plugins / 'docker-buildx'), 'LOOKUPS': str(root / 'lookups'), 'EXPECTED_VULN': vuln_version}
         env['DOCKER_CONFIG'] = str(root / 'ordinary-config')
         return root, destination, plugins, env
 
@@ -115,7 +138,7 @@ exec "$plugin" version''',
         root, destination, plugins, env = self.fixture()
         installed = self.run_script(root, env, 'install-verified-tools.sh')
         self.assertEqual(installed.returncode, 0, installed.stderr)
-        for binary in (destination / 'gitleaks', destination / 'cosign', plugins / 'docker-buildx'):
+        for binary in (destination / 'gitleaks', destination / 'cosign', plugins / 'docker-buildx', destination / 'govulncheck', destination / 'golangci-lint'):
             self.assertEqual(binary.stat().st_mode & 0o777, 0o755)
         self.assertEqual((destination / 'gitleaks').stat().st_uid, os.getuid())
         self.assertEqual(list((root / 'scratch').iterdir()), [])
@@ -140,8 +163,23 @@ exec "$plugin" version''',
         wrong = self.run_script(root, env, 'check-verified-tools.sh')
         self.assertNotEqual(wrong.returncode, 0)
 
+    def test_quality_selfcheck_rejects_missing_or_wrong_tool(self):
+        for tool in ('govulncheck', 'golangci-lint'):
+            for mode in ('missing', 'wrong'):
+                with self.subTest(tool=tool, mode=mode):
+                    root, destination, _, env = self.fixture()
+                    installed = self.run_script(root, env, 'install-verified-tools.sh')
+                    self.assertEqual(installed.returncode, 0, installed.stderr)
+                    binary = destination / tool
+                    if mode == 'missing':
+                        binary.unlink()
+                    else:
+                        binary.write_text('#!/bin/sh\necho wrong-version\n')
+                    result = self.run_script(root, env, 'check-verified-tools.sh')
+                    self.assertNotEqual(result.returncode, 0)
+
     def test_bad_artifacts_never_promote_tool_outputs_and_clean_scratch(self):
-        for installer in INSTALLERS:
+        for installer in (*INSTALLERS, 'install-board-quality-tools.sh'):
             with self.subTest(installer=installer):
                 root, destination, plugins, env = self.fixture(corrupt=installer)
                 result = self.run_script(root, env, 'install-verified-tools.sh')
@@ -161,7 +199,7 @@ exec "$plugin" version''',
                 fields = line.split()[1:-1]
                 self.assertTrue(all('*' not in item and item != '.' and not item.startswith('--') for item in fields))
                 sources.update(fields)
-        expected = {f'scripts/{name}' for name in (*INSTALLERS, 'ci-retry.sh')} | {
+        expected = {f'scripts/{name}' for name in (*INSTALLERS, *BOARD_INPUTS, 'ci-retry.sh')} | {
             f'images/yueops-ci-toolchain/{name}' for name in ('selfcheck.sh', 'docker-hostpath.sh',
                                                             'install-verified-tools.sh', 'check-verified-tools.sh')}
         self.assertEqual(sources, expected)
@@ -178,7 +216,7 @@ exec "$plugin" version''',
             self.assertEqual(build['with']['context'], '.')
             self.assertEqual(build['with']['file'], 'images/yueops-ci-toolchain/Dockerfile')
         trigger = workflow.get('on', workflow.get(True))
-        for source in (f'scripts/{name}' for name in (*INSTALLERS, 'ci-retry.sh')):
+        for source in (f'scripts/{name}' for name in (*INSTALLERS, *BOARD_INPUTS, 'ci-retry.sh')):
             self.assertIn(source, trigger['push']['paths'])
         for helper in ('install-verified-tools.sh', 'check-verified-tools.sh'):
             body = (IMAGE / helper).read_text()

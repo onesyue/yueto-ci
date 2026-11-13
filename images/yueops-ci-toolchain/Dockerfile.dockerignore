@@ -16,3 +16,5 @@ scripts/**
 !scripts/ops-validation-gitleaks.sh
 !scripts/install-cosign.sh
 !scripts/install-verified-buildx.sh
+!scripts/install-board-quality-tools.sh
+!scripts/lint-tool-versions.sh
