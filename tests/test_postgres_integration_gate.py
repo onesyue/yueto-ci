@@ -664,6 +664,20 @@ class PostgresAddressContractTest(unittest.TestCase):
             with self.subTest(uri=uri), self.assertRaises(RuntimeError):
                 self.validate(uri)
 
+    def test_loopback_requires_single_literal_hostspec_and_valid_port(self):
+        for hostspec in ('localhost', '127.0.0.1', 'localhost:55434', '127.0.0.1:5432'):
+            # Encoded userinfo does not change the address authority.
+            self.validate(f'postgres://post%67res:c%40i@{hostspec}/yueboard_test?sslmode=disable')
+        for hostspec in ('localhost:5432,example.invalid:5432',
+                         '127.0.0.1:5432,localhost:55434', 'localhost,example.invalid',
+                         '%6cocalhost:5432', 'localhost:%35%34%33%32',
+                         'localhost:5432%2cexample.invalid:5432',
+                         'localhost:', 'localhost:abc', 'localhost:-1',
+                         'localhost:0', 'localhost:65536', 'localhost:5432:5433',
+                         'localhost:5432@other.invalid', 'localhost.:5432'):
+            with self.subTest(hostspec=hostspec), self.assertRaises(RuntimeError):
+                self.validate(f'postgres://postgres:ci@{hostspec}/yueboard_test')
+
     def test_environment_redirects_rejected_without_value_disclosure(self):
         # Explicit inventory protects against dropping an entry from the production guard.
         keys = ('PGHOST', 'PGHOSTADDR', 'PGPORT', 'PGDATABASE', 'PGUSER', 'PGPASSWORD',
@@ -697,7 +711,10 @@ class PostgresAddressContractTest(unittest.TestCase):
                  (['--database-adapter', 'github-service'], service + '?hostaddr=192.0.2.1', {}),
                  ([], loopback + '?%68ostaddr=192.0.2.1', {}),
                  (['--database-adapter', 'github-service'], service, {'PGSERVICE': 'untrusted'}),
-                 ([], loopback, {'PGOPTIONS': '-csearch_path=untrusted'})]
+                 ([], loopback, {'PGOPTIONS': '-csearch_path=untrusted'}),
+                 ([], loopback.replace('127.0.0.1:5432', 'localhost:5432,example.invalid:5432'), {}),
+                 ([], loopback.replace('127.0.0.1:5432', 'localhost:%35%34%33%32'), {}),
+                 ([], loopback.replace('127.0.0.1:5432', '%6cocalhost:5432'), {})]
         with tempfile.TemporaryDirectory() as directory:
             receipt = Path(directory) / 'receipt.json'
             for args, uri, extra in cases:
