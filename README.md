@@ -285,6 +285,21 @@ artifacts, with the existing release-asset API fallback and checksum verificatio
 Their binary copies are no longer stored in `third_party/`; a download failure
 remains a failure rather than admitting an unverified replacement.
 
+The toolchain recipe reuses those same three installers during its image build.
+Only explicit recipe scripts enter the root build context, constrained by its
+Dockerfile-specific ignore file. Gitleaks is installed as the runner evidence
+owner; verified Cosign is copied onto PATH, and Buildx is installed in Docker's
+[system plugin directory](https://github.com/docker/buildx#manual-download)
+so container jobs with a different HOME can resolve it.
+The non-root selfcheck reads expected versions from the installer sources and
+checks ownership plus actual Buildx lookup with both ordinary and empty user
+configuration.
+
+This recipe change does not switch the consumer image digest or remove runtime
+bootstraps. A published image, successful non-root image selfcheck and three
+Board/Node acceptance runs are still required before that later migration;
+offline installer fixtures and policy tests do not establish those results.
+
 While this repository is public, do not register a persistent self-hosted runner.
 Never attach production hosts. Before using a local release runner, make the
 control repository private, protect branches and establish the Actions allowlist.

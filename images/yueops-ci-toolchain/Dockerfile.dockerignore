@@ -1,0 +1,18 @@
+# Root context: only explicit recipe inputs may reach the image builder.
+**
+!images/
+images/**
+!images/yueops-ci-toolchain/
+images/yueops-ci-toolchain/**
+!images/yueops-ci-toolchain/Dockerfile
+!images/yueops-ci-toolchain/Dockerfile.dockerignore
+!images/yueops-ci-toolchain/selfcheck.sh
+!images/yueops-ci-toolchain/docker-hostpath.sh
+!images/yueops-ci-toolchain/install-verified-tools.sh
+!images/yueops-ci-toolchain/check-verified-tools.sh
+!scripts/
+scripts/**
+!scripts/ci-retry.sh
+!scripts/ops-validation-gitleaks.sh
+!scripts/install-cosign.sh
+!scripts/install-verified-buildx.sh

@@ -20,6 +20,7 @@ for tool in initdb pg_ctl psql gcc make node npm jq git buf docker corepack ssh-
   command -v "$tool" >/dev/null
 done
 docker compose version >/dev/null
+yueops-ci-check-verified-tools
 data=$(mktemp -d)
 trap 'pg_ctl -D "$data" stop >/dev/null 2>&1 || true; rm -rf -- "$data"' EXIT
 initdb -D "$data" --username="$(id -un)" --auth=trust >/dev/null

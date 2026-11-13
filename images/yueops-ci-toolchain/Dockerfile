@@ -126,8 +126,8 @@ RUN curl --fail --silent --show-error --location \
  && rm -rf /tmp/sing-box.tgz /tmp/sing-box-1.14.4-linux-amd64 \
  && sing-box-1.14 version | grep -E '^sing-box version 1\.14\.'
 
-COPY selfcheck.sh /usr/local/bin/yueops-ci-toolchain-selfcheck
-COPY docker-hostpath.sh /usr/local/bin/docker
+COPY images/yueops-ci-toolchain/selfcheck.sh /usr/local/bin/yueops-ci-toolchain-selfcheck
+COPY images/yueops-ci-toolchain/docker-hostpath.sh /usr/local/bin/docker
 RUN chmod 0755 /usr/local/bin/yueops-ci-toolchain-selfcheck /usr/local/bin/docker \
  && groupadd --gid 1001 runner \
  && useradd --uid 1001 --gid 1001 --create-home --shell /bin/bash runner \
@@ -149,5 +149,12 @@ RUN apt-get update \
 ENV USER=runner \
     LOGNAME=runner
 
+COPY scripts/ci-retry.sh scripts/ops-validation-gitleaks.sh scripts/install-cosign.sh scripts/install-verified-buildx.sh /opt/yueops-ci-tools/.ci-policy/scripts/
+COPY images/yueops-ci-toolchain/install-verified-tools.sh /opt/yueops-ci-tools/install-verified-tools.sh
+COPY images/yueops-ci-toolchain/check-verified-tools.sh /usr/local/bin/yueops-ci-check-verified-tools
+RUN chmod 0755 /usr/local/bin/yueops-ci-check-verified-tools
+
 USER runner
 WORKDIR /home/runner
+RUN bash /opt/yueops-ci-tools/install-verified-tools.sh \
+ && yueops-ci-check-verified-tools
