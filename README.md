@@ -529,8 +529,8 @@ Standalone lint versions and existing archive digests live in
 `scripts/lint-tool-versions.sh`: golangci-lint, govulncheck, Squawk and actionlint.
 The Board installer, shared Ops migration phase (CI and local), and Policy
 workflow consume that exact policy file; Go cache identity includes its bytes.
-Future Board local execution must use the same shared installer. This moves
-existing pins without upgrading tools or enabling a new local adapter. Ruff and
+Board local execution uses the same shared installer. These pins are shared
+without upgrading tools. Ruff and
 frontend tools retain source lockfile authority; gitleaks/cosign/buildx retain
 their existing verified installers. ShellCheck still uses the runner's tool;
 this change does not establish a new ShellCheck pin or complete B10-2 parity.
@@ -690,7 +690,42 @@ Board common prerequisites now use `board-validation-preflight.sh` in two phases
 `dependencies` runs after the existing tool setup and before optional caches;
 `contract` clears Go test cache and runs the original pin authorizer and native
 contract validator after cache restoration. Hosted promotion intent is preserved
-through explicit PROMOTE; a future local caller must supply PROMOTE=false.
+through explicit PROMOTE; the local adapter supplies PROMOTE=false.
 Missing dependencies or credentials in the execution environment fail closed.
-This extraction does not add Board local execution, publish a toolchain image,
-or change its digest; `ci-check.sh yueboard --local` remains unsupported.
+
+### Board local validation adapter (B10-2)
+
+`scripts/ci-check.sh yueboard <exact-sha> --local` prepares independent source and
+policy clones, then uses the native Board planner and authorizer. The seven
+roles run separately in owned Linux amd64 containers through the same prerequisite,
+backend and frontend executors as hosted validation. The resulting build matrix
+is always empty. The source follows Board's existing admission rules, including
+the reviewed pin/native contract; this does not introduce Ops-only signature
+admission for Board. Delivery commits remain signed.
+
+The host needs Python with PyYAML, Git HTTPS access to the source, and Docker with
+privileged Linux amd64 support. The immutable validation image must provide the
+workflow's exact Go and Buf versions/checksum, Node major, Python, Docker daemon,
+sudo, and the shared executors' dependencies. No image is built or published by
+this command. A missing tool or mismatched version fails; the adapter does not
+claim that the current image already satisfies all Board prerequisites.
+
+Each role has a private daemon, source copy and temporary directory. Neither
+host Docker sockets nor clone credentials are passed to source execution.
+PostgreSQL roles create the workflow's immutable PostgreSQL 18 service inside
+that daemon, expose it only on loopback, wait for health, and retain diagnostics
+and remove only its exact container ID. Integration, migration, clean-lifecycle
+and E2E environments stay distinct. Frontend layout outputs use the shared
+adapter; only failed E2E tests retain safe report paths.
+
+`CI_CHECK_OUTPUT` selects the receipt directory. `targets.json`, per-role logs,
+`role-result.json`, `execution.json` and `failures.txt` record the exact source,
+policy and role outcomes. Validation failures allow other roles to run;
+infrastructure failures or missing/mismatched receipts cannot yield success.
+Exit 0 means complete successful validation, 1 means completed validation failed,
+and 2 means infrastructure or lifecycle evidence is incomplete.
+
+Offline lifecycle and shell controls do not establish actual Board validation
+parity. A real complete local run and matching hosted run at identical source
+and policy inputs remain required for B10-2 acceptance; PostgreSQL/browser and
+historical S1009 replay evidence remain outstanding.
