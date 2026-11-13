@@ -276,7 +276,7 @@ class BoardBoundary(unittest.TestCase):
             with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory); binpath = root/'bin'; binpath.mkdir()
                 log = root/'calls'
-                for tool in ('git', 'docker', 'python3'):
+                for tool in ('git', 'gh', 'docker', 'python3'):
                     program = binpath/tool
                     program.write_text('#!' + sys.executable + '\n' + '''import json, os, sys
 from pathlib import Path
@@ -285,6 +285,9 @@ with open(os.environ['FIXTURE_LOG'],'a') as f: f.write(json.dumps([name,args])+'
 if name=='git':
  if args[0]=='clone': Path(args[-1]).mkdir(parents=True)
  elif 'rev-parse' in args: print('b'*40)
+elif name=='gh':
+ assert args[:2]==['repo','clone'] and args[2]=='onesyue/yueboard', args
+ Path(args[3]).mkdir(parents=True)
 elif name=='python3':
  assert args[0].endswith('/scripts/ci_check_board_local.py'), args
  sys.exit(int(os.environ['FIXTURE_EXIT']))
@@ -293,12 +296,16 @@ elif name=='python3':
                 env = dict(os.environ, PATH=str(binpath)+os.pathsep+os.environ['PATH'],
                            FIXTURE_LOG=str(log), FIXTURE_EXIT=str(status), CI_CHECK_OUTPUT=str(root/'output'))
                 env.pop('CI_CHECK_MIGRATION_BASE', None)
+                env.pop('YUEBOARD_CHECKOUT', None)
                 result = subprocess.run(['bash', str(ROOT/'scripts/ci-check.sh'), 'yueboard', 'a'*40, '--local'],
                                         env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, status, result.stderr)
                 calls = [json.loads(line) for line in log.read_text().splitlines()]
                 clones = [args for name,args in calls if name=='git' and args[0]=='clone']
-                self.assertEqual(len(clones), 2)
+                self.assertEqual(len(clones), 1)
+                gh_calls = [args for name,args in calls if name=='gh']
+                self.assertEqual(len(gh_calls), 1)
+                self.assertEqual(gh_calls[0][:3], ['repo', 'clone', 'onesyue/yueboard'])
                 self.assertFalse(any('yueops' in ' '.join(args) for name,args in calls))
                 args = next(args for name,args in calls if name=='python3')
                 self.assertEqual(args[args.index('--source-sha')+1], 'a'*40)

@@ -3772,16 +3772,16 @@ def envelope(value):
                 require(value.get("validation_only") is None or value.get("validation_only") is True,
                         "validation_only must be absent or true")
                 if value.get("validation_only") is True:
-                    require(value.get("admission_rule") is None, "validation_only cannot carry admission_rule")
+                    require(value.get("admission_rule") is None,
+                            "validation-only does not carry a release admission rule")
+                elif value.get("admission_rule") == "signed-default-branch":
+                    require(value.get("estate_successor_of") is None
+                            and value.get("template_writer_retired_at") is None
+                            and value.get("pin_is_ancestor") is not True,
+                            "signed admission does not carry a seal marker")
                 else:
-                    if value.get("admission_rule") == "signed-default-branch":
-                        require(value.get("estate_successor_of") is None
-                                and value.get("template_writer_retired_at") is None
-                                and value.get("pin_is_ancestor") is not True,
-                                "signed admission does not carry a seal marker")
-                    else:
-                        require(False,
-                                "shared-input seals are retired; admit a signed default-branch commit")
+                    require(False,
+                            "shared-input seals are retired; admit a signed default-branch commit")
             require(planned["source_revision"] == value["source_revision"]
                     and planned["context"]["board_revision"] == value["board_revision"]
                     and all(planned["context"][k] == v for k, v in value["identity"].items()),
@@ -5550,9 +5550,9 @@ def main():
     expand_cli.add_argument("--runner", required=True)
     expand_cli.add_argument("--capacity", type=int, required=True)
     expand_cli.add_argument("--shards", type=int, required=True)
+    expand_cli.add_argument("--validation-only", action="store_true")
     expand_cli.add_argument("--timing", type=Path)
     expand_cli.add_argument("--weights", type=Path)
-    expand_cli.add_argument("--validation-only", action="store_true")
     run_cli = sub.add_parser("run")
     run_cli.add_argument("--admission", type=Path, required=True)
     run_cli.add_argument("--source", type=Path, required=True)
