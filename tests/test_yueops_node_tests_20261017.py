@@ -308,8 +308,8 @@ class YueOpsNativeObligationPolicy(unittest.TestCase):
             (target + ' 30 0', ''),
             (target + ' 30 0', target + ' 29 0'),
             (target + ' 30 0', target + ' 30 1001'),
-            ('YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"', ''),
-            ('YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"', 'YUEBOARD_REPO_PATH=/tmp/unbound'),
+            ('TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"', 'TZ=UTC'),
+            ('TZ=UTC YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"', 'TZ=UTC YUEBOARD_REPO_PATH=/tmp/unbound'),
         ):
             with self.subTest(after=after), self.assertRaises(AssertionError):
                 _assert_native_contract(self, workflow.replace(before, after, 1))
