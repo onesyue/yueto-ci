@@ -1,9 +1,10 @@
-"""Validate runs in the pinned toolchain image and does not apt."""
+"""Container validation stays pinned; Board visual validation uses the host."""
 
 from __future__ import annotations
 
 from workflow_source import workflow_text
 import re
+import yaml
 import unittest
 from pathlib import Path
 
@@ -31,14 +32,42 @@ class CiToolchainImageTest(unittest.TestCase):
         )[0]
         self.assertRegex(
             validate,
-            r"image: ghcr\.io/onesyue/yueops-ci-toolchain@sha256:[0-9a-f]{64}\n",
+            r"ghcr\.io/onesyue/yueops-ci-toolchain@sha256:[0-9a-f]{64}",
         )
         self.assertNotIn("DIGEST_PLACEHOLDER", workflow)
-        self.assertNotIn("apt-get", validate)
+        job = yaml.safe_load(workflow)['jobs']['validate']
+        self.assertRegex(job['container']['image'],
+                         r"^\$\{\{ matrix.board_role != 'e2e' && 'ghcr\.io/onesyue/yueops-ci-toolchain@sha256:[0-9a-f]{64}' \|\| '' \}\}$")
+        for step in job['steps']:
+            if 'apt-get' in step.get('run', ''):
+                self.assertEqual(step['if'], "matrix.board_role == 'e2e'")
         self.assertNotIn("install-yueops-pg18", validate)
         self.assertNotIn("install-native-nginx.sh", validate)
         self.assertIn("sing-box-1.14 version", validate)
         self.assertIn("shell: bash", validate)
+
+    def test_host_e2e_keeps_python_temp_database_and_visual_contract(self) -> None:
+        job = yaml.safe_load(WORKFLOW.read_text())['jobs']['validate']
+        steps = {step.get('name'): step for step in job['steps']}
+        self.assertEqual(job['env']['TMPDIR'],
+                         "${{ matrix.board_role == 'e2e' && '/tmp' || '/__w/_temp' }}")
+        host_condition = "matrix.board_role == 'e2e' && (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')"
+        for name in ('Set up Python for host Board e2e', 'Select Python for host Board e2e'):
+            self.assertEqual(steps[name]['if'], host_condition)
+        for name in ('Set up Python on GitHub-hosted runner', 'Select Python on GitHub-hosted runner'):
+            self.assertEqual(steps[name]['if'], host_condition.replace("== 'e2e'", "!= 'e2e'"))
+        self.assertEqual(steps['Set up Python for host Board e2e']['with']['python-version'], '3.13')
+        self.assertIn('command -v python3', steps['Select Python for host Board e2e']['run'])
+        e2e = steps['Validate YueBoard end-to-end suite']
+        self.assertIn('--database-adapter loopback', e2e['run'])
+        for name, database in [('YUEBOARD_ADMIN_DATABASE_URL', 'postgres'),
+                               ('YUEBOARD_E2E_DATABASE_URL', 'yueboard_e2e?sslmode=disable')]:
+            self.assertEqual(e2e['env'][name],
+                "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/" + database +
+                "' || 'postgres://postgres:ci@127.0.0.1:5432/" + database + "' }}")
+        executor = (ROOT / 'scripts/board-validation.sh').read_text()
+        self.assertIn('pnpm --dir test/e2e test --update-snapshots=none', executor)
+        self.assertNotIn('--update-snapshots=all', executor)
 
     def test_image_build_pins_uv_and_the_runtime_tools(self) -> None:
         digest = (IMAGE / "uv.sha256").read_text(encoding="utf-8").strip()

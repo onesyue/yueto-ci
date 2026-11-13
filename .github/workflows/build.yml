@@ -598,14 +598,15 @@ jobs:
   validate:
     needs: [plan]
     container:
-      image: ghcr.io/onesyue/yueops-ci-toolchain@sha256:96b3439fd16effe9686cb6297026e97fac605db4d1ab8ce674aa45c121873017
+      # Visual baselines were captured on the host; an empty image disables the job container.
+      image: ${{ matrix.board_role != 'e2e' && 'ghcr.io/onesyue/yueops-ci-toolchain@sha256:96b3439fd16effe9686cb6297026e97fac605db4d1ab8ce674aa45c121873017' || '' }}
       options: --user runner --volume /var/run/docker.sock:/var/run/docker.sock
     # A job container defaults to sh, which rejects `set -o pipefail`.
     defaults:
       run:
         shell: bash
     # The toolchain image already has PostgreSQL 18, compilers, sing-box
-    # 1.14 and Python 3.13. This job does not apt.
+    # 1.14 and Python 3.13. Only the host e2e row bootstraps missing tools.
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     # The 22k-test serial Ops gate reached 96% at the former 60-minute limit.
     # Keep all tests and allow the remaining suite/frontend stages to finish.
@@ -619,11 +620,11 @@ jobs:
       # The host ImageVersion is not passed into a job container. Shard
       # admission rejects a missing identity. OS and architecture still come
       # from the runner; this names the toolchain image.
-      ImageVersion: yueops-ci-toolchain
+      ImageVersion: ${{ matrix.board_role == 'e2e' && 'board-e2e-host' || 'yueops-ci-toolchain' }}
       # Pytest temp files must live on the mounted work directory. The host
       # Docker daemon cannot see the container's own /tmp, and a missing
       # bind source is created as a directory.
-      TMPDIR: /__w/_temp
+      TMPDIR: ${{ matrix.board_role == 'e2e' && '/tmp' || '/__w/_temp' }}
     strategy:
       # One shard's failure must not cancel its siblings.
       # A test failure still fails that shard immediately: the pytest step
@@ -751,11 +752,25 @@ jobs:
           go-version: '1.27.4'
           cache: false
 
-      - name: Set up Python on GitHub-hosted runner
-        if: github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release'
+      - name: Set up Python for host Board e2e
+        if: matrix.board_role == 'e2e' && (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: Select Python for host Board e2e
+        if: matrix.board_role == 'e2e' && (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
         run: |
           set -euo pipefail
-          # This job always runs in the toolchain image. That Python is
+          python_bin="$(command -v python3)"
+          "$python_bin" -c 'import sys; assert sys.version_info[:2] == (3, 13)'
+          echo "YUE_CI_PYTHON=$python_bin" >> "$GITHUB_ENV"
+
+      - name: Set up Python on GitHub-hosted runner
+        if: matrix.board_role != 'e2e' && (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
+        run: |
+          set -euo pipefail
+          # Non-e2e rows run in the toolchain image. That Python is
           # linked with an rpath and starts with an empty library path.
           # actions/setup-python would put another 3.13 first on PATH, and
           # product tests drop the LD_LIBRARY_PATH that build needs.
@@ -768,7 +783,7 @@ jobs:
           echo "YUE_CI_PYTHON=$python_bin" >> "$GITHUB_ENV"
 
       - name: Select Python on GitHub-hosted runner
-        if: github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release'
+        if: matrix.board_role != 'e2e' && (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
         run: |
           set -euo pipefail
           python_bin="${YUE_CI_PYTHON:?}"
@@ -815,6 +830,16 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
+
+      - name: Prepare host Board e2e tools
+        if: matrix.board_role == 'e2e'
+        run: |
+          set -euo pipefail
+          if ! command -v gcc >/dev/null 2>&1 || ! command -v psql >/dev/null 2>&1; then
+            sudo -n apt-get update
+            sudo -n apt-get install -y --no-install-recommends build-essential postgresql-client
+          fi
+          for tool in gcc psql corepack; do command -v "$tool" >/dev/null; done
 
       # Keep the protocol owner as the policy owner: central CI installs the
       # compiler, then executes YueBoard's checked-in lint + breaking script.
@@ -1137,12 +1162,12 @@ jobs:
         id: board_e2e
         if: matrix.validation == 'yueboard' && matrix.board_role == 'e2e' && steps.board_frontend.outputs.layout == 'workspace'
         env:
-          YUEBOARD_ADMIN_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/postgres' || 'postgres://postgres:ci@postgres:5432/postgres' }}
-          YUEBOARD_E2E_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@postgres:5432/yueboard_e2e?sslmode=disable' || 'postgres://postgres:ci@postgres:5432/yueboard_e2e?sslmode=disable' }}
+          YUEBOARD_ADMIN_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/postgres' || 'postgres://postgres:ci@127.0.0.1:5432/postgres' }}
+          YUEBOARD_E2E_DATABASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && 'postgres://postgres:ci@127.0.0.1:55434/yueboard_e2e?sslmode=disable' || 'postgres://postgres:ci@127.0.0.1:5432/yueboard_e2e?sslmode=disable' }}
           YUEBOARD_E2E_ALLOW_RESET: YES_I_UNDERSTAND_THIS_DATABASE_IS_DISPOSABLE
         run: |
           "$YUE_CI_PYTHON" .ci-policy/scripts/board-validation-output.py e2e \
-            "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.ci-policy" "$RUNNER_TEMP" --frontend-phase test --database-adapter github-service
+            "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.ci-policy" "$RUNNER_TEMP" --frontend-phase test --database-adapter loopback
 
       - name: Upload YueBoard E2E report
         if: failure() && matrix.validation == 'yueboard' && matrix.board_role == 'e2e' && steps.board_e2e.outcome == 'failure'

@@ -922,9 +922,10 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("While this repository is public, do not register a persistent self-hosted runner.", self.readme)
         self.assertIn("`--ephemeral --disableupdate` runner", self.readme)
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
-        # Host port map only. Job containers reach the service as postgres:5432.
-        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 1)
-        self.assertNotIn("postgres://postgres:ci@127.0.0.1", self.workflow)
+        # Container rows use service DNS; host e2e uses the published port.
+        # Service port plus the two host e2e database URLs.
+        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 3)
+        self.assertIn("postgres://postgres:ci@127.0.0.1", self.workflow)
         self.assertIn("postgres://postgres:ci@postgres:5432/", self.workflow)
 
 
@@ -1298,13 +1299,13 @@ class BuildPolicyTest(unittest.TestCase):
             with self.subTest(invariant=invariant):
                 self.assertIn(invariant, image)
         validate = self.workflow.split("\n  validate:\n", 1)[1].split("\n  validation-evidence:\n", 1)[0]
-        self.assertNotIn("apt-get", validate)
-        self.assertIn("ImageVersion: yueops-ci-toolchain", validate)
-        self.assertIn("TMPDIR: /__w/_temp", validate)
+        self.assertIn("Prepare host Board e2e tools", validate)
+        self.assertIn("'board-e2e-host' || 'yueops-ci-toolchain'", validate)
+        self.assertIn("'/tmp' || '/__w/_temp'", validate)
         self.assertNotIn("postgresql-18", self.workflow)
         self.assertIn("python_bin=/usr/local/bin/python3", validate)
-        self.assertNotIn("uses: actions/setup-python", validate)
-        self.assertNotIn('python_bin="$(command -v python3)"', validate)
+        self.assertIn("Set up Python for host Board e2e", validate)
+        self.assertIn('python_bin="$(command -v python3)"', validate)
         self.assertIn(
             "Set up Python on GitHub-hosted runner",
             self.workflow,
