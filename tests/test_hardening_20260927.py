@@ -96,9 +96,13 @@ class ForkTokenIsolationTest(unittest.TestCase):
                      "Validate YueBoard PostgreSQL module and migration integration"):
             with self.subTest(name=name):
                 original = step_named(self.validate, name)
-                changed = original.replace("        env:\n", "        env:\n"
-                    "          GITHUB_TOKEN: ${{ github.token }}\n", 1)
+                token_env = "          GITHUB_TOKEN: ${{ github.token }}\n"
+                if "        env:\n" in original:
+                    changed = original.replace("        env:\n", "        env:\n" + token_env, 1)
+                else:
+                    changed = original.replace("        run:", "        env:\n" + token_env + "        run:", 1)
                 self.assertNotEqual(original, changed)
+                self.assertEqual(changed.count(token_env), 1)
                 self.assertEqual(credential_leaks(self.validate.replace(original, changed, 1)),
                                  ["- name: " + name])
 
