@@ -643,3 +643,25 @@ throwaway keys inside its child environment. Clean rejects integration receipt
 arguments because it has no such receipt contract. The workflow retains three
 separate steps and environment scopes, plus job-owned service teardown and
 failure diagnostics; no new DROP cleanup or local-equivalence claim is added.
+
+The Board frontend roles use the same executor with explicit `--frontend-phase`
+values: prepare for all three roles, lint/design for frontends, and test for
+components/e2e. The workflow keeps its original stage IDs, workspace-only
+conditions and E2E report predicate. Legacy layouts still build/audit both apps
+and run design contracts; they do not run workspace-only suites.
+
+`board-validation-output.py` is only a workflow adapter. Each invocation owns a
+fresh result directory beneath the supplied temporary directory and forwards
+only a valid layout/visual marker to GITHUB_OUTPUT. Source stdout is not parsed,
+and the shared executor itself works without GitHub output files. Markers retain
+the original timing: layout precedes audit, and visual=compared precedes the
+comparison command; neither means the phase passed. Nonzero source status is
+preserved even when output validation fails.
+
+E2E database/reset variables remain scoped to its test step. Before DROP/CREATE,
+the shared address checker requires fixed admin/e2e database names, the same
+connection authority, no PG environment redirects, and explicit disposable reset
+consent. Only the existing SSL difference is accepted: admin may omit SSL mode
+or disable it, and E2E must explicitly use sslmode=disable. Extra query options
+are rejected. No snapshot authoring or local CLI authorization is introduced;
+complete prerequisite integration and real Board validation remain pending.
