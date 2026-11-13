@@ -1273,7 +1273,7 @@ class BuildPolicyTest(unittest.TestCase):
             "YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}",
             "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \\\n",
             "            make verify-fork-tags\n",
-            "yueboard) tools+=(buf corepack docker gcc go make node psql)",
+            "board-validation-preflight.sh dependencies",
             "Require the toolchain NGINX and sing-box",
             "yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql sing-box-1.14 uv)",
             "Preflight build and promotion dependencies",
@@ -1284,6 +1284,8 @@ class BuildPolicyTest(unittest.TestCase):
         for invariant in required:
             with self.subTest(invariant=invariant):
                 self.assertIn(invariant, self.workflow)
+        preflight = (ROOT / "scripts/board-validation-preflight.sh").read_text()
+        self.assertIn("for tool in bash git buf corepack docker gcc go make node psql", preflight)
         image = (ROOT / "images/yueops-ci-toolchain/Dockerfile").read_text(encoding="utf-8")
         for invariant in (
             "postgresql-18 postgresql-client-18 libpq-dev",
@@ -1411,8 +1413,11 @@ class BuildPolicyTest(unittest.TestCase):
         classifier = self.workflow[classifier_start:validation_start]
         self.assertIn("if: matrix.validation == 'yueboard'", classifier)
         self.assertIn("PROMOTE: ${{ needs.plan.outputs.promote }}", classifier)
-        self.assertIn(".ci-policy/native-node-contract.json", classifier)
-        self.assertIn("authorize-yueboard-promotion.sh", classifier)
+        self.assertIn("board-validation-preflight.sh contract", classifier)
+        preflight = (ROOT / "scripts/board-validation-preflight.sh").read_text()
+        self.assertIn('$policy/native-node-contract.json', preflight)
+        self.assertIn('authorize-yueboard-promotion.sh', preflight)
+        self.assertIn('"$source_sha" "$contract_pin" "$PROMOTE"', preflight)
         self.assertIn("authorize-yueboard-build-plan.sh", self.workflow)
         self.assertIn("board_source_sha", self.workflow)
         self.assertIn("encoded_board_ref", self.workflow)
@@ -1443,7 +1448,7 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertEqual(
             self.workflow.count(".ci-policy/scripts/authorize-yueboard-promotion.sh"),
-            2,
+            1,
         )
         self.assertIn("non-promotable", self.readme)
         self.assertIn("yueboard_contract_pin", self.readme)

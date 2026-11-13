@@ -875,10 +875,13 @@ jobs:
           VALIDATION_KIND: ${{ matrix.validation }}
         run: |
           set -euo pipefail
+          if [ "$VALIDATION_KIND" = yueboard ]; then
+            exec bash .ci-policy/scripts/board-validation-preflight.sh dependencies \
+              "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.ci-policy"
+          fi
           tools=(bash git)
           case "$VALIDATION_KIND" in
             yue-node) tools+=(base64 docker gcc go gpg jq make) ;;
-            yueboard) tools+=(buf corepack docker gcc go make node psql) ;;
             yueops) tools+=(docker initdb jq node npm pg_ctl postgres psql sing-box-1.14 uv) ;;
             ui-*) tools+=(corepack node npm) ;;
             *)
@@ -931,7 +934,7 @@ jobs:
           restore-keys: ${{ steps.go_cache.outputs.compiler_restore }}
 
       - name: Keep Go test execution independent of compiler cache
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueboard'
+        if: matrix.validation == 'yue-node'
         run: go clean -testcache
 
       # A new YueBoard HEAD may be reviewed before the cross-repository pin is
@@ -944,14 +947,11 @@ jobs:
         env:
           PROMOTE: ${{ needs.plan.outputs.promote }}
         run: |
-          set -euo pipefail
-          source_sha="$(git rev-parse HEAD)"
-          contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
-          bash .ci-policy/scripts/authorize-yueboard-promotion.sh \
-            "$source_sha" "$contract_pin" "$PROMOTE"
+          bash .ci-policy/scripts/board-validation-preflight.sh contract \
+            "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.ci-policy"
 
       - name: Validate native-node cross-repository contract
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard'
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'
         run: >-
           "$YUE_CI_PYTHON" .ci-policy/scripts/validate-native-node-contract.py
           --kind '${{ matrix.validation }}' --source .
