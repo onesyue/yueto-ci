@@ -749,3 +749,13 @@ used by hosted/local Board validation. Runtime setup can reuse those binaries
 without rebuilding govulncheck. This recipe change does not publish an image or
 advance the consumer digest; a real image build/selfcheck and product validation
 remain required before switching consumers.
+
+
+Board quality invokes the source-owned `make check-http-contract` in both hosted
+and local execution. The baseline is the merge base with the fetched
+`origin/master`; when validating master itself, its first parent is used when
+present. An explicit `HTTP_CONTRACT_BASE` resolves through Git before being
+passed to Make as a commit ID. Missing baseline history fails closed. This adds
+the existing snapshot/prior-deprecation compatibility gate; it does not replace
+the remaining migration-number allocation or accessibility checks required
+before retiring the disabled Board workflow.

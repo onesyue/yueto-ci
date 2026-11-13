@@ -88,6 +88,14 @@ case "$role" in
         export YUEBOARD_CONTRACT_BASELINE
         echo "economy contract baseline: first parent $YUEBOARD_CONTRACT_BASELINE"
       fi
+      # Compare the source-owned HTTP contract against real prior history.
+      # A master validation must not silently compare the contract to itself.
+      http_base=$(git merge-base HEAD "${HTTP_CONTRACT_BASE:-origin/master}") \
+        || fail 'HTTP contract baseline is unavailable'
+      if [ -z "${HTTP_CONTRACT_BASE:-}" ] && [ "$http_base" = "$(git rev-parse HEAD)" ] \
+        && git rev-parse --verify --quiet 'HEAD^1^{commit}' >/dev/null; then
+        http_base=$(git rev-parse 'HEAD^1')
+      fi
       go build ./...
       mapfile -t go_files < <(
         git ls-files '*.go' | grep -v '/gen/' | grep -v 'noderpc/gen'
@@ -103,6 +111,7 @@ case "$role" in
         exit 1
       fi
       make check-generated
+      make check-http-contract "HTTP_CONTRACT_BASE=$http_base"
       go vet ./...
       scripts/ci/check-server-error-logging.sh
       bash "$policy/scripts/install-board-quality-tools.sh" \
