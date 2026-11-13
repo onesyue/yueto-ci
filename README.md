@@ -764,3 +764,67 @@ root/sudo policy as component/E2E phases. The smoke script retains its existing
 serious/critical checks and baseline ratchet; source failure, missing browser,
 missing script or an explicit skip cannot succeed. This wiring is shared by
 hosted and local execution, but actual browser results still require a full run.
+
+### Offline Board UA parser gate
+
+The shared Board `quality` executor runs the source-owned UA matrix after the
+existing full Go quality checks and before the protocol gate. Both hosted and
+local callers use this entry. `scripts/validate-board-ua-cores.sh` prepares
+only checksum-verified official archives with `--download-only`, then executes
+the entire source gate in Docker with `--network none`. The Board helper also
+requires loopback to be the only interface UP, rejects non-loopback routes,
+and requires an unprivileged process before forcing offline core
+verification. There is no host parser execution or connected fallback.
+
+The runtime is the reviewed Go 1.27.4 multiarch index
+`golang@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea`.
+The source toolchain, host cache toolchain and container must agree; a toolchain
+change requires reviewing the image pin. Go auto-download and module-network
+access are disabled inside the gate. The source is read-only; verified core,
+module and compiler snapshots remain writable for locks and offline compilation.
+The wrapper copies only these four explicit input directories into fresh Docker
+volumes through a stopped seed container with the same UID/GID as the parser,
+so copied cache roots remain writable. It never assumes job-container paths exist on the host daemon and never mounts a parent
+container's full volumes or host home. Source is mounted read-only; each cache
+is private to this run. Copying the module and compiler caches costs temporary
+storage and I/O, and changes made inside those snapshots are not written back.
+The native job architecture must agree with Go's host architecture; pull, seed
+and parser explicitly select the same Linux amd64 or arm64 platform.
+The temporary tmpfs explicitly permits test-binary execution while retaining
+nosuid/nodev. Only fixed non-secret environment settings enter the container. Execution is
+bounded to two CPUs, 4 GiB, and an 18-minute attach timeout. The shared quality
+phase also applies a 30-minute overall timeout, with a cleanup grace period,
+covering download, pull, copies and execution. Cleanup removes only recorded
+containers and anonymous volumes created by this invocation; cleanup failure
+cannot report success. Resource IDs and removal outcomes remain in the owned
+temporary directory's `resources.jsonl`. No image is built or published.
+
+The source-owned receipt remains authoritative for coverage: Stash transport
+projections do not certify native Stash, and structural-only client rows remain
+native-check unavailable. Missing source helpers, incomplete receipt coverage,
+invalid archives, unavailable Docker and failed isolation are failures, not
+optional skips. This gate requires the companion Board offline-helper change.
+
+### Browser origin authority in validation
+
+Every Board and Ops validation row checks generated origin projections against
+the pinned yueto root. The workflow checks out `onesyue/yueto` `master` and
+passes that checkout's HEAD to `--authority-ref`. There is no commit literal
+in the workflow, so merging the root forward does not require a yueto-ci edit.
+Dispatch inputs and candidate-provided digests cannot select another root.
+Only the validator's existing source token gains contents-read access to
+`yueto`; plan, image build, publication, polling and signing permissions stay
+unchanged. The App switch retains its fail-closed behavior and existing PAT
+fallback.
+
+The sparse root checkout contains the source and the zero-dependency Node
+generator. After Node setup, the mandatory check compares that HEAD with the
+source and generator Git object bytes, then the component's generated files
+and marked blocks. Missing files, authority mismatch and drift fail validation.
+There is no missing-input skip or projection fallback. The source-owned
+tests remain responsible for runtime CSP, CORS, widget and nginx behavior.
+
+This check passes only after the root generator is on yueto master (yueto
+#179/#180) and the component projections match that root (Board #248). Earlier candidates
+without those projections fail. This does not authorize merging, deploying or
+modifying runtime configuration.
