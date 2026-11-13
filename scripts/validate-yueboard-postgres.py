@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 import subprocess
 import sys
+from typing import NoReturn
 from urllib.parse import parse_qsl, urlsplit
 
 DOMAIN = ['./test/integration']
@@ -49,7 +50,7 @@ DSNS = ['YUEBOARD_TEST_DATABASE_URL', 'YUEBOARD_TRAFFIC_TEST_DATABASE_URL',
         'YUEBOARD_TEMPLATE_TEST_DATABASE_URL']
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> NoReturn:
     raise RuntimeError(message)
 
 
@@ -86,6 +87,18 @@ def check_environment(phase: str, adapter: str = 'loopback') -> None:
             parsed = urlsplit(value)
             if parsed.scheme not in ('postgres', 'postgresql') or parsed.hostname not in ('127.0.0.1', 'localhost') or parsed.path != '/yueboard_test':
                 fail(f'{key} must point at the loopback disposable yueboard_test service')
+            # pgx splits the URL host into comma-separated failover hosts;
+            # urlsplit.hostname alone can hide everything after the first port.
+            # Check only the final hostspec, preserving encoded userinfo.
+            hostspec = parsed.netloc.rsplit('@', 1)[-1]
+            if re.fullmatch(r'(?:127\.0\.0\.1|localhost)(?::[0-9]+)?', hostspec) is None:
+                fail(f'{key} must contain one literal loopback host and optional numeric port')
+            try:
+                port = parsed.port
+            except ValueError:
+                fail(f'{key} contains an invalid loopback port')
+            if port is not None and not 1 <= port <= 65535:
+                fail(f'{key} contains an invalid loopback port')
             if parsed.fragment:
                 fail(f'{key} must not contain a URI fragment')
             # Decode parameter names before checking: %68ostaddr is hostaddr.
