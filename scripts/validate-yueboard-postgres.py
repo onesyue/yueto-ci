@@ -10,8 +10,7 @@ import re
 from pathlib import Path
 import subprocess
 import sys
-from typing import NoReturn
-from urllib.parse import parse_qsl, urlsplit
+from pg_validation_address import check_address, check_address_environment, fail
 
 DOMAIN = ['./test/integration']
 COMMANDS = ['./cmd/yueboard']
@@ -50,60 +49,12 @@ DSNS = ['YUEBOARD_TEST_DATABASE_URL', 'YUEBOARD_TRAFFIC_TEST_DATABASE_URL',
         'YUEBOARD_TEMPLATE_TEST_DATABASE_URL']
 
 
-def fail(message: str) -> NoReturn:
-    raise RuntimeError(message)
-
-
-# Explicit address contract for the already provisioned workflow service, not
-# proof of physical ownership. The workflow retains its service-ID diagnostics.
-SERVICE_DSNS = {f'{scheme}://postgres:ci@postgres:5432/yueboard_test'
-                for scheme in ('postgres', 'postgresql')}
-REDIRECT_OPTIONS = {'host', 'hostaddr', 'port', 'dbname', 'database', 'user',
-                    'password', 'passfile', 'service', 'servicefile', 'options',
-                    'target_session_attrs', 'search_path', 'role', 'session_authorization'}
-REDIRECT_ENV = ('PGHOST', 'PGHOSTADDR', 'PGPORT', 'PGDATABASE', 'PGUSER',
-                'PGPASSWORD', 'PGPASSFILE', 'PGSERVICE', 'PGSERVICEFILE',
-                'PGSYSCONFDIR', 'PGOPTIONS', 'PGTARGETSESSIONATTRS')
-
-
 def check_environment(phase: str, adapter: str = 'loopback') -> None:
-    if adapter not in ('loopback', 'github-service'):
-        fail('unsupported database adapter')
-    for key in REDIRECT_ENV:
-        if os.environ.get(key):
-            fail(f'{key} may redirect the disposable connection; unset it before execution')
+    check_address_environment(adapter)
     values = []
     for key in DSNS:
         value = os.environ.get(key, '')
-        if not value:
-            fail(f'{key} is required; refusing a silently skipped integration suite')
-        if adapter == 'github-service':
-            if value not in SERVICE_DSNS:
-                fail(f'{key} must be a canonical github-service disposable yueboard_test URI')
-        else:
-            # urlsplit strips some control characters; reject before parsing.
-            if any(ord(char) < 32 or ord(char) == 127 for char in value):
-                fail(f'{key} contains control characters')
-            parsed = urlsplit(value)
-            if parsed.scheme not in ('postgres', 'postgresql') or parsed.hostname not in ('127.0.0.1', 'localhost') or parsed.path != '/yueboard_test':
-                fail(f'{key} must point at the loopback disposable yueboard_test service')
-            # pgx splits the URL host into comma-separated failover hosts;
-            # urlsplit.hostname alone can hide everything after the first port.
-            # Check only the final hostspec, preserving encoded userinfo.
-            hostspec = parsed.netloc.rsplit('@', 1)[-1]
-            if re.fullmatch(r'(?:127\.0\.0\.1|localhost)(?::[0-9]+)?', hostspec) is None:
-                fail(f'{key} must contain one literal loopback host and optional numeric port')
-            try:
-                port = parsed.port
-            except ValueError:
-                fail(f'{key} contains an invalid loopback port')
-            if port is not None and not 1 <= port <= 65535:
-                fail(f'{key} contains an invalid loopback port')
-            if parsed.fragment:
-                fail(f'{key} must not contain a URI fragment')
-            # Decode parameter names before checking: %68ostaddr is hostaddr.
-            if any(name.lower() in REDIRECT_OPTIONS for name, _ in parse_qsl(parsed.query, keep_blank_values=True)):
-                fail(f'{key} contains a connection/session redirect option')
+        check_address(key, value, adapter, 'yueboard_test')
         values.append(value)
     if len(set(values)) != 1:
         fail('all integration DSNs must address the same disposable service/database')
