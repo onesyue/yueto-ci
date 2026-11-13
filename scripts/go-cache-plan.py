@@ -74,6 +74,7 @@ def plan() -> dict[str, str]:
     workload = digest({
         "workflow": (POLICY / ".github/workflows/build.yml").read_text(),
         "planner": Path(__file__).read_text(),
+        "lint_tools": (POLICY / "scripts/lint-tool-versions.sh").read_text(),
         "profile": profile,
     })
     compatible = digest({

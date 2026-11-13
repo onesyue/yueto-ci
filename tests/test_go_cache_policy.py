@@ -156,6 +156,26 @@ class GoCachePolicyTest(unittest.TestCase):
         self.assertEqual(hy2["enabled"], "true")
         self.assertNotEqual(hy2["compiler_restore"], vless["compiler_restore"])
 
+    def test_lint_authority_alone_changes_cache_identity(self):
+        policy = self.root / "isolated-policy"
+        (policy / "scripts").mkdir(parents=True)
+        (policy / ".github/workflows").mkdir(parents=True)
+        for relative in ("scripts/go-cache-plan.py", "scripts/lint-tool-versions.sh",
+                         ".github/workflows/build.yml"):
+            (policy / relative).write_text((ROOT / relative).read_text())
+        (self.source / ".ci-policy").unlink()
+        (self.source / ".ci-policy").symlink_to(policy, target_is_directory=True)
+        first = self.plan()
+        self.assertEqual(first["enabled"], "true")
+        authority = policy / "scripts/lint-tool-versions.sh"
+        authority.write_text(authority.read_text().replace("2.14.0", "2.14.1"))
+        changed = self.plan()
+        self.assertEqual(changed["enabled"], "true")
+        self.assertNotEqual(first["module_key"], changed["module_key"])
+        self.assertNotEqual(first["compiler_restore"], changed["compiler_restore"])
+        authority.unlink()
+        self.assertEqual(self.plan(), {"enabled": "false"})
+
     def test_untrusted_local_unknown_and_dirty_inputs_do_not_read_or_write(self):
         for changes in (
             {"GITHUB_REF": "refs/heads/feature"},

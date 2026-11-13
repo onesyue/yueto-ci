@@ -1236,8 +1236,7 @@ class BuildPolicyTest(unittest.TestCase):
             "python3 -m compileall -q scripts tests",
             'bash -n "$script"',
             "actionlint .github/workflows/*.yml",
-            "ACTIONLINT_VERSION: '1.7.12'",
-            "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+            "source scripts/lint-tool-versions.sh",
             "sha256sum --check --strict",
             "https://github.com/rhysd/actionlint/releases/download/",
             "--proto '=https' --tlsv1.2",
@@ -1615,9 +1614,8 @@ class BuildPolicyTest(unittest.TestCase):
             "working-directory: frontend",
             "working-directory: telegram-bot/yue/miniapp",
             "scripts/npm-audit-gate.py",
-            "squawk/releases/download/v2.60.0/squawk-linux-x64",
-            "708d77899e2b43e0d21cb811023dbbcfb3b8220b0c0b7e71c6e73568be7716e5",
-            'test "$("$squawk_bin" --version)" = \'squawk 2.60.0\'',
+            "squawk/releases/download/v${SQUAWK_VERSION}/squawk-linux-x64",
+            'test "$("$squawk_bin" --version)" = "squawk $SQUAWK_VERSION"',
             "aquasecurity/trivy-action@",
             "run: bash .ci-policy/scripts/install-cosign.sh",
             # >= v3.1.3: GHSA-fx35-mq7g-6g98 (2026-08-06, High 7.4) — a legacy
@@ -1804,10 +1802,10 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("CGO_ENABLED: '1'", race)
         self.assertNotIn("govulncheck", race_body)
         tools = (ROOT / "scripts" / "install-board-quality-tools.sh").read_text()
-        self.assertIn("golang.org/x/vuln/cmd/govulncheck@v1.8.0", tools)
-        self.assertIn("golangci-lint-2.14.0-linux-amd64.tar.gz", tools)
+        self.assertIn("golang.org/x/vuln/cmd/govulncheck@$GOVULNCHECK_VERSION", tools)
+        self.assertIn("golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz", tools)
         self.assertIn(
-            "ab90aeb7b066f92a33415b638a50fe5344bbb75a0d32ad30cc248d88f81032ab",
+            "$GOLANGCI_LINT_SHA256",
             tools,
         )
         self.assertNotIn("go run ", tools)
