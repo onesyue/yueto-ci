@@ -654,3 +654,12 @@ consent. Only the existing SSL difference is accepted: admin may omit SSL mode
 or disable it, and E2E must explicitly use sslmode=disable. Extra query options
 are rejected. No snapshot authoring or local CLI authorization is introduced;
 complete prerequisite integration and real Board validation remain pending.
+
+Board common prerequisites now use `board-validation-preflight.sh` in two phases.
+`dependencies` runs after the existing tool setup and before optional caches;
+`contract` clears Go test cache and runs the original pin authorizer and native
+contract validator after cache restoration. Hosted promotion intent is preserved
+through explicit PROMOTE; a future local caller must supply PROMOTE=false.
+Missing dependencies or credentials in the execution environment fail closed.
+This extraction does not add Board local execution, publish a toolchain image,
+or change its digest; `ci-check.sh yueboard --local` remains unsupported.
