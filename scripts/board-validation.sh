@@ -227,7 +227,11 @@ case "$role" in
         # --with-deps needs apt as root; the self-hosted release runner keeps
         # its system libraries provisioned and gets the browser only.
         deps=()
-        if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then deps=(--with-deps); fi
+        if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then
+          deps=(--with-deps)
+          # shellcheck source=scripts/lib/apt-mirror-fallback.sh
+          . "$(CDPATH=; cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/apt-mirror-fallback.sh"
+        fi
         pnpm --dir web exec playwright install "${deps[@]}" chromium
         pnpm run test:components
         ;;
@@ -241,7 +245,11 @@ case "$role" in
         psql -v ON_ERROR_STOP=1 "$YUEBOARD_ADMIN_DATABASE_URL" \
           -c 'DROP DATABASE IF EXISTS yueboard_e2e' -c 'CREATE DATABASE yueboard_e2e'
         deps=()
-        if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then deps=(--with-deps); fi
+        if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then
+          deps=(--with-deps)
+          # shellcheck source=scripts/lib/apt-mirror-fallback.sh
+          . "$(CDPATH=; cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/apt-mirror-fallback.sh"
+        fi
         pnpm --dir test/e2e exec playwright install "${deps[@]}" chromium
         shots=test/e2e/specs/__screenshots__
         [ -d "$shots" ] || {
@@ -274,7 +282,11 @@ case "$role" in
         fi
         # Use the source lock's playwright-core browser, as in the original gate.
         deps=()
-        if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then deps=(--with-deps); fi
+        if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then
+          deps=(--with-deps)
+          # shellcheck source=scripts/lib/apt-mirror-fallback.sh
+          . "$(CDPATH=; cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/apt-mirror-fallback.sh"
+        fi
         pnpm --dir test/a11y exec playwright-core install "${deps[@]}" chromium
         node test/a11y/a11y-smoke.mjs
         ;;

@@ -39,6 +39,14 @@ class FrontendExecutor(unittest.TestCase):
             path.mkdir(parents=True, exist_ok=True)
         for file in ('board-validation.sh', 'pg_validation_address.py', 'install-board-quality-tools.sh'):
             shutil.copy(ROOT / 'scripts' / file, self.policy / 'scripts')
+        lib = self.policy / 'scripts' / 'lib'
+        lib.mkdir()
+        shutil.copy(ROOT / 'scripts/lib/apt-mirror-fallback.sh', lib)
+        self.os_release = self.root / 'os-release'
+        self.os_release.write_text('VERSION_CODENAME=noble\n')
+        self.curl_log = self.root / 'curl.log'
+        self.apt_log = self.root / 'apt.log'
+        (self.root / 'apt-sources').mkdir()
         for file in ('go.mod', 'pnpm-workspace.yaml', 'scripts/ci/pnpm-audit-gate.mjs', 'test/e2e/playwright.config.ts',
                      'test/e2e/specs/__screenshots__/fixture-linux.png'):
             (self.source / file).touch()
@@ -47,7 +55,13 @@ class FrontendExecutor(unittest.TestCase):
         self.output = self.root / 'github-output'
         self.env = os.environ | {'PATH': str(self.bin) + os.pathsep + os.environ['PATH'],
                                  'CALL_LOG': str(self.log), 'YUE_CI_PYTHON': sys.executable,
-                                 'GITHUB_OUTPUT': str(self.output)}
+                                 'GITHUB_OUTPUT': str(self.output),
+                                 'YUETO_APT_OS_RELEASE': str(self.os_release),
+                                 'YUETO_APT_SOURCES_DIR': str(self.root / 'apt-sources'),
+                                 'YUETO_APT_CURL': str(self.bin / 'curl'),
+                                 'YUETO_APT_GET': str(self.bin / 'apt-get'),
+                                 'CURL_LOG': str(self.curl_log),
+                                 'APT_LOG': str(self.apt_log)}
         for key in ('GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN',
                     'YUEBOARD_ADMIN_DATABASE_URL', 'YUEBOARD_E2E_DATABASE_URL', 'YUEBOARD_E2E_ALLOW_RESET',
                     'PGHOST', 'PGHOSTADDR', 'PGPORT', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGPASSFILE',
@@ -79,11 +93,23 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
         (self.bin / 'sudo').write_text('#!/bin/sh\nexit "${TEST_SUDO:-1}"\n')
         for name in ('id', 'sudo'):
             (self.bin / name).chmod(0o755)
+        (self.bin / 'curl').write_text(
+            '#!/bin/sh\n'
+            'if [ -n "${CURL_LOG:-}" ]; then printf "%s\\n" "$*" >> "$CURL_LOG"; fi\n'
+            'exit 0\n')
+        (self.bin / 'apt-get').write_text(
+            '#!/bin/sh\n'
+            'if [ -n "${APT_LOG:-}" ]; then printf "%s\\n" "$*" >> "$APT_LOG"; fi\n'
+            'exit 0\n')
+        for name in ('curl', 'apt-get'):
+            (self.bin / name).chmod(0o755)
 
     def run_phase(self, role='frontends', phase='prepare', **extra):
         direct = extra.pop('direct', False)
         self.log.unlink(missing_ok=True)
         self.output.unlink(missing_ok=True)
+        self.curl_log.unlink(missing_ok=True)
+        self.apt_log.unlink(missing_ok=True)
         env = self.env | extra
         args = [role, str(self.source), str(self.policy), str(self.temp), '--frontend-phase', phase]
         if role == 'e2e' and phase == 'test':
@@ -151,6 +177,11 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
                 self.assertEqual(keys[-2], 'pnpm --dir test/a11y exec playwright-core install ' + ('--with-deps ' if with_deps else '') + 'chromium')
                 self.assertEqual(keys[-1], 'node test/a11y/a11y-smoke.mjs')
                 self.assertEqual(output, '')
+                probed = (self.curl_log.exists()
+                          and 'archive.ubuntu.com/ubuntu/dists/noble/InRelease' in self.curl_log.read_text())
+                self.assertEqual(probed, with_deps)
+                self.assertFalse(self.apt_log.exists())
+                self.assertNotIn('::notice::', result.stdout)
                 self.assertTrue(all(not row['db'] and not row['reset'] for row in rows))
         for status in (1, 2, 3):
             result, _, output = self.run_phase(phase='design', FAIL_COMMAND='node test/a11y/a11y-smoke.mjs', FAIL_STATUS=str(status))
@@ -225,6 +256,11 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
                 self.assertEqual(result.returncode, 0, result.stderr)
                 install = next(row['key'] for row in rows if 'playwright install' in row['key'])
                 self.assertEqual('--with-deps' in install, deps)
+                probed = (self.curl_log.exists()
+                          and 'archive.ubuntu.com/ubuntu/dists/noble/InRelease' in self.curl_log.read_text())
+                self.assertEqual(probed, deps)
+                self.assertFalse(self.apt_log.exists())
+                self.assertNotIn('::notice::', result.stdout)
                 if role == 'e2e':
                     self.assertEqual(rows[-1]['key'], 'pnpm --dir test/e2e test --update-snapshots=none')
 
