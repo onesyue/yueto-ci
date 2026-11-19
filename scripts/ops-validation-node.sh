@@ -12,6 +12,10 @@ site_pm=$(node -p "require('./site/package.json').packageManager || ''")
 corepack install --global "$site_pm"
 pnpm --dir site install --frozen-lockfile --ignore-scripts
 deps=()
-if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then deps=(--with-deps); fi
+if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then
+  deps=(--with-deps)
+  # shellcheck source=scripts/lib/apt-mirror-fallback.sh
+  . "$(CDPATH=; cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/apt-mirror-fallback.sh"
+fi
 pnpm --dir site exec playwright install "${deps[@]}" chromium
 pnpm --dir site test
