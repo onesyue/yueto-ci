@@ -83,7 +83,7 @@ class SourceEvidence(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             public = Path(directory)
             (public / "scripts").mkdir()
-            for name in ("pytest-shards.py", "source_evidence.py"):
+            for name in ("pytest-shards.py", "source_evidence.py", "brand_literals.py"):
                 shutil.copyfile(E.ROOT / "scripts" / name, public / "scripts" / name)
             shutil.copytree(self.policy, public / "policy")
 

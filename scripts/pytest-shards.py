@@ -30,6 +30,10 @@ ROOT = Path(__file__).resolve().parents[1]
 _SOURCE_SPEC = importlib.util.spec_from_file_location("trusted_source_evidence", ROOT / "scripts/source_evidence.py")
 source_evidence = importlib.util.module_from_spec(_SOURCE_SPEC)
 _SOURCE_SPEC.loader.exec_module(source_evidence)
+_BRAND_SPEC = importlib.util.spec_from_file_location(
+    "ci_brand_literals", ROOT / "scripts/brand_literals.py")
+_brand = importlib.util.module_from_spec(_BRAND_SPEC)
+_BRAND_SPEC.loader.exec_module(_brand)
 SHA = re.compile(r"[0-9a-f]{40}")
 EXPECTED_CONFIG = {
     "testpaths": "tests", "python_files": "test_*.py",
@@ -1112,7 +1116,7 @@ RETIRED_HOST_BEFORE_BLOB = "812e3509c7213cf16f507271f5a1d4f8c0cefe29"
 RETIRED_HOST_AFTER_BLOB = "ba19e043309d0805710e0a2d3fc9cc76ea6ce55f"
 RETIRED_HOST_TRANSITION_SHA256 = "961fa6fd314c9d292e766e1cea5b8571f0d97b489adbebb63d4f35d16af6d7b0"
 RETIRED_HOST_IDS = {
-    RETIRED_HOST_MODULE + "::" + name + "[mini.xn--jdu596h.com]"
+    RETIRED_HOST_MODULE + "::" + name + "[" + _brand.RETIRED_MINI_PRIMARY_HOST + "]"
     for name in (
         "test_native_mini_index_assets_and_telegram_frame_policy",
         "test_native_auth_is_not_panel_cookie_or_bearer_and_secret_paths_do_not_log",
@@ -1121,14 +1125,15 @@ RETIRED_HOST_IDS = {
 }
 
 # 2026-11-10 (owner t836u, yueops fdf97f87e / 3ed500a0f): the sibling Mini host
-# mini.xn--9kq451mn9g.com was retired too and the fixture certificate moved to
-# app.yue.to.  This is a code-reviewed successor on top of the sealed transition
-# above; it changes no baseline bytes.  With exactly this module blob, the three
-# mini.xn--9kq451mn9g.com cases must be absent and every other survivor keeps its
-# sealed outcome and reason.  Any other blob still has to equal the sealed case.
+# brand_literals.RETIRED_MINI_ALTERNATE_HOST was retired too and the fixture
+# certificate moved to brand_literals.PANEL_HOST. This is a code-reviewed
+# successor on top of the sealed transition above; it changes no baseline
+# bytes. With exactly this module blob, the three alternate-mirror Mini
+# cases must be absent and every other survivor keeps its sealed outcome
+# and reason. Any other blob still has to equal the sealed case.
 RETIRED_HOST_SECOND_AFTER_BLOB = "6c3e8eca2a185a9b89aedbc3abec63c7cc2eb2fd"
 RETIRED_HOST_SECOND_IDS = {
-    RETIRED_HOST_MODULE + "::" + name + "[mini.xn--9kq451mn9g.com]"
+    RETIRED_HOST_MODULE + "::" + name + "[" + _brand.RETIRED_MINI_ALTERNATE_HOST + "]"
     for name in (
         "test_native_mini_index_assets_and_telegram_frame_policy",
         "test_native_auth_is_not_panel_cookie_or_bearer_and_secret_paths_do_not_log",
@@ -1522,7 +1527,7 @@ def generate_retired_host_baseline(predecessor, source, revision):
     record = {
         "schema": 1,
         "prior_baseline_sha256": RETIRED_HOST_PRIOR_SHA256,
-        "host": "mini.xn--jdu596h.com",
+        "host": _brand.RETIRED_MINI_PRIMARY_HOST,
         "retired_by": "Jim",
         "retired_at": "2026-10-30 01:26 SGT",
         "reason": "Owner retired this Mini host; sibling Mini and app hosts remain required.",
