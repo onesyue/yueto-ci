@@ -24,6 +24,10 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Job timeout-minutes cannot read workflow env. plan and incident keep
+  # this integer. The Trivy action input can read env, so it uses the name.
+  SHORT_JOB_TIMEOUT_MINUTES: "5"
+  TRIVY_ACTION_TIMEOUT: 15m
 
 concurrency:
   group: promoted-image-rescan
@@ -120,7 +124,7 @@ jobs:
           vuln-type: os,library
           scanners: vuln
           severity: HIGH,CRITICAL
-          timeout: 15m
+          timeout: ${{ env.TRIVY_ACTION_TIMEOUT }}
           trivyignores: .trivyignore
           skip-setup-trivy: true
 

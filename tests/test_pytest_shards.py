@@ -92,7 +92,8 @@ class ShardPrimitives(unittest.TestCase):
             "import pytest\npytest.skip('existing collection skip', allow_module_level=True)\n")
         (self.policy / "scripts").mkdir(parents=True)
         for name in ("lens_report.py", "lens-report-source.json", "pytest-timing.py",
-                     "pytest-shards.py", "admission_diagnostics.py", "source_evidence.py"):
+                     "pytest-shards.py", "admission_diagnostics.py", "source_evidence.py",
+                     "brand_literals.py"):
             shutil.copyfile(ROOT / "scripts" / name, self.policy / "scripts" / name)
         self.env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", TZ="UTC",
                         PYTEST_ADDOPTS="", PYTHONPATH=str(self.site),

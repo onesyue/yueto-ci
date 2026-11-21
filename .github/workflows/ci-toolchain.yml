@@ -22,6 +22,11 @@ permissions:
   contents: read
   packages: write
 
+env:
+  # Job timeout-minutes cannot read workflow env. The image job keeps this
+  # integer. Same ceiling as build.yml toolchain-image.
+  TOOLCHAIN_IMAGE_TIMEOUT_MINUTES: "45"
+
 concurrency:
   group: ci-toolchain-${{ github.ref }}
   cancel-in-progress: false
