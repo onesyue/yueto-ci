@@ -215,7 +215,14 @@ exit 22
         self.assertNotIn("anchore/sbom-action@", workflow)
 
     def test_download_callers_use_helper_and_retain_checksum_gates(self):
-        for name in ("install-verified-buildx.sh", "install-verified-trivy.sh", "freeze-build-plan.sh"):
+        for name in (
+            "install-verified-buildx.sh",
+            "install-verified-trivy.sh",
+            "install-verified-govulncheck.sh",
+            "install-verified-dart.sh",
+            "install-verified-uv.sh",
+            "freeze-build-plan.sh",
+        ):
             source = (ROOT / "scripts" / name).read_text()
             self.assertIn('/ci-retry.sh"', source)
             self.assertIn("ci_download 4 --fail", source)

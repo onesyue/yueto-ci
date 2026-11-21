@@ -1105,6 +1105,7 @@ class BuildPolicyTest(unittest.TestCase):
                 "ci-toolchain.yml",
                 "image-rescan.yml",
                 "policy-ci.yml",
+                "weekly-vuln-sbom.yml",
             ],
         )
 
@@ -1225,6 +1226,23 @@ class BuildPolicyTest(unittest.TestCase):
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, policy_lower)
+
+        weekly = (WORKFLOW_DIR / "weekly-vuln-sbom.yml").read_text(encoding="utf-8")
+        weekly_code = "\n".join(
+            line for line in weekly.splitlines() if not line.lstrip().startswith("#")
+        )
+        self.assertIn("permissions:\n  contents: read", weekly_code)
+        self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", weekly_code)
+        for forbidden in (
+            "build-push-action",
+            "imagetools create",
+            "cosign",
+            "promote=true",
+            "packages: write",
+            "id-token: write",
+        ):
+            with self.subTest(weekly_forbidden=forbidden):
+                self.assertNotIn(forbidden, weekly_code)
         self.assertNotRegex(
             self.policy_workflow,
             r"(?m)^\s+[A-Za-z-]+:\s*write\s*$",

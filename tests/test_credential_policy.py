@@ -47,6 +47,7 @@ PAT_FALLBACKS = (
     ),
 )
 SOURCE_REPOS = {"yueboard", "yue-node", "yueops", "quic-go"}
+WEEKLY_SOURCE_REPOS = {"yueops", "yueboard", "yue-node", "yueto", "yuelink"}
 
 
 def _code(text: str) -> str:
@@ -123,7 +124,12 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
                 repos = re.search(r"repositories: ([A-Za-z0-9_.,-]+)", step)
                 self.assertIsNotNone(repos, "token must name its repositories")
                 assert repos is not None
-                allowed = SOURCE_REPOS | ({"yueto"} if name == "build.yml" and job == "validate" else set())
+                if name == "weekly-vuln-sbom.yml":
+                    allowed = WEEKLY_SOURCE_REPOS
+                else:
+                    allowed = SOURCE_REPOS | (
+                        {"yueto"} if name == "build.yml" and job == "validate" else set()
+                    )
                 self.assertLessEqual(set(repos.group(1).split(",")), allowed)
                 permissions = re.findall(r"permission-([a-z-]+): (\w+)", step)
                 self.assertEqual(len(permissions), 1, permissions)

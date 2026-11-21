@@ -1,0 +1,157 @@
+name: Weekly dependency vulnerability and SBOM report
+
+# Report-only first-party source scan in the public CI repository. Native
+# scanners may record findings. Missing checkouts, missing pins, or a scan
+# floor miss fails the job. This workflow never blocks build.yml, never
+# opens pull requests, and never publishes images.
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: weekly-vuln-sbom
+  cancel-in-progress: false
+
+jobs:
+  report:
+    name: Scan first-party sources
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout scan policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: .ci-policy
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6.5.0
+        with:
+          go-version: '1.27.4'
+          cache: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.22.3'
+
+      - name: Validate the first-party scan catalog
+        run: |
+          set -euo pipefail
+          python3 .ci-policy/scripts/weekly-vuln-scan.py catalog \
+            --catalog .ci-policy/policy/weekly-vuln-scan-targets.json \
+            --output "${RUNNER_TEMP:?}/weekly-catalog.json"
+
+      - name: Install pinned scanners
+        run: |
+          set -euo pipefail
+          bash .ci-policy/scripts/install-verified-syft.sh
+          bash .ci-policy/scripts/install-verified-govulncheck.sh
+          bash .ci-policy/scripts/install-verified-dart.sh
+          bash .ci-policy/scripts/install-verified-uv.sh
+          python3 -m pip install --require-hashes --only-binary=:all: \
+            -r .ci-policy/requirements-audit.txt
+          command -v syft
+          command -v govulncheck
+          command -v dart
+          command -v uv
+          command -v pip-audit
+          command -v node
+          command -v npm
+
+      - name: Mint read-only source token (GitHub App)
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        id: source_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueops,yueboard,yue-node,yueto,yuelink
+          permission-contents: read
+
+      - name: Checkout yueops
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueops
+          ref: master
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          persist-credentials: false
+          path: sources/yueops
+
+      - name: Checkout yueboard
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueboard
+          ref: master
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          persist-credentials: false
+          path: sources/yueboard
+
+      - name: Checkout yue-node
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yue-node
+          ref: master
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          persist-credentials: false
+          path: sources/yue-node
+
+      - name: Checkout yueto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueto
+          ref: master
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          persist-credentials: false
+          path: sources/yueto
+
+      - name: Checkout yuelink
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yuelink
+          ref: master
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          persist-credentials: false
+          path: sources/yuelink
+
+      - name: Checkout yuelink-ci
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yuelink-ci
+          ref: master
+          persist-credentials: false
+          path: sources/yuelink-ci
+
+      - name: Materialize the yueto-ci policy checkout
+        run: |
+          set -euo pipefail
+          mkdir -p sources
+          cp -a .ci-policy sources/yueto-ci
+
+      - name: Scan sources and write the SBOM plus findings
+        run: |
+          set -euo pipefail
+          python3 .ci-policy/scripts/weekly-vuln-scan.py scan \
+            --catalog .ci-policy/policy/weekly-vuln-scan-targets.json \
+            --sources sources \
+            --output "${RUNNER_TEMP:?}/weekly-vuln-sbom"
+
+      - name: Upload SBOM and findings
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: weekly-vuln-sbom-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/weekly-vuln-sbom/
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90

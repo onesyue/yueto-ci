@@ -263,6 +263,14 @@ no credential for private `release.yaml`. Enumeration fails closed; scan/plan
 failure or cancellation records a workflow summary and error annotation and
 fails the reporting job. There is no private checkout, registry write or public artifact.
 
+[weekly-vuln-sbom.yml](.github/workflows/weekly-vuln-sbom.yml) runs a report-only
+first-party source scan every Monday. For each catalogued repository it runs the
+native scanner (govulncheck, pip-audit, npm/pnpm audit, `dart pub outdated`) and
+Syft, then uploads one SBOM plus findings artifact. Findings are recorded; they
+do not fail the job, block `build.yml`, or open pull requests. Missing checkouts,
+missing pins, or a scan-floor miss fails the reporting job. Scanner versions are
+SHA-256 pinned; the govulncheck module-zip pin closes the previous version-only gap.
+
 [plan-rescan-targets.py](scripts/plan-rescan-targets.py) paginates 100 versions per
 page, at most100 pages, using only the reviewed owner/package. A full page requires
 another request even without a Link header. Malformed/duplicate/error/truncated

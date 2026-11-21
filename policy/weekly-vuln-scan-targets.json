@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "report_only": true,
+  "minimum_repositories": 7,
+  "minimum_scanner_runs": 10,
+  "required_kinds": [
+    "govulncheck",
+    "pip-audit",
+    "npm-audit",
+    "pnpm-audit",
+    "dart-outdated",
+    "syft"
+  ],
+  "repositories": [
+    {
+      "name": "yue-node",
+      "private": true,
+      "scanners": ["govulncheck", "syft"]
+    },
+    {
+      "name": "yueboard",
+      "private": true,
+      "scanners": ["govulncheck", "pnpm-audit", "syft"]
+    },
+    {
+      "name": "yueops",
+      "private": true,
+      "scanners": ["pip-audit", "npm-audit", "syft"]
+    },
+    {
+      "name": "yueto",
+      "private": true,
+      "scanners": ["syft"]
+    },
+    {
+      "name": "yuelink",
+      "private": true,
+      "scanners": ["dart-outdated", "syft"]
+    },
+    {
+      "name": "yueto-ci",
+      "private": false,
+      "scanners": ["pip-audit", "syft"]
+    },
+    {
+      "name": "yuelink-ci",
+      "private": false,
+      "scanners": ["syft"]
+    }
+  ]
+}
