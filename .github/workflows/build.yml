@@ -177,7 +177,7 @@ jobs:
     # 8-14 min (yueboard / yueops), multi-arch build <= 13 min.
     timeout-minutes: 10
     outputs:
-      matrix: ${{ steps.resume.outputs.matrix || steps.plan.outputs.matrix }}
+      matrix: ${{ steps.resume.outputs.matrix || steps.ops_scope.outputs.matrix || steps.plan.outputs.matrix }}
       resume: ${{ steps.plan.outputs.resume }}
       validation_matrix: ${{ steps.ops_plan.outputs.validation_matrix }}
       validation_parallelism: ${{ steps.ops_plan.outputs.max_parallel }}
@@ -185,10 +185,11 @@ jobs:
       ops_source: ${{ steps.plan.outputs.ops_source }}
       admission_sha256: ${{ steps.ops_plan.outputs.admission_sha256 }}
       admission_rejected: ${{ steps.ops_plan.outputs.admission_rejected }}
-      has_builds: ${{ steps.plan.outputs.has_builds }}
+      has_builds: ${{ steps.ops_scope.outputs.has_builds || steps.plan.outputs.has_builds }}
       promote: ${{ steps.plan.outputs.promote }}
       yueboard_contract_ref: ${{ steps.plan.outputs.yueboard_contract_ref }}
       yueboard_policy_pin: ${{ steps.plan.outputs.yueboard_policy_pin }}
+      ops_selection_matrix: ${{ steps.ops_scope.outputs.ops_selection_matrix || '[]' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -501,6 +502,39 @@ jobs:
             -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${auth}" \
             fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
           git -C .ops-shard-source rev-parse --verify refs/remotes/origin/master >/dev/null
+
+      - name: Scope YueOps services by changed paths
+        id: ops_scope
+        if: steps.plan.outputs.ops_source != ''
+        env:
+          SERVICE: ${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
+          MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}
+          RUNNER: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}
+        run: |
+          set -euo pipefail
+          plan="${RUNNER_TEMP:?}/build-target-plan.json"
+          next="${RUNNER_TEMP:?}/build-target-plan.next.json"
+          selection="${RUNNER_TEMP:?}/ops-selection-matrix.json"
+          if [ "$RUNNER" = "yue-local-release" ]; then
+            python3 scripts/ops-service-scope.py filter-plan \
+              --dispatch "$SERVICE" \
+              --keep-all \
+              --selection-output "$selection" <"$plan" >"$next"
+          else
+            python3 scripts/ops-service-scope.py changed-paths \
+              --source .ops-shard-source \
+              --base "$MIGRATION_BASE" >"${RUNNER_TEMP:?}/ops-changed-paths.txt"
+            python3 scripts/ops-service-scope.py filter-plan \
+              --dispatch "$SERVICE" \
+              --paths "${RUNNER_TEMP:?}/ops-changed-paths.txt" \
+              --selection-output "$selection" <"$plan" >"$next"
+          fi
+          mv -- "$next" "$plan"
+          {
+            echo "matrix=$(jq -c '.matrix' "$plan")"
+            echo "has_builds=$(jq -r '.has_builds' "$plan")"
+            echo "ops_selection_matrix=$(jq -c . "$selection")"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Read previous ordinary shard weights
         if: steps.plan.outputs.ops_source != '' && github.event.inputs.runner != 'yue-local-release'
@@ -1956,14 +1990,185 @@ jobs:
           overwrite: false
           retention-days: 14
 
+  ops-service-selection:
+    needs: [plan]
+    if: needs.plan.outputs.ops_selection_matrix != '[]' && needs.plan.outputs.ops_selection_matrix != ''
+    container:
+      image: ghcr.io/onesyue/yueops-ci-toolchain@sha256:96b3439fd16effe9686cb6297026e97fac605db4d1ab8ce674aa45c121873017
+      options: --user runner --volume /var/run/docker.sock:/var/run/docker.sock
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    timeout-minutes: 120
+    env:
+      TZ: UTC
+      ImageVersion: yueops-ci-toolchain
+      TMPDIR: /__w/_temp
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.ops_selection_matrix) }}
+    name: select-${{ matrix.service }}
+    services:
+      postgres:
+        image: postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: yueboard_test
+        ports:
+          # Preserve the hosted-runner contract while avoiding unrelated local
+          # PostgreSQL instances on the manual self-hosted fallback.
+          - ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '127.0.0.1:55434:5432' || '5432:5432' }}
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Use the runner Docker daemon
+        run: |
+          set -euo pipefail
+          if [ -S /var/run/docker.sock ]; then
+            sudo chmod a+rw /var/run/docker.sock
+          fi
+          docker version >/dev/null
+
+      # 凭据切换开关（README「CI 凭据迁移」）：仓库变量 YUETO_CI_APP_CLIENT_ID 为空时
+      # 本步跳过、下面沿用旧 YUETO_CI_PAT；设置后改用 GitHub App 按需签发的一小时
+      # 只读 token（contents:read，仅限列出的源码仓）。签发失败即整个 job 失败，
+      # 不会静默回退到 PAT——回退只由「变量是否设置」这一处显式决定。
+      - name: Mint read-only source token (GitHub App)
+        id: source_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueboard,yue-node,yueops,quic-go
+          permission-contents: read
+      - name: Checkout source repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout build policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueto-ci
+          ref: ${{ github.sha }}
+          path: .ci-policy
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python on GitHub-hosted runner
+        if: matrix.board_role != 'e2e' && (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
+        run: |
+          set -euo pipefail
+          # Non-e2e rows run in the toolchain image. That Python is
+          # linked with an rpath and starts with an empty library path.
+          # actions/setup-python would put another 3.13 first on PATH, and
+          # product tests drop the LD_LIBRARY_PATH that build needs.
+          python_bin=/usr/local/bin/python3
+          [ -x "$python_bin" ] || {
+            echo "::error::toolchain image is missing $python_bin"
+            exit 1
+          }
+          "$python_bin" -c 'import sys; assert sys.version_info[:2] == (3, 13)'
+          echo "YUE_CI_PYTHON=$python_bin" >> "$GITHUB_ENV"
+
+      - name: Select Python on GitHub-hosted runner
+        if: matrix.board_role != 'e2e' && (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
+        run: |
+          set -euo pipefail
+          python_bin="${YUE_CI_PYTHON:?}"
+          [ "$python_bin" = /usr/local/bin/python3 ]
+          "$python_bin" -c 'import sys; assert sys.version_info[:2] == (3, 13)'
+          echo "YUE_CI_PYTHON=$python_bin" >> "$GITHUB_ENV"
+
+      # The self-hosted path does not use the image selection above. Debian 13
+      # has no setup-python tool-cache build. Verify its own Python 3.13 before
+      # any central policy or source validation is allowed to execute.
+      - name: Validate system Python on self-hosted runner
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release'
+        run: |
+          set -euo pipefail
+          system_python=$(command -v python3)
+          if [ -z "$system_python" ] || [ ! -x "$system_python" ]; then
+            echo "::error::toolchain image is missing python3"
+            exit 1
+          fi
+          "$system_python" - <<'PY'
+          import sys
+          if sys.version_info[:2] != (3, 13):
+              raise SystemExit(
+                  f"self-hosted runner requires system Python 3.13; got {sys.version.split()[0]}"
+              )
+          print(f"validated system Python {sys.version.split()[0]}")
+          PY
+          echo "YUE_CI_PYTHON=$system_python" >> "$GITHUB_ENV"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: '0.10.9'
+          enable-cache: true
+
+      - name: Set up YueOps Node
+        run: |
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-node-toolchain.sh"
+
+      - name: Install yueops dependencies
+        env:
+          UV_PYTHON_DOWNLOADS: never
+        run: |
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-dependencies.sh"
+
+      - name: Run service-owned pytest selection
+        id: owned
+        env:
+          SERVICE: ${{ matrix.service }}
+          UV_PYTHON_DOWNLOADS: never
+        run: |
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-service-owned.sh"
+
+      - name: Write owned selection verdict
+        id: verdict
+        if: always()
+        env:
+          SERVICE: ${{ matrix.service }}
+          OUTCOME: ${{ steps.owned.outcome }}
+        run: |
+          set -euo pipefail
+          python3 "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-service-scope.py" write-verdict \
+            --service "$SERVICE" \
+            --outcome "$OUTCOME" \
+            --output "${RUNNER_TEMP:?}/ops-selection-verdict/${SERVICE}.json"
+
+      - name: Upload owned selection verdict
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ops-selection-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.service }}
+          path: ${{ runner.temp }}/ops-selection-verdict/${{ matrix.service }}.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 14
+
   publish:
-    needs: [build, plan, validate, validation-evidence]
-    # Candidate builds overlap validation, but registry publication waits for
-    # every required validation and evidence job to succeed for this exact run.
-    # Failed, cancelled or skipped prerequisites cannot write publication tags.
-    # Resume is the one skip that still publishes: build is skipped only after
-    # plan says resume, and validate plus validation-evidence must succeed.
-    if: always() && needs.plan.result == 'success' && needs.validate.result == 'success' && needs.validation-evidence.result == 'success' && needs.plan.outputs.has_builds == 'true' && !inputs.validation_only && (needs.build.result == 'success' || (needs.plan.outputs.resume == 'true' && needs.build.result == 'skipped'))
+    needs: [build, plan, validate, validation-evidence, ops-service-selection]
+    # Candidate builds overlap validation. plan, validate, and
+    # validation-evidence must succeed. The owned-selection job may fail
+    # or be skipped: each YueOps image checks its own verdict before any
+    # retag, and a red sibling does not cancel this cell. Cancelled or
+    # unfinished selection does not publish. Resume is the one build skip
+    # that still publishes.
+    if: always() && needs.plan.result == 'success' && needs.validate.result == 'success' && needs.validation-evidence.result == 'success' && (needs.ops-service-selection.result == 'success' || needs.ops-service-selection.result == 'failure' || needs.ops-service-selection.result == 'skipped') && needs.plan.outputs.has_builds == 'true' && !inputs.validation_only && (needs.build.result == 'success' || (needs.plan.outputs.resume == 'true' && needs.build.result == 'skipped'))
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 30
     permissions:
@@ -2158,6 +2363,25 @@ jobs:
             python3 .ci-policy/scripts/candidate-receipt.py read \
               "${RUNNER_TEMP:?}/verified-candidate/candidate.json" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Download owned Ops selection verdicts
+        if: matrix.validation == 'yueops'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: ops-selection-${{ github.run_id }}-${{ github.run_attempt }}-*
+          path: ${{ runner.temp }}/ops-selection-verdicts
+          merge-multiple: true
+          digest-mismatch: error
+
+      - name: Refuse promotion without a passed service selection
+        if: matrix.validation == 'yueops'
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          set -euo pipefail
+          python3 .ci-policy/scripts/ops-service-scope.py assert-promotable \
+            --service "$SERVICE" \
+            --verdicts "${RUNNER_TEMP:?}/ops-selection-verdicts"
 
       # `built-<full sha>` — the answer to "does an image already exist for
       # this commit?", stored where the truth is: on the artifact itself.

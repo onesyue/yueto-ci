@@ -912,9 +912,9 @@ class BuildPolicyTest(unittest.TestCase):
             "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
             "'[\"ubuntu-24.04\"]')"
         )
-        # plan, validate, validation-evidence, candidate build, and publish.
-        # The toolchain image is not a runner. The selector stays manual.
-        self.assertEqual(self.workflow.count(selector), 5)
+        # plan, validate, validation-evidence, candidate build,
+        # owned ops selection, and publish. The toolchain image is not a runner.
+        self.assertEqual(self.workflow.count(selector), 6)
         self.assertIn(
             "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,
@@ -922,9 +922,8 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("While this repository is public, do not register a persistent self-hosted runner.", self.readme)
         self.assertIn("`--ephemeral --disableupdate` runner", self.readme)
         self.assertIn("'127.0.0.1:55434:5432' || '5432:5432'", self.workflow)
-        # Container rows use service DNS; host e2e uses the published port.
-        # Service port plus the two host e2e database URLs.
-        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 3)
+        # Validate and owned-selection service ports, plus the two host e2e database URLs.
+        self.assertEqual(self.workflow.count("127.0.0.1:55434"), 4)
         self.assertIn("postgres://postgres:ci@127.0.0.1", self.workflow)
         self.assertIn("postgres://postgres:ci@postgres:5432/", self.workflow)
 
@@ -2377,7 +2376,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("scripts/plan-build-targets.sh", self.workflow)
         self.assertIn("validation-targets.json", self.target_planner)
         self.assertIn("validation-only targets cannot be promoted as container images", self.workflow)
-        self.assertIn("has_builds: ${{ steps.plan.outputs.has_builds }}", self.workflow)
+        self.assertIn("has_builds: ${{ steps.ops_scope.outputs.has_builds || steps.plan.outputs.has_builds }}", self.workflow)
         self.assertIn("if: needs.plan.outputs.has_builds == 'true'", self.workflow)
         self.assertNotIn("matrix.validation == 'yuelink'", self.workflow)
         # The root workspace still invokes this native validator directly.

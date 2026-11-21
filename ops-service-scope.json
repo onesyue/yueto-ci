@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "services": ["checkin-api", "yue-bot", "yueops-web"],
+  "owned": {
+    "checkin-api": ["checkin-api/", "services/checkin-api/"],
+    "yue-bot": ["services/yue-bot/", "telegram-bot/"],
+    "yueops-web": ["frontend/", "services/yueops-web/", "web/"]
+  },
+  "shared": [
+    "internal_service_auth.py",
+    "packages/",
+    "pyproject.toml",
+    "services/python-security-floor.txt",
+    "uv.lock",
+    "yueops/",
+    "yueops_runtime/"
+  ],
+  "tests": {
+    "checkin-api": ["tests/test_checkin_", "tests/test_ticket_"],
+    "yue-bot": [
+      "tests/test_antispam_",
+      "tests/test_bot_",
+      "tests/test_kb_",
+      "tests/test_miniapp_",
+      "tests/test_telegram_"
+    ],
+    "yueops-web": ["tests/test_console_", "tests/test_frontend_", "tests/test_web_"]
+  }
+}

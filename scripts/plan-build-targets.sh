@@ -49,7 +49,7 @@ selected_count=$(jq -n \
   exit 1
 }
 
-jq -nc \
+plan="$(jq -nc \
   --argjson builds "$builds" \
   --argjson validators "$validators" '
     ($builds + $validators
@@ -68,4 +68,14 @@ jq -nc \
         validation_matrix: $validation_matrix,
         has_builds: (($builds | length) > 0)
       }
-  '
+  ')"
+
+# Path filtering is opt-in. An unset or empty OPS_CHANGED_PATHS keeps this
+# document byte-compatible with the unfiltered planner.
+if [ -n "${OPS_CHANGED_PATHS:-}" ]; then
+  printf '%s\n' "$plan" | python3 "$script_dir/ops-service-scope.py" filter-plan \
+    --dispatch "$service" \
+    --paths "$OPS_CHANGED_PATHS"
+else
+  printf '%s\n' "$plan"
+fi

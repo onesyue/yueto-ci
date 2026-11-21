@@ -54,10 +54,14 @@ class FailFastPolicyTest(unittest.TestCase):
         self.assertIsNotNone(match)
         assert match is not None
         needs = {name.strip() for name in match.group(1).split(",")}
-        self.assertEqual(needs, REQUIRED)
+        self.assertEqual(needs, REQUIRED | {"ops-service-selection"})
         expected = (
             "always() && needs.plan.result == 'success' && needs.validate.result == 'success'"
-            " && needs.validation-evidence.result == 'success' && needs.plan.outputs.has_builds == 'true'"
+            " && needs.validation-evidence.result == 'success'"
+            " && (needs.ops-service-selection.result == 'success'"
+            " || needs.ops-service-selection.result == 'failure'"
+            " || needs.ops-service-selection.result == 'skipped')"
+            " && needs.plan.outputs.has_builds == 'true'"
             " && !inputs.validation_only && (needs.build.result == 'success'"
             " || (needs.plan.outputs.resume == 'true' && needs.build.result == 'skipped'))"
         )
@@ -69,21 +73,24 @@ class FailFastPolicyTest(unittest.TestCase):
         self.assert_publication_gate(self.text)
         expression = re.search(r"(?m)^    if: (.+)$", self.jobs['publish']).group(1)
         names = sorted(REQUIRED)
-        for states in itertools.product(("success", "failure", "skipped", "cancelled", "in_progress"), repeat=4):
+        selection_states = ("success", "failure", "skipped", "cancelled", "in_progress")
+        for states in itertools.product(selection_states, repeat=4):
             results = dict(zip(names, states))
             for resume in (False, True):
-                actual = expression.replace('always()', 'True').replace('!inputs.validation_only', 'True')
-                actual = actual.replace("needs.plan.outputs.has_builds == 'true'", 'True')
-                actual = actual.replace("needs.plan.outputs.resume == 'true'", str(resume))
-                for name, state in results.items():
-                    actual = actual.replace('needs.' + name + '.result', repr(state))
-                admitted = eval(actual.replace('&&', ' and ').replace('||', ' or '), {'__builtins__': {}}, {})
-                expected = all(results[n] == 'success' for n in REQUIRED - {'build'}) and (results['build'] == 'success' or (resume and results['build'] == 'skipped'))
-                with self.subTest(results=results, resume=resume):
-                    self.assertEqual(admitted, expected)
+                for selection in selection_states:
+                    actual = expression.replace('always()', 'True').replace('!inputs.validation_only', 'True')
+                    actual = actual.replace("needs.plan.outputs.has_builds == 'true'", 'True')
+                    actual = actual.replace("needs.plan.outputs.resume == 'true'", str(resume))
+                    for name, state in results.items():
+                        actual = actual.replace('needs.' + name + '.result', repr(state))
+                    actual = actual.replace('needs.ops-service-selection.result', repr(selection))
+                    admitted = eval(actual.replace('&&', ' and ').replace('||', ' or '), {'__builtins__': {}}, {})
+                    expected = all(results[n] == 'success' for n in REQUIRED - {'build'}) and (results['build'] == 'success' or (resume and results['build'] == 'skipped')) and selection in {'success', 'failure', 'skipped'}
+                    with self.subTest(results=results, resume=resume, selection=selection):
+                        self.assertEqual(admitted, expected)
 
     def test_old_async_graph_and_status_overrides_are_rejected(self) -> None:
-        original = "needs: [build, plan, validate, validation-evidence]"
+        original = "needs: [build, plan, validate, validation-evidence, ops-service-selection]"
         for replacement in (
             "needs: [build, plan]", "needs: [build, plan, validate]",
             "needs: [build, plan, validation-evidence]", "needs: [plan, validate, validation-evidence]",

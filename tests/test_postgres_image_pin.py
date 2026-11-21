@@ -15,7 +15,7 @@ class PostgresImagePinTest(unittest.TestCase):
             r"^    services:\n      postgres:\n        image: ([^\n]+)$",
             workflow, re.M,
         )
-        self.assertEqual(images, [IMAGE])
+        self.assertEqual(images, [IMAGE, IMAGE])
 
     def test_reviewed_service_pin(self):
         self.assert_pin((ROOT / ".github/workflows/build.yml").read_text())

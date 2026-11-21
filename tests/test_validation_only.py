@@ -72,6 +72,14 @@ class ValidationOnlyTest(unittest.TestCase):
                 for dependency in ('plan', 'build', 'validate', 'validation-evidence'):
                     condition = condition.replace("needs." + dependency + ".result == 'success'", 'true')
                     condition = condition.replace("needs." + dependency + ".result == 'skipped'", 'false')
+                if name == "publish":
+                    clause = (
+                        "(needs.ops-service-selection.result == 'success' "
+                        "|| needs.ops-service-selection.result == 'failure' "
+                        "|| needs.ops-service-selection.result == 'skipped')"
+                    )
+                    self.assertIn(clause, expression)
+                    condition = condition.replace(clause, "true")
                 status = subprocess.run(['bash', '-c', condition], capture_output=True, check=False).returncode
                 expected = not validation_only and (failed if name.startswith('abort-') else has_builds)
                 self.assertEqual(status == 0, expected)

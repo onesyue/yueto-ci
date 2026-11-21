@@ -146,7 +146,7 @@ class PublicationWiringTest(unittest.TestCase):
         build, publish = workflow.split("\n  build:\n", 1)[1].split("\n  publish:\n", 1)
         self.assertTrue(build.startswith("    needs: [plan]\n"))
         # Publication joins verified candidates with complete validation evidence.
-        self.assertTrue(publish.startswith("    needs: [build, plan, validate, validation-evidence]\n"))
+        self.assertTrue(publish.startswith("    needs: [build, plan, validate, validation-evidence, ops-service-selection]\n"))
         self.assertIn("needs.plan.outputs.has_builds == 'true'", publish)
         self.assertIn("needs.validate.result == 'success'", publish)
         self.assertIn("needs.validation-evidence.result == 'success'", publish)
@@ -189,9 +189,9 @@ class PublicationWiringTest(unittest.TestCase):
     def test_mutations_cannot_bypass_join_or_immutable_handoff(self):
         workflow = WORKFLOW.read_text()
         for old, new in (
-            ("    needs: [build, plan, validate, validation-evidence]\n", "    needs: [build, plan]\n"),
-            ("    needs: [build, plan, validate, validation-evidence]\n", "    needs: [build, plan, validate]\n"),
-            ("    needs: [build, plan, validate, validation-evidence]\n", "    needs: [plan, validate, validation-evidence]\n"),
+            ("    needs: [build, plan, validate, validation-evidence, ops-service-selection]\n", "    needs: [build, plan]\n"),
+            ("    needs: [build, plan, validate, validation-evidence, ops-service-selection]\n", "    needs: [build, plan, validate]\n"),
+            ("    needs: [build, plan, validate, validation-evidence, ops-service-selection]\n", "    needs: [plan, validate, validation-evidence]\n"),
             ("candidate-receipt.py read", "candidate-receipt.py write"),
             ("CANDIDATE_DIGEST: ${{ steps.build.outputs.digest }}", "CANDIDATE_DIGEST: latest"),
             ("digest-mismatch: error", "digest-mismatch: warn"),
