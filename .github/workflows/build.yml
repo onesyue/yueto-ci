@@ -507,8 +507,11 @@ jobs:
         id: ops_scope
         if: steps.plan.outputs.ops_source != ''
         env:
-          SERVICE: ${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
-          MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}
+          # Do not name these SERVICE or MIGRATION_BASE: GitHub prints step
+          # env into the plan job log, and ship identity requires a single
+          # SERVICE:/MIGRATION_BASE block from the `plan` step.
+          DISPATCH_SERVICE: ${{ github.event.inputs.service || github.event.client_payload.service || 'all' }}
+          OPS_MIGRATION_BASE: ${{ github.event.inputs.migration_base || '' }}
           RUNNER: ${{ github.event.inputs.runner || 'ubuntu-24.04' }}
         run: |
           set -euo pipefail
@@ -517,15 +520,15 @@ jobs:
           selection="${RUNNER_TEMP:?}/ops-selection-matrix.json"
           if [ "$RUNNER" = "yue-local-release" ]; then
             python3 scripts/ops-service-scope.py filter-plan \
-              --dispatch "$SERVICE" \
+              --dispatch "$DISPATCH_SERVICE" \
               --keep-all \
               --selection-output "$selection" <"$plan" >"$next"
           else
             python3 scripts/ops-service-scope.py changed-paths \
               --source .ops-shard-source \
-              --base "$MIGRATION_BASE" >"${RUNNER_TEMP:?}/ops-changed-paths.txt"
+              --base "$OPS_MIGRATION_BASE" >"${RUNNER_TEMP:?}/ops-changed-paths.txt"
             python3 scripts/ops-service-scope.py filter-plan \
-              --dispatch "$SERVICE" \
+              --dispatch "$DISPATCH_SERVICE" \
               --paths "${RUNNER_TEMP:?}/ops-changed-paths.txt" \
               --selection-output "$selection" <"$plan" >"$next"
           fi
