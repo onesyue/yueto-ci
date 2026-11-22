@@ -638,7 +638,11 @@ class EvidenceProbeTest(unittest.TestCase):
         self.assertEqual(result["evidence_run"], 7)
         self.assertEqual(result["validate_minutes"], 20.0)
         self.assertFalse(result["enabled"])
-        self.assertTrue(any("pip-audit" in g for g in result["not_reproduced_by_identity"]))
+        residual = " ".join(result["not_reproduced_by_identity"])
+        for gate in ("pip-audit", "npm-audit", "pnpm-audit"):
+            self.assertNotIn(gate, residual)
+        for remaining in ("wall-clock", "cold cache", "apt"):
+            self.assertIn(remaining, residual)
 
     def test_every_identity_check_rejects_on_its_own(self) -> None:
         mutations = {
