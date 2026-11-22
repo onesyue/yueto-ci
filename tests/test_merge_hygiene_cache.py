@@ -48,7 +48,7 @@ class MergeCache(unittest.TestCase):
         self.requests = []
         self.not_modified = 0
         self.anchor = {"number": 71, "state": "open", "merged_at": None,
-                       "base": {"repo": {"full_name": "onesyue/yueto-ci"}}}
+                       "base": {"repo": {"full_name": "onesyue/yueops"}}}
         self.pulls = {1: [self.pr]}
         self.files = [{"filename": "scripts/tool.py", "status": "modified"}]
         self.conditional = False
@@ -61,7 +61,7 @@ class MergeCache(unittest.TestCase):
         self.assertIn("--include", command)
         endpoint = command[2]
         self.requests.append(endpoint)
-        if endpoint == "repos/onesyue/yueto-ci/pulls/71":
+        if endpoint == "repos/onesyue/yueops/pulls/71":
             body = self.anchor
         elif "/pulls?" in endpoint:
             body = self.pulls[int(endpoint.rsplit("page=", 1)[1])]
@@ -83,16 +83,16 @@ class MergeCache(unittest.TestCase):
             return response(status=304)
         return response(body, headers={"ETag": etag})
 
-    def audit_rows(self, repo="yueto-ci", registered=None):
+    def audit_rows(self, repo="yueops", registered=None):
         return self.audit.audit("onesyue", [repo], self.cutoff, self.now)
 
     def test_disk_hit_after_reload_revalidates_evidence_and_reuses_compare(self):
-        cold = self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
+        cold = self.audit.merged_findings("onesyue", "yueops", self.pr)
         self.assertEqual(len(self.requests), 3)
         self.requests.clear()
         self.conditional = True
         reloaded = load_audit()
-        self.assertEqual(reloaded.merged_findings("onesyue", "yueto-ci", self.pr), cold)
+        self.assertEqual(reloaded.merged_findings("onesyue", "yueops", self.pr), cold)
         self.assertEqual(len(self.requests), 3)
         self.assertEqual(self.not_modified, 3)
         self.assertFalse(any("/compare/" in endpoint for endpoint in self.requests))
@@ -108,11 +108,11 @@ class MergeCache(unittest.TestCase):
         self.assertEqual(self.not_modified, 4)
 
     def test_cache_key_separates_owner_repo_pr_merge_and_inputs(self):
-        self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
-        cases = [("other", "yueto-ci", self.pr), ("onesyue", "yueops", self.pr),
-                 ("onesyue", "yueto-ci", self.pr | {"number": 204}),
-                 ("onesyue", "yueto-ci", self.pr | {"merge_commit_sha": "e" * 40}),
-                 ("onesyue", "yueto-ci", self.pr | {"head": {"sha": "f" * 40}})]
+        self.audit.merged_findings("onesyue", "yueops", self.pr)
+        cases = [("other", "yueops", self.pr), ("onesyue", "yueboard", self.pr),
+                 ("onesyue", "yueops", self.pr | {"number": 204}),
+                 ("onesyue", "yueops", self.pr | {"merge_commit_sha": "e" * 40}),
+                 ("onesyue", "yueops", self.pr | {"head": {"sha": "f" * 40}})]
         for owner, repo, pr in cases:
             with self.subTest(owner=owner, repo=repo, pr=pr):
                 self.requests.clear()
@@ -122,24 +122,24 @@ class MergeCache(unittest.TestCase):
     def test_missing_merge_sha_and_corrupt_cache_never_pass_as_a_hit(self):
         for sha in (None, "", "invalid"):
             with self.subTest(sha=sha), self.assertRaises(ValueError):
-                self.audit.merged_findings("onesyue", "yueto-ci", self.pr | {"merge_commit_sha": sha})
+                self.audit.merged_findings("onesyue", "yueops", self.pr | {"merge_commit_sha": sha})
         self.assertEqual(self.requests, [])
-        self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
+        self.audit.merged_findings("onesyue", "yueops", self.pr)
         path, = list(Path(self.tmp.name).glob("v*/http/*.json"))[:1]
         for content in ("{", "{}", '{"findings": [], "evidence_only": true}'):
             path.write_text(content)
             self.requests.clear()
-            self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
+            self.audit.merged_findings("onesyue", "yueops", self.pr)
             self.assertEqual(len(self.requests), 3)
 
     def test_incomplete_fetch_and_failed_cache_write_never_create_a_result(self):
         with patch.object(self.audit, "all_rows", side_effect=ValueError("unavailable")):
             with self.assertRaises(ValueError):
-                self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
+                self.audit.merged_findings("onesyue", "yueops", self.pr)
         self.assertEqual(list(Path(self.tmp.name).glob("v*/compare/*.json")), [])
         with patch.object(self.audit, "write_cache", side_effect=PermissionError):
             with self.assertRaises(OSError):
-                self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
+                self.audit.merged_findings("onesyue", "yueops", self.pr)
         self.assertEqual(list(Path(self.tmp.name).glob("v*/compare/*.json")), [])
 
     def test_revalidated_verdicts_match_cold_for_clean_missing_red_pending_and_unknown(self):
@@ -162,7 +162,7 @@ class MergeCache(unittest.TestCase):
                 self.assertEqual(len(self.requests), 3)
 
     def test_legacy_green_verdict_cache_is_ignored(self):
-        key = ["onesyue", "yueto-ci", self.pr["number"], self.pr["merge_commit_sha"]]
+        key = ["onesyue", "yueops", self.pr["number"], self.pr["merge_commit_sha"]]
         inputs = {"key": key, "head": self.pr["head"]["sha"], "base": self.pr["base"]["sha"],
                   "merged_at": self.pr["merged_at"], "author": self.pr["user"]["login"]}
         digest = hashlib.sha256(json.dumps(key, sort_keys=True).encode()).hexdigest()
@@ -189,10 +189,10 @@ class MergeCache(unittest.TestCase):
 
     def test_open_pr_always_refetches_evidence_and_detects_new_failure(self):
         self.files = [{"filename": "merge-receipts/yueops/203.json", "status": "added"}]
-        self.audit.merged_findings("onesyue", "yueto-ci", self.pr)
+        self.audit.merged_findings("onesyue", "yueops", self.pr)
         self.requests.clear()
         self.fixture["checks"][0]["conclusion"] = "failure"
-        row = self.audit.premerge("onesyue", "yueto-ci", 203)
+        row = self.audit.premerge("onesyue", "yueops", 203)
         self.assertIn("check_nonpassing_at_merge:policy", row["findings"])
         self.assertEqual(len(self.requests), 5)
 
@@ -228,7 +228,7 @@ class MergeCache(unittest.TestCase):
 
                 with self.subTest(status=status, output_format=output_format), patch.object(
                         self.audit.subprocess, "run", side_effect=unavailable), patch(
-                        "sys.argv", ["audit", "--repos", "yueto-ci", "--hours", "240", "--format", output_format]), patch.object(
+                        "sys.argv", ["audit", "--repos", "yueops", "--hours", "240", "--format", output_format]), patch.object(
                         self.audit, "datetime", wraps=self.audit.datetime) as clock, contextlib.redirect_stdout(io.StringIO()) as output:
                     clock.now.return_value = self.now
                     self.assertEqual(self.audit.main(), 2)

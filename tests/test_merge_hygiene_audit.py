@@ -44,6 +44,17 @@ class MergeHygieneAudit(unittest.TestCase):
             "id": 2, "state": "CHANGES_REQUESTED", "submitted_at": "2026-11-02T09:45:00Z"})
         self.assertIn("no_approving_review_at_merge", self.findings())
 
+    def test_review_exempt_repos_skip_only_the_approval_finding(self):
+        self.fixture["reviews"] = []
+        for repo in ("yueops", "yueboard", "yue-node", None):
+            with self.subTest(repo=repo):
+                self.assertIn("no_approving_review_at_merge", AUDIT.findings(**self.fixture, repo=repo))
+        for repo in ("yueto", "yueto-ci"):
+            with self.subTest(repo=repo):
+                self.assertNotIn("no_approving_review_at_merge", AUDIT.findings(**self.fixture, repo=repo))
+        self.fixture["checks"][0] = self.fixture["checks"][0] | {"conclusion": "failure"}
+        self.assertTrue(any("nonpassing" in f for f in AUDIT.findings(**self.fixture, repo="yueto-ci")))
+
     def test_failing_pending_and_late_success_checks(self):
         check = self.fixture["checks"][0]
         for change, expected in (({"conclusion": "failure"}, "nonpassing"),
