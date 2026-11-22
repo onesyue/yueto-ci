@@ -1,0 +1,88 @@
+{
+  "dead_code": {
+    "go": 0,
+    "python": 2
+  },
+  "functions": {
+    "scripts/ci_check_board_role.py::run( report : dict )#1": {
+      "ccn": 45,
+      "nloc": 116
+    },
+    "scripts/input-fingerprint.py::compute( source , rev : str , entry : dict )#1": {
+      "ccn": 36,
+      "nloc": 71
+    },
+    "scripts/input-fingerprint.py::feedback_manifest( source , base : str , matrix : list , validators : list , context : dict )#1": {
+      "ccn": 60,
+      "nloc": 100
+    },
+    "scripts/input-fingerprint.py::parse_dockerfile( text : str )#1": {
+      "ccn": 44,
+      "nloc": 85
+    },
+    "scripts/merge-hygiene-audit.py::findings( pr , reviews , checks , statuses )#1": {
+      "ccn": 34,
+      "nloc": 54
+    },
+    "scripts/merge-hygiene-audit.py::indirect_merge( owner , repo , pr )#1": {
+      "ccn": 51,
+      "nloc": 61
+    },
+    "scripts/ops-service-scope.py::filter_plan( plan : dict , paths : list [ str ] | None , dispatch : str , * , paths_known : bool = True , keep_all : bool = False , manifest : dict | None = None , )#1": {
+      "ccn": 38,
+      "nloc": 77
+    },
+    "scripts/ops-service-scope.py::load_manifest( path : Path | None = None , services_path : Path | None = None )#1": {
+      "ccn": 42,
+      "nloc": 69
+    },
+    "scripts/pytest-shards.py::_admit_existing_shared_inputs( baseline , common , files = None )#1": {
+      "ccn": 132,
+      "nloc": 256
+    },
+    "scripts/pytest-shards.py::_eval_skip_expr( node , env )#1": {
+      "ccn": 36,
+      "nloc": 51
+    },
+    "scripts/pytest-shards.py::admit_shared_inputs( baseline , common , files = None , * , source_revision = None , estate_successor_of = None , template_writer_retired_at = None , pin_is_ancestor = False )#1": {
+      "ccn": 111,
+      "nloc": 210
+    },
+    "scripts/pytest-shards.py::admit_skips( value , result , native , source = None )#1": {
+      "ccn": 33,
+      "nloc": 128
+    },
+    "scripts/pytest-shards.py::estate_successor_proof( baseline , source , revision )#1": {
+      "ccn": 55,
+      "nloc": 166
+    },
+    "scripts/pytest-shards.py::inspect_session( directory , value , assignment , * , expected_empty = False )#1": {
+      "ccn": 75,
+      "nloc": 112
+    },
+    "scripts/pytest-shards.py::reviewed_case_file_transition( baseline , files = None )#1": {
+      "ccn": 38,
+      "nloc": 75
+    },
+    "scripts/pytest-timing.py::inspect( output )#1": {
+      "ccn": 64,
+      "nloc": 118
+    },
+    "scripts/validate-native-node-contract.py::validate_yueboard( root : Path , contract : dict )#1": {
+      "ccn": 9,
+      "nloc": 393
+    },
+    "scripts/validate-native-node-contract.py::validate_yueops( root : Path , contract : dict , yueboard_contract_root : Path | None )#1": {
+      "ccn": 8,
+      "nloc": 257
+    },
+    "scripts/verify-sbom-attestations.py::_statement_architectures( statement : dict [ str , Any ] , image : str , digest : str , sbom_format : str )#1": {
+      "ccn": 39,
+      "nloc": 81
+    },
+    "scripts/weekly-vuln-scan.py::load_catalog( path : Path )#1": {
+      "ccn": 32,
+      "nloc": 45
+    }
+  }
+}
