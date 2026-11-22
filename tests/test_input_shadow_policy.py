@@ -28,6 +28,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
@@ -682,6 +684,59 @@ class EvidenceProbeTest(unittest.TestCase):
         self.assertNotEqual(expected, digest(other, migration="different-base"))
         other["ops_plan"]["assignments"] = ["b"]
         self.assertNotEqual(expected, digest(other))
+
+    def test_workflow_decision_and_publish_receipt(self):
+        jobs = yaml.safe_load(WORKFLOW.read_text())["jobs"]
+        steps = {step.get("id"): step for step in jobs["plan"]["steps"]}
+        self.assertEqual(steps["evidence"]["env"]["REUSE_YUE_NODE"], "${{ vars.YUETO_REUSE_YUE_NODE }}")
+        self.assertEqual(steps["evidence"]["env"]["REUSE_YUEOPS"], "${{ vars.YUETO_REUSE_YUEOPS }}")
+        self.assertIn("steps.plan.outputs.resume != 'true'", steps["identity"]["if"])
+        self.assertIn("evidence_run == ''", jobs["validate"]["if"])
+        self.assertIn("evidence_run == ''", jobs["ops-service-selection"]["if"])
+        self.assertNotIn("evidence_run", jobs["freshness"]["if"])
+        checks = jobs["validation-evidence"]["steps"]
+        receipt = next(s for s in checks if s.get("name", "").startswith("Record prior validation"))
+        admit = next(s for s in checks if s.get("id") == "reused_services")
+        self.assertIn("needs.freshness.result == 'success'", admit["if"])
+        self.assertIn("success()", admit["if"])
+        fetch = next(s for s in jobs["publish"]["steps"] if s.get("name") == "Download this service selection verdict")
+        self.assertIn("needs.plan.outputs.evidence_run", fetch["with"]["run-id"])
+        self.assertIn("needs.plan.outputs.evidence_attempt", fetch["with"]["name"])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outfile = root / "output"
+            row = {"service": "yue-bot", "validation": "yueops", "ref": self.REF}
+            (root / "ops-admission.json").write_text(json.dumps({"validation_matrix": [row]}))
+            env = dict(RUNNER_TEMP=tmp, GITHUB_OUTPUT=str(outfile), GITHUB_STEP_SUMMARY=str(root / "summary"),
+                       GH_TOKEN="fake", VALIDATION_IDENTITY=BINDING, EVIDENCE_SELECTION=json.dumps([row]),
+                       EVIDENCE_BUILDS=json.dumps([row]), EVIDENCE_SERVICE="yueops", EVIDENCE_REF=self.REF,
+                       EVIDENCE_PROMOTE="true", GITHUB_REPOSITORY=self.current["repository"],
+                       GITHUB_RUN_ID="99", GITHUB_RUN_ATTEMPT="1", GITHUB_REF="refs/heads/master",
+                       GITHUB_SHA=self.current["head_sha"], DEFAULT_BRANCH="master",
+                       ImageVersion=self.current["image_version"], REUSE_YUEOPS="true")
+            self.run["created_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
+            with mock.patch.dict(os.environ, env), mock.patch.object(sys, "argv", ["script", "decide"]), \
+                    mock.patch.object(EV, "Api", return_value=self):
+                EV.main()
+                self.assertEqual(outfile.read_text().splitlines(), ["attempt=1", "run=7"])
+                self.assertIn("REPRODUCED_BY_IDENTITY", (root / "summary").read_text())
+                outfile.unlink()
+                for override in ({"REUSE_YUEOPS": ""}, {"REUSE_YUE_NODE": "true", "REUSE_YUEOPS": ""},
+                                 {"EVIDENCE_PROMOTE": "false"}, {"EVIDENCE_SELECTION": "[]"}):
+                    with mock.patch.dict(os.environ, override), mock.patch.object(self, "get") as lookup:
+                        EV.main()
+                        lookup.assert_not_called()
+                        self.assertFalse(outfile.exists())
+                with mock.patch.object(self, "get", side_effect=PermissionError):
+                    EV.main()
+                self.assertFalse(outfile.exists())
+            for status in ("failure", "cancelled", "skipped", "success"):
+                ran = subprocess.run(["bash", "-c", receipt["run"]], capture_output=True,
+                                     env=os.environ | env | dict(FRESHNESS=status, PRIOR_RUN="7", PRIOR_ATTEMPT="1"))
+                self.assertEqual(ran.returncode == 0, status == "success")
+                self.assertEqual((root / "ops-validation-evidence-99-1.json").exists(), status == "success")
+            subprocess.run(["bash", "-c", admit["run"]], check=True, env=os.environ | env | {"BUILDS": json.dumps([row])})
+            self.assertEqual(outfile.read_text().strip(), 'services={"yue-bot":true}')
 
     def test_log_parsers(self) -> None:
         log = PLAN_LOG.format(ref=self.REF)

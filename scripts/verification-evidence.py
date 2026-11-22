@@ -5,14 +5,14 @@ from __future__ import annotations
 
 import copy
 import hashlib
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 import datetime as dt
 import json
 import os
 import re
 import sys
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 WORKFLOW_PATH = ".github/workflows/build.yml"
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
@@ -164,22 +164,34 @@ def main():
     group = {row["validation"] for row in matrix}
     flags = {"yue-node": "REUSE_YUE_NODE", "yueops": "REUSE_YUEOPS"}
     enabled = len(group) == 1 and env.get(flags.get(next(iter(group)), "")) == "true"
+    builds = json.loads(env["EVIDENCE_BUILDS"])
+    planned_ops = {row["service"] for row in builds if row["validation"] == "yueops"}
+    covered = (bool(builds) and all(row["validation"] in group and row["ref"] == env["EVIDENCE_REF"]
+                                    for row in builds)
+               and planned_ops == {row["service"] for row in selection})
     current = {
         "repository": env["GITHUB_REPOSITORY"], "run_id": int(env["GITHUB_RUN_ID"]),
         "head_sha": env["GITHUB_SHA"], "default_branch": env["DEFAULT_BRANCH"],
         "service": env["EVIDENCE_SERVICE"], "ref": env["EVIDENCE_REF"],
         "binding": env["VALIDATION_IDENTITY"], "image_version": env.get("ImageVersion", ""),
         "validation_jobs": validation_job_names(matrix) + ["select-" + row["service"] for row in selection],
-        "enabled": enabled and env["EVIDENCE_PROMOTE"] == "true"
+        "enabled": enabled and covered and env["EVIDENCE_PROMOTE"] == "true"
                    and env["GITHUB_REF"] == "refs/heads/" + env["DEFAULT_BRANCH"]
                    and all(row["ref"] == env["EVIDENCE_REF"] for row in matrix),
     }
-    run = reusable_run(current, Api(current["repository"], env["GH_TOKEN"]), dt.datetime.now(dt.timezone.utc))
+    try:
+        run = reusable_run(current, Api(current["repository"], env["GH_TOKEN"]), dt.datetime.now(dt.timezone.utc))
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        # Log only the error class: storage redirects may include signed URLs.
+        print(f"Evidence lookup unavailable ({type(exc).__name__}). Full validation required.")
+        return
     if run:
         message = f"REPRODUCED_BY_IDENTITY from run {run['id']} attempt {run['run_attempt']}"
         print(message)
         with open(env["GITHUB_STEP_SUMMARY"], "a") as out:
             print(message, file=out)
+            for residual in NOT_REPRODUCED_BY_IDENTITY:
+                print(f"- Original run observed {residual}", file=out)
         with open(env["GITHUB_OUTPUT"], "a") as out:
             print(f"attempt={int(run['run_attempt'])}\nrun={int(run['id'])}", file=out)
     else:
