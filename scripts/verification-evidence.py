@@ -1,53 +1,23 @@
 #!/usr/bin/env python3
-"""Would an earlier run's verification evidence be reusable?  MEASUREMENT ONLY.
-
-P3 (2026-09-24) asked for "reuse a prior successful verification of the same
-source SHA instead of re-running identical validate jobs", behind a default-off
-flag, *only if the trust argument is airtight*.  The identity half can be made
-airtight within GitHub Actions' guarantees and is encoded below.  The freshness
-half still depends on the inputs in ``NOT_REPRODUCED_BY_IDENTITY``. The
-workflow checks live advisories in separate freshness jobs. This script
-measures how many validate minutes a matching prior run consumed. All
-validation and freshness jobs still execute.
-
-Identity checks (every one must hold; the first failure is the reason):
-
-1. same repository, workflow path ``.github/workflows/build.yml``, event
-   ``workflow_dispatch``, default branch, and **the same yueto-ci commit**
-   (``head_sha``).  One commit pins the workflow blob *and* every planner /
-   contract input it reads (services.json, validation-targets.json,
-   native-node-contract.json, scripts/*), so "same workflow file blob and same
-   planner/contract inputs" reduces to commit equality -- no weaker
-   per-file comparison is attempted;
-2. completed, not this run, created within ``--max-age-hours``;
-3. exactly one ``plan`` job, successful, whose runner-printed env block names
-   the same ``SERVICE``, the same exact 40-hex ``REF_OVERRIDE``, event
-   ``workflow_dispatch`` and an empty ``MANUAL_YUEBOARD_CONTRACT_REF`` (a manual
-   contract override validates against a different YueBoard tree).  The env
-   block is written by the runner before any user code runs; a duplicated key
-   line is rejected, the same binding ``scripts/match-build-run.py`` uses;
-4. every validate job the current plan needs is present, ``success``, on the
-   GitHub-hosted ``ubuntu-24.04`` label in the ``GitHub Actions`` runner group
-   (never the manual self-hosted fallback);
-5. each of those jobs ran on the **same runner image version** as this run
-   (``Runner Image / Version:`` from the job log header, vs ``$ImageVersion``).
-"""
+"""Bind reusable validation to an exact source, policy, workflow, hosted image and input plan."""
 
 from __future__ import annotations
 
-import argparse
+import copy
+import hashlib
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 import datetime as dt
 import json
 import os
 import re
 import sys
-import urllib.error
 import urllib.request
 
 WORKFLOW_PATH = ".github/workflows/build.yml"
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
-ENV_LINE = r"^\d{{4}}-\d{{2}}-\d{{2}}T[0-9:.]+Z +{key}:(?: (?P<value>.*?))?\s*$"
+ENV_LINE = r"^\d{{4}}-\d{{2}}-\d{{2}}T[0-9:.]+Z +{key}:(?: (?P<value>[^\r\n]*))?[ \t]*\r?$"
 IMAGE_VERSION = re.compile(
     r"##\[group\]Runner Image\s*\n(?:.*\n){0,3}?\S+Z Version: (?P<version>[0-9.]+)"
 )
@@ -76,72 +46,78 @@ def _ts(value: str) -> dt.datetime:
     return dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def assess_candidate(current: dict, cand: dict, now: dt.datetime, max_age: dt.timedelta) -> str:
-    """Return "" when the candidate passes every identity check, else the reason."""
-    run = cand["run"]
-    if run.get("id") == current["run_id"]:
-        return "this run"
-    if (run.get("head_repository") or {}).get("full_name") != current["repository"]:
-        return "different repository"
-    if run.get("path") != WORKFLOW_PATH:
-        return "different workflow path"
-    if run.get("event") != "workflow_dispatch":
-        return f"event {run.get('event')}"
-    if run.get("head_branch") != current["default_branch"]:
-        return f"branch {run.get('head_branch')}"
-    if run.get("head_sha") != current["head_sha"]:
-        return "different yueto-ci commit (workflow/planner/contract inputs may differ)"
-    if run.get("status") != "completed":
-        return "not completed"
-    created = _ts(run["created_at"])
-    if not (dt.timedelta(0) <= now - created <= max_age):
-        return "outside freshness window"
-    plans = [j for j in cand["jobs"] if j.get("name") == "plan"]
-    if len(plans) != 1 or plans[0].get("conclusion") != "success":
-        return "plan job missing or unsuccessful"
-    log = cand.get("plan_log", "")
-    if env_value(log, "SERVICE") != current["service"]:
-        return "different service"
-    ref = env_value(log, "REF_OVERRIDE")
-    if not ref or not SHA40.match(ref) or ref != current["ref"]:
-        return "different or non-exact source ref"
-    if env_value(log, "EVENT_NAME") != "workflow_dispatch":
-        return "plan env event mismatch"
-    if env_value(log, "MANUAL_YUEBOARD_CONTRACT_REF") != "":
-        return "manual YueBoard contract override (or unreadable)"
-    by_name = {j.get("name"): j for j in cand["jobs"]}
-    for name in current["validation_jobs"]:
-        job = by_name.get(name)
-        if job is None:
-            return f"{name} missing"
-        if job.get("conclusion") != "success":
-            return f"{name} {job.get('conclusion')}"
-        if job.get("labels") != ["ubuntu-24.04"] or job.get("runner_group_name") != "GitHub Actions":
-            return f"{name} not on the hosted ubuntu-24.04 class"
-        seen = cand.get("image_versions", {}).get(name, "")
-        if not seen or seen != current["image_version"]:
-            return f"{name} runner image {seen or 'unreadable'} != {current['image_version'] or 'unknown'}"
-    return ""
+def inputs_digest(admission, selection, service, migration_base):
+    # Run/attempt seal the original join. They do not change the test inputs.
+    value = copy.deepcopy(admission)
+    del value["admission_sha256"]
+    contexts = [value["identity"]]
+    if value["ops_plan"] is not None:
+        contexts.append(value["ops_plan"]["context"])
+        del value["ops_plan"]["plan_sha256"]
+    for context in contexts:
+        del context["run_id"], context["run_attempt"]
+    # Timing weights only choose assignments. The actual assignments are bound.
+    value.pop("ordinary_weights", None)
+    data = json.dumps([value, selection, service, migration_base],
+                      sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(data).hexdigest()
 
 
-def assess(current: dict, candidates: list[dict], now: dt.datetime, max_age_hours: float = 24) -> dict:
-    max_age = dt.timedelta(hours=max_age_hours)
-    rejected = {}
-    for cand in sorted(candidates, key=lambda c: c["run"].get("created_at", ""), reverse=True):
-        reason = assess_candidate(current, cand, now, max_age)
-        if not reason:
-            minutes = sum(
-                (_ts(j["completed_at"]) - _ts(j["started_at"])).total_seconds() / 60
-                for j in cand["jobs"] if j.get("name") in current["validation_jobs"]
-            )
-            return {
-                "identity_reusable": True, "evidence_run": cand["run"]["id"],
-                "validate_minutes": round(minutes, 1), "rejected": rejected,
-                "enabled": False, "not_reproduced_by_identity": list(NOT_REPRODUCED_BY_IDENTITY),
-            }
-        rejected[str(cand["run"].get("id"))] = reason
-    return {"identity_reusable": False, "rejected": rejected, "enabled": False,
-            "not_reproduced_by_identity": list(NOT_REPRODUCED_BY_IDENTITY)}
+def eligible_run(current, run, now):
+    return (run["id"] != current["run_id"]
+            and (run.get("head_repository") or {}).get("full_name") == current["repository"]
+            and run.get("path") == WORKFLOW_PATH and run.get("event") == "workflow_dispatch"
+            and run.get("head_branch") == current["default_branch"]
+            and run.get("head_sha") == current["head_sha"]
+            and run.get("status") == "completed" and run.get("conclusion") == "success"
+            and dt.timedelta() <= now - _ts(run["created_at"]) <= dt.timedelta(hours=24))
+
+
+def hosted_success(job):
+    return (job.get("status") == "completed" and job.get("conclusion") == "success"
+            and job.get("labels") == ["ubuntu-24.04"]
+            and job.get("runner_group_name") == "GitHub Actions")
+
+
+def matching_candidate(current, run, api):
+    attempt = run["run_attempt"]
+    jobs = api.get(f"actions/runs/{run['id']}/attempts/{attempt}/jobs?per_page=100")
+    rows = jobs["jobs"]
+    if jobs["total_count"] != len(rows):
+        return False
+    names = ["plan", "validation-evidence", *current["validation_jobs"]]
+    required = [job for job in rows if job["name"] in names]
+    if (not current["validation_jobs"] or sorted(job["name"] for job in required) != sorted(set(names))
+            or len(names) != len(set(names))
+            or not all(hosted_success(job) and job.get("run_attempt") == attempt for job in required)):
+        return False
+    plan = next(job for job in required if job["name"] == "plan")
+    log = api.get(f"actions/jobs/{plan['id']}/logs", raw=True)
+    if (env_value(log, "SERVICE") != current["service"]
+            or env_value(log, "REF_OVERRIDE") != current["ref"]
+            or env_value(log, "EVENT_NAME") != "workflow_dispatch"
+            or env_value(log, "VALIDATION_IDENTITY") != current["binding"]):
+        return False
+
+    def same_image(job):
+        header = api.get(f"actions/jobs/{job['id']}/logs", raw=True, limit=65536)
+        return image_version(header) == current["image_version"]
+
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        return all(pool.map(same_image, required))
+
+
+def reusable_run(current, api, now):
+    if (not current["enabled"] or not SHA40.fullmatch(current["ref"])
+            or not SHA40.fullmatch(current["head_sha"]) or not current["image_version"]
+            or not re.fullmatch(r"[0-9a-f]{64}:[0-9a-f]{64}", current["binding"])):
+        return None
+    runs = api.get(f"actions/workflows/build.yml/runs?head_sha={current['head_sha']}"
+                   "&event=workflow_dispatch&status=success&per_page=30")["workflow_runs"]
+    for run in runs:
+        if eligible_run(current, run, now) and matching_candidate(current, run, api):
+            return run
+    return None
 
 
 def validation_job_names(matrix: list[dict]) -> list[str]:
@@ -163,86 +139,52 @@ class Api:
 
     def get(self, path: str, raw: bool = False, limit: int | None = None):
         req = urllib.request.Request(self.base + "/" + path, headers={
-            "Authorization": f"Bearer {self.token}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         })
+        # Actions log downloads redirect to signed storage URLs.
+        req.add_unredirected_header("Authorization", f"Bearer {self.token}")
         with urllib.request.urlopen(req, timeout=30) as response:
             data = response.read(limit) if limit else response.read()
         return data.decode("utf-8", "replace") if raw else json.loads(data)
 
 
-def probe(args: argparse.Namespace) -> int:
+def main():
     env = os.environ
-    repository = env["GITHUB_REPOSITORY"]
+    admission = json.loads((Path(env["RUNNER_TEMP"]) / "ops-admission.json").read_bytes())
+    selection = json.loads(env["EVIDENCE_SELECTION"])
+    if sys.argv[1] == "identity":
+        inputs = inputs_digest(admission, selection, env["EVIDENCE_SERVICE"], env["EVIDENCE_BASE"])
+        workflow = hashlib.sha256(Path(WORKFLOW_PATH).read_bytes()).hexdigest()
+        print(f"binding={workflow}:{inputs}")
+        return
+    if sys.argv[1] != "decide":
+        raise ValueError("unknown command")
+    matrix = admission["validation_matrix"]
+    group = {row["validation"] for row in matrix}
+    flags = {"yue-node": "REUSE_YUE_NODE", "yueops": "REUSE_YUEOPS"}
+    enabled = len(group) == 1 and env.get(flags.get(next(iter(group)), "")) == "true"
     current = {
-        "repository": repository,
-        "run_id": int(env["GITHUB_RUN_ID"]),
-        "head_sha": env["GITHUB_SHA"],
-        "default_branch": args.default_branch,
-        "service": args.service,
-        "ref": args.ref,
-        "validation_jobs": validation_job_names(json.loads(args.validation_matrix)),
-        "image_version": env.get("ImageVersion", ""),
+        "repository": env["GITHUB_REPOSITORY"], "run_id": int(env["GITHUB_RUN_ID"]),
+        "head_sha": env["GITHUB_SHA"], "default_branch": env["DEFAULT_BRANCH"],
+        "service": env["EVIDENCE_SERVICE"], "ref": env["EVIDENCE_REF"],
+        "binding": env["VALIDATION_IDENTITY"], "image_version": env.get("ImageVersion", ""),
+        "validation_jobs": validation_job_names(matrix) + ["select-" + row["service"] for row in selection],
+        "enabled": enabled and env["EVIDENCE_PROMOTE"] == "true"
+                   and env["GITHUB_REF"] == "refs/heads/" + env["DEFAULT_BRANCH"]
+                   and all(row["ref"] == env["EVIDENCE_REF"] for row in matrix),
     }
-    if not SHA40.match(args.ref):
-        result = {"identity_reusable": False, "rejected": {}, "reason": "current ref is not an exact 40-hex SHA"}
+    run = reusable_run(current, Api(current["repository"], env["GH_TOKEN"]), dt.datetime.now(dt.timezone.utc))
+    if run:
+        message = f"REPRODUCED_BY_IDENTITY from run {run['id']} attempt {run['run_attempt']}"
+        print(message)
+        with open(env["GITHUB_STEP_SUMMARY"], "a") as out:
+            print(message, file=out)
+        with open(env["GITHUB_OUTPUT"], "a") as out:
+            print(f"attempt={int(run['run_attempt'])}\nrun={int(run['id'])}", file=out)
     else:
-        api = Api(repository, env["GITHUB_TOKEN"])
-        runs = api.get(
-            f"actions/workflows/build.yml/runs?head_sha={current['head_sha']}"
-            "&event=workflow_dispatch&status=completed&per_page=30"
-        ).get("workflow_runs", [])
-        now = dt.datetime.now(dt.timezone.utc)
-        candidates = []
-        for run in runs:
-            if run.get("id") == current["run_id"] or now - _ts(run["created_at"]) > dt.timedelta(hours=args.max_age_hours):
-                continue
-            jobs = api.get(f"actions/runs/{run['id']}/jobs?per_page=100").get("jobs", [])
-            cand = {"run": run, "jobs": jobs, "plan_log": "", "image_versions": {}}
-            plans = [j for j in jobs if j.get("name") == "plan"]
-            if len(plans) == 1:
-                cand["plan_log"] = api.get(f"actions/jobs/{plans[0]['id']}/logs", raw=True)
-            for job in jobs:
-                if job.get("name") in current["validation_jobs"] and job.get("conclusion") == "success":
-                    head = api.get(f"actions/jobs/{job['id']}/logs", raw=True, limit=65536)
-                    cand["image_versions"][job["name"]] = image_version(head)
-            candidates.append(cand)
-        result = assess(current, candidates, now, args.max_age_hours)
-    verdict = (
-        f"identity-reusable evidence: run {result['evidence_run']} "
-        f"({result['validate_minutes']} validate min) -- NOT used, reuse is disabled"
-        if result.get("identity_reusable") else
-        "no identity-reusable evidence (" + (result.get("reason") or f"{len(result['rejected'])} candidate(s) rejected") + ")"
-    )
-    print(f"::notice title=verification-evidence {args.service}::{verdict}")
-    summary = env.get("GITHUB_STEP_SUMMARY")
-    if summary:
-        with open(summary, "a", encoding="utf-8") as handle:
-            handle.write(f"## Verification evidence reuse probe (measurement only)\n\n{verdict}\n\n")
-            for rid, why in result.get("rejected", {}).items():
-                handle.write(f"- run {rid}: {why}\n")
-    print(json.dumps(result, sort_keys=True))
-    return 0
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    sub = parser.add_subparsers(dest="cmd", required=True)
-    p = sub.add_parser("probe")
-    p.add_argument("--service", required=True)
-    p.add_argument("--ref", required=True)
-    p.add_argument("--validation-matrix", required=True)
-    p.add_argument("--default-branch", default="master")
-    p.add_argument("--max-age-hours", type=float, default=24)
-    args = parser.parse_args(argv)
-    try:
-        return probe(args)
-    except (urllib.error.URLError, TimeoutError, ValueError, KeyError) as exc:
-        # Measurement only: a broken probe must be visible, never gating.
-        print(f"::warning title=verification-evidence::probe unavailable: {exc}")
-        return 0
+        print("Full validation required")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
