@@ -1248,12 +1248,17 @@ class BuildPolicyTest(unittest.TestCase):
         )
 
     def test_policy_ci_runs_pinned_fail_closed_policy_tooling(self) -> None:
-        required = (
+        entry = (ROOT / "scripts/check-policy.sh").read_text()
+        for command in (
             "python3 scripts/run-policy-tests.py",
             "shellcheck --severity=warning scripts/*.sh",
             "python3 -m compileall -q scripts tests",
             'bash -n "$script"',
             "actionlint .github/workflows/*.yml",
+        ):
+            self.assertIn(command, entry)
+        required = (
+            "run: scripts/check-policy.sh ci",
             "source scripts/lint-tool-versions.sh",
             "sha256sum --check --strict",
             "https://github.com/rhysd/actionlint/releases/download/",
