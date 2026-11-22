@@ -128,6 +128,11 @@ def run(source: Path, policy: Path, source_sha: str, policy_sha: str, output: Pa
     output.mkdir(parents=True, exist_ok=True)
     roles = plan(policy, source_sha, output)
     contract = workflow_contract(policy)
+    registry_env = {key: os.environ[key] for key in ('GHCR_USER', 'GHCR_PASSWORD') if key in os.environ}
+    contract['promoted_board_ref'] = subprocess.check_output(
+        [sys.executable, str(policy / 'scripts/validate-native-node-contract.py'), 'resolve-yueboard-ref'],
+        env=planner_environment() | registry_env, text=True,
+    ).strip()
     image = image_from_workflow()
     summary = output / 'execution.json'
     statuses: dict[str, int] = {}
