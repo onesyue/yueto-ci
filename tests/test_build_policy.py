@@ -1415,7 +1415,7 @@ class BuildPolicyTest(unittest.TestCase):
             with self.subTest(invariant=invariant):
                 self.assertIn(invariant, self.workflow)
 
-    def test_yueboard_promotion_is_bound_to_exact_reviewed_contract_pin(self) -> None:
+    def test_yueboard_promotion_uses_computed_checks_not_pin_equality(self) -> None:
         classifier_start = self.workflow.index(
             "- name: Classify YueBoard reviewed-pin authorization"
         )
@@ -1432,7 +1432,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("PROMOTE: ${{ needs.plan.outputs.promote }}", classifier)
         self.assertIn("board-validation-preflight.sh contract", classifier)
         preflight = (ROOT / "scripts/board-validation-preflight.sh").read_text()
-        self.assertIn('$policy/native-node-contract.json', preflight)
+        self.assertIn('verify-yueboard-commit.py', preflight)
         self.assertIn('authorize-yueboard-promotion.sh', preflight)
         self.assertIn('"$source_sha" "$contract_pin" "$PROMOTE"', preflight)
         self.assertIn("authorize-yueboard-build-plan.sh", self.workflow)
@@ -1458,6 +1458,7 @@ class BuildPolicyTest(unittest.TestCase):
         promotion = self.workflow[promotion_start:]
         self.assertIn("VALIDATION_KIND: ${{ matrix.validation }}", promotion)
         self.assertIn('if [ "$VALIDATION_KIND" = yueboard ]', promotion)
+        self.assertIn("verify-yueboard-commit.py", promotion)
         self.assertIn(".ci-policy/native-node-contract.json", promotion)
         self.assertIn(
             '"$SOURCE_SHA" "$contract_pin" true',
@@ -1470,9 +1471,9 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("non-promotable", self.readme)
         self.assertIn("yueboard_contract_pin", self.readme)
 
-    def test_yueboard_pin_authorizer_positive_and_negative_cases(self) -> None:
+    def test_yueboard_pin_is_informational_for_any_commit(self) -> None:
         reviewed = "a" * 40
-        unreviewed = "b" * 40
+        other = "b" * 40
 
         exact = subprocess.run(
             ["bash", str(YUEBOARD_AUTHORIZER), reviewed, reviewed, "true"],
@@ -1484,8 +1485,20 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(exact.returncode, 0, exact.stderr)
         self.assertIn("promotable=true requested=true", exact.stdout)
 
+        different = subprocess.run(
+            ["bash", str(YUEBOARD_AUTHORIZER), other, reviewed, "true"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(different.returncode, 0, different.stderr)
+        self.assertIn("promotable=true requested=true", different.stdout)
+        self.assertIn("informational", different.stdout)
+        self.assertNotIn("exact reviewed native contract pin", different.stdout + different.stderr)
+
         validation_only = subprocess.run(
-            ["bash", str(YUEBOARD_AUTHORIZER), unreviewed, reviewed, "false"],
+            ["bash", str(YUEBOARD_AUTHORIZER), other, reviewed, "false"],
             cwd=ROOT,
             check=False,
             capture_output=True,
@@ -1495,19 +1508,15 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("validation-only source is non-promotable", validation_only.stdout)
         self.assertIn("no registry write is authorized", validation_only.stdout)
 
-        rejected = subprocess.run(
-            ["bash", str(YUEBOARD_AUTHORIZER), unreviewed, reviewed, "true"],
+        ignored = subprocess.run(
+            ["bash", str(YUEBOARD_AUTHORIZER), other, "not-a-sha", "true"],
             cwd=ROOT,
             check=False,
             capture_output=True,
             text=True,
         )
-        self.assertEqual(rejected.returncode, 1)
-        self.assertIn(
-            "is not the exact reviewed native contract pin",
-            rejected.stderr,
-        )
-        self.assertIn("signed cross-repository pin convergence", rejected.stderr)
+        self.assertEqual(ignored.returncode, 0, ignored.stderr)
+        self.assertIn("not a 40-hex commit", ignored.stderr)
 
         malformed = subprocess.run(
             ["bash", str(YUEBOARD_AUTHORIZER), "main", reviewed, "true"],
@@ -1563,10 +1572,12 @@ class BuildPolicyTest(unittest.TestCase):
         )
         self.assertEqual(validation_only.returncode, 0, validation_only.stderr)
         plan = json.loads(validation_only.stdout)
-        self.assertEqual(plan["matrix"], [])
-        self.assertFalse(plan["has_builds"])
+        self.assertTrue(plan["has_builds"])
+        self.assertEqual(len(plan["matrix"]), 1)
+        self.assertEqual(plan["matrix"][0]["ref"], unreviewed)
         self.assertEqual(plan["validation_matrix"][0]["ref"], unreviewed)
-        self.assertIn("no image build, candidate tag, built marker", validation_only.stderr)
+        self.assertIn("does not gate image builds", validation_only.stderr)
+        self.assertNotIn("refusing YueBoard promotion", validation_only.stderr)
 
         pinned = subprocess.run(
             [
@@ -1589,7 +1600,7 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertEqual(pinned_plan["matrix"][0]["ref"], reviewed)
         self.assertEqual(pinned_plan["validation_matrix"][0]["ref"], reviewed)
 
-        rejected = subprocess.run(
+        promoted = subprocess.run(
             [
                 "bash",
                 str(YUEBOARD_PLAN_AUTHORIZER),
@@ -1603,9 +1614,11 @@ class BuildPolicyTest(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertEqual(rejected.returncode, 1)
-        self.assertEqual(rejected.stdout, "")
-        self.assertIn("refusing YueBoard promotion", rejected.stderr)
+        self.assertEqual(promoted.returncode, 0, promoted.stderr)
+        promoted_plan = json.loads(promoted.stdout)
+        self.assertTrue(promoted_plan["has_builds"])
+        self.assertEqual(promoted_plan["matrix"][0]["ref"], unreviewed)
+        self.assertNotIn("refusing YueBoard promotion", promoted.stderr)
 
         malformed = subprocess.run(
             [
@@ -2070,10 +2083,11 @@ class BuildPolicyTest(unittest.TestCase):
             "YueOps requires explicit yueboard_contract_ref from signed desired",
             self.workflow,
         )
-        self.assertIn(
+        self.assertNotIn(
             'explicit_board_ref" != "$yueboard_contract_pin',
             self.workflow,
         )
+        self.assertIn("verify-yueboard-commit.py", self.workflow)
         self.assertIn(
             'echo "yueboard_contract_ref=$yueboard_contract_ref"',
             self.workflow,
@@ -2119,9 +2133,8 @@ class BuildPolicyTest(unittest.TestCase):
         self,
     ) -> None:
         self.assertEqual(self.native_contract["version"], 6)
-        # Current reviewed values live only in native-node-contract.json.
-        # Promotion binds the source to that exact pin; the native validator
-        # checks the pinned tree's floor rather than a second current literal.
+        # The pin is informational. Computed checks at the commit under build
+        # replace pin equality; schema_floor stays a positive integer here.
         self.assertIsInstance(self.native_contract["schema_floor"], int)
         self.assertGreater(self.native_contract["schema_floor"], 0)
         self.assertRegex(self.native_contract["yueboard_contract_pin"], r"^[0-9a-f]{40}$")

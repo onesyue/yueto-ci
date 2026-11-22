@@ -268,8 +268,8 @@ jobs:
             false) ;;
             *) echo 'invalid validation_only value' >&2; exit 1 ;;
           esac
-          # Board publication and node validation retain their reviewed policy pin.
-          # Ops instead consumes the caller-bound production Board revision.
+          # The recorded pin remains the default contract tree for node validation.
+          # It does not reject a YueBoard commit. Ops still requires an explicit ref.
           yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
           yueboard_contract_ref="$yueboard_contract_pin"
           explicit_board_ref=""
@@ -357,9 +357,8 @@ jobs:
               echo 'YueOps requires explicit yueboard_contract_ref from signed desired (historical override only for validation_only)' >&2
               exit 1
             }
-          elif [ -n "$explicit_board_ref" ] && [ "$explicit_board_ref" != "$yueboard_contract_pin" ]; then
-            echo 'non-Ops validation must use the reviewed pinned YueBoard contract' >&2
-            exit 1
+          # yueboard_contract_pin does not reject a different commit. Computed
+          # checks run in verify-yueboard-commit.py at the commit under build.
           fi
           if [ "$validation_only" = true ]; then
             # One SHA cannot identify commits in several independent repositories.
@@ -1035,11 +1034,9 @@ jobs:
         if: matrix.validation == 'yue-node'
         run: go clean -testcache
 
-      # A new YueBoard HEAD may be reviewed before the cross-repository pin is
-      # advanced. Planning keeps it in this validation matrix but removes it
-      # from the build matrix, so it cannot log in to or mutate the registry.
-      # Repeat the non-promotable classification against the immutable policy
-      # checkout; the final tag-mutation step repeats the exact pin check too.
+      # Computed checks at this checkout replace pin equality. A commit that is
+      # not yueboard_contract_pin still validates and can be built. The pin is
+      # informational. Publish repeats verify-yueboard-commit.py before retag.
       - name: Classify YueBoard reviewed-pin authorization
         if: matrix.validation == 'yueboard'
         env:
@@ -2453,7 +2450,8 @@ jobs:
             exit 1
           }
           if [ "$VALIDATION_KIND" = yueboard ]; then
-            contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' .ci-policy/native-node-contract.json)"
+            python3 .ci-policy/scripts/verify-yueboard-commit.py --source .
+            contract_pin="$(jq -r '.yueboard_contract_pin // empty' .ci-policy/native-node-contract.json)"
             bash .ci-policy/scripts/authorize-yueboard-promotion.sh \
               "$SOURCE_SHA" "$contract_pin" true
           fi

@@ -85,7 +85,7 @@ def assert_desired_unchanged(snapshot):
             ('yueops', 'master', 'a' * 40, False),
             ('yueops', 'b' * 40, 'a' * 40, True),
             ('yueboard', '', 'a' * 40, True),
-            ('yueboard', 'b' * 40, 'a' * 40, False),
+            ('yueboard', 'b' * 40, 'a' * 40, True),
         ]:
             with self.subTest(kind=kind, explicit=explicit):
                 env = os.environ | {'target_plan': '{"validation_matrix":[{"validation":"' + kind + '"}]}',

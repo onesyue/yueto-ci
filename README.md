@@ -41,9 +41,9 @@ is not permission to substitute another revision into the interrupted release.
 ## Run validation or promotion
 
 ```sh
-# Exact reviewed Board pin: validate and build a candidate.
+# Any exact YueBoard commit: validate and build a candidate.
 gh workflow run build.yml -R onesyue/yueto-ci \
-  -f service=yueboard -f ref=<40-hex-reviewed-contract-pin>
+  -f service=yueboard -f ref=<40-hex-yueboard-sha>
 
 # Validate all targets and build registry-eligible candidate images (no promotion).
 # Supply the trusted predecessor required by Ops SQL lint.
@@ -56,7 +56,7 @@ gh workflow run build.yml -R onesyue/yueto-ci \
 
 # Promotion additionally requires the conditions below.
 gh workflow run build.yml -R onesyue/yueto-ci \
-  -f service=yueboard -f ref=<40-hex-reviewed-contract-pin> -f promote=true
+  -f service=yueboard -f ref=<40-hex-yueboard-sha> -f promote=true
 ```
 
 Validation accepts full branch/tag names or full 40-character commit SHAs;
@@ -65,11 +65,19 @@ full 40-character source SHA and this workflow's `refs/heads/master`. Validation
 and build check out independently, so movable refs cannot authorize promotion.
 
 Promotion also requires source default-branch ancestry, build inputs identical
-to HEAD, no regression behind `:latest`, and Board's exact signed
-`yueboard_contract_pin` in [native-node-contract.json](native-node-contract.json).
-[promote-source-gate.py](scripts/promote-source-gate.py) repeats these checks
-immediately before changing tags. Unpinned Board HEAD receives full validation
-but is `non-promotable`: no registry login, image, candidate or tag writes.
+to HEAD, no regression behind `:latest`, and the computed checks in
+[verify-yueboard-commit.py](scripts/verify-yueboard-commit.py) at the commit
+being built: schema floor does not regress against the previous promoted floor,
+`schema-compat.txt` is at or below that floor, the proto breaking check passes,
+and the OpenAPI snapshot is fresh. `YUEBOARD_BASELINE_REV`, or a yueto release
+ledger passed as `YUEBOARD_RELEASE_LEDGER`, supplies the previous revision.
+When neither is set, baseline-relative checks log a warning and today's checks
+still run. `yueboard_contract_pin` in
+[native-node-contract.json](native-node-contract.json) is informational and
+does not accept or reject a commit.
+[promote-source-gate.py](scripts/promote-source-gate.py) repeats the ancestry
+checks immediately before changing tags. `promote=false` and validation-only
+runs stay non-promotable: no registry write is authorized.
 Source-only targets reject promotion; ordinary `service=yue-node` still builds
 an image, while `yue-node-validation` runs both complete native profiles only.
 
