@@ -188,6 +188,7 @@ jobs:
       has_builds: ${{ steps.ops_scope.outputs.has_builds || steps.plan.outputs.has_builds }}
       promote: ${{ steps.plan.outputs.promote }}
       yueboard_contract_ref: ${{ steps.plan.outputs.yueboard_contract_ref }}
+      promoted_board_ref: ${{ steps.plan.outputs.promoted_board_ref }}
       ops_selection_matrix: ${{ steps.ops_scope.outputs.ops_selection_matrix || '[]' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -336,9 +337,15 @@ jobs:
           # validators in separate registries. `all` covers YueLink without
           # ever inventing a Docker target for it.
           target_plan="$(bash scripts/plan-build-targets.sh "$SERVICE" "$REF_OVERRIDE")"
-          yueboard_contract_ref=""
-          if [ -n "$YUEBOARD_CONTRACT_REF" ] ||
-             jq -e 'any(.validation_matrix[]; .validation == "yue-node" or .validation == "yueops")' <<<"$target_plan" >/dev/null; then
+          promoted_board_ref=""
+          if jq -e 'any(.validation_matrix[]; .validation == "yueboard")' <<<"$target_plan" >/dev/null; then
+            promoted_board_ref="$(python3 scripts/validate-native-node-contract.py resolve-yueboard-ref)"
+          fi
+          yueboard_contract_ref="$promoted_board_ref"
+          if [ -n "$YUEBOARD_CONTRACT_REF" ] || {
+            [ -z "$promoted_board_ref" ] &&
+              jq -e 'any(.validation_matrix[]; .validation == "yue-node" or .validation == "yueops")' <<<"$target_plan" >/dev/null
+          }; then
             yueboard_contract_ref="$(python3 scripts/validate-native-node-contract.py resolve-yueboard-ref --explicit="$YUEBOARD_CONTRACT_REF")"
           fi
           if [ "$validation_only" = true ]; then
@@ -454,6 +461,7 @@ jobs:
             echo "validation_matrix=$validation_matrix"
             echo "has_builds=$has_builds"
             echo "promote=$promote"
+            echo "promoted_board_ref=$promoted_board_ref"
             echo "yueboard_contract_ref=$yueboard_contract_ref"
           } >> "$GITHUB_OUTPUT"
 
@@ -1015,6 +1023,7 @@ jobs:
       - name: Classify YueBoard reviewed-pin authorization
         if: matrix.validation == 'yueboard'
         env:
+          PROMOTED_BOARD_REF: ${{ needs.plan.outputs.promoted_board_ref }}
           PROMOTE: ${{ needs.plan.outputs.promote }}
         run: |
           bash .ci-policy/scripts/board-validation-preflight.sh contract \

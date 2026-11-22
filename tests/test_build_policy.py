@@ -1142,7 +1142,9 @@ class BuildPolicyTest(unittest.TestCase):
             line for line in capture.splitlines() if not line.lstrip().startswith("#")
         )
         self.assertIn("permissions:\n  contents: read", capture_code)
-        self.assertIn("['yueboard_contract_pin']", capture_code)
+        self.assertIn('revision="$(python3 policy/scripts/validate-native-node-contract.py resolve-yueboard-ref --explicit="$YUEBOARD_CONTRACT_REF")"', capture_code)
+        self.assertIn('ref: ${{ steps.source.outputs.revision }}', capture_code)
+        self.assertNotIn('yueboard_contract_pin', capture_code)
         self.assertIn('playwright test "specs/${VISUAL_SPEC}.spec.ts" --update-snapshots=changed', capture_code)
         self.assertIn("case \"$VISUAL_SPEC\" in plan-change-confirm|gift-ledger) ;; *) exit 1 ;; esac", capture_code)
         self.assertIn("assert len(files) == 4", capture_code)
@@ -1434,7 +1436,9 @@ class BuildPolicyTest(unittest.TestCase):
         preflight = (ROOT / "scripts/board-validation-preflight.sh").read_text()
         self.assertIn('verify-yueboard-commit.py', preflight)
         self.assertIn('authorize-yueboard-promotion.sh', preflight)
-        self.assertIn('"$source_sha" "$contract_pin" "$PROMOTE"', preflight)
+        self.assertIn("PROMOTED_BOARD_REF: ${{ needs.plan.outputs.promoted_board_ref }}", classifier)
+        self.assertIn('"$source_sha" "$PROMOTED_BOARD_REF" "$PROMOTE"', preflight)
+        self.assertNotIn('yueboard_contract_pin', preflight)
         self.assertIn("authorize-yueboard-build-plan.sh", self.workflow)
         self.assertIn("board_source_sha", self.workflow)
         self.assertIn("encoded_board_ref", self.workflow)
@@ -1459,9 +1463,9 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("VALIDATION_KIND: ${{ matrix.validation }}", promotion)
         self.assertIn('if [ "$VALIDATION_KIND" = yueboard ]', promotion)
         self.assertIn("verify-yueboard-commit.py", promotion)
-        self.assertIn(".ci-policy/native-node-contract.json", promotion)
+        self.assertNotIn("yueboard_contract_pin", promotion)
         self.assertIn(
-            '"$SOURCE_SHA" "$contract_pin" true',
+            '"$SOURCE_SHA" "" true',
             promotion,
         )
         self.assertEqual(
@@ -2051,7 +2055,7 @@ class BuildPolicyTest(unittest.TestCase):
     def test_yueops_tests_do_not_override_the_isolated_database_fixture(self) -> None:
         self.assertNotIn("DATABASE_URL: ''", self.workflow)
 
-    def test_yue_node_and_yueops_use_a_pinned_yueboard_contract(self) -> None:
+    def test_yue_node_and_yueops_use_the_resolved_yueboard_contract(self) -> None:
         self.assertIn(
             "Checkout pinned YueBoard canonical contract",
             self.workflow,
@@ -2067,26 +2071,11 @@ class BuildPolicyTest(unittest.TestCase):
             "if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'",
             checkout_step,
         )
-        pin = self.native_contract["yueboard_contract_pin"]
-        self.assertRegex(pin, r"^[0-9a-f]{40}$")
-        self.assertIn(".yueboard_contract_pin", self.workflow)
-        self.assertIn("yueboard_contract_ref:", self.workflow)
-        self.assertIn(
-            "ref: ${{ matrix.validation == 'yueops' && needs.plan.outputs.yueboard_contract_ref || needs.plan.outputs.yueboard_policy_pin }}",
-            self.workflow,
-        )
-        self.assertIn(
-            '[[ "$yueboard_contract_ref" =~ ^[0-9a-f]{40}$ ]]',
-            self.workflow,
-        )
-        self.assertIn(
-            "YueOps requires explicit yueboard_contract_ref from signed desired",
-            self.workflow,
-        )
-        self.assertNotIn(
-            'explicit_board_ref" != "$yueboard_contract_pin',
-            self.workflow,
-        )
+        self.assertIn('ref: ${{ needs.plan.outputs.yueboard_contract_ref }}', checkout_step)
+        self.assertIn('yueboard_contract_ref: ${{ steps.plan.outputs.yueboard_contract_ref }}', self.workflow)
+        self.assertIn('resolve-yueboard-ref --explicit="$YUEBOARD_CONTRACT_REF"', self.workflow)
+        self.assertNotIn('yueboard_contract_pin', self.workflow)
+        self.assertNotIn('yueboard_policy_pin', self.workflow)
         self.assertIn("verify-yueboard-commit.py", self.workflow)
         self.assertIn(
             'echo "yueboard_contract_ref=$yueboard_contract_ref"',
