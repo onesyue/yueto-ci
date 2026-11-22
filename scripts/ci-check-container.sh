@@ -9,6 +9,7 @@ export GITHUB_PATH=$RUNNER_TEMP/github-path
 export GITHUB_ENV=$RUNNER_TEMP/github-env
 export YUE_CI_PYTHON=/usr/local/bin/python3
 export TZ=UTC
+export NPM_CONFIG_AUDIT=false
 board_checkout=$GITHUB_WORKSPACE/.ci-yueboard
 policy_checkout=$GITHUB_WORKSPACE/.ci-policy
 mkdir -p "$RUNNER_TEMP/ops-admission"

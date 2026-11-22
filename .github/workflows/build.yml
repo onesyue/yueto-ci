@@ -653,6 +653,8 @@ jobs:
     # gauntlet that is green under a different zone is not evidence.
     env:
       TZ: UTC
+      # npm ci otherwise sends an advisory request even for a locked install.
+      NPM_CONFIG_AUDIT: 'false'
       # The host ImageVersion is not passed into a job container. Shard
       # admission rejects a missing identity. OS and architecture still come
       # from the runner; this names the toolchain image.
@@ -2044,6 +2046,8 @@ jobs:
     timeout-minutes: 120
     env:
       TZ: UTC
+      # npm ci otherwise sends an advisory request even for a locked install.
+      NPM_CONFIG_AUDIT: 'false'
       ImageVersion: yueops-ci-toolchain
       TMPDIR: /__w/_temp
     strategy:
