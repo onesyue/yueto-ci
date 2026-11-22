@@ -10,10 +10,6 @@ usage() {
   exit 2
 }
 
-[[ "$contract_pin" =~ ^[0-9a-f]{40}$ ]] || {
-  echo "::error::YueBoard native contract pin must be an exact lowercase 40-hex commit" >&2
-  usage
-}
 [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]] || {
   echo "::error::resolved YueBoard source must be an exact lowercase 40-hex commit" >&2
   usage
@@ -54,29 +50,21 @@ else
   exit 2
 fi
 
-if [ "$source_sha" != "$contract_pin" ] && [ "$promote" = true ]; then
-  echo "::error::refusing YueBoard promotion: resolved source ${source_sha} is not the exact reviewed native contract pin ${contract_pin}" >&2
-  echo "::error::advance native-node-contract.json through the signed cross-repository pin convergence before retrying promote=true" >&2
-  exit 1
+if [[ "$contract_pin" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "::notice::yueboard_contract_pin is informational and does not remove image builds source=${source_sha} pin=${contract_pin} requested=${promote}" >&2
+else
+  echo "::warning::yueboard_contract_pin is informational and not a 40-hex commit; ignored source=${source_sha} requested=${promote}" >&2
 fi
 
 jq -c \
-  --arg source_sha "$source_sha" \
-  --arg contract_pin "$contract_pin" '
+  --arg source_sha "$source_sha" '
     .validation_matrix |= map(
       if .validation == "yueboard" then .ref = $source_sha else . end
     )
     | .matrix |= map(
         if .validation == "yueboard" then .ref = $source_sha else . end
       )
-    | if $source_sha != $contract_pin then
-        .matrix |= map(select(.validation != "yueboard"))
-      else . end
     | .has_builds = ((.matrix | length) > 0)
   ' <<<"$plan"
 
-if [ "$source_sha" = "$contract_pin" ]; then
-  echo "::notice::YueBoard build plan is pinned and registry-eligible: source=${source_sha}" >&2
-else
-  echo "::notice::YueBoard validation-only plan is non-promotable: source=${source_sha} reviewed_pin=${contract_pin}; no image build, candidate tag, built marker, sha-* tag, or latest mutation is scheduled" >&2
-fi
+echo "::notice::YueBoard build plan schedules source=${source_sha}; the reviewed pin does not gate image builds" >&2

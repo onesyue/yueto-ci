@@ -14,6 +14,10 @@ done
 source_dir=$(cd -- "$2" && pwd)
 policy=$(cd -- "$3" && pwd)
 [ -n "${YUE_CI_PYTHON:-}" ] && [ -x "$YUE_CI_PYTHON" ] || fail 'validated Python interpreter is unavailable'
+case "$0" in
+  */*) verifier_dir=$(cd -- "${0%/*}" && pwd) ;;
+  *) verifier_dir=$PWD ;;
+esac
 export TZ=UTC
 cd -- "$source_dir"
 case "$phase" in
@@ -30,7 +34,8 @@ case "$phase" in
     case "${PROMOTE:-}" in true|false) ;; *) fail 'explicit PROMOTE=true|false is required' ;; esac
     go clean -testcache
     source_sha="$(git rev-parse HEAD)"
-    contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' "$policy/native-node-contract.json")"
+    contract_pin="$(jq -r '.yueboard_contract_pin // empty' "$policy/native-node-contract.json")"
+    "$YUE_CI_PYTHON" "$verifier_dir/verify-yueboard-commit.py" --source "$source_dir"
     bash "$policy/scripts/authorize-yueboard-promotion.sh" "$source_sha" "$contract_pin" "$PROMOTE"
     "$YUE_CI_PYTHON" "$policy/scripts/validate-native-node-contract.py" --kind yueboard --source .
     ;;

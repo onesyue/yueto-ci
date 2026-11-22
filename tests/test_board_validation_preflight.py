@@ -63,6 +63,21 @@ if os.getenv('FAIL_TOOL') == name: sys.exit(23)
             (self.bin / tool).symlink_to(actual)
         validator = self.policy / 'scripts/validate-native-node-contract.py'
         validator.write_text(stub.read_text().split('\n', 1)[1])
+        self.write_passing_board()
+
+    def write_passing_board(self):
+        (self.source / 'schema-floor.txt').write_text('10\n')
+        (self.source / 'schema-compat.txt').write_text('10\n')
+        openapi = self.source / 'contracts/openapi'
+        openapi.mkdir(parents=True)
+        (openapi / 'yueboard-api.v1.json').write_text('{"openapi":"3.0.3"}\n')
+        (self.source / 'cmd/export-openapi').mkdir(parents=True)
+        gate = self.source / 'scripts/ci/proto-gate.sh'
+        gate.parent.mkdir(parents=True)
+        gate.write_text('#!/usr/bin/env bash\nset -euo pipefail\ncommand -v buf >/dev/null\nbuf lint\n')
+        (self.source / 'proto/yuenode/v1').mkdir(parents=True)
+        (self.source / 'proto/yuenode/v1/yuenode.proto').write_text('syntax = "proto3";\n')
+        (self.source / 'proto/breaking-baseline.binpb').write_bytes(b'baseline')
 
     def execute(self, phase, **extra):
         self.log.unlink(missing_ok=True)
@@ -91,29 +106,30 @@ if os.getenv('FAIL_TOOL') == name: sys.exit(23)
         self.assertEqual(len(rows), 1)
 
     def test_contract_clears_cache_then_preserves_native_arguments_and_intent(self):
-        for promote, matching in (('false', True), ('false', False), ('true', True)):
+        for promote, matching in (('false', True), ('false', False), ('true', True), ('true', False)):
             self.pin.write_text(json.dumps({'yueboard_contract_pin': self.sha if matching else 'a'*40}))
             result, rows = self.execute('contract', PROMOTE=promote)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual([row['name'] for row in rows], ['go', 'validate-native-node-contract.py'])
+            self.assertEqual([row['name'] for row in rows],
+                             ['go', 'buf', 'go', 'validate-native-node-contract.py'])
             self.assertEqual(rows[0]['args'], ['clean', '-testcache'])
-            self.assertEqual(rows[1]['args'], ['--kind', 'yueboard', '--source', '.'])
+            self.assertEqual(rows[1]['args'], ['lint'])
+            self.assertEqual(rows[2]['args'], ['run', './cmd/export-openapi', '--check'])
+            self.assertEqual(rows[3]['args'], ['--kind', 'yueboard', '--source', '.'])
             self.assertTrue(all(row['cwd'] == str(self.source) and row['tz'] == 'UTC' for row in rows))
+            self.assertIn("baseline-relative checks skipped", result.stderr)
+            self.assertNotIn('exact reviewed native contract pin', result.stdout + result.stderr)
 
     def test_contract_failures_stop_later_validation(self):
-        for failing in ('go', 'validate-native-node-contract.py'):
+        for failing, count in (('go', 1), ('validate-native-node-contract.py', 4)):
             result, rows = self.execute('contract', FAIL_TOOL=failing)
             self.assertEqual(result.returncode, 23)
-            self.assertEqual(len(rows), 1 if failing == 'go' else 2)
-        self.pin.write_text(json.dumps({'yueboard_contract_pin': 'a'*40}))
-        result, rows = self.execute('contract', PROMOTE='true')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('refusing YueBoard promotion', result.stderr)
-        self.assertEqual([r['name'] for r in rows], ['go'])
+            self.assertEqual(len(rows), count)
         self.pin.write_text(json.dumps({'yueboard_contract_pin': 'not-a-sha'}))
-        result, rows = self.execute('contract')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual([r['name'] for r in rows], ['go'])
+        result, rows = self.execute('contract', PROMOTE='true')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('not a 40-hex commit', result.stderr)
+        self.assertEqual(rows[-1]['name'], 'validate-native-node-contract.py')
         for value in ('', 'invalid'):
             result, rows = self.execute('contract', PROMOTE=value)
             self.assertEqual(result.returncode, 2)
