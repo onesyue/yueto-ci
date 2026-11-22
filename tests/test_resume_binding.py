@@ -319,7 +319,8 @@ else:
             'inspect_entry': 'scripts/resume-binding.py',
         })
         self.assertIn("needs.plan.outputs.resume != 'true'", jobs['build']['if'])
-        for gate in ('needs.plan.result', 'needs.validate.result', 'needs.validation-evidence.result'):
+        self.assertIn("needs.validation-evidence.outputs.services != ''", jobs['publish']['if'])
+        for gate in ('needs.plan.result',):
             self.assertIn(gate + " == 'success'", jobs['publish']['if'])
         self.assertIn("needs.build.result == 'skipped'", jobs['publish']['if'])
         plan = next(s for s in jobs['plan']['steps'] if s.get('id') == 'plan')

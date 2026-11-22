@@ -43,8 +43,15 @@ if [ "$OPS_ROLE" = legacy ]; then
   invocation_id=$(.venv/bin/python -c 'import json,sys; print(json.load(open(sys.argv[1]))["invocation_id"])' "$timing_dir/metadata.json")
   pytest_rc=0
   .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-start-unix-ns.txt"
-  LENS_REPORT="$timing_dir/events.jsonl" LENS_INVOCATION_ID="$invocation_id" \
-    YUEOPS_PYTEST_SERIAL=1 bash scripts/run-pytest-parallel.sh || pytest_rc=$?
+  (
+    if [[ -e tests/quarantine.json || -L tests/quarantine.json || "${YUETO_SHARED_SELECTION:-[]}" != '[]' ]]; then
+      export YUETO_OPS_TEST_SOURCE="$PWD"
+      export PYTEST_PLUGINS=ops_quarantine
+      export PYTHONPATH="$PWD/.ci-policy/scripts${PYTHONPATH:+:$PYTHONPATH}"
+    fi
+    LENS_REPORT="$timing_dir/events.jsonl" LENS_INVOCATION_ID="$invocation_id" \
+      YUEOPS_PYTEST_SERIAL=1 bash scripts/run-pytest-parallel.sh
+  ) || pytest_rc=$?
   printf '%s\n' "$pytest_rc" > "$timing_dir/pytest-exit-code.txt"
   .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-finish-unix-ns.txt"
   if [ "$pytest_rc" -ne 0 ]; then exit "$pytest_rc"; fi

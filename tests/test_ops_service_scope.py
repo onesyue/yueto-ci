@@ -561,7 +561,8 @@ class OpsServiceScopeTest(unittest.TestCase):
         )
         images = re.findall(r"^    services:\n      postgres:\n        image: ([^\n]+)$", workflow, re.M)
         self.assertEqual(images, [POSTGRES, POSTGRES])
-        for gate in ("validate", "build"):
+        self.assertNotIn("\n  abort-on-validate-failure:", workflow)
+        for gate in ("build",):
             rest = workflow.split(f"\n  abort-on-{gate}-failure:\n", 1)[1]
             # The next job key is indented two spaces. Four-space comments
             # inside the abort job must stay in the slice.

@@ -332,7 +332,7 @@ class ShadowWiringTest(unittest.TestCase):
                         "scripts/verification-evidence.py probe", "shadow-ci"):
             self.assertNotIn(retired, text)
         self.assertNotIn("needs.validate.result == 'skipped'", text)
-        self.assertIn("    needs: [plan, validate]\n", text)
+        self.assertIn("    needs: [plan, validate, ops-service-selection]\n", text)
 
     def test_diagnostics_retired_and_full_validation_required(self):
         self.assert_release_wiring(WORKFLOW.read_text())

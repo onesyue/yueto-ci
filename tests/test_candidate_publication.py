@@ -148,8 +148,8 @@ class PublicationWiringTest(unittest.TestCase):
         # Publication joins verified candidates with complete validation evidence.
         self.assertTrue(publish.startswith("    needs: [build, plan, validate, validation-evidence, ops-service-selection]\n"))
         self.assertIn("needs.plan.outputs.has_builds == 'true'", publish)
-        self.assertIn("needs.validate.result == 'success'", publish)
-        self.assertIn("needs.validation-evidence.result == 'success'", publish)
+        self.assertIn('$services[$service] == true', publish)
+        self.assertIn("needs.validation-evidence.outputs.services != ''", publish)
         self.assertNotIn("continue-on-error", build + publish)
         self.assertNotIn("built-${SOURCE_SHA}", build)
         self.assertNotIn('promotion_tag_args=', build)

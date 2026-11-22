@@ -26,7 +26,7 @@ class FailFastPolicyTest(unittest.TestCase):
         self.jobs = _jobs(self.text)
 
     def test_every_job_has_a_timeout(self) -> None:
-        self.assertTrue(REQUIRED | {"publish", "abort-on-validate-failure", "abort-on-build-failure"} <= self.jobs.keys())
+        self.assertTrue(REQUIRED | {"publish", "abort-on-build-failure"} <= self.jobs.keys())
         for name, job in self.jobs.items():
             self.assertRegex(job, r"(?m)^    timeout-minutes: \d+", name)
 
@@ -56,8 +56,8 @@ class FailFastPolicyTest(unittest.TestCase):
         needs = {name.strip() for name in match.group(1).split(",")}
         self.assertEqual(needs, REQUIRED | {"ops-service-selection"})
         expected = (
-            "always() && needs.plan.result == 'success' && needs.validate.result == 'success'"
-            " && needs.validation-evidence.result == 'success'"
+            "always() && !cancelled() && needs.plan.result == 'success'"
+            " && needs.validation-evidence.outputs.services != ''"
             " && (needs.ops-service-selection.result == 'success'"
             " || needs.ops-service-selection.result == 'failure'"
             " || needs.ops-service-selection.result == 'skipped')"
@@ -72,20 +72,21 @@ class FailFastPolicyTest(unittest.TestCase):
     def test_publication_requires_success_for_every_prerequisite(self) -> None:
         self.assert_publication_gate(self.text)
         expression = re.search(r"(?m)^    if: (.+)$", self.jobs['publish']).group(1)
-        names = sorted(REQUIRED)
+        names = ["plan", "build"]
         selection_states = ("success", "failure", "skipped", "cancelled", "in_progress")
-        for states in itertools.product(selection_states, repeat=4):
+        for states in itertools.product(selection_states, repeat=2):
             results = dict(zip(names, states))
             for resume in (False, True):
-                for selection in selection_states:
-                    actual = expression.replace('always()', 'True').replace('!inputs.validation_only', 'True')
+                for selection, evidence in itertools.product(selection_states, (False, True)):
+                    actual = expression.replace('always()', 'True').replace('!cancelled()', 'True').replace('!inputs.validation_only', 'True')
                     actual = actual.replace("needs.plan.outputs.has_builds == 'true'", 'True')
+                    actual = actual.replace("needs.validation-evidence.outputs.services != ''", str(evidence))
                     actual = actual.replace("needs.plan.outputs.resume == 'true'", str(resume))
                     for name, state in results.items():
                         actual = actual.replace('needs.' + name + '.result', repr(state))
                     actual = actual.replace('needs.ops-service-selection.result', repr(selection))
                     admitted = eval(actual.replace('&&', ' and ').replace('||', ' or '), {'__builtins__': {}}, {})
-                    expected = all(results[n] == 'success' for n in REQUIRED - {'build'}) and (results['build'] == 'success' or (resume and results['build'] == 'skipped')) and selection in {'success', 'failure', 'skipped'}
+                    expected = results['plan'] == 'success' and evidence and (results['build'] == 'success' or (resume and results['build'] == 'skipped')) and selection in {'success', 'failure', 'skipped'}
                     with self.subTest(results=results, resume=resume, selection=selection):
                         self.assertEqual(admitted, expected)
 
@@ -103,7 +104,8 @@ class FailFastPolicyTest(unittest.TestCase):
                 self.assert_publication_gate(changed)
 
     def test_abort_jobs_cancel_only_this_failed_run_with_minimal_privilege(self) -> None:
-        for gate in ("validate", "build"):
+        self.assertNotIn("abort-on-validate-failure", self.jobs)
+        for gate in ("build",):
             job = self.jobs[f"abort-on-{gate}-failure"]
             self.assertIn(f"    needs: [plan, {gate}]\n", job)
             self.assertIn("    if: failure() && !inputs.validation_only\n", job)
