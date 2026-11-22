@@ -107,8 +107,7 @@ def workflow_contract(policy: Path) -> dict:
 
 def plan(policy: Path, source_sha: str, output: Path) -> list[str]:
     native = subprocess.check_output(['bash', str(policy / 'scripts/plan-build-targets.sh'), 'yueboard', source_sha], text=True, env=planner_environment())
-    pin = json.loads((policy / 'native-node-contract.json').read_text())['yueboard_contract_pin']
-    authorized = subprocess.check_output(['bash', str(policy / 'scripts/authorize-yueboard-build-plan.sh'), pin, source_sha, 'false'], input=native, text=True, env=planner_environment())
+    authorized = subprocess.check_output(['bash', str(policy / 'scripts/authorize-yueboard-build-plan.sh'), '', source_sha, 'false'], input=native, text=True, env=planner_environment())
     value = json.loads(authorized)
     rows = value['validation_matrix']
     roles = [row['board_role'] for row in rows]
@@ -116,7 +115,7 @@ def plan(policy: Path, source_sha: str, output: Path) -> list[str]:
             row['repo'] != 'onesyue/yueboard' or row['validation'] != 'yueboard' or row['ref'] != source_sha
             or not re.fullmatch(r'[a-z0-9]+', row['board_role']) for row in rows):
         raise ValueError('native Board role matrix identity differs')
-    # Even an exact reviewed pin is never build-authorized by this CLI.
+    # Local Board validation only executes the role matrix.
     value['matrix'] = []
     value['has_builds'] = False
     (output / 'targets.json').write_text(json.dumps(value, indent=2) + '\n')

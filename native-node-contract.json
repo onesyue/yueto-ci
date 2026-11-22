@@ -2,6 +2,9 @@
   "version": 6,
   "schema_floor": 163,
   "yueboard_contract_pin": "e57dd84480f04bd4b5ec64d0b58fd2b4af8563ac",
+  "deprecated_fields": {
+    "yueboard_contract_pin": "Required by root scripts/ship.sh until its Board dispatch check is retired."
+  },
   "layout": {
     "node-1": {
       "inventory_type": "hy2",
