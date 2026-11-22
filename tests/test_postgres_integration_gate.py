@@ -529,6 +529,26 @@ class PostgresIntegrationExecutionTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("missing=['./internal/modules/remindmailcron']", result.stderr)
 
+    def test_unpaid_dm_source_requires_its_real_integration_package(self):
+        telegram = './internal/modules/telegram'
+        for path in GATE.ORDER:
+            if path != telegram:
+                self.package(path)
+        marker = self.root / GATE.CAPABILITY_ADDITIONS[telegram]
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text('package telegram\n')
+        result = self.command('domain', self.root / 'receipt.json')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing=['" + telegram + "']", result.stderr)
+
+    def test_source_without_unpaid_dm_integration_is_not_missing(self):
+        telegram = './internal/modules/telegram'
+        for path in GATE.ORDER:
+            if path != telegram:
+                self.package(path)
+        result = self.command('domain', self.root / 'receipt.json')
+        self.assertNotIn('integration package plan mismatch', result.stderr)
+
     def test_abuse_retry_writer_requires_its_real_integration_suite(self):
         (self.root / 'schema-floor.txt').write_text('144\n')
         abuse_package = './internal/modules/usagepolicy'

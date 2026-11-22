@@ -20,7 +20,8 @@ MODULES = [
     './internal/modules/order', './internal/modules/emby', './internal/modules/handoff',
     './internal/platform/deviceidentity', './internal/modules/nodesync',
     './internal/modules/subscribe', './internal/modules/statcron',
-    './internal/modules/remindmailcron', './internal/modules/usagepolicy',
+    './internal/modules/remindmailcron', './internal/modules/telegram',
+    './internal/modules/usagepolicy',
 ]
 MIGRATIONS = ['./internal/platform/db', './internal/platform/nativeproto']
 ORDER = DOMAIN + COMMANDS + MODULES + MIGRATIONS
@@ -36,6 +37,10 @@ FLOOR_ADDITIONS = {'./internal/modules/subscribe': 138, './internal/modules/stat
 CAPABILITY_ADDITIONS = {
     './internal/platform/emailcoupon': Path('internal/platform/emailcoupon/worker.go'),
     './internal/modules/remindmailcron': Path('internal/platform/reminderrules/rules_g.go'),
+    # 23d409d8 added unpaid-reminder DM integration tests in the telegram
+    # module with no schema-floor bump. Require the suite only when that
+    # source file exists so older pins stay on their actual inventory.
+    './internal/modules/telegram': Path('internal/modules/telegram/unpaid_dm_integration_test.go'),
 }
 # Durable abuse reset retries were introduced without a schema-floor change.
 # Require their suite when the production writer supports the pending intent;
