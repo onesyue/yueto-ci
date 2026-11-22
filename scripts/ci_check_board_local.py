@@ -95,9 +95,12 @@ def workflow_contract(policy: Path) -> dict:
             raise ValueError('unexpected workflow phase environment key')
         environments[role] = {k: env_value(v, role) for k, v in raw.items()}
     go = step('Set up YueBoard Go')['with']['go-version']
-    node = step('Set up Node')['with']['node-version']
+    node_setup = step('Set up Node')['with']
+    if 'node-version' in node_setup or node_setup.get('node-version-file') != '.ci-policy/.node-version':
+        raise ValueError('expected the central Node version file')
+    node = (policy / '.node-version').read_text().strip()
     buf = step('Set up Buf for YueBoard protocol compatibility')['with']
-    if not re.fullmatch(r'\d+\.\d+\.\d+', go) or not re.fullmatch(r'\d+', node):
+    if not re.fullmatch(r'\d+\.\d+\.\d+', go) or not re.fullmatch(r'24\.\d+\.\d+', node):
         raise ValueError('unsupported compiler version contract')
     if not re.fullmatch(r'\d+\.\d+\.\d+', buf['version']) or not re.fullmatch(r'[a-f0-9]{64}', buf['checksum']):
         raise ValueError('unsupported Buf identity')

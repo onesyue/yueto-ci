@@ -19,8 +19,8 @@ def capture(command: list[str], env: dict) -> str:
 def toolchain(contract: dict, env: dict) -> None:
     if capture(['go', 'env', 'GOVERSION'], env) != 'go' + contract['go']:
         raise ValueError('image Go compiler differs from workflow')
-    if capture(['node', '--version'], env).split('.')[0] != 'v' + contract['node']:
-        raise ValueError('image Node major differs from workflow')
+    if capture(['node', '--version'], env) != 'v' + contract['node']:
+        raise ValueError('image Node version differs from workflow')
     buf = shutil.which('buf', path=env.get('PATH'))
     if not buf or hashlib.sha256(Path(buf).read_bytes()).hexdigest() != contract['buf_sha256']:
         raise ValueError('image Buf checksum differs from workflow')
