@@ -20,7 +20,7 @@ class IndirectMergeSource(unittest.TestCase):
         fixture = json.loads((ROOT / "tests/fixtures/merge-hygiene/approved.json").read_text())
         self.old = fixture["pr"] | {"number": 248, "state": "closed", "merge_commit_sha": "c" * 40,
                                    "merged_at": "2026-11-02T10:00:02Z"}
-        self.old["base"] = {"sha": "b" * 40, "ref": "master", "repo": {"full_name": "onesyue/yueto-ci"}}
+        self.old["base"] = {"sha": "b" * 40, "ref": "master", "repo": {"full_name": "onesyue/yueops"}}
         self.direct = copy.deepcopy(self.old) | {"number": 252, "merged_at": "2026-11-02T10:00:00Z",
                                                 "head": {"sha": "e" * 40}}
         self.parents = [{"sha": "b" * 40}, {"sha": "e" * 40}]
@@ -71,7 +71,7 @@ class IndirectMergeSource(unittest.TestCase):
 
     def run_audit(self, api=None):
         with patch.object(AUDIT, "api", side_effect=api or self.api):
-            return AUDIT.audit("onesyue", ["yueto-ci"], AUDIT.timestamp("2026-11-02T00:00:00Z"),
+            return AUDIT.audit("onesyue", ["yueops"], AUDIT.timestamp("2026-11-02T00:00:00Z"),
                                AUDIT.timestamp("2026-11-03T00:00:00Z"))
 
     def test_actual_delayed_ancestor_closure_retains_old_red(self):
@@ -140,7 +140,7 @@ class IndirectMergeSource(unittest.TestCase):
         output = io.StringIO()
         with patch.object(AUDIT, "api", side_effect=self.api), patch.object(
                 AUDIT, "baseline", return_value=(AUDIT.timestamp("2026-11-03T00:00:00Z"), accepted or {})), patch(
-                "sys.argv", ["audit", "--repos", "yueto-ci", "--hours", "10000", "--baseline", "baseline.json", "--format", "json"]), contextlib.redirect_stdout(output):
+                "sys.argv", ["audit", "--repos", "yueops", "--hours", "10000", "--baseline", "baseline.json", "--format", "json"]), contextlib.redirect_stdout(output):
             code = AUDIT.main()
         return code, json.loads(output.getvalue())
 
@@ -166,7 +166,7 @@ class IndirectMergeSource(unittest.TestCase):
                 self.old_checks = checks
                 old = self.run_audit()[0]
                 findings = list(old["findings"])
-                accepted = {("yueto-ci", 248, self.old["head"]["sha"]): {"findings": findings}}
+                accepted = {("yueops", 248, self.old["head"]["sha"]): {"findings": findings}}
                 code, result = self.main_result(accepted)
                 self.assertEqual(code, 0)
                 self.assertTrue(result["complete"])
@@ -226,7 +226,7 @@ class IndirectMergeSource(unittest.TestCase):
         rows = self.run_audit()
         output = io.StringIO()
         with patch.object(AUDIT, "audit", return_value=rows), patch.object(
-                AUDIT, "baseline", return_value=(AUDIT.timestamp("2026-11-01T00:00:00Z"), {})), patch("sys.argv", ["audit", "--repos", "yueto-ci"]), contextlib.redirect_stdout(output):
+                AUDIT, "baseline", return_value=(AUDIT.timestamp("2026-11-01T00:00:00Z"), {})), patch("sys.argv", ["audit", "--repos", "yueops"]), contextlib.redirect_stdout(output):
             self.assertEqual(AUDIT.main(), 0)
         self.assertIn("INDIRECT ", output.getvalue())
         self.assertIn("historical old-head findings (not passed):", output.getvalue())
@@ -240,7 +240,7 @@ class IndirectMergeSource(unittest.TestCase):
             return self.api(endpoint)
         with patch.object(AUDIT, "api", side_effect=live), patch.object(
                 AUDIT, "indirect_merge", side_effect=AssertionError("premerge cannot borrow a source")):
-            row = AUDIT.premerge("onesyue", "yueto-ci", 248)
+            row = AUDIT.premerge("onesyue", "yueops", 248)
         self.assertIn("check_nonpassing_at_merge:policy", row["findings"])
         self.assertNotIn("indirect_merge", row)
 

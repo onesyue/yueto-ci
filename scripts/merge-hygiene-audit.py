@@ -20,6 +20,10 @@ import tempfile
 import time
 
 REPOS = ("yueops", "yueboard", "yueto", "yueto-ci", "yuelink", "yuelink-ci", "yue-node")
+# Owner decision 2026-11-23 05:50 SGT (t1383s8203): yueto and yueto-ci merge
+# without an independent PR approval. Signatures, no-ff, status checks and every
+# other finding still apply; all other repositories keep the approval finding.
+REVIEW_EXEMPT_REPOS = frozenset({"yueto", "yueto-ci"})
 ROOT = Path(__file__).resolve().parents[1]
 # Bump when the interpretation of cached remote evidence changes.
 CACHE_VERSION = 3
@@ -153,7 +157,7 @@ def all_rows(endpoint, key=None):
     return [row for batch in pages(endpoint, key) for row in batch]
 
 
-def findings(pr, reviews, checks, statuses):
+def findings(pr, reviews, checks, statuses, repo=None):
     merged = timestamp(pr["merged_at"])
     reasons = []
     latest_reviews = {}
@@ -162,7 +166,7 @@ def findings(pr, reviews, checks, statuses):
             continue
         if review["state"] in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED"):
             latest_reviews[review["user"]["login"]] = review
-    if not any(r["state"] == "APPROVED" and login != pr["user"]["login"]
+    if repo not in REVIEW_EXEMPT_REPOS and not any(r["state"] == "APPROVED" and login != pr["user"]["login"]
                and r["user"].get("type") != "Bot" and r.get("commit_id") == pr["head"]["sha"]
                for login, r in latest_reviews.items()):
         reasons.append("no_approving_review_at_merge")
@@ -265,7 +269,7 @@ def merged_findings(owner, repo, pr):
     return findings(
         pr, all_rows(f'{prefix}/pulls/{pr["number"]}/reviews'),
         all_rows(f"{prefix}/commits/{sha}/check-runs?filter=all", "check_runs"),
-        all_rows(f"{prefix}/commits/{sha}/statuses"))
+        all_rows(f"{prefix}/commits/{sha}/statuses"), repo=repo)
 
 
 def merged_row(owner, repo, pr):
@@ -392,7 +396,7 @@ def premerge(owner, repo, number):
     if refreshed["head"]["sha"] != head_sha or refreshed["base"]["sha"] != base_sha:
         raise ValueError("PR head or base changed while fetching evidence; audit incomplete")
     return {"repo": repo, "pr": number, "url": pr["html_url"], "head": head_sha,
-            "merged_at": None, "findings": findings(candidate, reviews, checks, statuses)}
+            "merged_at": None, "findings": findings(candidate, reviews, checks, statuses, repo=repo)}
 
 
 def main():
