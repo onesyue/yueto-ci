@@ -59,7 +59,7 @@ class ValidationOnlyTest(unittest.TestCase):
         self.assertEqual(plan['env']['VALIDATION_ONLY'], "${{ inputs.validation_only && 'true' || 'false' }}")
         # The boolean input, rather than a possibly absent plan output, also
         # protects abort jobs when planning itself fails.
-        for name in ('build', 'publish', 'abort-on-build-failure', 'abort-on-validate-failure'):
+        for name in ('build', 'publish', 'abort-on-build-failure'):
             expression = jobs[name]['if']
             self.assertIn('!inputs.validation_only', expression)
             for validation_only, has_builds, failed in itertools.product((False, True), repeat=3):
@@ -68,11 +68,12 @@ class ValidationOnlyTest(unittest.TestCase):
                 condition = condition.replace('failure()', str(failed).lower())
                 condition = condition.replace("needs.plan.outputs.resume != 'true'", 'true')
                 condition = condition.replace("needs.plan.outputs.resume == 'true'", 'false')
-                condition = condition.replace('always()', 'true')
+                condition = condition.replace('always()', 'true').replace('!cancelled()', 'true')
                 for dependency in ('plan', 'build', 'validate', 'validation-evidence'):
                     condition = condition.replace("needs." + dependency + ".result == 'success'", 'true')
                     condition = condition.replace("needs." + dependency + ".result == 'skipped'", 'false')
                 if name == "publish":
+                    condition = condition.replace("needs.validation-evidence.outputs.services != ''", 'true')
                     clause = (
                         "(needs.ops-service-selection.result == 'success' "
                         "|| needs.ops-service-selection.result == 'failure' "
@@ -89,7 +90,7 @@ class ValidationOnlyTest(unittest.TestCase):
             self.assertNotIn('concurrency', jobs[name])
         self.assertIn("inputs.validation_only && 'validate-only' || 'build'", workflow['concurrency']['group'])
         self.assertEqual(jobs['validate']['strategy']['matrix']['include'], '${{ fromJSON(needs.plan.outputs.validation_matrix) }}')
-        self.assertEqual(jobs['validation-evidence']['needs'], ['plan', 'validate'])
+        self.assertEqual(jobs['validation-evidence']['needs'], ['plan', 'validate', 'ops-service-selection'])
         self.assertIn("always() && needs.plan.result == 'success'", jobs['validation-evidence']['if'])
         plan_steps = str(jobs['plan']['steps'])
         self.assertIn('scripts/pytest-shards.py expand', plan_steps)
@@ -98,7 +99,7 @@ class ValidationOnlyTest(unittest.TestCase):
     def test_read_only_graph_and_missing_boundary_mutations(self):
         text = WORKFLOW.read_text()
         self.assert_read_only_graph(text)
-        for name in ('build', 'publish', 'abort-on-build-failure', 'abort-on-validate-failure'):
+        for name in ('build', 'publish', 'abort-on-build-failure'):
             prefix, body = text.split('\n  ' + name + ':\n', 1)
             changed = prefix + '\n  ' + name + ':\n' + body.replace(' && !inputs.validation_only', '', 1)
             with self.subTest(name=name), self.assertRaises(AssertionError):

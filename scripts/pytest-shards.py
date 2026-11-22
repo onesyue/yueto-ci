@@ -4012,6 +4012,10 @@ def execute(value, source, board, role, output, site):
                         "LENS_INVOCATION_ID": metadata["invocation_id"],
                         "PYTHONPATH": shard_pythonpath(source, site),
                         "YUEOPS_PYTEST_SERIAL": "1"}
+    quarantine = source / "tests/quarantine.json"
+    if quarantine.is_symlink() or quarantine.exists() or os.environ.get("YUETO_SHARED_SELECTION", "[]") != "[]":
+        env.update(PYTEST_PLUGINS="ops_quarantine", YUETO_OPS_TEST_SOURCE=str(source.resolve()),
+                   PYTHONPATH=str(ROOT / "scripts") + os.pathsep + env["PYTHONPATH"])
     (output / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
     result = subprocess.run(
         ["bash", "scripts/run-pytest-parallel.sh", "--ci-selection", str(selection_path),

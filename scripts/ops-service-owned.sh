@@ -27,4 +27,9 @@ if [ "${#modules[@]}" -eq 0 ]; then
 fi
 
 cd -- "$OPS_SOURCE"
+if [[ -e tests/quarantine.json || -L tests/quarantine.json || "${YUETO_SHARED_SELECTION:-[]}" != '[]' ]]; then
+  export YUETO_OPS_TEST_SOURCE="$PWD"
+  export PYTEST_PLUGINS=ops_quarantine
+  export PYTHONPATH="$script_dir${PYTHONPATH:+:$PYTHONPATH}"
+fi
 exec .venv/bin/python -m pytest "${modules[@]}"
