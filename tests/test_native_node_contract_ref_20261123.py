@@ -54,3 +54,24 @@ def test_resolution_fails_closed(resolve, explicit, promoted):
     result = resolve(explicit=explicit, promoted=promoted)
     assert result.returncode != 0
     assert result.stdout == ""
+
+
+def test_workflows_check_out_the_resolved_revision():
+    import yaml
+
+    workflows = ROOT / ".github/workflows"
+    build = yaml.safe_load((workflows / "build.yml").read_text())["jobs"]
+    plan = next(s for s in build["plan"]["steps"] if s.get("id") == "plan")
+    assert 'resolve-yueboard-ref --explicit="$YUEBOARD_CONTRACT_REF"' in plan["run"]
+    assert 'echo "yueboard_contract_ref=$yueboard_contract_ref"' in plan["run"]
+    board = next(s for s in build["validate"]["steps"] if s.get("with", {}).get("path") == ".ci-yueboard")
+    assert board["if"] == "matrix.validation == 'yue-node' || matrix.validation == 'yueops'"
+    assert board["with"]["ref"] == "${{ needs.plan.outputs.yueboard_contract_ref }}"
+    capture = yaml.safe_load((workflows / "board-visual-capture.yml").read_text())["jobs"]["capture"]
+    source = next(s for s in capture["steps"] if s.get("id") == "source")
+    assert 'resolve-yueboard-ref --explicit="$YUEBOARD_CONTRACT_REF"' in source["run"]
+    checkout = next(s for s in capture["steps"] if s.get("with", {}).get("path") == "source")
+    assert checkout["with"]["ref"] == "${{ steps.source.outputs.revision }}"
+    for path in (workflows / "build.yml", workflows / "board-visual-capture.yml",
+                 ROOT / "scripts/ci_check_board_local.py", VALIDATOR):
+        assert "yueboard_contract_pin" not in path.read_text()
