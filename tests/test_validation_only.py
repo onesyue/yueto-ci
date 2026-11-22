@@ -90,7 +90,7 @@ class ValidationOnlyTest(unittest.TestCase):
             self.assertNotIn('concurrency', jobs[name])
         self.assertIn("inputs.validation_only && 'validate-only' || 'build'", workflow['concurrency']['group'])
         self.assertEqual(jobs['validate']['strategy']['matrix']['include'], '${{ fromJSON(needs.plan.outputs.validation_matrix) }}')
-        self.assertEqual(jobs['validation-evidence']['needs'], ['plan', 'validate', 'ops-service-selection'])
+        self.assertEqual(jobs['validation-evidence']['needs'], ['plan', 'validate', 'freshness', 'ops-service-selection'])
         self.assertIn("always() && needs.plan.result == 'success'", jobs['validation-evidence']['if'])
         plan_steps = str(jobs['plan']['steps'])
         self.assertIn('scripts/pytest-shards.py expand', plan_steps)

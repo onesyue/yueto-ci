@@ -345,22 +345,13 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
         script = re.search(r"^        run: \|\n((?:          .*\n|\n)*)", body, re.MULTILINE)
         return body, textwrap.dedent(script.group(1)) if script else ""
 
-    def run_backend(self, behavior="clean", provider="pypi", role="native", missing_env=None):
+    def run_audit(self, behavior="clean", provider="pypi", role="native", missing_env=None):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         source, runner, bindir = root / "source", root / "runner", root / "bin"
-        for path in (source / "scripts", source / ".venv/bin", source / "web",
-                     source / "checkin-api", source / "telegram-bot/yue", runner, bindir):
-            path.mkdir(parents=True, exist_ok=True)
-        (source / ".venv/bin/python").symlink_to(sys.executable)
-        for name in ("check-python-dependency-groups.py", "audit-route-consistency.py"):
-            (source / "scripts" / name).write_text("")
-        (source / "scripts/security_scan.sh").write_text('echo \'{"fail":0}\'\n')
-        (source / "scripts/run-pytest-parallel.sh").write_text("exit 0\n")
-        timing = runner / "yueops-pytest-timing"
-        timing.mkdir()
-        (timing / "metadata.json").write_text('{"invocation_id":"fixture-only"}')
+        for path in (source, runner, bindir):
+            path.mkdir()
         uv = bindir / "uv"
         uv.write_text(f"#!{sys.executable}\n" + textwrap.dedent('''
             import json, os, pathlib, sys
@@ -368,16 +359,12 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
             root = pathlib.Path(os.environ['AUDIT_FIXTURE_ROOT'])
             def record(value):
                 with (root / 'calls').open('a') as handle: handle.write(value + '\\n')
-            if args == ['lock', '--check']:
-                record('lock')
-                raise SystemExit(12 if os.environ['AUDIT_BEHAVIOR'] == 'pre-audit' else 0)
             if args[0] == 'export':
+                record('export')
+                if os.environ['AUDIT_BEHAVIOR'] == 'pre-audit': raise SystemExit(12)
                 pathlib.Path(args[args.index('--output-file') + 1]).write_text('fixture==1.0\\n')
                 raise SystemExit(0)
-            if 'pip-audit' not in args:
-                assert args == ['run', '--frozen', '--only-group', 'lint', 'ruff', 'check', '.']
-                record('later-ruff')
-                raise SystemExit(0)
+            assert 'pip-audit' in args
             for required in ('--frozen', '--only-group', '--require-hashes', '--disable-pip', '--strict', '--cache-dir'):
                 assert required in args, required
             provider = args[args.index('--vulnerability-service') + 1]
@@ -396,23 +383,6 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
             raise SystemExit(1 if behavior == 'vulnerability' else 0)
         '''))
         uv.chmod(0o755)
-        sudo = bindir / "sudo"
-        sudo.write_text(
-            "#!/bin/sh\n"
-            "token=\n"
-            "for arg in \"$@\"; do\n"
-            "  case $arg in\n"
-            "    *prepare-native-run-exec.sh) token=later-native-exec ;;\n"
-            "    *run-native-nginx-tests.py) token=later-native ;;\n"
-            "  esac\n"
-            "done\n"
-            "if [ -z \"$token\" ]; then\n"
-            "  printf 'unexpected-sudo\\n' >> \"$AUDIT_FIXTURE_ROOT/calls\"\n"
-            "  exit 1\n"
-            "fi\n"
-            "printf '%s\\n' \"$token\" >> \"$AUDIT_FIXTURE_ROOT/calls\"\n"
-        )
-        sudo.chmod(0o755)
         env = dict(os.environ, PATH=str(bindir) + os.pathsep + os.environ["PATH"],
                    RUNNER_TEMP=str(runner), OPS_ROLE=role, GITHUB_RUN_ID="12345",
                    GITHUB_RUN_ATTEMPT="2", AUDIT_FIXTURE_ROOT=str(root),
@@ -420,7 +390,7 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
                    PYTHONDONTWRITEBYTECODE="1")
         if missing_env:
             env.pop(missing_env)
-        _, script = self.step("Validate yueops backend")
+        _, script = self.step("Audit YueOps locked Python dependencies")
         result = subprocess.run(["bash", "-c", script], cwd=source, env=env,
                                 capture_output=True, text=True, timeout=20, check=False)
         calls = (root / "calls").read_text().splitlines() if (root / "calls").exists() else []
@@ -441,40 +411,40 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
         for role in ("native", "legacy"):
             for provider in ("pypi", "osv"):
                 with self.subTest(role=role, provider=provider):
-                    result, root, runner, calls = self.run_backend("vulnerability", provider, role)
+                    result, root, runner, calls = self.run_audit("vulnerability", provider, role)
                     self.assertEqual(result.returncode, 1, result.stderr)
                     providers = ["pypi"] if provider == "pypi" else ["pypi", "osv"]
-                    self.assertEqual(calls, ["lock", *providers])
+                    self.assertEqual(calls, ["export", *providers])
                     self.assert_retained(root, runner, providers)
 
     def test_clean_reports_survive_and_no_output_failure_is_not_fabricated(self):
         for role in ("native", "legacy"):
             with self.subTest(role=role):
-                result, root, runner, calls = self.run_backend(role=role)
+                result, root, runner, calls = self.run_audit(role=role)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(calls, ["lock", "pypi", "osv", "later-ruff", "later-native-exec", "later-native"])
+                self.assertEqual(calls, ["export", "pypi", "osv"])
                 self.assert_retained(root, runner, ["pypi", "osv"])
         for behavior, provider, expected, providers in (
                 ("pre-audit", "pypi", 12, []), ("error", "pypi", 7, []),
                 ("error", "osv", 7, ["pypi"])):
             with self.subTest(behavior=behavior, provider=provider):
-                result, root, runner, calls = self.run_backend(behavior, provider)
+                result, root, runner, calls = self.run_audit(behavior, provider)
                 self.assertEqual(result.returncode, expected, result.stderr)
-                self.assertFalse(any(c.startswith("later-") for c in calls))
+                self.assertEqual(calls, ["export", *providers, *([provider] if behavior == "error" else [])])
                 self.assert_retained(root, runner, providers)
 
     def test_real_jq_refusals_keep_original_reports_without_later_work(self):
         for behavior in ("malformed", "incomplete", "skip", "zero-exit-vulnerability"):
             with self.subTest(behavior=behavior):
-                result, root, runner, calls = self.run_backend(behavior)
+                result, root, runner, calls = self.run_audit(behavior)
                 self.assertNotEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(calls, ["lock", "pypi"])
+                self.assertEqual(calls, ["export", "pypi"])
                 self.assert_retained(root, runner, ["pypi"])
 
     def test_missing_run_attempt_or_role_refuses_unbound_diagnostics(self):
         for key in ("GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT", "OPS_ROLE"):
             with self.subTest(key=key):
-                result, _, runner, calls = self.run_backend(missing_env=key)
+                result, _, runner, calls = self.run_audit(missing_env=key)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(calls, [])
                 self.assertFalse(list(runner.glob("python-audit-reports.*/*.json")))
@@ -486,12 +456,12 @@ class LockedPythonAuditRetentionTest(unittest.TestCase):
         self.assertIn("if-no-files-found: warn", body)
         self.assertIn("retention-days: 14", body)
         self.assertIn("uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", body)
-        backend, _ = self.step("Validate yueops backend")
+        backend, _ = self.step("Audit YueOps locked Python dependencies")
         self.assertIn("OPS_ROLE: ${{ matrix.ops_role }}", backend)
         name = re.search(r"^          name: (.*)$", body, re.MULTILINE).group(1)
         path = re.search(r"^          path: (.*)$", body, re.MULTILINE).group(1)
         for role in ("native", "legacy"):
-            result, root, runner, _ = self.run_backend(role=role)
+            result, root, runner, _ = self.run_audit(role=role)
             self.assertEqual(result.returncode, 0, result.stderr)
             replacements = {"runner.temp": str(runner), "github.run_id": "12345",
                             "github.run_attempt": "2", "matrix.ops_role": role}
@@ -912,9 +882,9 @@ class BuildPolicyTest(unittest.TestCase):
             "'[\"self-hosted\",\"Linux\",\"X64\",\"yue-local-release\"]' || "
             "'[\"ubuntu-24.04\"]')"
         )
-        # plan, validate, validation-evidence, candidate build,
+        # plan, validate, freshness, validation-evidence, candidate build,
         # owned ops selection, and publish. The toolchain image is not a runner.
-        self.assertEqual(self.workflow.count(selector), 6)
+        self.assertEqual(self.workflow.count(selector), 7)
         self.assertIn(
             "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,
@@ -1666,7 +1636,7 @@ class BuildPolicyTest(unittest.TestCase):
         for gate in required:
             with self.subTest(gate=gate):
                 self.assertIn(gate, self.workflow)
-        self.assertIn("bash scripts/check-vulnerabilities.sh", (ROOT / "scripts/node-validation.sh").read_text())
+        self.assertIn("run: bash scripts/check-vulnerabilities.sh", self.workflow.split("\n  freshness:\n")[1])
         self.assertNotIn("npm install --global squawk", self.workflow)
         self.assertIn('board-validation-output.py', self.workflow)
         frontend = (ROOT / 'scripts/board-validation.sh').read_text()
@@ -1704,7 +1674,6 @@ class BuildPolicyTest(unittest.TestCase):
             "go vet ./...",
             "scripts/ci/check-server-error-logging.sh",
             'bash "$policy/scripts/install-board-quality-tools.sh"',
-            "govulncheck ./...",
             "golangci-lint run --timeout=6m ./...",
             "go test ./...",
         ):
@@ -1968,60 +1937,23 @@ class BuildPolicyTest(unittest.TestCase):
             'security_report=$(mktemp "${RUNNER_TEMP:?}/security-scan.',
             backend_step,
         )
+        audit_step = self.workflow.split("- name: Audit YueOps locked Python dependencies", 1)[1]
         self.assertIn(
             'python_lock_audit=$(mktemp "${RUNNER_TEMP:?}/python-lock-audit.',
-            backend_step,
+            audit_step,
         )
-        self.assertIn("trap cleanup_reports EXIT", backend_step)
+        self.assertIn("trap cleanup_reports EXIT", audit_step)
         self.assertNotIn("/tmp/security-scan.json", backend_step)
         self.assertNotIn("/tmp/python-lock-audit.txt", backend_step)
 
     def test_yueops_npm_audit_policy_is_owned_by_the_checked_out_source(self) -> None:
-        frontend_start = self.workflow.index("- name: Validate yueops frontend")
-        miniapp_start = self.workflow.index("- name: Validate Yue mini app")
-        migration_start = self.workflow.index(
-            "- name: Lint changed YueOps SQL migrations"
-        )
-        frontend_step = self.workflow[frontend_start:miniapp_start]
-        miniapp_step = self.workflow[miniapp_start:migration_start]
-
-        expected_gate = 'audit_gate="$GITHUB_WORKSPACE/scripts/npm-audit-gate.py"'
-        self.assertIn(expected_gate, frontend_step)
-        self.assertIn(expected_gate, miniapp_step)
-        self.assertEqual(self.workflow.count(expected_gate), 2)
-
-        # A source checkout that omitted its reviewed policy must stop the
-        # release.  The central builder must never grow an independent
-        # advisory-ID allowlist that can drift from the product topology.
-        missing_gate_guard = '[ -f "$audit_gate" ] || {'
-        self.assertIn(missing_gate_guard, frontend_step)
-        self.assertIn(missing_gate_guard, miniapp_step)
-        frontend_call = (
-            '"$YUE_CI_PYTHON" "$audit_gate" "$GITHUB_WORKSPACE/frontend"'
-        )
-        self.assertIn(frontend_call, frontend_step)
-        self.assertIn(
-            '"$GITHUB_WORKSPACE/telegram-bot/yue/miniapp"',
-            miniapp_step,
-        )
-        self.assertIn(
-            "exit 1",
-            frontend_step[
-                frontend_step.index(missing_gate_guard) : frontend_step.index(
-                    frontend_call
-                )
-            ],
-        )
-        self.assertIn(
-            "exit 1",
-            miniapp_step[
-                miniapp_step.index(missing_gate_guard) : miniapp_step.index(
-                    '"$YUE_CI_PYTHON" "$audit_gate"'
-                )
-            ],
-        )
-        self.assertNotIn("GHSA-", frontend_step + miniapp_step)
-        self.assertNotIn("npm audit --", frontend_step + miniapp_step)
+        step = self.workflow.split("- name: Audit YueOps frontend and mini app", 1)[1].split("- name:", 1)[0]
+        self.assertIn('audit_gate="$GITHUB_WORKSPACE/scripts/npm-audit-gate.py"', step)
+        self.assertIn('[ -f "$audit_gate" ] || {', step)
+        for project in ("frontend", "telegram-bot/yue/miniapp"):
+            self.assertIn(f'"$YUE_CI_PYTHON" "$audit_gate" "$GITHUB_WORKSPACE/{project}"', step)
+        self.assertNotIn("GHSA-", step)
+        self.assertNotIn("npm audit --", step)
 
     def test_central_release_runs_the_miniapp_source_linter(self) -> None:
         install_start = self.workflow.index("- name: Install yueops dependencies")

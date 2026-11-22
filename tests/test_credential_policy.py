@@ -189,12 +189,9 @@ class DependencyLifecycleScriptPolicyTest(unittest.TestCase):
 
     def test_yueboard_npm_audit_gates_are_source_owned_and_fail_closed(self) -> None:
         workflow = (WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8")
-        start = workflow.index("- name: Validate yueboard frontends")
-        end = workflow.index("- name: Validate YueBoard responsive and design contracts")
-        wiring = workflow[start:end]
-        self.assertIn('board-validation-output.py', wiring)
-        self.assertIn('--frontend-phase prepare', wiring)
-        step = (ROOT / 'scripts/board-validation.sh').read_text().rsplit('case "$role:$frontend_phase" in', 1)[1]
+        freshness = workflow.split('\n  freshness:\n', 1)[1]
+        self.assertIn('bash .ci-policy/scripts/board-frontend-audit.sh', freshness)
+        step = (ROOT / 'scripts/board-frontend-audit.sh').read_text()
         self.assertIn('audit_gate="scripts/ci/pnpm-audit-gate.mjs"', step)
         guard = step.index('[ -f "$audit_gate" ] || {')
         call = step.index('node "$audit_gate" web web-admin')
@@ -202,8 +199,7 @@ class DependencyLifecycleScriptPolicyTest(unittest.TestCase):
         # call must be a bare command so any non-zero code fails the step.
         self.assertNotRegex(step[call:], r'node "\$audit_gate" web web-admin\s*(\|\||;\s*true)')
         self.assertIn("exit 1", step[guard:call])
-        # The audit must judge the tree that was actually installed and built.
-        self.assertLess(step.index("pnpm --dir web-admin build"), guard)
+        self.assertIn('node "$audit_gate" test/a11y test/e2e', step)
         self.assertNotIn("GHSA-", step)
 
 

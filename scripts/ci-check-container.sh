@@ -42,7 +42,7 @@ run_step() {
   (
     cd "$directory"
     case "$step" in
-      dependencies|selection|backend|notices) export UV_PYTHON_DOWNLOADS=never ;;
+      dependencies|selection|backend|notices|python-audit) export UV_PYTHON_DOWNLOADS=never ;;
     esac
     case "$step" in
       selection|backend)
@@ -77,5 +77,7 @@ else
   run_step miniapp "$GITHUB_WORKSPACE/telegram-bot/yue/miniapp"
   run_step node
   run_step migrations
+  run_step python-audit
+  run_step npm-audit
   run_step terminal
 fi

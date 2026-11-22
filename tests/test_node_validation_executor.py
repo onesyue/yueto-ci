@@ -69,7 +69,7 @@ if name == 'go' and args == ['env', 'CGO_ENABLED']:
             '-run', 'Splice|VendoredVisionReality', './internal/kernel/xray/']
         return [('go', ['env', 'CGO_ENABLED']), ('make', ['check-profile-deps']),
                 ('test-vulnerabilities', []), ('go', race + ['./...']), ('go', race + subset)] + (
-                    [('make', ['build']), ('scan-vulnerabilities', [])] if profile == 'vless' else [])
+                    [('make', ['build'])] if profile == 'vless' else [])
 
     def test_profiles_exact_commands_environment_and_default_bundle(self) -> None:
         for profile in ('hy2', 'vless'):
