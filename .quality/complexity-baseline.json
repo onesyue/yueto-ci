@@ -10,11 +10,11 @@
     },
     "scripts/input-fingerprint.py::compute( source , rev : str , entry : dict )#1": {
       "ccn": 36,
-      "nloc": 71
+      "nloc": 70
     },
     "scripts/input-fingerprint.py::feedback_manifest( source , base : str , matrix : list , validators : list , context : dict )#1": {
       "ccn": 60,
-      "nloc": 100
+      "nloc": 99
     },
     "scripts/input-fingerprint.py::parse_dockerfile( text : str )#1": {
       "ccn": 44,
@@ -30,7 +30,7 @@
     },
     "scripts/ops-service-scope.py::filter_plan( plan : dict , paths : list [ str ] | None , dispatch : str , * , paths_known : bool = True , keep_all : bool = False , manifest : dict | None = None , )#1": {
       "ccn": 38,
-      "nloc": 77
+      "nloc": 76
     },
     "scripts/ops-service-scope.py::load_manifest( path : Path | None = None , services_path : Path | None = None )#1": {
       "ccn": 42,
@@ -75,6 +75,10 @@
     "scripts/validate-native-node-contract.py::validate_yueops( root : Path , contract : dict , yueboard_contract_root : Path | None )#1": {
       "ccn": 8,
       "nloc": 257
+    },
+    "scripts/validate-yueboard-postgres.py::run_group( paths : list [ str ] , entries : list [ dict ] )#1": {
+      "ccn": 31,
+      "nloc": 55
     },
     "scripts/verify-sbom-attestations.py::_statement_architectures( statement : dict [ str , Any ] , image : str , digest : str , sbom_format : str )#1": {
       "ccn": 39,

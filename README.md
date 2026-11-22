@@ -360,6 +360,34 @@ Discovery rejects unreachable test cases and import failures. Policy CI also
 compiles Python, checks shell syntax, runs pinned actionlint and ShellCheck.
 See [policy-ci.yml](.github/workflows/policy-ci.yml) for exact commands and pins.
 
+### Complexity and dead-code reports
+
+The public CI runs a non-blocking quality report on policy PRs and pushes to
+`master`. Dispatch **Quality ratchet report** for a public target checkout with
+its exact source and base commit SHAs. Private targets can use the same command
+against an existing local checkout.
+
+Install `requirements-quality.txt` and
+`golang.org/x/tools/cmd/deadcode@v0.51.0` before running the check:
+
+```bash
+python3 scripts/complexity-ratchet.py /path/to/target --base BASE_SHA
+```
+
+The base commit supplies `.quality/complexity-baseline.json`. Lizard measures
+tracked Python, Go, TypeScript, TSX and Dart functions. A new or edited
+function exceeds the budget above 30 CCN or 200 NLOC. An existing budgeted
+function may shrink or hold steady in both metrics. Go `deadcode -test`
+counts findings in tracked Go files. Vulture counts Python findings at 100%
+confidence. Capture and compare Go baselines on the same platform and Go
+version so build tags select the same files.
+
+Use `--init-baseline` once in a clean target checkout and commit the reviewed
+baseline. Use `--update-baseline` to remove resolved entries or tighten
+existing budgets. Run the check against the reviewed base to confirm that
+the change meets its budgets before committing an update. A report exits 1
+for regressions and 2 when the scan or baseline is unavailable.
+
 ### I33 A13 toolchain and PostgreSQL pin coverage
 
 The workspace guard `scripts/check-toolchain-pin-agreement.py` in `onesyue/yueto`
