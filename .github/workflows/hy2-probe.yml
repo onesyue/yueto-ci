@@ -24,9 +24,7 @@ jobs:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
           private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
           owner: onesyue
-          repositories: |
-            hysteria
-            quic-go
+          repositories: hysteria,quic-go
           permission-contents: read
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

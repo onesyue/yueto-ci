@@ -126,6 +126,9 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
                 assert repos is not None
                 if name == "weekly-vuln-sbom.yml":
                     allowed = WEEKLY_SOURCE_REPOS
+                elif name == "hy2-probe.yml" and job == "build":
+                    allowed = {"hysteria", "quic-go"}
+                    self.assertEqual(set(repos.group(1).split(",")), allowed)
                 else:
                     allowed = SOURCE_REPOS | (
                         {"yueto"} if name == "build.yml" and job == "validate" else set()
