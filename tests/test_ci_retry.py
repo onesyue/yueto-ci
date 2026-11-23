@@ -282,6 +282,14 @@ exit 0
         for name in ("install-verified-buildx.sh", "install-verified-trivy.sh", "install-cosign.sh"):
             self.assertIn("ci_release_asset_api", (ROOT / "scripts" / name).read_text())
 
+    def cosign_installer_environment(self, github_path):
+        import shutil
+
+        checksum = shutil.which("gsha256sum") or shutil.which("sha256sum")
+        self.assertIsNotNone(checksum, "GNU sha256sum is required by the Cosign installer fixture")
+        (self.base / "sha256sum").symlink_to(checksum)
+        return {**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)}
+
     def cosign_fixture_platform(self, system="Linux", machine="x86_64"):
         # The artifact in these installer controls is a shell fixture. Exercise
         # the real platform on matching hosts and supply it on other hosts.
@@ -290,15 +298,18 @@ exit 0
 
     def test_cosign_rejects_unsupported_platform_before_download(self):
         self.shim("curl", 'echo unexpected-download >> "$CALLS"; exit 97')
+        github_path = self.base / "github_path"
         for system, machine in (("Darwin", "x86_64"), ("Linux", "aarch64")):
             with self.subTest(system=system, machine=machine):
                 (self.base / "uname").unlink(missing_ok=True)
                 self.cosign_fixture_platform(system, machine)
                 result = subprocess.run(["bash", str(ROOT / "scripts/install-cosign.sh")],
-                                        env=self.env, capture_output=True, text=True, timeout=15)
-                self.assertNotEqual(result.returncode, 0)
+                                        env={**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)},
+                                        capture_output=True, text=True, timeout=15)
+                self.assertEqual(result.returncode, 1, result.stderr)
                 self.assertIn("reviewed only for Linux x86_64", result.stderr)
                 self.assertEqual(self.lines("calls"), [])
+                self.assertFalse(github_path.exists())
 
     def test_cosign_verified_install_and_version_gate(self):
         self.cosign_fixture_platform()
@@ -315,6 +326,7 @@ exit 0
         fixture = self.base / "artifact"
         installer = self.base / "installer.sh"
         github_path = self.base / "github_path"
+        environment = self.cosign_installer_environment(github_path)
         self.shim("curl", """
 while [ "$#" -gt 0 ]; do
   if [ "$1" = -o ]; then cp "$ARTIFACT" "$2"; exit 0; fi
@@ -330,8 +342,7 @@ exit 97
                 installer.write_text(source.replace(reviewed, digest))
                 result = subprocess.run(
                     ["bash", str(installer)],
-                    env={**self.env, "RUNNER_TEMP": str(self.base),
-                         "GITHUB_PATH": str(github_path), "ARTIFACT": str(fixture)},
+                    env={**environment, "ARTIFACT": str(fixture)},
                     capture_output=True, text=True, timeout=15,
                 )
                 if version == "v3.1.3":
@@ -415,7 +426,7 @@ exit 97
         github_path = self.base / "github_path"
         result = subprocess.run(
             ["bash", str(scripts / "install-cosign.sh")],
-            env={**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)},
+            env=self.cosign_installer_environment(github_path),
             capture_output=True, text=True, timeout=15,
         )
         self.assertNotEqual(result.returncode, 0)

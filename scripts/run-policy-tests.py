@@ -11,12 +11,14 @@ from __future__ import annotations
 import argparse
 import importlib.metadata
 import os
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+REQUIRED_TOOLS = ("bash", "curl", "git", "go", "gpg", "gpgv", "jq", "node", "sha256sum", "tar")
 
 
 def discovered_modules(directory: Path) -> list[str]:
@@ -140,9 +142,16 @@ def changed_modules(root: Path) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     options = parser.add_mutually_exclusive_group()
+    options.add_argument("--check-toolchain", action="store_true", help="Check required executables")
     options.add_argument("--check-tools", action="store_true")
     options.add_argument("--changed", action="store_true")
     args = parser.parse_args()
+    missing = [tool for tool in REQUIRED_TOOLS if shutil.which(tool) is None]
+    if missing:
+        print(f"policy toolchain missing required executables: {', '.join(missing)}", file=sys.stderr)
+        return 2
+    if args.check_toolchain:
+        return 0
     if args.check_tools:
         return check_tools(ROOT)
     names = changed_modules(ROOT) if args.changed else None

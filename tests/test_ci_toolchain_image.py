@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from workflow_source import workflow_text
+import os
 import re
-import yaml
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
+
+import yaml
+from workflow_source import workflow_text
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
@@ -118,14 +122,26 @@ class CiToolchainImageTest(unittest.TestCase):
         self.assertIn("provenance: false", rebuild)
         self.assertIn("yueops-ci-toolchain-selfcheck", rebuild)
 
+    def test_selfcheck_rejects_root_before_checking_the_image(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            fake_id = Path(directory) / "id"
+            fake_id.write_text('#!/bin/sh\n[ "$1" = -u ] || exit 99\nprintf "0\\n"\n', encoding="utf-8")
+            fake_id.chmod(0o755)
+            completed = subprocess.run(
+                ["/bin/bash", str(IMAGE / "selfcheck.sh")],
+                env={"PATH": directory},
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "::error::initdb fixtures require the non-root runner user\n")
+        self.assertEqual(completed.stdout, "")
+
     def test_docker_wrapper_rewrites_host_work_path(self) -> None:
         wrapper = IMAGE / "docker-hostpath.sh"
         fake = ROOT / ".docker-fake-not-used"
         # The wrapper execs DOCKER_REAL. A shell stub records its arguments.
-        import os
-        import subprocess
-        import tempfile
-
         with tempfile.TemporaryDirectory() as directory:
             stub = Path(directory) / "docker"
             stub.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n", encoding="utf-8")
@@ -133,7 +149,18 @@ class CiToolchainImageTest(unittest.TestCase):
             completed = subprocess.run(
                 ["bash", str(wrapper), "run", "-v",
                  "/__w/yueto-ci/yueto-ci/scripts/yueops-harden.sh:/review/yueops-harden.sh:ro",
-                 "--mount", "type=bind,source=/__w/yueto-ci/yueto-ci,target=/src"],
+                 "--mount", "type=bind,source=/__w/yueto-ci/yueto-ci,target=/src",
+                 "--volume", "/__w:/workspace",
+                 "-v", "/__w/project/__w:/nested",
+                 "-v", "/__workspace:/separate",
+                 "-v", "/tmp/__w:/temporary",
+                 "-v", "cache:/__w",
+                 "-v", "/__w/target-only",
+                 "--mount", "type=bind,source=/__w,target=/workspace",
+                 "--mount", "type=bind,source=/__workspace,target=/separate",
+                 "--mount", "type=bind,source=/tmp/__w,target=/temporary",
+                 "--mount", 'type=bind,"src=/__w/with,comma",target=/quoted',
+                 "--mount", 'type=bind,"target=/tmp,source=/__w",source=/tmp'],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -148,7 +175,39 @@ class CiToolchainImageTest(unittest.TestCase):
             lines[4],
             "type=bind,source=/home/runner/work/yueto-ci/yueto-ci,target=/src",
         )
+        self.assertEqual(lines[6::2], [
+            "/home/runner/work:/workspace",
+            "/home/runner/work/project/__w:/nested",
+            "/__workspace:/separate",
+            "/tmp/__w:/temporary",
+            "cache:/__w",
+            "/__w/target-only",
+            "type=bind,source=/home/runner/work,target=/workspace",
+            "type=bind,source=/__workspace,target=/separate",
+            "type=bind,source=/tmp/__w,target=/temporary",
+            'type=bind,"src=/home/runner/work/with,comma",target=/quoted',
+            'type=bind,"target=/tmp,source=/__w",source=/tmp',
+        ])
         self.assertFalse(fake.exists())
+
+    def test_docker_wrapper_propagates_backend_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            stub = Path(directory) / "docker"
+            stub.write_text(
+                '#!/bin/sh\n[ "$1" = run ] || exit 99\nprintf "fixture: daemon unavailable\\n" >&2\nexit 42\n',
+                encoding="utf-8",
+            )
+            stub.chmod(0o755)
+            completed = subprocess.run(
+                ["/bin/bash", str(IMAGE / "docker-hostpath.sh"), "run"],
+                env={"DOCKER_REAL": str(stub)},
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        self.assertEqual(completed.returncode, 42)
+        self.assertEqual(completed.stderr, "fixture: daemon unavailable\n")
+        self.assertEqual(completed.stdout, "")
 
 
 if __name__ == "__main__":

@@ -2548,7 +2548,7 @@ MINIAPP_MEMBERSHIP_INPUT = "tests/_miniapp_source.py"
 
 
 def reviewed_miniapp_membership_transition():
-    """Codex-reviewed successor of one shared input, kept outside the sealed skip baseline.
+    """Reviewed successor of one shared input, kept outside the sealed skip baseline.
 
     The record follows the historical transition format (plus a reviewer label);
     storing it separately leaves every sealed prior_baseline_sha256 untouched.
@@ -4960,17 +4960,6 @@ def _const_arg(call, index):
     return None
 
 
-def _list_strings(node):
-    if not isinstance(node, ast.List):
-        return None
-    values = []
-    for item in node.elts:
-        if not isinstance(item, ast.Constant) or not isinstance(item.value, str):
-            return None
-        values.append(item.value)
-    return values
-
-
 def _docker_returncode(args):
     """Return code the central runner produces for one docker invocation.
 
@@ -5464,17 +5453,6 @@ def load_policy_module(ci_revision, checkout=None):
         for name in _POLICY_HELPERS:
             exec(inspect.getsource(globals()[name]), module.__dict__)
     return module
-
-
-def _read_ops_module(checkout, revision, module):
-    if not safe_module(module):
-        return None
-    try:
-        return git(checkout, "show", f"{revision}:{module}").decode()
-    except subprocess.CalledProcessError:
-        return None
-    except UnicodeDecodeError:
-        return None
 
 
 def skip_blob_precheck(checkout, revision, *, ci_revision=None):

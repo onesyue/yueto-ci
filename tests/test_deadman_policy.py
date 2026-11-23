@@ -194,6 +194,49 @@ def test_mirrored_checker_distinguishes_every_failure_state() -> None:
     ).state == "degraded"
 
 
+def test_mirrored_checker_cli_alarms_when_receipt_cannot_be_opened() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        receipt = Path(directory) / "missing.json"
+        result = subprocess.run(
+            [sys.executable, str(CHECKER), "--receipt", str(receipt)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+    assert result.returncode == 1
+    assert result.stdout.startswith("::error::")
+    assert "[missing]" in result.stdout
+
+
+def test_mirrored_checker_cli_alarms_on_empty_stdin() -> None:
+    result = subprocess.run(
+        [sys.executable, str(CHECKER), "--receipt", "-"],
+        input="",
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 1
+    assert result.stdout.startswith("::error::")
+    assert "[missing]" in result.stdout
+
+
+def test_mirrored_checker_cli_rejects_zero_max_age() -> None:
+    result = subprocess.run(
+        [sys.executable, str(CHECKER), "--receipt", "-", "--max-age-seconds", "0"],
+        input="",
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 2
+    assert "--max-age-seconds" in result.stderr
+    assert result.stdout == ""
+
+
 def load_tests(
     loader: unittest.TestLoader, tests: unittest.TestSuite, pattern: str | None
 ) -> unittest.TestSuite:

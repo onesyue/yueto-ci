@@ -38,6 +38,31 @@ class NativeRunExec(unittest.TestCase):
         )
         self.assertLess(prepare, native)
 
+    def test_noexec_parent_mount_is_never_remounted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mount_calls = root / "mount-calls"
+            tools = {
+                "uname": "echo Linux",
+                "id": "echo 0",
+                "findmnt": 'case "$3" in TARGET) echo / ;; OPTIONS) echo rw,noexec ;; *) exit 97 ;; esac',
+                "mount": 'echo "$*" > "$MOUNT_CALLS"; exit 97',
+            }
+            for name, body in tools.items():
+                tool = root / name
+                tool.write_text("#!/bin/sh\n" + body + "\n")
+                tool.chmod(0o755)
+            result = subprocess.run(
+                ["bash", str(SCRIPT)],
+                env={"PATH": f"{root}:/usr/bin:/bin", "MOUNT_CALLS": str(mount_calls)},
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertIn("refusing to remount /; /run is not its own mount", result.stderr)
+            self.assertFalse(mount_calls.exists())
+
     def test_script_refuses_to_remount_anything_except_run(self):
         source = SCRIPT.read_text()
         self.assertIn("[[ $target == /run ]] || fail", source)
