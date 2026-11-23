@@ -1,7 +1,7 @@
 {
   "version": 6,
   "schema_floor": 165,
-  "yueboard_contract_pin": "6dc7ba7998ebfae7d56dddcb0cee6cf4f0606171",
+  "yueboard_contract_pin": "321c658cc073985b306221c38159513a36c1ee48",
   "deprecated_fields": {
     "yueboard_contract_pin": "Required by root scripts/ship.sh until its Board dispatch check is retired."
   },
