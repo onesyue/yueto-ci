@@ -38,49 +38,47 @@ class LockDiagnostics(unittest.TestCase):
     def execute(self, step, mode='ok'):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            docker = root / 'docker'
-            # The failed-reload cases can invoke Docker 60 times in one test.
-            docker.write_text(r'''#!/usr/bin/env bash
-set -eu
-printf '%s\n' "$@" >> "$RUNNER_TEMP/calls"
-if [[ "$1" == logs ]]; then
-    printf '%s\n' 'deadlock detected' 'Process 123: query one' 'Process 456: query two'
-    [[ "$MODE" != logs_fail ]] || exit 17
-    exit 0
+            tool_fixture = root / 'tools.sh'
+            tool_fixture.write_text('''sleep() { :; }
+docker() {
+printf '%s\\n' "$*" >> "$RUNNER_TEMP/calls"
+if [ "$1" = logs ]; then
+    printf '%s\\n' 'deadlock detected' 'Process 123: query one' 'Process 456: query two'
+    if [ "$MODE" = logs_fail ]; then return 17; fi
+    return 0
 fi
-[[ "$1" == exec && "$2" == exact-service-id ]]
-ignore_psqlrc=false
-stop_on_error=false
-for arg in "$@"; do
-    case "$arg" in
-        -X) ignore_psqlrc=true ;;
-        ON_ERROR_STOP=1) stop_on_error=true ;;
-    esac
-done
-[[ "$ignore_psqlrc" == true && "$stop_on_error" == true ]]
-sql=${!#}
-[[ "$MODE" != sql_fail ]] || exit 19
+[ "$#" -eq 12 ] || return 97
+[ "$1" = exec ] || return 97
+[ "$2" = exact-service-id ] || return 97
+[ "${8}" = -X ] || return 97
+[ "${10}" = ON_ERROR_STOP=1 ] || return 97
+sql=${12}
+if [ "$MODE" = sql_fail ]; then return 19; fi
+if [ "$MODE" = "$sql" ]; then
+    echo wrong
+    return 0
+fi
 case "$sql" in
-    'SELECT pg_reload_conf()') value=t ;;
-    'SHOW log_lock_waits') value=on ;;
-    'SHOW deadlock_timeout') value=200ms ;;
-    'SHOW log_line_prefix') value='%m [%p] %q%u@%d app=%a xid=%x ' ;;
-    'ALTER SYSTEM SET '*) exit 0 ;;
-    *) exit 1 ;;
+    'SELECT pg_reload_conf()') echo t ;;
+    'SHOW log_lock_waits') echo on ;;
+    'SHOW deadlock_timeout') echo 200ms ;;
+    'SHOW log_line_prefix') printf '%s\\n' '%m [%p] %q%u@%d app=%a xid=%x ' ;;
+    'ALTER SYSTEM SET '*) ;;
+    *) return 97 ;;
 esac
-if [[ "$MODE" == "$sql" ]]; then
-    value=wrong
-fi
-printf '%s\n' "$value"
+}
 ''')
-            docker.chmod(0o755)
-            sleep = root / 'sleep'
-            sleep.write_text('#!/bin/sh\nexit 0\n'); sleep.chmod(0o755)
             script = str(ROOT / 'scripts/board-postgres-diagnostics.sh')
             body = step['run'].replace('.ci-policy/scripts/board-postgres-diagnostics.sh', script)
-            result = subprocess.run(['bash', '-c', body], text=True, capture_output=True,
-                timeout=15, env={**os.environ, 'PATH': str(root) + ':' + os.environ['PATH'],
-                                'PG_SERVICE': 'exact-service-id', 'RUNNER_TEMP': str(root), 'MODE': mode})
+            # Keep the real retry loop and Docker argv checks without starting
+            # an interpreter for each simulated SQL read or sleep.
+            result = subprocess.run(
+                ['bash', '-ec', 'source "$1"; export -f docker sleep; ' + body,
+                 '--', str(tool_fixture)],
+                text=True, capture_output=True, timeout=15,
+                env={**os.environ, 'PG_SERVICE': 'exact-service-id',
+                     'RUNNER_TEMP': str(root), 'MODE': mode},
+            )
             return result, (root / 'calls').read_text()
 
     def test_setup_effective_and_dependency_failures(self):
@@ -91,7 +89,11 @@ printf '%s\n' "$value"
         for failure in ('sql_fail', 'SELECT pg_reload_conf()', 'SHOW log_lock_waits',
                         'SHOW deadlock_timeout', 'SHOW log_line_prefix'):
             with self.subTest(failure=failure):
-                self.assertNotEqual(self.execute(self.setup, failure)[0].returncode, 0)
+                result, calls = self.execute(self.setup, failure)
+                self.assertEqual(result.returncode, 19 if failure == 'sql_fail' else 1, result.stderr)
+                if failure.startswith('SHOW '):
+                    self.assertIn('PostgreSQL lock diagnostics did not take effect', result.stderr)
+                    self.assertEqual(sum(line.endswith(failure) for line in calls.splitlines()), 20)
 
     def test_complete_both_pid_report_and_collection_failure(self):
         result, _ = self.execute(self.collect)
