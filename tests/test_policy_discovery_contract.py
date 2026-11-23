@@ -18,6 +18,9 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -132,6 +135,26 @@ class PolicyDiscoveryContractTest(unittest.TestCase):
         self.assertIn("unittest", script)
         self.assertIn("discover", script)
         self.assertNotIn("test_build_policy.py", script)
+
+    def test_runner_requires_policy_tools_before_discovery(self) -> None:
+        script = ROOT / "scripts" / "run-policy-tests.py"
+        tools = ("bash", "curl", "git", "go", "gpg", "gpgv", "jq", "node", "sha256sum", "tar")
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            for tool in tools:
+                (directory / tool).symlink_to(sys.executable)
+            env = dict(os.environ, PATH=tmp)
+            command = [sys.executable, str(script)]
+            complete = subprocess.run([*command, "--check-toolchain"], env=env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(complete.returncode, 0, complete.stderr)
+            for tool in ("gpgv", "jq", "node"):
+                with self.subTest(tool=tool):
+                    (directory / tool).unlink()
+                    missing = subprocess.run(command, env=env, capture_output=True, text=True, timeout=10)
+                    self.assertEqual(missing.returncode, 2, missing.stderr)
+                    self.assertEqual(missing.stderr.strip(), f"policy toolchain missing required executables: {tool}")
+                    self.assertEqual(missing.stdout, "")
+                    (directory / tool).symlink_to(sys.executable)
 
     def test_parallel_processes_run_every_discovered_module(self) -> None:
         runner = _runner()
