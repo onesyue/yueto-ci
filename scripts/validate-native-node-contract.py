@@ -214,7 +214,14 @@ def validate_node_test_chain(makefile: str) -> None:
     evaluator. Detached words/comments, conditional or ambiguous definitions
     cannot authorize the default test entry.
     """
-    names = {"test", "test-vendored", "verify-fork-tags", "check-profile-deps"}
+    owned_checks = {
+        "check-runtime-constants": [
+            (0, 'python3 scripts/sync-host-paths.py --source "$(HOST_PATH_SOURCE)" --check'),
+            (0, "python3 scripts/check-runtime-constants.py"),
+        ],
+        "test-owned-contracts": [(0, "python3 scripts/test_owned_contracts.py")],
+    }
+    names = {"test", "test-vendored", "verify-fork-tags", "check-profile-deps", *owned_checks}
     targets: dict[str, tuple[list[str], list[tuple[int, str]]]] = {}
     phony: set[str] = set()
     current = None
@@ -274,9 +281,15 @@ def validate_node_test_chain(makefile: str) -> None:
         if recipe != [(0, "$(MAKE) test-vendored")]:
             raise RuntimeError("yue-node Make test chain lacks required recursive delegation")
         dependencies, recipe = target("test-vendored")
-        if dependencies != ["check-profile-deps"]:
+        if owned_checks.keys() & targets.keys():
+            if dependencies != ["check-profile-deps", *owned_checks]:
+                raise RuntimeError("yue-node Make test chain disconnects owned prerequisites")
+            for name, commands in owned_checks.items():
+                if target(name) != ([], commands):
+                    raise RuntimeError(f"yue-node Make test chain disconnects {name}")
+        elif dependencies != ["check-profile-deps"]:
             raise RuntimeError("yue-node Make test chain lacks vendored profile prerequisite")
-    elif dependencies != ["verify-fork-tags", "check-profile-deps"]:
+    elif owned_checks.keys() & targets.keys() or dependencies != ["verify-fork-tags", "check-profile-deps"]:
         raise RuntimeError("yue-node Make test chain lacks verification/profile prerequisites")
     expected = [(0, "bash scripts/test-check-vulnerabilities.sh")] + [
         (0, f'go test -race -count=1 -timeout $(TEST_TIMEOUT) -tags "$(TEST_COMMON_TAGS) yue_profile_{profile}" ./...')

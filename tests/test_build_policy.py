@@ -122,6 +122,28 @@ class NativeNodeMakeChainTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn("verified for yue-node", result.stdout)
 
+    def test_owned_prerequisites_run_exactly_the_reviewed_commands(self):
+        rules = (
+            ".PHONY: check-runtime-constants test-owned-contracts\n"
+            "check-runtime-constants:\n"
+            '\tpython3 scripts/sync-host-paths.py --source "$(HOST_PATH_SOURCE)" --check\n'
+            "\tpython3 scripts/check-runtime-constants.py\n"
+            "test-owned-contracts:\n\tpython3 scripts/test_owned_contracts.py\n"
+        )
+        chain = self.CURRENT.rstrip() + " check-runtime-constants test-owned-contracts\n"
+        good = self.PREFIX + rules + chain + self.BODY
+        result = self.cli(good)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotEqual(self.cli(self.PREFIX + rules + self.LEGACY + self.BODY).returncode, 0)
+        for old, new in (
+            ("check-profile-deps check-runtime-constants test-owned-contracts\n", "check-profile-deps\n"),
+            ("scripts/test_owned_contracts.py", "scripts/other.py"),
+            (" --check\n", "\n"),
+            ("scripts/check-runtime-constants.py", "scripts/other.py"),
+        ):
+            with self.subTest(old=old):
+                self.assertNotEqual(self.cli(good.replace(old, new)).returncode, 0)
+
     def test_actual_cli_rejects_disconnected_or_ambiguous_current_targets(self):
         good = self.PREFIX + self.CURRENT + self.BODY
         mutations = {
