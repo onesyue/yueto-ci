@@ -25,7 +25,7 @@ class BoardLocal(unittest.TestCase):
     def test_native_planner_and_workflow_authority(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            sha = json.loads((ROOT / 'native-node-contract.json').read_text())['yueboard_contract_pin']
+            sha = 'a' * 40
             roles = LOCAL.plan(ROOT, sha, output)
             expected = json.loads(subprocess.check_output(['bash', str(ROOT / 'scripts/plan-build-targets.sh'), 'yueboard', sha]))
             self.assertEqual(roles, [r['board_role'] for r in expected['validation_matrix']])
