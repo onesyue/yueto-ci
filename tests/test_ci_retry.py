@@ -282,6 +282,14 @@ exit 0
         for name in ("install-verified-buildx.sh", "install-verified-trivy.sh", "install-cosign.sh"):
             self.assertIn("ci_release_asset_api", (ROOT / "scripts" / name).read_text())
 
+    def cosign_installer_environment(self, github_path):
+        import shutil
+
+        checksum = shutil.which("gsha256sum") or shutil.which("sha256sum")
+        self.assertIsNotNone(checksum, "GNU sha256sum is required by the Cosign installer fixture")
+        (self.base / "sha256sum").symlink_to(checksum)
+        return {**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)}
+
     def cosign_fixture_platform(self, system="Linux", machine="x86_64"):
         # The artifact in these installer controls is a shell fixture. Exercise
         # the real platform on matching hosts and supply it on other hosts.
@@ -318,6 +326,7 @@ exit 0
         fixture = self.base / "artifact"
         installer = self.base / "installer.sh"
         github_path = self.base / "github_path"
+        environment = self.cosign_installer_environment(github_path)
         self.shim("curl", """
 while [ "$#" -gt 0 ]; do
   if [ "$1" = -o ]; then cp "$ARTIFACT" "$2"; exit 0; fi
@@ -333,8 +342,7 @@ exit 97
                 installer.write_text(source.replace(reviewed, digest))
                 result = subprocess.run(
                     ["bash", str(installer)],
-                    env={**self.env, "RUNNER_TEMP": str(self.base),
-                         "GITHUB_PATH": str(github_path), "ARTIFACT": str(fixture)},
+                    env={**environment, "ARTIFACT": str(fixture)},
                     capture_output=True, text=True, timeout=15,
                 )
                 if version == "v3.1.3":
@@ -418,7 +426,7 @@ exit 97
         github_path = self.base / "github_path"
         result = subprocess.run(
             ["bash", str(scripts / "install-cosign.sh")],
-            env={**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)},
+            env=self.cosign_installer_environment(github_path),
             capture_output=True, text=True, timeout=15,
         )
         self.assertNotEqual(result.returncode, 0)
