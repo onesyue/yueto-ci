@@ -112,6 +112,8 @@ def run(report: dict) -> int:
         validation_started = True
         if role in ('quality', 'race'):
             backend(role)
+            if role == 'quality':
+                command([str(temp / 'board-quality-tools/govulncheck'), './...'], {'CGO_ENABLED': '1'})
         elif role in ('postgres', 'migration'):
             backend(role, phase_environment(role), pg=True)
             if role == 'postgres':
@@ -128,6 +130,7 @@ def run(report: dict) -> int:
                     raise
             if role == 'frontends':
                 frontend('design')
+                command(['bash', str(policy / 'scripts/board-frontend-audit.sh')])
     except subprocess.CalledProcessError as error:
         status = error.returncode if error.returncode > 0 else 128 - error.returncode
         print('ci-check: Board phase failed', file=sys.stderr)

@@ -332,7 +332,7 @@ class ShadowWiringTest(unittest.TestCase):
                         "scripts/verification-evidence.py probe", "shadow-ci"):
             self.assertNotIn(retired, text)
         self.assertNotIn("needs.validate.result == 'skipped'", text)
-        self.assertIn("    needs: [plan, validate, ops-service-selection]\n", text)
+        self.assertIn("    needs: [plan, validate, freshness, ops-service-selection]\n", text)
 
     def test_diagnostics_retired_and_full_validation_required(self):
         self.assert_release_wiring(WORKFLOW.read_text())
@@ -638,7 +638,11 @@ class EvidenceProbeTest(unittest.TestCase):
         self.assertEqual(result["evidence_run"], 7)
         self.assertEqual(result["validate_minutes"], 20.0)
         self.assertFalse(result["enabled"])
-        self.assertTrue(any("pip-audit" in g for g in result["not_reproduced_by_identity"]))
+        residual = " ".join(result["not_reproduced_by_identity"])
+        for gate in ("pip-audit", "npm-audit", "pnpm-audit"):
+            self.assertNotIn(gate, residual)
+        for remaining in ("wall-clock", "cold cache", "apt"):
+            self.assertIn(remaining, residual)
 
     def test_every_identity_check_rejects_on_its_own(self) -> None:
         mutations = {

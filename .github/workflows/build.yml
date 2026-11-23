@@ -180,6 +180,7 @@ jobs:
       matrix: ${{ steps.resume.outputs.matrix || steps.ops_scope.outputs.matrix || steps.plan.outputs.matrix }}
       resume: ${{ steps.plan.outputs.resume }}
       validation_matrix: ${{ steps.ops_plan.outputs.validation_matrix }}
+      freshness_matrix: ${{ steps.ops_plan.outputs.freshness_matrix }}
       validation_parallelism: ${{ steps.ops_plan.outputs.max_parallel }}
       ops_mode: ${{ steps.ops_plan.outputs.ops_mode }}
       ops_source: ${{ steps.plan.outputs.ops_source }}
@@ -567,6 +568,7 @@ jobs:
           "${expand_args[@]}" > "$RUNNER_TEMP/ops-admission.json"
           {
             echo "validation_matrix=$(jq -c '.validation_matrix' "$RUNNER_TEMP/ops-admission.json")"
+            echo "freshness_matrix=$(jq -c '[.validation_matrix[] | select(.ops_role == "native" or .ops_role == "legacy" or .board_role == "quality" or .node_profile == "vless")]' "$RUNNER_TEMP/ops-admission.json")"
             echo "max_parallel=$(jq -er '.max_parallel' "$RUNNER_TEMP/ops-admission.json")"
             echo "ops_mode=$(jq -er '.mode' "$RUNNER_TEMP/ops-admission.json")"
             echo "admission_sha256=$(jq -er '.admission_sha256' "$RUNNER_TEMP/ops-admission.json")"
@@ -641,6 +643,8 @@ jobs:
     # gauntlet that is green under a different zone is not evidence.
     env:
       TZ: UTC
+      # npm ci otherwise sends an advisory request even for a locked install.
+      NPM_CONFIG_AUDIT: 'false'
       # The host ImageVersion is not passed into a job container. Shard
       # admission rejects a missing identity. OS and architecture still come
       # from the runner; this names the toolchain image.
@@ -1306,16 +1310,6 @@ jobs:
         run: |
           bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-backend.sh"
 
-      # Provider JSON is diagnostic only. Never put it in native/shard evidence.
-      - name: Retain Ops Python audit diagnostics
-        if: always() && matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ops-audit-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.ops_role }}
-          path: ${{ runner.temp }}/python-audit-reports.${{ github.run_id }}.${{ github.run_attempt }}.${{ matrix.ops_role }}.*/*.json
-          if-no-files-found: warn
-          retention-days: 14
-
       - name: Summarize passive yueops pytest timing
         if: always() && matrix.validation == 'yueops' && matrix.ops_role == 'legacy'
         run: |
@@ -1407,7 +1401,7 @@ jobs:
         run: test ! -e "$YUETO_OWNED_FAILURES/yueops-web"
 
   validation-evidence:
-    needs: [plan, validate, ops-service-selection]
+    needs: [plan, validate, freshness, ops-service-selection]
     outputs:
       services: ${{ steps.service_report.outputs.services }}
     if: always() && needs.plan.result == 'success'
@@ -1421,6 +1415,9 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Require selected freshness checks for validation-only runs
+        if: (inputs.validation_only || needs.plan.outputs.has_builds != 'true') && needs.plan.outputs.freshness_matrix != '[]' && needs.freshness.result != 'success'
+        run: exit 1
       - name: Select current resume admission attempt
         id: resume_handoff
         if: needs.plan.outputs.resume == 'true'
@@ -2031,6 +2028,8 @@ jobs:
     timeout-minutes: 120
     env:
       TZ: UTC
+      # npm ci otherwise sends an advisory request even for a locked install.
+      NPM_CONFIG_AUDIT: 'false'
       ImageVersion: yueops-ci-toolchain
       TMPDIR: /__w/_temp
     strategy:
@@ -2712,3 +2711,90 @@ jobs:
           set -euo pipefail
           echo "::error::a required job failed; cancelling run $RUN_ID so nothing keeps running on a failed release"
           gh run cancel "$RUN_ID"
+
+  freshness:
+    needs: [plan]
+    if: needs.plan.outputs.freshness_matrix != '[]'
+    name: freshness-${{ matrix.validation }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    container:
+      image: ghcr.io/onesyue/yueops-ci-toolchain@sha256:96b3439fd16effe9686cb6297026e97fac605db4d1ab8ce674aa45c121873017
+      options: --user runner
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(needs.plan.outputs.validation_parallelism) }}
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.freshness_matrix) }}
+    steps:
+      - name: Mint read-only source token (GitHub App)
+        id: source_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueboard,yue-node,yueops
+          permission-contents: read
+      - name: Checkout source repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          persist-credentials: false
+      - name: Checkout immutable central native-node policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueto-ci
+          ref: ${{ github.sha }}
+          path: .ci-policy
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Audit YueOps locked Python dependencies
+        if: matrix.validation == 'yueops'
+        env:
+          UV_PYTHON_DOWNLOADS: never
+          OPS_ROLE: ${{ matrix.ops_role }}
+        run: |
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-python-audit.sh"
+
+      # Provider JSON is diagnostic only. Never put it in native/shard evidence.
+      - name: Retain Ops Python audit diagnostics
+        if: always() && matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ops-audit-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.ops_role }}
+          path: ${{ runner.temp }}/python-audit-reports.${{ github.run_id }}.${{ github.run_attempt }}.${{ matrix.ops_role }}.*/*.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Audit YueOps frontend and mini app
+        if: matrix.validation == 'yueops'
+        env:
+          YUE_CI_PYTHON: /usr/local/bin/python3
+        run: |
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-npm-audit.sh"
+
+      - name: Audit YueBoard dependencies
+        if: matrix.validation == 'yueboard'
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          set -euo pipefail
+          bash .ci-policy/scripts/install-board-quality-tools.sh "$RUNNER_TEMP/board-quality-tools"
+          "$RUNNER_TEMP/board-quality-tools/govulncheck" ./...
+          bash .ci-policy/scripts/board-frontend-audit.sh
+
+      - name: Audit yue-node vendored profiles
+        if: matrix.validation == 'yue-node'
+        env:
+          CGO_ENABLED: '1'
+          GOFLAGS: -mod=vendor
+          NODE_PROFILE: vless
+        run: bash scripts/check-vulnerabilities.sh

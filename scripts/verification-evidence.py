@@ -5,12 +5,10 @@ P3 (2026-09-24) asked for "reuse a prior successful verification of the same
 source SHA instead of re-running identical validate jobs", behind a default-off
 flag, *only if the trust argument is airtight*.  The identity half can be made
 airtight within GitHub Actions' guarantees and is encoded below.  The freshness
-half cannot (see ``NOT_REPRODUCED_BY_IDENTITY``): the validate jobs contain
-gates whose verdict depends on the time they run, not on their inputs.  So this
-file never skips anything.  It reports, for a promote run, whether evidence
-that passes every identity check exists and how many validate minutes reusing
-it would have saved -- the number that decides whether splitting those gates
-out (the precondition for real reuse) is worth doing.
+half still depends on the inputs in ``NOT_REPRODUCED_BY_IDENTITY``. The
+workflow checks live advisories in separate freshness jobs. This script
+measures how many validate minutes a matching prior run consumed. All
+validation and freshness jobs still execute.
 
 Identity checks (every one must hold; the first failure is the reason):
 
@@ -54,15 +52,11 @@ IMAGE_VERSION = re.compile(
     r"##\[group\]Runner Image\s*\n(?:.*\n){0,3}?\S+Z Version: (?P<version>[0-9.]+)"
 )
 
-# Gates inside the validate jobs whose verdict can change with wall-clock time
-# for identical inputs.  Reusing evidence would silently skip re-asking them
-# at promote time; this is why reuse is not enabled (module docstring).
+# Residual inputs to validate itself. Freshness is independently required.
 NOT_REPRODUCED_BY_IDENTITY = (
-    "yueops: pip-audit against the live PyPI advisory database",
-    "yueops: npm-audit-gate.py (frontend + mini app) against the live npm advisory database",
-    "yueboard: pnpm-audit-gate.mjs against the live npm advisory database",
-    "time-dependent tests (date/expiry/timezone windows) judged at run time",
-    "anything installed from mutable package indexes during validation",
+    "wall-clock dates, expiry and timezone windows in product tests",
+    "PyPI, npm/pnpm and Go module downloads on a cold cache, including locked dependencies",
+    "Node 24 and host Python 3.13 patch selection, browser downloads and apt package indexes",
 )
 
 

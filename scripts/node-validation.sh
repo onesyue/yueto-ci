@@ -48,7 +48,6 @@ case "$NODE_PROFILE" in
 esac
 if [ "$NODE_PROFILE" = vless ]; then
   # One job verifies the exact selector + dependency-pruned bundle
-  # and both vulnerability views after both source suites complete.
+  # after the source suites complete.
   make build
-  bash scripts/check-vulnerabilities.sh
 fi
