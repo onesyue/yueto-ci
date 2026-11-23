@@ -1,6 +1,7 @@
 """Exercise failures at the entrypoints called by the hosted workflows."""
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -45,6 +46,13 @@ class WorkflowScriptFailures(unittest.TestCase):
     def run_command(self, *command):
         return subprocess.run(command, cwd=self.source, env=self.env,
                               capture_output=True, text=True, timeout=20)
+
+    def workflow_step(self, filename, step_name):
+        workflow = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
+        matches = [step["run"] for job in workflow["jobs"].values()
+                   for step in job["steps"] if step.get("name") == step_name]
+        self.assertEqual(len(matches), 1, step_name)
+        return matches[0]
 
     def test_failed_dependency_setup_stops_all_followup_tools(self):
         self.executable(self.bin / "uv", 'printf "%s\n" "$1" >> "$CALLS"\nexit 37\n')
@@ -140,20 +148,60 @@ printf 'fixture another-platform.tar.xz\n' > "$2"
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("fixture-ui is not a static UI validation", result.stderr)
 
+    def test_failed_frontend_advisory_check_stops_before_miniapp(self):
+        gate = self.source / "scripts/npm-audit-gate.py"
+        gate.parent.mkdir()
+        gate.write_text(
+            "import os, sys\n"
+            "from pathlib import Path\n"
+            "with Path(os.environ['CALLS']).open('a') as log:\n"
+            "    log.write(Path(sys.argv[1]).name + '\\n')\n"
+            "raise SystemExit(37)\n",
+            encoding="utf-8",
+        )
+        result = self.run_script("ops-validation-npm-audit.sh")
+        self.assertEqual(result.returncode, 37, result.stderr)
+        self.assertEqual(self.log.read_text().splitlines(), ["frontend"])
+
+    def test_syft_bad_digest_stops_before_extraction_and_path_publication(self):
+        checksum = shutil.which("gsha256sum") if sys.platform == "darwin" else shutil.which("sha256sum")
+        self.assertIsNotNone(checksum, "workflow checksum tool is required")
+        (self.bin / "sha256sum").symlink_to(checksum)
+        self.executable(self.bin / "uname", 'case "$1" in -s) echo Linux;; -m) echo x86_64;; esac\n')
+        self.executable(self.bin / "curl", """
+echo download >> "$CALLS"
+while [ "$1" != --output ]; do shift; done
+echo fixture-archive > "$2"
+""")
+        self.executable(self.bin / "tar", 'echo unexpected-extraction >> "$CALLS"\nexit 39\n')
+        result = self.run_script("install-verified-syft.sh")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("FAILED", result.stdout, result.stderr)
+        self.assertEqual(self.log.read_text().splitlines(), ["download"])
+        self.assertEqual(list(self.runner.iterdir()), [])
+
+    def test_visual_capture_ref_mismatch_stops_before_rendering(self):
+        step = self.workflow_step("board-visual-capture.yml", "Capture the four native Linux views")
+        self.env.update(VISUAL_SPEC="plan-change-confirm", EXPECTED_SOURCE="a" * 40)
+        self.executable(self.bin / "git", 'echo "$*" >> "$CALLS"\necho ' + "b" * 40 + "\n")
+        self.executable(self.bin / "corepack", 'echo unexpected-corepack >> "$CALLS"\n')
+        result = self.run_command("/bin/bash", "-c", step)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(self.log.read_text().splitlines(), ["rev-parse HEAD"])
+        self.assertFalse((self.source / "visual-capture.json").exists())
+
     def test_toolchain_invalid_pin_or_image_digest_cannot_publish(self):
-        workflow = yaml.safe_load((ROOT / ".github/workflows/ci-toolchain.yml").read_text())
-        steps = {step["name"]: step for job in workflow["jobs"].values()
-                 for step in job["steps"] if "name" in step}
+        filename = "ci-toolchain.yml"
         pin = self.source / "images/yueops-ci-toolchain/uv.sha256"
         pin.parent.mkdir(parents=True)
         pin.write_text("fixture-invalid-digest\n")
         output = self.runner / "output"
         self.env.update(GITHUB_OUTPUT=str(output), DIGEST="sha256:1234")
-        read_pin = self.run_command("/bin/bash", "-c", steps["Read the uv pin"]["run"])
+        read_pin = self.run_command("/bin/bash", "-c", self.workflow_step(filename, "Read the uv pin"))
         self.assertEqual(read_pin.returncode, 1, read_pin.stderr)
         self.assertIn("uv.sha256 must be 64 hex digits", read_pin.stdout)
         self.assertFalse(output.exists())
-        print_digest = self.run_command("/bin/bash", "-c", steps["Print the image digest"]["run"])
+        print_digest = self.run_command("/bin/bash", "-c", self.workflow_step(filename, "Print the image digest"))
         self.assertEqual(print_digest.returncode, 1, print_digest.stderr)
         self.assertNotIn("toolchain image ghcr.io", print_digest.stdout)
 
