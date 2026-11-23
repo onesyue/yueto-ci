@@ -25,7 +25,7 @@ class BoardLocal(unittest.TestCase):
     def test_native_planner_and_workflow_authority(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            sha = json.loads((ROOT / 'native-node-contract.json').read_text())['yueboard_contract_pin']
+            sha = 'a' * 40
             roles = LOCAL.plan(ROOT, sha, output)
             expected = json.loads(subprocess.check_output(['bash', str(ROOT / 'scripts/plan-build-targets.sh'), 'yueboard', sha]))
             self.assertEqual(roles, [r['board_role'] for r in expected['validation_matrix']])
@@ -121,7 +121,7 @@ class BoardLocal(unittest.TestCase):
                         (log.parent/'role-result.json').write_text(json.dumps({'role': 'other' if mode == 'wrong-result' else role,
                             'source': 'a'*40, 'policy': 'b'*40, 'complete': mode != 'infra', 'exit_code': code}))
                     return code
-                with contextlib.redirect_stdout(stdout), patch.object(LOCAL, 'checkout'), patch.object(LOCAL, 'plan', return_value=roles), patch.object(LOCAL, 'workflow_contract', return_value={}), patch.object(LOCAL, 'execute_container', side_effect=execute), patch.object(LOCAL.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)):
+                with contextlib.redirect_stdout(stdout), patch.object(LOCAL, 'checkout'), patch.object(LOCAL, 'plan', return_value=roles), patch.object(LOCAL, 'workflow_contract', return_value={}), patch.object(LOCAL.subprocess, 'check_output', return_value='c'*40 + '\n') as resolution, patch.object(LOCAL, 'execute_container', side_effect=execute), patch.object(LOCAL.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)):
                     if mode.startswith('missing') or mode == 'wrong-result':
                         with self.assertRaises((OSError, ValueError)): LOCAL.run(source, policy, 'a'*40, 'b'*40, output)
                     else:
@@ -133,6 +133,8 @@ class BoardLocal(unittest.TestCase):
                         expected_failures = diagnostic + '\n' if mode == 'source-fail' else ''
                         self.assertEqual(stdout.getvalue(), expected_failures)
                         self.assertEqual((output/'failures.txt').read_text(), expected_failures)
+                self.assertEqual(resolution.call_count, 1)
+                self.assertEqual(resolution.call_args.args[0][-1], 'resolve-yueboard-ref')
                 for command in commands:
                     text = ' '.join(command)
                     self.assertNotIn('/var/run/docker.sock', text)
@@ -151,7 +153,7 @@ class BoardRole(unittest.TestCase):
         source = job/'source'; source.mkdir()
         temp = job/'temp'; temp.mkdir()
         (source/'.ci-policy').mkdir()
-        (job/'contract.json').write_text(json.dumps(LOCAL.workflow_contract(ROOT)))
+        (job/'contract.json').write_text(json.dumps(LOCAL.workflow_contract(ROOT) | {'promoted_board_ref': 'c'*40}))
         env = {'CI_CHECK_JOB': str(job), 'GITHUB_WORKSPACE': str(source), 'RUNNER_TEMP': str(temp),
                'CI_CHECK_SOURCE_SHA': 'a'*40, 'CI_CHECK_POLICY_SHA': 'b'*40, 'BOARD_ROLE': role,
                'YUE_CI_PYTHON': sys.executable, 'PATH': os.environ['PATH'], 'HOME': str(job)}
@@ -165,6 +167,8 @@ class BoardRole(unittest.TestCase):
             raise AssertionError(command)
         def run(command, env, **kwargs):
             calls.append((command, env))
+            if command[1].endswith('board-validation-preflight.sh') and command[2] == 'contract':
+                self.assertEqual(env['PROMOTED_BOARD_REF'], 'c'*40)
             if mode == 'diagnostic' and 'board-postgres-diagnostics.sh' in command[1]: raise subprocess.CalledProcessError(19, command)
             if mode == 'start' and command[:2] == ['docker', 'start']: raise subprocess.CalledProcessError(23, command)
             if mode == 'logs' and command[:2] == ['docker', 'logs']: raise subprocess.CalledProcessError(29, command)

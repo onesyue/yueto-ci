@@ -34,6 +34,8 @@ class ValidationOnlyTest(unittest.TestCase):
                 self.assertIs(plan['has_builds'], False)
                 self.assertIn('has_builds=false', getattr(result, 'outputs'))
                 self.assertIn('promote=false', getattr(result, 'outputs'))
+                if service == 'yueboard':
+                    self.assertIn('promoted_board_ref=' + 'c' * 40, result.outputs.splitlines())
 
     def test_invalid_modes_fail_before_emitting_any_plan(self):
         cases = [dict(REF_OVERRIDE=value) for value in ('', 'master', 'a' * 12, 'A' * 40, 'a' * 41)]

@@ -84,7 +84,8 @@ def run(report: dict) -> int:
     try:
         command(['bash', str(policy / 'scripts/board-validation-preflight.sh'), 'dependencies', str(source), str(policy)])
         # Cold isolated caches: no cache hit can bypass native checks.
-        command(['bash', str(policy / 'scripts/board-validation-preflight.sh'), 'contract', str(source), str(policy)])
+        command(['bash', str(policy / 'scripts/board-validation-preflight.sh'), 'contract', str(source), str(policy)],
+                {'PROMOTED_BOARD_REF': contract['promoted_board_ref']})
         if role in ('postgres', 'migration', 'e2e'):
             pg_id = capture(['docker', 'create', '--platform', 'linux/amd64',
                              '-e', 'POSTGRES_PASSWORD=ci', '-e', 'POSTGRES_DB=yueboard_test',
