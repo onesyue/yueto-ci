@@ -25,7 +25,6 @@ done
 case "$repo" in
   yueops) ;;
   yueboard|yue-node)
-    [ "$repo" = yueboard ] || [ "$mode" = remote ] || fail "$repo local validation is not implemented"
     [ "$prepare_only" = false ] && [ -z "$prepared" ] && [ -z "$board_sha" ] &&
       [ -z "${CI_CHECK_MIGRATION_BASE:-}" ] || fail 'Board/base/prepared options apply only to yueops'
     ;;
@@ -48,6 +47,14 @@ if [ "$repo" = yueops ]; then
   [[ "$board_sha" =~ ^[0-9a-f]{40}$ ]] || fail 'board ref must be an exact 40-hex commit SHA'
 fi
 [ "$mode" = remote ] || [ "$mode" = --local ] || usage
+if [ "$repo" = yue-node ] && [ "$mode" = --local ]; then
+  for tool in bash git jq python3; do
+    command -v "$tool" >/dev/null || fail "$tool is required for yue-node --local"
+  done
+  if [ "${#raw_sha}" -lt 40 ]; then
+    command -v gh >/dev/null || fail 'gh is required to resolve a short source SHA'
+  fi
+fi
 if [[ "$raw_sha" =~ ^[0-9a-f]{40}$ ]]; then
   full_sha=$raw_sha
 else
@@ -95,6 +102,17 @@ clone_at() {
   fi
   git -C "$destination" checkout --quiet --detach "$revision"
 }
+if [ "$repo" = yue-node ]; then
+  checkouts=$(mktemp -d "$output/checkouts.XXXXXX")
+  clone_at yueto-ci "$policy_sha" "$checkouts/policy" "$ROOT"
+  board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' \
+    "$checkouts/policy/native-node-contract.json") || fail 'invalid pinned Board revision'
+  clone_at yue-node "$full_sha" "$checkouts/source" "${YUE_NODE_CHECKOUT:-}"
+  clone_at yueboard "$board_pin" "$checkouts/board" "${YUEBOARD_CHECKOUT:-}"
+  python3 "$checkouts/policy/scripts/ci_check_node_local.py" "$checkouts/source" "$full_sha" \
+    "$checkouts/board" "$output"
+  exit
+fi
 if [ "$repo" = yueboard ]; then
   command -v docker >/dev/null || fail 'docker is required for --local'
   checkouts=$(mktemp -d "$output/checkouts.XXXXXX")
