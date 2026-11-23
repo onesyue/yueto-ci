@@ -38,35 +38,47 @@ class LockDiagnostics(unittest.TestCase):
     def execute(self, step, mode='ok'):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            docker = root / 'docker'
-            docker.write_text('''#!/usr/bin/env python3
-import os, sys
-from pathlib import Path
-args = sys.argv[1:]
-with (Path(os.environ['RUNNER_TEMP']) / 'calls').open('a') as f:
-    f.write(repr(args) + '\\n')
-if args[0] == 'logs':
-    print('deadlock detected\\nProcess 123: query one\\nProcess 456: query two')
-    sys.exit(17 if os.environ['MODE'] == 'logs_fail' else 0)
-assert args[:2] == ['exec', 'exact-service-id']
-assert '-X' in args and 'ON_ERROR_STOP=1' in args
-sql = args[-1]
-if os.environ['MODE'] == 'sql_fail': sys.exit(19)
-values = {'SELECT pg_reload_conf()': 't', 'SHOW log_lock_waits': 'on',
-          'SHOW deadlock_timeout': '200ms',
-          'SHOW log_line_prefix': '%m [%p] %q%u@%d app=%a xid=%x '}
-if sql in values:
-    print('wrong' if os.environ['MODE'] == sql else values[sql])
-else: assert sql.startswith('ALTER SYSTEM SET ')
+            tool_fixture = root / 'tools.sh'
+            tool_fixture.write_text('''sleep() { :; }
+docker() {
+printf '%s\\n' "$*" >> "$RUNNER_TEMP/calls"
+if [ "$1" = logs ]; then
+    printf '%s\\n' 'deadlock detected' 'Process 123: query one' 'Process 456: query two'
+    if [ "$MODE" = logs_fail ]; then return 17; fi
+    return 0
+fi
+[ "$#" -eq 12 ] || return 97
+[ "$1" = exec ] || return 97
+[ "$2" = exact-service-id ] || return 97
+[ "${8}" = -X ] || return 97
+[ "${10}" = ON_ERROR_STOP=1 ] || return 97
+sql=${12}
+if [ "$MODE" = sql_fail ]; then return 19; fi
+if [ "$MODE" = "$sql" ]; then
+    echo wrong
+    return 0
+fi
+case "$sql" in
+    'SELECT pg_reload_conf()') echo t ;;
+    'SHOW log_lock_waits') echo on ;;
+    'SHOW deadlock_timeout') echo 200ms ;;
+    'SHOW log_line_prefix') printf '%s\\n' '%m [%p] %q%u@%d app=%a xid=%x ' ;;
+    'ALTER SYSTEM SET '*) ;;
+    *) return 97 ;;
+esac
+}
 ''')
-            docker.chmod(0o755)
-            sleep = root / 'sleep'
-            sleep.write_text('#!/bin/sh\nexit 0\n'); sleep.chmod(0o755)
             script = str(ROOT / 'scripts/board-postgres-diagnostics.sh')
             body = step['run'].replace('.ci-policy/scripts/board-postgres-diagnostics.sh', script)
-            result = subprocess.run(['bash', '-c', body], text=True, capture_output=True,
-                timeout=15, env={**os.environ, 'PATH': str(root) + ':' + os.environ['PATH'],
-                                'PG_SERVICE': 'exact-service-id', 'RUNNER_TEMP': str(root), 'MODE': mode})
+            # Keep the real retry loop and Docker argv checks without starting
+            # an interpreter for each simulated SQL read or sleep.
+            result = subprocess.run(
+                ['bash', '-ec', 'source "$1"; export -f docker sleep; ' + body,
+                 '--', str(tool_fixture)],
+                text=True, capture_output=True, timeout=15,
+                env={**os.environ, 'PG_SERVICE': 'exact-service-id',
+                     'RUNNER_TEMP': str(root), 'MODE': mode},
+            )
             return result, (root / 'calls').read_text()
 
     def test_setup_effective_and_dependency_failures(self):
@@ -77,7 +89,11 @@ else: assert sql.startswith('ALTER SYSTEM SET ')
         for failure in ('sql_fail', 'SELECT pg_reload_conf()', 'SHOW log_lock_waits',
                         'SHOW deadlock_timeout', 'SHOW log_line_prefix'):
             with self.subTest(failure=failure):
-                self.assertNotEqual(self.execute(self.setup, failure)[0].returncode, 0)
+                result, calls = self.execute(self.setup, failure)
+                self.assertEqual(result.returncode, 19 if failure == 'sql_fail' else 1, result.stderr)
+                if failure.startswith('SHOW '):
+                    self.assertIn('PostgreSQL lock diagnostics did not take effect', result.stderr)
+                    self.assertEqual(sum(line.endswith(failure) for line in calls.splitlines()), 20)
 
     def test_complete_both_pid_report_and_collection_failure(self):
         result, _ = self.execute(self.collect)
