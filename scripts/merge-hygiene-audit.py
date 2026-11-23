@@ -2,8 +2,8 @@
 """Audit merged PRs via gh api. Exit 0 clean/accepted history, 1 findings, 2 incomplete.
 
 GitHub REST exposes current check runs, not a complete history of overwritten
-runs or dismissed reviews. Missing/ambiguous evidence fails closed. Approval must
-belong to the exact head; local receipts never replace native evidence.
+runs. Missing or ambiguous evidence fails closed. Local receipts never replace
+native evidence.
 This retrospective audit does not override GitHub branch rules.
 """
 import argparse
@@ -20,10 +20,8 @@ import tempfile
 import time
 
 REPOS = ("yueops", "yueboard", "yueto", "yueto-ci", "yuelink", "yuelink-ci", "yue-node")
-# Owner decision 2026-11-23 05:50 SGT (t1383s8203): yueto and yueto-ci merge
-# without an independent PR approval. Signatures, no-ff, status checks and every
-# other finding still apply; all other repositories keep the approval finding.
-REVIEW_EXEMPT_REPOS = frozenset({"yueto", "yueto-ci"})
+# Owner decision 2026-11-23 10:26 SGT (t1396u): independent PR approval is
+# optional in every repository. Signed no-ff merges and check evidence are required.
 ROOT = Path(__file__).resolve().parents[1]
 # Bump when the interpretation of cached remote evidence changes.
 CACHE_VERSION = 3
@@ -157,19 +155,9 @@ def all_rows(endpoint, key=None):
     return [row for batch in pages(endpoint, key) for row in batch]
 
 
-def findings(pr, reviews, checks, statuses, repo=None):
+def findings(pr, checks, statuses):
     merged = timestamp(pr["merged_at"])
     reasons = []
-    latest_reviews = {}
-    for review in sorted(reviews, key=lambda r: (r.get("submitted_at") or "", r["id"])):
-        if not review.get("submitted_at") or timestamp(review["submitted_at"]) > merged:
-            continue
-        if review["state"] in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED"):
-            latest_reviews[review["user"]["login"]] = review
-    if repo not in REVIEW_EXEMPT_REPOS and not any(r["state"] == "APPROVED" and login != pr["user"]["login"]
-               and r["user"].get("type") != "Bot" and r.get("commit_id") == pr["head"]["sha"]
-               for login, r in latest_reviews.items()):
-        reasons.append("no_approving_review_at_merge")
 
     # Only checks from the same app/suite/name can replace one another.
     # Without suite identity, preserve each run rather than hide an independent
@@ -258,18 +246,32 @@ def baseline(path):
     return frozen_at, result
 
 
-def merged_findings(owner, repo, pr):
-    merge_sha = pr["merge_commit_sha"]
+def merge_commit_evidence(prefix, merge_sha):
     if not isinstance(merge_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", merge_sha):
         raise ValueError("invalid PR merge commit SHA")
+    commit = api(f"{prefix}/git/commits/{merge_sha}")
+    parents = commit["parents"]
+    if (commit["sha"] != merge_sha or not isinstance(parents, list)
+            or any(not isinstance(p, dict) or not isinstance(p.get("sha"), str)
+                   or not re.fullmatch(r"[0-9a-f]{40}", p["sha"]) for p in parents)
+            or len({p["sha"] for p in parents}) != len(parents)):
+        raise ValueError("invalid merge parent evidence")
+    return parents, commit["verification"]["verified"] is True
+
+
+def merged_findings(owner, repo, pr):
     prefix = f"repos/{owner}/{repo}"
     sha = pr["head"]["sha"]
-    # Revalidate every mutable evidence page through HTTP/ETag. Never cache a
-    # verdict or let a local artifact replace GitHub review/check evidence.
-    return findings(
-        pr, all_rows(f'{prefix}/pulls/{pr["number"]}/reviews'),
-        all_rows(f"{prefix}/commits/{sha}/check-runs?filter=all", "check_runs"),
-        all_rows(f"{prefix}/commits/{sha}/statuses"), repo=repo)
+    # Revalidate native evidence through HTTP/ETag. Cache evidence, never verdicts.
+    parents, signature_verified = merge_commit_evidence(prefix, pr["merge_commit_sha"])
+    reasons = findings(
+        pr, all_rows(f"{prefix}/commits/{sha}/check-runs?filter=all", "check_runs"),
+        all_rows(f"{prefix}/commits/{sha}/statuses"))
+    if not signature_verified:
+        reasons.append("merge_commit_signature_unverified")
+    if len(parents) != 2:
+        reasons.append("merge_commit_not_no_ff")
+    return sorted(reasons)
 
 
 def merged_row(owner, repo, pr):
@@ -282,17 +284,9 @@ def indirect_merge(owner, repo, pr):
     """Attribute automatic ancestor closure to its independently admitted merge source."""
     prefix = f"repos/{owner}/{repo}"
     merge_sha, old_head = pr["merge_commit_sha"], pr["head"]["sha"]
-    commit = api(f"{prefix}/git/commits/{merge_sha}")
-    if not isinstance(commit, dict):
-        raise ValueError("invalid indirect merge commit response")
-    parents = commit.get("parents")
-    if (commit.get("sha") != merge_sha or not isinstance(parents, list)
-            or any(not isinstance(p, dict) or not isinstance(p.get("sha"), str)
-                   or not re.fullmatch(r"[0-9a-f]{40}", p["sha"]) for p in parents)
-            or len({p["sha"] for p in parents}) != len(parents)):
-        raise ValueError("invalid indirect merge parent evidence")
-    if len(parents) != 2:
-        return None  # Unsupported topology retains ordinary findings and history rules.
+    parents, signature_verified = merge_commit_evidence(prefix, merge_sha)
+    if len(parents) != 2 or not signature_verified:
+        return None  # Keep findings tied to the actual merge commit.
     first, second = (p["sha"] for p in parents)
     if old_head == second:
         return None  # A direct source's red/missing evidence is never transferable.
@@ -340,7 +334,7 @@ def indirect_merge(owner, repo, pr):
     # baseline exception or post-merge green substitution.
     direct_row = merged_row(owner, repo, direct)
     if direct_row["findings"]:
-        raise ValueError("indirect merge direct source lacks native review/check admission")
+        raise ValueError("indirect merge direct source lacks native merge admission")
     return {"direct_pr": direct["number"], "direct_head": second, "merge_sha": merge_sha,
             "direct_merged_at": direct["merged_at"], "indirect_merged_at": pr["merged_at"]}
 
@@ -387,7 +381,6 @@ def premerge(owner, repo, number):
     if any(not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha)
            for sha in (head_sha, base_sha)):
         raise ValueError("invalid PR base or head SHA")
-    reviews = all_rows(f"{prefix}/pulls/{number}/reviews")
     checks = all_rows(f"{prefix}/commits/{head_sha}/check-runs?filter=all", "check_runs")
     statuses = all_rows(f"{prefix}/commits/{head_sha}/statuses")
     now = datetime.now(timezone.utc)
@@ -396,7 +389,7 @@ def premerge(owner, repo, number):
     if refreshed["head"]["sha"] != head_sha or refreshed["base"]["sha"] != base_sha:
         raise ValueError("PR head or base changed while fetching evidence; audit incomplete")
     return {"repo": repo, "pr": number, "url": pr["html_url"], "head": head_sha,
-            "merged_at": None, "findings": findings(candidate, reviews, checks, statuses, repo=repo)}
+            "merged_at": None, "findings": findings(candidate, checks, statuses)}
 
 
 def main():
@@ -407,7 +400,7 @@ def main():
     parser.add_argument("--baseline", type=Path, default=None)
     parser.add_argument("--format", choices=("json", "text"), default="text")
     parser.add_argument("--premerge", nargs=2, metavar=("REPO", "PR"),
-                        help="also require exact-head approval and passing current checks for an open PR")
+                        help="also require passing current checks for an open PR")
     args = parser.parse_args()
     if args.premerge and (args.premerge[0] not in REPOS or not args.premerge[1].isdigit()
                           or int(args.premerge[1]) <= 0):

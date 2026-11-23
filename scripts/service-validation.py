@@ -36,6 +36,10 @@ def results(builds, validations, jobs):
         if role and role != "legacy":
             name += "-" + role
         groups.setdefault(group, []).append(completed(name))
+    # Each source-wide advisory gate covers every image built from that source.
+    for group in ("yueops", "yueboard", "yue-node"):
+        if group in groups:
+            groups[group].append(completed("freshness-" + group))
     services = {}
     for build in builds:
         service, group = build["service"], build["validation"]

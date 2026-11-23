@@ -59,9 +59,15 @@ class ValidationWrapperFailureTests(unittest.TestCase):
         )
         self.assertFalse(Path(self.env["GITHUB_PATH"]).exists())
 
-    def test_frontend_and_miniapp_require_the_source_audit_gate(self):
-        self.stub("bin/npm", 'printf "%s\\n" "$*" >> "$CALLS"')
+    def test_npm_audit_requires_the_source_gate(self):
         self.stub("bin/python", 'echo unexpected-audit >> "$CALLS"')
+        result = self.run_script("ops-validation-npm-audit.sh")
+        self.assert_exit(result, 1)
+        self.assertIn("source-owned npm audit gate is missing", result.stdout)
+        self.assertEqual(self.calls.read_text(), "")
+
+    def test_frontend_and_miniapp_run_their_build_steps(self):
+        self.stub("bin/npm", 'printf "%s\\n" "$*" >> "$CALLS"')
         for script, expected_calls in (
             ("ops-validation-frontend.sh", ["ci --ignore-scripts", "run lint", "run build"]),
             ("ops-validation-miniapp.sh", ["run lint", "run build"]),
@@ -69,8 +75,7 @@ class ValidationWrapperFailureTests(unittest.TestCase):
             with self.subTest(script=script):
                 self.calls.write_text("")
                 result = self.run_script(script)
-                self.assert_exit(result, 1)
-                self.assertIn("source-owned npm audit gate is missing", result.stdout)
+                self.assert_exit(result, 0)
                 self.assertEqual(self.calls.read_text().splitlines(), expected_calls)
 
     def test_node_toolchain_refuses_ambiguous_release_metadata(self):

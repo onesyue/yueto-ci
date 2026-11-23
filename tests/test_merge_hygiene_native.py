@@ -26,8 +26,6 @@ class NativeEvidence(unittest.TestCase):
         self.seen.append(endpoint)
         if endpoint.endswith('/pulls/203'):
             return self.pr if self.seen.count(endpoint) == 1 else self.refreshed
-        if '/reviews?' in endpoint:
-            return self.fixture['reviews']
         if '/check-runs?' in endpoint:
             return {'check_runs': self.fixture['checks']}
         if '/statuses?' in endpoint:
@@ -38,27 +36,11 @@ class NativeEvidence(unittest.TestCase):
         with patch.object(AUDIT, 'api', side_effect=self.api):
             return AUDIT.premerge('onesyue', 'yueops', 203)
 
-    def test_exact_head_approval_needs_no_local_artifact(self):
+    def test_unreviewed_open_pr_passes_with_native_checks(self):
         with patch.object(Path, 'read_text', side_effect=AssertionError('no offline evidence')):
             row = self.premerge()
         self.assertEqual(row['findings'], [])
         self.assertEqual(set(row), {'repo', 'pr', 'url', 'head', 'merged_at', 'findings'})
-
-    def test_missing_stale_and_malformed_review_commit_are_rejected(self):
-        for value in (None, '', 'b' * 40, 'invalid'):
-            with self.subTest(commit=value):
-                self.fixture['reviews'][0]['commit_id'] = value
-                self.assertIn('no_approving_review_at_merge', self.premerge()['findings'])
-        self.fixture['reviews'][0].pop('commit_id')
-        self.assertIn('no_approving_review_at_merge', self.premerge()['findings'])
-
-    def test_new_review_replaces_stale_approval_only_for_current_commit(self):
-        old = self.fixture['reviews'][0] | {'commit_id': 'b' * 40}
-        self.fixture['reviews'] = [old]
-        self.assertIn('no_approving_review_at_merge', self.premerge()['findings'])
-        self.fixture['reviews'].append(old | {'id': 2, 'commit_id': self.pr['head']['sha'],
-                                             'submitted_at': '2026-11-02T09:01:00Z'})
-        self.assertEqual(self.premerge()['findings'], [])
 
     def test_head_or_base_movement_is_incomplete(self):
         for field in ('head', 'base'):

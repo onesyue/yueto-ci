@@ -285,13 +285,31 @@ exit 0
     def cosign_installer_environment(self, github_path):
         import shutil
 
-        self.shim("uname", 'case "$1" in -s) echo Linux;; -m) echo x86_64;; *) exit 97;; esac\n')
         checksum = shutil.which("gsha256sum") or shutil.which("sha256sum")
         self.assertIsNotNone(checksum, "GNU sha256sum is required by the Cosign installer fixture")
         (self.base / "sha256sum").symlink_to(checksum)
         return {**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)}
 
+    def cosign_fixture_platform(self, system="Linux", machine="x86_64"):
+        # The artifact in these installer controls is a shell fixture. Exercise
+        # the real platform on matching hosts and supply it on other hosts.
+        if (os.uname().sysname, os.uname().machine) != (system, machine):
+            self.shim("uname", f'case "$1" in -s) echo {system} ;; -m) echo {machine} ;; *) exit 2 ;; esac')
+
+    def test_cosign_rejects_unsupported_platform_before_download(self):
+        self.shim("curl", 'echo unexpected-download >> "$CALLS"; exit 97')
+        for system, machine in (("Darwin", "x86_64"), ("Linux", "aarch64")):
+            with self.subTest(system=system, machine=machine):
+                (self.base / "uname").unlink(missing_ok=True)
+                self.cosign_fixture_platform(system, machine)
+                result = subprocess.run(["bash", str(ROOT / "scripts/install-cosign.sh")],
+                                        env=self.env, capture_output=True, text=True, timeout=15)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("reviewed only for Linux x86_64", result.stderr)
+                self.assertEqual(self.lines("calls"), [])
+
     def test_cosign_verified_install_and_version_gate(self):
+        self.cosign_fixture_platform()
         # Replace only the reviewed digest in a private fixture copy so real
         # sha256sum, install and PATH handoff can run without a network fetch.
         source = (ROOT / "scripts/install-cosign.sh").read_text()
@@ -388,6 +406,7 @@ exit 97
                     self.assertEqual(installed.stat().st_mode & 0o777, 0o755)
 
     def test_cosign_bad_digest_stops_before_install_or_execution(self):
+        self.cosign_fixture_platform()
         self.shim("curl", """
 while [ "$#" -gt 0 ]; do
   if [ "$1" = -o ]; then echo corrupt > "$2"; exit 0; fi
