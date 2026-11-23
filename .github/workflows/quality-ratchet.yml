@@ -1,0 +1,84 @@
+name: Quality ratchet report
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Public target repository (owner/name)
+        required: true
+        type: string
+        default: onesyue/yueto-ci
+      revision:
+        description: Exact target commit SHA
+        required: true
+        type: string
+      base:
+        description: Exact base commit SHA containing the reviewed baseline
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Complexity and dead-code report
+    if: github.repository == 'onesyue/yueto-ci'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: policy
+          persist-credentials: false
+
+      - name: Validate manual revisions
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REVISION: ${{ inputs.revision }}
+          BASE: ${{ inputs.base }}
+        run: |
+          [[ "$REVISION" =~ ^[0-9a-f]{40}$ && "$BASE" =~ ^[0-9a-f]{40}$ ]]
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.repository || github.repository }}
+          ref: ${{ inputs.revision || github.sha }}
+          path: target
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.2'
+          cache: false
+
+      - name: Install analyzers
+        run: |
+          python3 -m pip install -r policy/requirements-quality.txt
+          go install golang.org/x/tools/cmd/deadcode@v0.51.0
+          go env GOPATH | sed 's|$|/bin|' >> "$GITHUB_PATH"
+
+      - name: Measure target against the base revision
+        id: measure
+        env:
+          BASE: ${{ inputs.base || github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          git -C target merge-base --is-ancestor "$BASE" HEAD
+          python3 policy/scripts/complexity-ratchet.py target --base "$BASE"
+
+      - name: Summarize report status
+        if: always()
+        env:
+          MEASURE_OUTCOME: ${{ steps.measure.outcome || 'skipped' }}
+        run: |
+          printf 'Quality ratchet (report only): %s. See the job log for findings or scan errors.\n' \
+            "$MEASURE_OUTCOME" >> "$GITHUB_STEP_SUMMARY"

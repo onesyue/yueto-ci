@@ -1074,9 +1074,17 @@ class BuildPolicyTest(unittest.TestCase):
                 "ci-toolchain.yml",
                 "image-rescan.yml",
                 "policy-ci.yml",
+                "quality-ratchet.yml",
                 "weekly-vuln-sbom.yml",
             ],
         )
+
+        report = (WORKFLOW_DIR / "quality-ratchet.yml").read_text(encoding="utf-8")
+        self.assertIn("permissions:\n  contents: read\n", report)
+        self.assertIn("continue-on-error: true", report)
+        self.assertIn('complexity-ratchet.py target --base "$BASE"', report)
+        for forbidden in ("secrets.", "packages: write", "id-token: write", "pull_request_target"):
+            self.assertNotIn(forbidden, report)
 
         toolchain = (WORKFLOW_DIR / "ci-toolchain.yml").read_text(encoding="utf-8")
         toolchain_code = "\n".join(
