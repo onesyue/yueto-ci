@@ -1,0 +1,85 @@
+name: Build reviewed HY2 probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.repository == 'onesyue/yueto-ci' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: policy
+          persist-credentials: false
+      - name: Mint read-only source token
+        id: source
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: |
+            hysteria
+            quic-go
+          permission-contents: read
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/hysteria
+          ref: c7c91bb398460031aeda898297a5ef4743c4c583
+          token: ${{ steps.source.outputs.token || secrets.YUETO_CI_PAT }}
+          fetch-depth: 0
+          path: hysteria
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/quic-go
+          ref: 6e04cc5812b7d1041bd0382c953149076e1a5def
+          token: ${{ steps.source.outputs.token || secrets.YUETO_CI_PAT }}
+          fetch-depth: 0
+          path: quic-go
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.4'
+          cache: false
+      - name: Verify signed tags and build the Linux observer
+        env:
+          GOWORK: 'off'
+          GOTOOLCHAIN: local
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: amd64
+          GOAMD64: v1
+          GOPRIVATE: github.com/onesyue/*
+        run: |
+          set -euo pipefail
+          export GNUPGHOME
+          GNUPGHOME=$(mktemp -d)
+          gpg --batch --import policy/policy/yueops-owner.gpg
+          for item in hysteria:core/v2.14.0-yue.1 hysteria:extras/v2.14.0-yue.1 quic-go:v0.65.1-yue.1; do
+            repo=${item%%:*}
+            tag=${item#*:}
+            test "$(git -C "$repo" rev-parse "$tag^{}")" = "$(git -C "$repo" rev-parse HEAD)"
+            git -C "$repo" verify-tag --raw "$tag" 2> "$RUNNER_TEMP/tag-status"
+            grep -Eq '^\[GNUPG:\] VALIDSIG CEF96E9A4ECB741C78329CA3FE2659E6AC769954 .* D9D3C6E59E7465BD07C2177142239A996FDA9F55$' "$RUNNER_TEMP/tag-status"
+          done
+          git config --global url."file://$PWD/quic-go".insteadOf https://github.com/onesyue/quic-go
+          mkdir artifact
+          (cd hysteria/app && go build -mod=readonly -trimpath -buildvcs=true -o ../../artifact/hysteria-probe .)
+          cd artifact
+          go version -m hysteria-probe > buildinfo.txt
+          grep -Fx $'\tbuild\tvcs.revision=c7c91bb398460031aeda898297a5ef4743c4c583' buildinfo.txt
+          grep -Fx $'\tbuild\tvcs.modified=false' buildinfo.txt
+          grep -Fx $'\t=>\tgithub.com/onesyue/quic-go\tv0.65.1-yue.1\th1:PakWfZivnEvnlMLIinntBoQ7vYoFd8cvv1iX5gVtX54=' buildinfo.txt
+          sha256sum hysteria-probe > SHA256SUMS
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: hy2-probe-c7c91bb398460031aeda898297a5ef4743c4c583
+          path: artifact/
+          if-no-files-found: error
