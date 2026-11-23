@@ -166,6 +166,22 @@ class PlanPromotionGateTest(unittest.TestCase):
             output.touch()
             bin_dir = Path(temp) / "bin"
             bin_dir.mkdir()
+            # Run the real plan and resolver against an offline promoted-image fixture.
+            policy = Path(temp) / "policy"
+            scripts = policy / "scripts"
+            scripts.mkdir(parents=True)
+            for name in ("services.json", "validation-targets.json"):
+                (policy / name).symlink_to(ROOT / name)
+            for name in ("plan-build-targets.sh", "authorize-yueboard-build-plan.sh",
+                         "freeze-build-plan.sh", "ci-retry.sh"):
+                (scripts / name).symlink_to(ROOT / "scripts" / name)
+            shutil.copy(ROOT / "scripts/validate-native-node-contract.py", scripts)
+            (scripts / "input-fingerprint.py").write_text(
+                'class Unknown(Exception): pass\n'
+                'def ghcr_latest(service, user, password):\n'
+                '    assert (service, user, password) == ("yueboard", "fixture", "fixture")\n'
+                '    return "sha256:" + "a" * 64, "c" * 40\n'
+            )
             curl = bin_dir / "curl"
             curl.write_text("#!/bin/sh\necho 'unexpected fixture network request' >&2\nexit 97\n")
             if resolve_branch:
@@ -186,13 +202,15 @@ class PlanPromotionGateTest(unittest.TestCase):
                 "WORKFLOW_GIT_REF": "refs/heads/master",
                 "MANUAL_PROMOTE": "false",
                 "DISPATCH_PROMOTE": "false",
-                "YUEBOARD_CONTRACT_REF": json.loads((ROOT / "native-node-contract.json").read_text())["yueboard_contract_pin"],
+                "YUEBOARD_CONTRACT_REF": "",
+                "GHCR_USER": "fixture",
+                "GHCR_PASSWORD": "fixture",
                 "GITHUB_OUTPUT": str(output),
                 "RUNNER_TEMP": temp,
                 **overrides,
             }
             result = subprocess.run(
-                ["bash", "-c", plan_script()], cwd=ROOT, env=env,
+                ["bash", "-c", plan_script()], cwd=policy, env=env,
                 text=True, capture_output=True, timeout=60,
             )
             result.outputs = output.read_text()  # type: ignore[attr-defined]
@@ -201,8 +219,11 @@ class PlanPromotionGateTest(unittest.TestCase):
                                   if target_plan.exists() else None)
             return result
 
-    def test_ops_requires_explicit_board_context_and_preserves_noncentral_identity(self):
-        for board in ("", "master", "b" * 12, "B" * 40):
+    def test_ops_resolves_promoted_context_and_preserves_explicit_identity(self):
+        default = self.run_plan(SERVICE="yueops", REF_OVERRIDE="a" * 40)
+        self.assertEqual(default.returncode, 0, default.stderr)
+        self.assertIn("yueboard_contract_ref=" + "c" * 40, default.outputs)
+        for board in ("master", "b" * 12, "B" * 40):
             with self.subTest(board=board):
                 result = self.run_plan(SERVICE="yueops", REF_OVERRIDE="a" * 40,
                                        YUEBOARD_CONTRACT_REF=board)
@@ -656,7 +677,8 @@ class PolicyCiRunsEveryTestFileTest(unittest.TestCase):
         files = sorted(p.name for p in (ROOT / "tests").glob("test_*.py"))
         self.assertIn("test_hardening_20260927.py", files)
         self.assertIn("test_policy_discovery_contract.py", files)
-        self.assertIn("python3 scripts/run-policy-tests.py", policy)
+        self.assertIn("run: scripts/check-policy.sh ci", policy)
+        self.assertIn("python3 scripts/run-policy-tests.py", (ROOT / "scripts/check-policy.sh").read_text())
 
 
 if __name__ == "__main__":

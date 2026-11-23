@@ -9,6 +9,7 @@ export GITHUB_PATH=$RUNNER_TEMP/github-path
 export GITHUB_ENV=$RUNNER_TEMP/github-env
 export YUE_CI_PYTHON=/usr/local/bin/python3
 export TZ=UTC
+export NPM_CONFIG_AUDIT=false
 board_checkout=$GITHUB_WORKSPACE/.ci-yueboard
 policy_checkout=$GITHUB_WORKSPACE/.ci-policy
 mkdir -p "$RUNNER_TEMP/ops-admission"
@@ -41,7 +42,7 @@ run_step() {
   (
     cd "$directory"
     case "$step" in
-      dependencies|selection|backend|notices) export UV_PYTHON_DOWNLOADS=never ;;
+      dependencies|selection|backend|notices|python-audit) export UV_PYTHON_DOWNLOADS=never ;;
     esac
     case "$step" in
       selection|backend)
@@ -76,5 +77,7 @@ else
   run_step miniapp "$GITHUB_WORKSPACE/telegram-bot/yue/miniapp"
   run_step node
   run_step migrations
+  run_step python-audit
+  run_step npm-audit
   run_step terminal
 fi

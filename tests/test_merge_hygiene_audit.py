@@ -27,33 +27,35 @@ class MergeHygieneAudit(unittest.TestCase):
         self.fixture = json.loads((ROOT / "tests/fixtures/merge-hygiene/approved.json").read_text())
 
     def findings(self):
-        return AUDIT.findings(**self.fixture)
+        return AUDIT.findings(self.fixture["pr"], self.fixture["checks"], self.fixture["statuses"])
 
     def test_clean(self):
         self.assertEqual(self.findings(), [])
 
-    def test_no_late_self_bot_or_dismissed_approval(self):
-        for change in ({"submitted_at": "2026-11-02T11:00:00Z"}, {"state": "DISMISSED"},
-                       {"user": {"login": "author"}}, {"user": {"login": "bot", "type": "Bot"}}):
-            with self.subTest(change=change):
-                original = self.fixture["reviews"][0]
-                self.fixture["reviews"] = [original | change]
-                self.assertIn("no_approving_review_at_merge", self.findings())
-                self.fixture["reviews"] = [original]
-        self.fixture["reviews"].append(self.fixture["reviews"][0] | {
-            "id": 2, "state": "CHANGES_REQUESTED", "submitted_at": "2026-11-02T09:45:00Z"})
-        self.assertIn("no_approving_review_at_merge", self.findings())
+    def test_unreviewed_no_ff_merge_requires_verified_signature(self):
+        pr = self.fixture["pr"]
+        commit = {"sha": pr["merge_commit_sha"],
+                  "parents": [pr["base"], pr["head"]],
+                  "verification": {"verified": True, "reason": "valid"}}
 
-    def test_review_exempt_repos_skip_only_the_approval_finding(self):
-        self.fixture["reviews"] = []
-        for repo in ("yueops", "yueboard", "yue-node", None):
-            with self.subTest(repo=repo):
-                self.assertIn("no_approving_review_at_merge", AUDIT.findings(**self.fixture, repo=repo))
-        for repo in ("yueto", "yueto-ci"):
-            with self.subTest(repo=repo):
-                self.assertNotIn("no_approving_review_at_merge", AUDIT.findings(**self.fixture, repo=repo))
-        self.fixture["checks"][0] = self.fixture["checks"][0] | {"conclusion": "failure"}
-        self.assertTrue(any("nonpassing" in f for f in AUDIT.findings(**self.fixture, repo="yueto-ci")))
+        def api(endpoint):
+            if endpoint.endswith(f'/git/commits/{pr["merge_commit_sha"]}'):
+                return commit
+            if "/check-runs?" in endpoint:
+                return {"check_runs": self.fixture["checks"]}
+            if "/statuses?" in endpoint:
+                return self.fixture["statuses"]
+            self.fail(f"unexpected endpoint: {endpoint}")
+
+        with patch.object(AUDIT, "api", side_effect=api):
+            self.assertEqual(AUDIT.merged_findings("onesyue", "yueops", pr), [])
+            commit["verification"] = {"verified": False, "reason": "unsigned"}
+            self.assertEqual(AUDIT.merged_findings("onesyue", "yueops", pr),
+                             ["merge_commit_signature_unverified"])
+            commit["verification"] = {"verified": True, "reason": "valid"}
+            commit["parents"] = [pr["base"]]
+            self.assertEqual(AUDIT.merged_findings("onesyue", "yueops", pr),
+                             ["merge_commit_not_no_ff"])
 
     def test_failing_pending_and_late_success_checks(self):
         check = self.fixture["checks"][0]
@@ -136,13 +138,15 @@ class MergeHygieneAudit(unittest.TestCase):
     def test_pagination_and_head_sha_endpoints(self):
         fixture = self.fixture
         pr = fixture["pr"]
+        fixture["checks"][0]["conclusion"] = "failure"
         seen = []
         def api(endpoint):
             seen.append(endpoint)
             if "/pulls?" in endpoint:
                 return [pr | {"merged_at": None}] * 100 if endpoint.endswith("&page=1") else [pr]
-            if "/reviews?" in endpoint:
-                return []
+            if endpoint.endswith(f'/git/commits/{pr["merge_commit_sha"]}'):
+                return {"sha": pr["merge_commit_sha"], "parents": [pr["base"], pr["head"]],
+                        "verification": {"verified": True}}
             if "/check-runs?" in endpoint:
                 return {"check_runs": fixture["checks"]}
             return fixture["statuses"]
@@ -158,7 +162,7 @@ class MergeHygieneAudit(unittest.TestCase):
         import io
         row = {"repo": "yueops", "pr": 203, "head": self.fixture["pr"]["head"]["sha"],
                "merged_at": self.fixture["pr"]["merged_at"],
-               "findings": ["no_approving_review_at_merge"], "exception": None}
+               "findings": ["no_check_evidence_at_merge"], "exception": None}
         for rows, expected in (([], 0), ([row], 1)):
             with patch("sys.argv", ["audit", "--format", "json"]), patch.object(AUDIT, "audit", return_value=rows):
                 with contextlib.redirect_stdout(io.StringIO()) as output:

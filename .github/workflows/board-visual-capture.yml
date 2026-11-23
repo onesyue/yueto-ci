@@ -5,8 +5,12 @@ name: Capture reviewed Board native visuals
 on:
   workflow_dispatch:
     inputs:
+      yueboard_contract_ref:
+        description: Exact YueBoard commit to capture (defaults to the promoted revision)
+        type: string
+        required: false
       spec:
-        description: Reviewed four-view visual spec to capture at the pinned Board revision
+        description: Reviewed four-view visual spec to capture at the selected Board revision
         type: choice
         default: plan-change-confirm
         options:
@@ -15,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: board-visual-capture
@@ -49,14 +54,14 @@ jobs:
           persist-credentials: false
       - name: Select reviewed source
         id: source
+        env:
+          YUEBOARD_CONTRACT_REF: ${{ inputs.yueboard_contract_ref }}
+          GHCR_USER: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
+          GHCR_PASSWORD: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
         run: |
-          python3 - <<'PY'
-          import json, os, re
-          revision = json.load(open('policy/native-node-contract.json'))['yueboard_contract_pin']
-          assert re.fullmatch('[0-9a-f]{40}', revision)
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
-              output.write(f'revision={revision}\n')
-          PY
+          set -euo pipefail
+          revision="$(python3 policy/scripts/validate-native-node-contract.py resolve-yueboard-ref --explicit="$YUEBOARD_CONTRACT_REF")"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
       - name: Mint read-only source token (GitHub App)
         id: source_token
         if: vars.YUETO_CI_APP_CLIENT_ID != ''

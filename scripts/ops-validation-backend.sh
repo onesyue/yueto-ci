@@ -5,32 +5,11 @@ set -euo pipefail
 export YUEBOARD_REPO_PATH="$PWD/.ci-yueboard"
 export YUETO_CI_REPO_PATH="$PWD/.ci-policy"
 security_report=$(mktemp "${RUNNER_TEMP:?}/security-scan.XXXXXX.json")
-python_lock_audit=$(mktemp "${RUNNER_TEMP:?}/python-lock-audit.XXXXXX.txt")
-python_audit_cache=$(mktemp -d "${RUNNER_TEMP:?}/python-audit-cache.XXXXXX")
-python_audit_reports=$(mktemp -d "${RUNNER_TEMP:?}/python-audit-reports.${GITHUB_RUN_ID:?}.${GITHUB_RUN_ATTEMPT:?}.${OPS_ROLE:?}.XXXXXX")
-cleanup_reports() {
-  rm -f -- "$security_report" "$python_lock_audit"
-  rm -rf -- "$python_audit_cache"
-}
-trap cleanup_reports EXIT
+trap 'rm -f -- "$security_report"' EXIT
 uv lock --check
 .venv/bin/python scripts/check-python-dependency-groups.py
 bash scripts/security_scan.sh --json | tee "$security_report"
 jq -e '.fail == 0' "$security_report" >/dev/null
-uv export --frozen --all-groups --no-emit-local \
-  --no-annotate --no-header --output-file "$python_lock_audit"
-# Provider coverage differs: Mako's 2026-10-05 advisory was present
-# in OSV while a fresh PyPI audit still reported zero findings.
-for vulnerability_service in pypi osv; do
-  uv run --frozen --only-group audit pip-audit \
-    --requirement "$python_lock_audit" \
-    --progress-spinner off --require-hashes --disable-pip --strict \
-    --cache-dir "$python_audit_cache" \
-    --vulnerability-service "$vulnerability_service" \
-    --format json --output "$python_audit_reports/$vulnerability_service.json"
-  jq -e '.dependencies | type == "array" and length >= 100 and all(.[]; .vulns == [] and (has("skip_reason") | not))' \
-    "$python_audit_reports/$vulnerability_service.json" >/dev/null
-done
 .venv/bin/python -m compileall -q web checkin-api telegram-bot/yue
 uv run --frozen --only-group lint ruff check .
 .venv/bin/python scripts/audit-route-consistency.py

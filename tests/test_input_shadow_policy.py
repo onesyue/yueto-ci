@@ -28,6 +28,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
@@ -332,7 +334,7 @@ class ShadowWiringTest(unittest.TestCase):
                         "scripts/verification-evidence.py probe", "shadow-ci"):
             self.assertNotIn(retired, text)
         self.assertNotIn("needs.validate.result == 'skipped'", text)
-        self.assertIn("    needs: [plan, validate, ops-service-selection]\n", text)
+        self.assertIn("    needs: [plan, validate, freshness, ops-service-selection]\n", text)
 
     def test_diagnostics_retired_and_full_validation_required(self):
         self.assert_release_wiring(WORKFLOW.read_text())
@@ -596,12 +598,7 @@ class AffectedFeedbackTest(unittest.TestCase):
 
 
 
-def _job(name: str, conclusion: str = "success", labels=None, group="GitHub Actions") -> dict:
-    return {"name": name, "conclusion": conclusion, "labels": labels or ["ubuntu-24.04"],
-            "runner_group_name": group, "started_at": "2026-09-24T01:00:00Z",
-            "completed_at": "2026-09-24T01:20:00Z", "id": 1}
-
-
+BINDING = "a" * 64 + ":" + "b" * 64
 PLAN_LOG = """2026-09-24T01:00:00.1Z ##[group]Runner Image
 2026-09-24T01:00:00.2Z Image: ubuntu-24.04
 2026-09-24T01:00:00.3Z Version: 20260907.300.1
@@ -609,71 +606,141 @@ PLAN_LOG = """2026-09-24T01:00:00.1Z ##[group]Runner Image
 2026-09-24T01:00:01.1Z   SERVICE: yueops
 2026-09-24T01:00:01.2Z   REF_OVERRIDE: {ref}
 2026-09-24T01:00:01.3Z   EVENT_NAME: workflow_dispatch
-2026-09-24T01:00:01.4Z   MANUAL_YUEBOARD_CONTRACT_REF:
-"""
+2026-09-24T01:00:01.4Z   VALIDATION_IDENTITY: """ + BINDING + "\n"
 
 
 class EvidenceProbeTest(unittest.TestCase):
     NOW = dt.datetime(2026, 9, 24, 3, 0, tzinfo=dt.timezone.utc)
     REF = "b" * 40
 
-    def current(self) -> dict:
-        return {"repository": "onesyue/yueto-ci", "run_id": 99, "head_sha": "c" * 40,
-                "default_branch": "master", "service": "yueops", "ref": self.REF,
-                "validation_jobs": ["validate-yueops"], "image_version": "20260907.300.1"}
+    def setUp(self):
+        self.current = {"repository": "onesyue/yueto-ci", "run_id": 99, "head_sha": "c" * 40,
+                        "default_branch": "master", "service": "yueops", "ref": self.REF,
+                        "validation_jobs": ["validate-yueops", "select-yue-bot"], "binding": BINDING,
+                        "image_version": "20260907.300.1", "enabled": True}
+        self.run = {"id": 7, "head_repository": {"full_name": "onesyue/yueto-ci"},
+                    "path": EV.WORKFLOW_PATH, "event": "workflow_dispatch", "head_branch": "master",
+                    "head_sha": "c" * 40, "status": "completed", "conclusion": "success",
+                    "created_at": "2026-09-24T01:00:00Z", "run_attempt": 1}
+        self.jobs = [dict(name=name, conclusion="success", status="completed", run_attempt=1,
+                          labels=["ubuntu-24.04"], runner_group_name="GitHub Actions", id=i)
+                     for i, name in enumerate(["plan", "validate-yueops", "select-yue-bot", "validation-evidence"])]
+        self.log = PLAN_LOG.format(ref=self.REF)
 
-    def candidate(self, **run_over) -> dict:
-        run = {"id": 7, "head_repository": {"full_name": "onesyue/yueto-ci"},
-               "path": ".github/workflows/build.yml", "event": "workflow_dispatch",
-               "head_branch": "master", "head_sha": "c" * 40, "status": "completed",
-               "created_at": "2026-09-24T01:00:00Z"}
-        run.update(run_over)
-        return {"run": run, "jobs": [_job("plan"), _job("validate-yueops")],
-                "plan_log": PLAN_LOG.format(ref=self.REF),
-                "image_versions": {"validate-yueops": "20260907.300.1"}}
+    def get(self, path, raw=False, limit=None):
+        if path.startswith("actions/workflows/"):
+            return {"workflow_runs": [self.run]}
+        if path == "actions/runs/7/attempts/1/jobs?per_page=100":
+            return {"jobs": self.jobs, "total_count": len(self.jobs)}
+        self.assertTrue(raw)
+        return self.log
 
-    def test_positive_case_is_reported_but_never_enabled(self) -> None:
-        result = EV.assess(self.current(), [self.candidate()], self.NOW)
-        self.assertTrue(result["identity_reusable"])
-        self.assertEqual(result["evidence_run"], 7)
-        self.assertEqual(result["validate_minutes"], 20.0)
-        self.assertFalse(result["enabled"])
-        self.assertTrue(any("pip-audit" in g for g in result["not_reproduced_by_identity"]))
+    def decide(self):
+        return EV.reusable_run(self.current, self, self.NOW)
 
-    def test_every_identity_check_rejects_on_its_own(self) -> None:
-        mutations = {
-            "other repository": lambda c: c["run"].update(head_repository={"full_name": "evil/fork"}),
-            "other workflow": lambda c: c["run"].update(path=".github/workflows/x.yml"),
-            "other event": lambda c: c["run"].update(event="repository_dispatch"),
-            "other branch": lambda c: c["run"].update(head_branch="feature"),
-            "other ci commit": lambda c: c["run"].update(head_sha="d" * 40),
-            "in progress": lambda c: c["run"].update(status="in_progress"),
-            "too old": lambda c: c["run"].update(created_at="2026-09-22T01:00:00Z"),
-            "this run": lambda c: c["run"].update(id=99),
-            "plan failed": lambda c: c["jobs"].__setitem__(0, _job("plan", "failure")),
-            "other service": lambda c: c.update(plan_log=c["plan_log"].replace("SERVICE: yueops", "SERVICE: yueboard")),
-            "other ref": lambda c: c.update(plan_log=c["plan_log"].replace(self.REF, "e" * 40)),
-            "duplicated ref line": lambda c: c.update(plan_log=c["plan_log"] + f"2026-09-24T01:00:02Z   REF_OVERRIDE: {self.REF}\n"),
-            "contract override": lambda c: c.update(plan_log=c["plan_log"].replace("CONTRACT_REF:", "CONTRACT_REF: " + "f" * 40)),
-            "validate failed": lambda c: c["jobs"].__setitem__(1, _job("validate-yueops", "failure")),
-            "validate missing": lambda c: c["jobs"].pop(1),
-            "self-hosted": lambda c: c["jobs"].__setitem__(1, _job("validate-yueops", labels=["self-hosted", "yue-local-release"])),
-            "other runner image": lambda c: c["image_versions"].update({"validate-yueops": "20260914.1"}),
-            "unreadable runner image": lambda c: c["image_versions"].clear(),
-        }
-        for label, mutate in mutations.items():
-            with self.subTest(label=label):
-                cand = self.candidate()
-                before = json.dumps(cand, sort_keys=True)
-                mutate(cand)
-                self.assertNotEqual(json.dumps(cand, sort_keys=True), before, "mutation was a no-op")
-                result = EV.assess(self.current(), [cand], self.NOW)
-                self.assertFalse(result["identity_reusable"], label)
-                self.assertEqual(len(result["rejected"]), 1)
+    def test_match_and_each_single_mismatch(self):
+        self.assertEqual(self.decide(), self.run)
+        for key, value in (("ref", "e" * 40), ("head_sha", "d" * 40), ("image_version", "unknown"),
+                           ("binding", "c" * 64 + BINDING[64:]), ("binding", BINDING[:65] + "c" * 64),
+                           ("enabled", False), ("service", "yueboard"), ("ref", "master"),
+                           ("binding", ""), ("image_version", ""), ("validation_jobs", [])):
+            with self.subTest(key=key, value=value), mock.patch.dict(self.current, {key: value}):
+                self.assertIsNone(self.decide())
+
+    def test_only_original_green_hosted_jobs_from_a_recent_trusted_run(self):
+        for key, value in (("head_repository", {"full_name": "example/fork"}), ("path", "other.yml"),
+                           ("event", "push"), ("head_branch", "feature"), ("status", "in_progress"),
+                           ("created_at", "2026-09-22T01:00:00Z"), ("id", 99), ("conclusion", "failure")):
+            with self.subTest(key=key), mock.patch.dict(self.run, {key: value}):
+                self.assertIsNone(self.decide())
+        for job in self.jobs:
+            for key, value in (("conclusion", "skipped"), ("conclusion", "failure"),
+                               ("labels", ["self-hosted"]), ("runner_group_name", "other"),
+                               ("run_attempt", 2), ("name", "absent")):
+                with self.subTest(job=job["name"], key=key), mock.patch.dict(job, {key: value}):
+                    self.assertIsNone(self.decide())
+        with mock.patch.object(self, "jobs", self.jobs + [self.jobs[0]]):
+            self.assertIsNone(self.decide())
+        for key in ("REF_OVERRIDE", "VALIDATION_IDENTITY"):
+            with mock.patch.object(self, "log", self.log + next(line for line in self.log.splitlines() if key in line)):
+                self.assertIsNone(self.decide())
+
+    def test_bound_inputs_survive_only_run_bookkeeping_changes(self):
+        context = {"run_id": "1", "run_attempt": "1", "policy_revision": "c" * 40}
+        admission = {"identity": dict(context), "admission_sha256": "old",
+                     "ops_plan": {"context": dict(context), "plan_sha256": "old", "assignments": ["a"]},
+                     "board_revision": "a" * 40, "validation_matrix": ["native"]}
+        def digest(value, selection=None, migration="base"):
+            return EV.inputs_digest(value, selection or [], "yueops", migration)
+        expected = digest(admission)
+        other = copy.deepcopy(admission)
+        other["identity"]["run_id"] = other["ops_plan"]["context"]["run_id"] = "2"
+        other["admission_sha256"] = other["ops_plan"]["plan_sha256"] = "new"
+        self.assertEqual(expected, digest(other))
+        for key, value in (("board_revision", "b" * 40), ("validation_matrix", ["serial"]),
+                           ("validation_only", True)):
+            self.assertNotEqual(expected, digest(other | {key: value}))
+        self.assertNotEqual(expected, digest(other, ["different-service"]))
+        self.assertNotEqual(expected, digest(other, migration="different-base"))
+        other["ops_plan"]["assignments"] = ["b"]
+        self.assertNotEqual(expected, digest(other))
+
+    def test_workflow_decision_and_publish_receipt(self):
+        jobs = yaml.safe_load(WORKFLOW.read_text())["jobs"]
+        steps = {step.get("id"): step for step in jobs["plan"]["steps"]}
+        self.assertEqual(steps["evidence"]["env"]["REUSE_YUE_NODE"], "${{ vars.YUETO_REUSE_YUE_NODE }}")
+        self.assertEqual(steps["evidence"]["env"]["REUSE_YUEOPS"], "${{ vars.YUETO_REUSE_YUEOPS }}")
+        self.assertIn("steps.plan.outputs.resume != 'true'", steps["identity"]["if"])
+        self.assertIn("evidence_run == ''", jobs["validate"]["if"])
+        self.assertIn("evidence_run == ''", jobs["ops-service-selection"]["if"])
+        self.assertNotIn("evidence_run", jobs["freshness"]["if"])
+        checks = jobs["validation-evidence"]["steps"]
+        receipt = next(s for s in checks if s.get("name", "").startswith("Record prior validation"))
+        admit = next(s for s in checks if s.get("id") == "reused_services")
+        self.assertIn("needs.freshness.result == 'success'", admit["if"])
+        self.assertIn("success()", admit["if"])
+        fetch = next(s for s in jobs["publish"]["steps"] if s.get("name") == "Download this service selection verdict")
+        self.assertIn("needs.plan.outputs.evidence_run", fetch["with"]["run-id"])
+        self.assertIn("needs.plan.outputs.evidence_attempt", fetch["with"]["name"])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outfile = root / "output"
+            row = {"service": "yue-bot", "validation": "yueops", "ref": self.REF}
+            (root / "ops-admission.json").write_text(json.dumps({"validation_matrix": [row]}))
+            env = dict(RUNNER_TEMP=tmp, GITHUB_OUTPUT=str(outfile), GITHUB_STEP_SUMMARY=str(root / "summary"),
+                       GH_TOKEN="fake", VALIDATION_IDENTITY=BINDING, EVIDENCE_SELECTION=json.dumps([row]),
+                       EVIDENCE_BUILDS=json.dumps([row]), EVIDENCE_SERVICE="yueops", EVIDENCE_REF=self.REF,
+                       EVIDENCE_PROMOTE="true", GITHUB_REPOSITORY=self.current["repository"],
+                       GITHUB_RUN_ID="99", GITHUB_RUN_ATTEMPT="1", GITHUB_REF="refs/heads/master",
+                       GITHUB_SHA=self.current["head_sha"], DEFAULT_BRANCH="master",
+                       ImageVersion=self.current["image_version"], REUSE_YUEOPS="true")
+            self.run["created_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
+            with mock.patch.dict(os.environ, env), mock.patch.object(sys, "argv", ["script", "decide"]), \
+                    mock.patch.object(EV, "Api", return_value=self):
+                EV.main()
+                self.assertEqual(outfile.read_text().splitlines(), ["attempt=1", "run=7"])
+                self.assertIn("REPRODUCED_BY_IDENTITY", (root / "summary").read_text())
+                outfile.unlink()
+                for override in ({"REUSE_YUEOPS": ""}, {"REUSE_YUE_NODE": "true", "REUSE_YUEOPS": ""},
+                                 {"EVIDENCE_PROMOTE": "false"}, {"EVIDENCE_SELECTION": "[]"}):
+                    with mock.patch.dict(os.environ, override), mock.patch.object(self, "get") as lookup:
+                        EV.main()
+                        lookup.assert_not_called()
+                        self.assertFalse(outfile.exists())
+                with mock.patch.object(self, "get", side_effect=PermissionError):
+                    EV.main()
+                self.assertFalse(outfile.exists())
+            for status in ("failure", "cancelled", "skipped", "success"):
+                ran = subprocess.run(["bash", "-c", receipt["run"]], capture_output=True,
+                                     env=os.environ | env | dict(FRESHNESS=status, PRIOR_RUN="7", PRIOR_ATTEMPT="1"))
+                self.assertEqual(ran.returncode == 0, status == "success")
+                self.assertEqual((root / "ops-validation-evidence-99-1.json").exists(), status == "success")
+            subprocess.run(["bash", "-c", admit["run"]], check=True, env=os.environ | env | {"BUILDS": json.dumps([row])})
+            self.assertEqual(outfile.read_text().strip(), 'services={"yue-bot":true}')
 
     def test_log_parsers(self) -> None:
         log = PLAN_LOG.format(ref=self.REF)
-        self.assertEqual(EV.env_value(log, "MANUAL_YUEBOARD_CONTRACT_REF"), "")
+        self.assertEqual(EV.env_value(log, "VALIDATION_IDENTITY"), BINDING)
         self.assertIsNone(EV.env_value(log, "ABSENT"))
         self.assertEqual(EV.image_version(log), "20260907.300.1")
         provisioner = log.replace("##[group]Runner Image\n", "##[group]Runner Image Provisioner\n")

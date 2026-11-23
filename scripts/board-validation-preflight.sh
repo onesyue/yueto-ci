@@ -32,11 +32,11 @@ case "$phase" in
     ;;
   contract)
     case "${PROMOTE:-}" in true|false) ;; *) fail 'explicit PROMOTE=true|false is required' ;; esac
+    [[ "${PROMOTED_BOARD_REF:-}" =~ ^[0-9a-f]{40}$ ]] || fail 'resolved promoted Board revision must be an exact 40-hex commit'
     go clean -testcache
     source_sha="$(git rev-parse HEAD)"
-    contract_pin="$(jq -r '.yueboard_contract_pin // empty' "$policy/native-node-contract.json")"
     "$YUE_CI_PYTHON" "$verifier_dir/verify-yueboard-commit.py" --source "$source_dir"
-    bash "$policy/scripts/authorize-yueboard-promotion.sh" "$source_sha" "$contract_pin" "$PROMOTE"
+    bash "$policy/scripts/authorize-yueboard-promotion.sh" "$source_sha" "$PROMOTED_BOARD_REF" "$PROMOTE"
     "$YUE_CI_PYTHON" "$policy/scripts/validate-native-node-contract.py" --kind yueboard --source .
     ;;
 esac

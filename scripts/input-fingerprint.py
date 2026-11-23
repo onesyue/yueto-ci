@@ -845,6 +845,8 @@ def ghcr_latest(service: str, user: str, password: str) -> tuple[str, str]:
             ]
             if not platform:
                 raise Unknown("latest index has no linux/amd64 manifest")
+            if service == "yueboard" and len(platform) != 1:
+                raise Unknown("ambiguous linux/amd64 manifests for promoted YueBoard")
             with get(f"manifests/{platform[0]['digest']}") as response:
                 manifest = json.load(response)
         with get(f"blobs/{manifest['config']['digest']}", "*/*") as response:

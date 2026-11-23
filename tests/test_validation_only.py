@@ -34,6 +34,8 @@ class ValidationOnlyTest(unittest.TestCase):
                 self.assertIs(plan['has_builds'], False)
                 self.assertIn('has_builds=false', getattr(result, 'outputs'))
                 self.assertIn('promote=false', getattr(result, 'outputs'))
+                if service == 'yueboard':
+                    self.assertIn('promoted_board_ref=' + 'c' * 40, result.outputs.splitlines())
 
     def test_invalid_modes_fail_before_emitting_any_plan(self):
         cases = [dict(REF_OVERRIDE=value) for value in ('', 'master', 'a' * 12, 'A' * 40, 'a' * 41)]
@@ -90,7 +92,7 @@ class ValidationOnlyTest(unittest.TestCase):
             self.assertNotIn('concurrency', jobs[name])
         self.assertIn("inputs.validation_only && 'validate-only' || 'build'", workflow['concurrency']['group'])
         self.assertEqual(jobs['validate']['strategy']['matrix']['include'], '${{ fromJSON(needs.plan.outputs.validation_matrix) }}')
-        self.assertEqual(jobs['validation-evidence']['needs'], ['plan', 'validate', 'ops-service-selection'])
+        self.assertEqual(jobs['validation-evidence']['needs'], ['plan', 'validate', 'freshness', 'ops-service-selection'])
         self.assertIn("always() && needs.plan.result == 'success'", jobs['validation-evidence']['if'])
         plan_steps = str(jobs['plan']['steps'])
         self.assertIn('scripts/pytest-shards.py expand', plan_steps)

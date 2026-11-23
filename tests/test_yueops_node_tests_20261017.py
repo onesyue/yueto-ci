@@ -111,7 +111,7 @@ with open(os.environ['CALL_LOG'], 'a') as out:
 """)
             env = {**os.environ, "PATH": str(bindir) + os.pathsep + os.environ["PATH"],
                    "CALL_LOG": str(log), "GITHUB_WORKSPACE": str(root), "YUE_CI_PYTHON": sys.executable}
-            for failure, code, expected in (("", 0, ["install", "lint", "build", "audit"]),
+            for failure, code, expected in (("", 0, ["install", "lint", "build"]),
                                             ("install", 23, ["install"]),
                                             ("lint", 37, ["install", "lint"])):
                 with self.subTest(failure=failure):
@@ -125,7 +125,7 @@ with open(os.environ['CALL_LOG'], 'a') as out:
                     self.assertEqual([row["phase"] for row in calls], expected)
                     self.assertTrue(all(Path(row["cwd"]) == (root / "frontend").resolve() for row in calls))
                     if not failure:
-                        self.assertEqual(calls[-1]["argv"], [str(root / "frontend")])
+                        self.assertEqual(calls[-1]["argv"], ["run", "build"])
 
 
 class YueOpsNodeTestPolicy(unittest.TestCase):
