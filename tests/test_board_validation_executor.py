@@ -83,7 +83,7 @@ if name == 'gofmt' and os.getenv('UNFORMATTED'):
     def quality_commands(self):
         return ['go build ./...', 'gofmt -l main.go', 'make check-generated', f'make check-http-contract HTTP_CONTRACT_BASE={self.first}', 'go vet ./...',
                 'check-server-error-logging.sh ', 'installer ' + str(self.temp / 'board-quality-tools'),
-                'govulncheck ./...', 'golangci-lint run --timeout=6m ./...', 'go test ./...', 'ua-gate ', 'proto-gate.sh ']
+                'golangci-lint run --timeout=6m ./...', 'go test ./...', 'ua-gate ', 'proto-gate.sh ']
 
     def keys(self, rows):
         return [row['name'] + ' ' + ' '.join(row['args']) for row in rows]

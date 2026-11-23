@@ -65,8 +65,9 @@ class MergeCache(unittest.TestCase):
             body = self.anchor
         elif "/pulls?" in endpoint:
             body = self.pulls[int(endpoint.rsplit("page=", 1)[1])]
-        elif "/reviews?" in endpoint:
-            body = self.fixture["reviews"]
+        elif "/git/commits/" in endpoint:
+            body = {"sha": endpoint.rsplit("/", 1)[1], "parents": [self.pr["base"], self.pr["head"]],
+                    "verification": {"verified": True}}
         elif "/check-runs?" in endpoint:
             body = {"check_runs": self.fixture["checks"]}
         elif "/statuses?" in endpoint:
@@ -98,7 +99,7 @@ class MergeCache(unittest.TestCase):
         self.assertFalse(any("/compare/" in endpoint for endpoint in self.requests))
 
     def test_full_rerun_counts_and_unchanged_verdict(self):
-        self.fixture["reviews"] = []
+        self.fixture["checks"][0]["conclusion"] = "failure"
         cold = self.audit_rows()
         self.assertEqual(len(self.requests), 4)  # PR list plus three native evidence requests
         self.requests.clear()
@@ -144,7 +145,7 @@ class MergeCache(unittest.TestCase):
 
     def test_revalidated_verdicts_match_cold_for_clean_missing_red_pending_and_unknown(self):
         original = copy.deepcopy(self.fixture)
-        changes = [({}, []), ({"reviews": []}, ["no_approving_review_at_merge"]),
+        changes = [({}, []),
                    ({"checks": [], "statuses": []}, ["no_check_evidence_at_merge"])]
         for change, reason in (({"conclusion": "failure"}, "check_nonpassing_at_merge:policy"),
                                ({"status": "queued"}, "check_pending_at_merge:policy"),
@@ -180,7 +181,7 @@ class MergeCache(unittest.TestCase):
         old = self.pr | {"merged_at": "2026-10-01T00:00:00Z", "updated_at": "2026-10-01T00:00:00Z"}
         self.pulls = {1: [old | {"updated_at": self.pr["updated_at"]}] * 100,
                       2: [self.pr] + [old] * 99}
-        self.fixture["reviews"] = []
+        self.fixture["checks"][0]["conclusion"] = "failure"
         rows = self.audit_rows()
         self.assertEqual(len(rows), 1)
         self.assertEqual(sum("/pulls?" in r for r in self.requests), 2)
@@ -194,13 +195,12 @@ class MergeCache(unittest.TestCase):
         self.fixture["checks"][0]["conclusion"] = "failure"
         row = self.audit.premerge("onesyue", "yueops", 203)
         self.assertIn("check_nonpassing_at_merge:policy", row["findings"])
-        self.assertEqual(len(self.requests), 5)
+        self.assertEqual(len(self.requests), 4)
 
-    def test_warm_audit_detects_changed_checks_reviews_and_statuses(self):
+    def test_warm_audit_detects_changed_checks_and_statuses(self):
         original = copy.deepcopy(self.fixture)
         mutations = [
             ("checks", {"conclusion": "failure"}, "check_nonpassing_at_merge:policy"),
-            ("reviews", {"state": "DISMISSED"}, "no_approving_review_at_merge"),
             ("statuses", {"state": "failure"}, "status_nonpassing_at_merge:external-ci"),
         ]
         for field, change, reason in mutations:

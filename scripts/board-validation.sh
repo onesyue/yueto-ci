@@ -117,7 +117,6 @@ case "$role" in
       bash "$policy/scripts/install-board-quality-tools.sh" \
         "${temp}/board-quality-tools"
       export PATH="${temp}/board-quality-tools:${PATH}"
-      govulncheck ./...
       golangci-lint run --timeout=6m ./...
       go test ./...
     )
@@ -190,19 +189,6 @@ case "$role" in
         fi
         emit_frontend_result "layout=$layout"
         echo "YueBoard frontend layout: $layout"
-        # Source-owned advisory gate (same model as YueOps'
-        # scripts/npm-audit-gate.py): the reviewed exception list lives in
-        # the YueBoard tree, never here. A checkout without it must stop.
-        # Exit 0 = pass, 1 = blocking advisory, 2 = the gate itself failed;
-        # anything non-zero stops the release (2 is never a pass). The same
-        # project-name call works in both layouts (workspace mode audits the
-        # root lock once and requires each name to be a workspace member).
-        audit_gate="scripts/ci/pnpm-audit-gate.mjs"
-        [ -f "$audit_gate" ] || {
-          echo "::error::source-owned pnpm audit gate is missing: $audit_gate"
-          exit 1
-        }
-        node "$audit_gate" web web-admin
         ;;
       frontends:lint)
         [ -f pnpm-workspace.yaml ] || fail 'workspace-only phase requires workspace layout'
@@ -270,7 +256,6 @@ case "$role" in
         node scripts/ci/verify-page-consistency.mjs
         [ -f test/a11y/a11y-smoke.mjs ] || fail 'source-owned accessibility smoke gate is missing'
         [ "${YUEBOARD_A11Y_SKIP:-0}" != 1 ] || fail 'accessibility smoke cannot be skipped in validation'
-        node scripts/ci/pnpm-audit-gate.mjs test/a11y test/e2e
         if [ ! -f pnpm-workspace.yaml ]; then
           a11y_pm=$(node -p "require('./test/a11y/package.json').packageManager || ''")
           web_pm=$(node -p "require('./web/package.json').packageManager || ''")

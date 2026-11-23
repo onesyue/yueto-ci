@@ -95,9 +95,12 @@ def workflow_contract(policy: Path) -> dict:
             raise ValueError('unexpected workflow phase environment key')
         environments[role] = {k: env_value(v, role) for k, v in raw.items()}
     go = step('Set up YueBoard Go')['with']['go-version']
-    node = step('Set up Node')['with']['node-version']
+    node_setup = step('Set up Node')['with']
+    if 'node-version' in node_setup or node_setup.get('node-version-file') != '.ci-policy/.node-version':
+        raise ValueError('expected the central Node version file')
+    node = (policy / '.node-version').read_text().strip()
     buf = step('Set up Buf for YueBoard protocol compatibility')['with']
-    if not re.fullmatch(r'\d+\.\d+\.\d+', go) or not re.fullmatch(r'\d+', node):
+    if not re.fullmatch(r'\d+\.\d+\.\d+', go) or not re.fullmatch(r'24\.\d+\.\d+', node):
         raise ValueError('unsupported compiler version contract')
     if not re.fullmatch(r'\d+\.\d+\.\d+', buf['version']) or not re.fullmatch(r'[a-f0-9]{64}', buf['checksum']):
         raise ValueError('unsupported Buf identity')
@@ -107,8 +110,7 @@ def workflow_contract(policy: Path) -> dict:
 
 def plan(policy: Path, source_sha: str, output: Path) -> list[str]:
     native = subprocess.check_output(['bash', str(policy / 'scripts/plan-build-targets.sh'), 'yueboard', source_sha], text=True, env=planner_environment())
-    pin = json.loads((policy / 'native-node-contract.json').read_text())['yueboard_contract_pin']
-    authorized = subprocess.check_output(['bash', str(policy / 'scripts/authorize-yueboard-build-plan.sh'), pin, source_sha, 'false'], input=native, text=True, env=planner_environment())
+    authorized = subprocess.check_output(['bash', str(policy / 'scripts/authorize-yueboard-build-plan.sh'), '', source_sha, 'false'], input=native, text=True, env=planner_environment())
     value = json.loads(authorized)
     rows = value['validation_matrix']
     roles = [row['board_role'] for row in rows]
@@ -116,7 +118,7 @@ def plan(policy: Path, source_sha: str, output: Path) -> list[str]:
             row['repo'] != 'onesyue/yueboard' or row['validation'] != 'yueboard' or row['ref'] != source_sha
             or not re.fullmatch(r'[a-z0-9]+', row['board_role']) for row in rows):
         raise ValueError('native Board role matrix identity differs')
-    # Even an exact reviewed pin is never build-authorized by this CLI.
+    # Local Board validation only executes the role matrix.
     value['matrix'] = []
     value['has_builds'] = False
     (output / 'targets.json').write_text(json.dumps(value, indent=2) + '\n')
@@ -129,6 +131,11 @@ def run(source: Path, policy: Path, source_sha: str, policy_sha: str, output: Pa
     output.mkdir(parents=True, exist_ok=True)
     roles = plan(policy, source_sha, output)
     contract = workflow_contract(policy)
+    registry_env = {key: os.environ[key] for key in ('GHCR_USER', 'GHCR_PASSWORD') if key in os.environ}
+    contract['promoted_board_ref'] = subprocess.check_output(
+        [sys.executable, str(policy / 'scripts/validate-native-node-contract.py'), 'resolve-yueboard-ref'],
+        env=planner_environment() | registry_env, text=True,
+    ).strip()
     image = image_from_workflow()
     summary = output / 'execution.json'
     statuses: dict[str, int] = {}

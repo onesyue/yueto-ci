@@ -51,7 +51,7 @@ def secret_findings(workflow):
     permissions = re.search(r"^permissions:\n(?:  .+\n)+", workflow, re.M)
     if permissions is None or permissions.group(0).strip() != "permissions:\n  contents: read":
         findings.append("workflow permissions are not contents: read only")
-    for name in ("validate", "validation-evidence"):
+    for name in ("validate", "freshness", "validation-evidence"):
         job = _job(workflow, name)
         override = re.search(r"^    permissions:\n(?:      .+\n)+", job, re.M)
         # The evidence job lists this run's artifacts. candidate-artifact.py

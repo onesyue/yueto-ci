@@ -5,7 +5,7 @@ executed once someone also remembered to add that line; PolicyCiRunsEveryTestFil
 caught the omission, but only because it happened to exist in one of the listed
 files. Discovery removes the list; this contract keeps discovery honest:
 
-* the workflow really runs ``python3 scripts/run-policy-tests.py``
+* the shared policy entry runs ``python3 scripts/run-policy-tests.py``
   and no longer carries a per-file list that could silently diverge;
 * every ``test_*`` case in ``tests/test_*.py`` is reachable by unittest: it lives
   on a ``unittest.TestCase`` subclass, or the module defines ``load_tests`` (the
@@ -27,6 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_CI = ROOT / ".github" / "workflows" / "policy-ci.yml"
+ENTRY = ROOT / "scripts/check-policy.sh"
 DISCOVER = "python3 scripts/run-policy-tests.py"
 # 2026-09-28: 8 files / 150+ cases. Floors, not exact counts.
 MIN_FILES = 8
@@ -83,9 +84,11 @@ def count_cases(suite: unittest.TestSuite) -> int:
 class PolicyDiscoveryContractTest(unittest.TestCase):
     def test_policy_ci_runs_discovery_not_a_hand_kept_list(self) -> None:
         workflow = POLICY_CI.read_text(encoding="utf-8")
-        self.assertIn(DISCOVER, workflow)
+        self.assertIn("run: scripts/check-policy.sh ci", workflow)
+        entry = ENTRY.read_text(encoding="utf-8")
+        self.assertIn(DISCOVER, entry)
         # A leftover per-file line would mean two sources of truth again.
-        self.assertNotRegex(workflow, r"python3 tests/test_[a-z0-9_]+\.py")
+        self.assertNotRegex(workflow + entry, r"python3 tests/test_[a-z0-9_]+\.py")
 
     def test_every_case_is_reachable_by_unittest(self) -> None:
         directory = ROOT / "tests"
@@ -121,9 +124,8 @@ class PolicyDiscoveryContractTest(unittest.TestCase):
             )
             self.assertEqual(undiscovered_cases(directory), [])
 
-    def test_rejects_a_workflow_that_went_back_to_a_list(self) -> None:
-        workflow = POLICY_CI.read_text(encoding="utf-8")
-        mutated = workflow.replace(DISCOVER, "python3 tests/test_build_policy.py")
+    def test_rejects_an_entry_that_went_back_to_a_list(self) -> None:
+        mutated = ENTRY.read_text(encoding="utf-8").replace(DISCOVER, "python3 tests/test_build_policy.py")
         self.assertNotIn(DISCOVER, mutated)
         self.assertRegex(mutated, r"python3 tests/test_[a-z0-9_]+\.py")
 

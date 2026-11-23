@@ -43,7 +43,7 @@ class BoardPreflight(unittest.TestCase):
         shutil.copy(ROOT / 'scripts/authorize-yueboard-promotion.sh', self.policy / 'scripts')
         self.log = self.root / 'calls'
         self.env = dict(os.environ, PATH=str(self.bin), YUE_CI_PYTHON=sys.executable,
-                        CALL_LOG=str(self.log), PROMOTE='false', TZ='Asia/Singapore')
+                        CALL_LOG=str(self.log), PROMOTED_BOARD_REF=self.sha, PROMOTE='false', TZ='Asia/Singapore')
         for key in ('GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN'):
             self.env.pop(key, None)
         stub = self.bin / 'stub'
@@ -107,8 +107,9 @@ if os.getenv('FAIL_TOOL') == name: sys.exit(23)
 
     def test_contract_clears_cache_then_preserves_native_arguments_and_intent(self):
         for promote, matching in (('false', True), ('false', False), ('true', True), ('true', False)):
-            self.pin.write_text(json.dumps({'yueboard_contract_pin': self.sha if matching else 'a'*40}))
-            result, rows = self.execute('contract', PROMOTE=promote)
+            promoted = self.sha if matching else 'a'*40
+            result, rows = self.execute('contract', PROMOTE=promote, PROMOTED_BOARD_REF=promoted)
+            self.assertIn(f'pin={promoted} requested={promote}', result.stdout)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual([row['name'] for row in rows],
                              ['go', 'buf', 'go', 'validate-native-node-contract.py'])
@@ -125,11 +126,12 @@ if os.getenv('FAIL_TOOL') == name: sys.exit(23)
             result, rows = self.execute('contract', FAIL_TOOL=failing)
             self.assertEqual(result.returncode, 23)
             self.assertEqual(len(rows), count)
-        self.pin.write_text(json.dumps({'yueboard_contract_pin': 'not-a-sha'}))
-        result, rows = self.execute('contract', PROMOTE='true')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('not a 40-hex commit', result.stderr)
-        self.assertEqual(rows[-1]['name'], 'validate-native-node-contract.py')
+        for invalid in ('', 'master', self.sha + '\n' + 'b'*40):
+            with self.subTest(invalid=invalid):
+                result, rows = self.execute('contract', PROMOTED_BOARD_REF=invalid)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn('resolved promoted Board revision', result.stderr)
+                self.assertEqual(rows, [])
         for value in ('', 'invalid'):
             result, rows = self.execute('contract', PROMOTE=value)
             self.assertEqual(result.returncode, 2)
@@ -168,7 +170,10 @@ if os.getenv('FAIL_TOOL') == name: sys.exit(23)
         self.assertLess(names.index('Restore and refresh Go compiler cache'), names.index(contract['name']))
         self.assertLess(names.index(contract['name']), names.index('Validate YueBoard backend quality gates'))
         self.assertEqual(contract['if'], "matrix.validation == 'yueboard'")
-        self.assertEqual(contract['env'], {'PROMOTE': '${{ needs.plan.outputs.promote }}'})
+        self.assertEqual(contract['env'], {
+            'PROMOTE': '${{ needs.plan.outputs.promote }}',
+            'PROMOTED_BOARD_REF': '${{ needs.plan.outputs.promoted_board_ref }}',
+        })
         self.assertEqual(cache_clear['if'], "matrix.validation == 'yue-node'")
         self.assertEqual(cache_clear['run'], 'go clean -testcache')
         self.assertEqual(native['if'], "matrix.validation == 'yue-node' || matrix.validation == 'yueops'")
