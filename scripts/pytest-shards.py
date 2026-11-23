@@ -2548,7 +2548,7 @@ MINIAPP_MEMBERSHIP_INPUT = "tests/_miniapp_source.py"
 
 
 def reviewed_miniapp_membership_transition():
-    """Codex-reviewed successor of one shared input, kept outside the sealed skip baseline.
+    """Reviewed successor of one shared input, kept outside the sealed skip baseline.
 
     The record follows the historical transition format (plus a reviewer label);
     storing it separately leaves every sealed prior_baseline_sha256 untouched.

@@ -1,3 +1,0 @@
-yueto #53 @ d70595e8 parity vs master 3e8c6671 (box, 2026-11-02T17:14:51Z)
-check-schedule-registry: master 50 findings, PR 48; new in PR: none; fixed: midautumn, observe-taiwan-final
-pytest test-schedule-registry+test-observer-install-owners: master 7 failed/50 passed; PR 3 failed/51 passed (subset of master failures, pre-existing workspace drift)
