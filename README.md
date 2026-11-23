@@ -401,13 +401,13 @@ python3 scripts/merge-hygiene-audit.py --hours 24
 python3 scripts/merge-hygiene-audit.py --hours 24 --format json
 ```
 
-The audit reads native GitHub reviews, checks and statuses using authenticated
-`gh api`. It defaults to all seven repositories: `yueops`, `yueboard`, `yueto`,
-`yueto-ci`, `yuelink`, `yuelink-ci`, and `yue-node`. The credential needs read
-access to this evidence. A non-author, non-bot approval must name the exact PR
-head in its `commit_id`; an approval of an older commit cannot admit a new head.
-Latest review state and checks/statuses are evaluated at merge time. Later green
-reruns cannot erase observed failures. Completed `success`, `neutral`, and
+The audit reads native GitHub commit metadata, checks and statuses using
+authenticated `gh api`. It defaults to all seven repositories: `yueops`,
+`yueboard`, `yueto`, `yueto-ci`, `yuelink`, `yuelink-ci`, and `yue-node`.
+Independent PR approval is optional in every repository under the 2026-11-23
+owner decision (t1396u). Merged PRs require a GitHub-verified merge commit
+signature and two parents. Checks and statuses are evaluated at merge time.
+Later green reruns cannot erase observed failures. Completed `success`, `neutral`, and
 `skipped` checks retain GitHub's passing-conclusion semantics; this does not
 claim that skipped work executed. Missing, pending, red or ambiguous evidence
 remains a finding. API/input failures exit **2**, never clean.
