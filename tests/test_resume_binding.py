@@ -106,14 +106,16 @@ class ResumeBinding(unittest.TestCase):
         self.workflow.fixture.git(self.source, 'add', 'app.py', *[self.entries[s]['dockerfile'] for s in B.OPS])
         self.workflow.fixture.commit(self.source)
         self.old_source = self.workflow.fixture.git(self.source, 'rev-parse', 'HEAD').stdout.strip()
-        self.workflow.baseline['context'] = {'platform': 'linux', 'uid': 1001}
-        self.workflow.baseline['reviewed_hosted'] = {'schema': 1, 'context': {'platform': 'linux', 'uid': 1001},
+        # The generated fixture already recorded the UID of its pytest subprocess.
+        # Source-owned evidence requires Linux even in the metadata-only tests.
+        context = self.workflow.baseline['context'] | {'platform': 'linux'}
+        self.workflow.baseline['context'] = context
+        self.workflow.baseline['reviewed_hosted'] = {'schema': 1, 'context': context,
                                                    'runner': {'runner_os': 'Linux', 'runner_arch': 'X64'}, 'cases': {}}
         (self.workflow.policy / 'ops-pytest-skip-baseline.json').write_text(json.dumps(self.workflow.baseline))
         self.workflow.fixture.git(self.workflow.policy, 'add', 'ops-pytest-skip-baseline.json')
         self.workflow.fixture.commit(self.workflow.policy)
         self.exported = self.workflow.consumer.export_source_baseline(self.source, self.old_source)['baseline']
-        self.exported['context'] = {'platform': 'linux', 'uid': 1001}
         self.evidence = B.load('source_evidence')
         self.evidence.ROOT = self.owner.policy.parent
         original_load = B.load

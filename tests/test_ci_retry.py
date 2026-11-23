@@ -298,15 +298,18 @@ exit 0
 
     def test_cosign_rejects_unsupported_platform_before_download(self):
         self.shim("curl", 'echo unexpected-download >> "$CALLS"; exit 97')
+        github_path = self.base / "github_path"
         for system, machine in (("Darwin", "x86_64"), ("Linux", "aarch64")):
             with self.subTest(system=system, machine=machine):
                 (self.base / "uname").unlink(missing_ok=True)
                 self.cosign_fixture_platform(system, machine)
                 result = subprocess.run(["bash", str(ROOT / "scripts/install-cosign.sh")],
-                                        env=self.env, capture_output=True, text=True, timeout=15)
-                self.assertNotEqual(result.returncode, 0)
+                                        env={**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)},
+                                        capture_output=True, text=True, timeout=15)
+                self.assertEqual(result.returncode, 1, result.stderr)
                 self.assertIn("reviewed only for Linux x86_64", result.stderr)
                 self.assertEqual(self.lines("calls"), [])
+                self.assertFalse(github_path.exists())
 
     def test_cosign_verified_install_and_version_gate(self):
         self.cosign_fixture_platform()

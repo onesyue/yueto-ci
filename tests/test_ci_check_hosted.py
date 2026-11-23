@@ -107,6 +107,9 @@ class HostedExecution(unittest.TestCase):
         self.assertIn('time budget', receipt['problem'])
         self.assertNotIn('session_cleanup_problem', receipt)
         self.assertIn('started', (self.output / 'hosted.log').read_text())
+        self.assertFalse(receipt['complete'])
+        with self.assertRaises(ProcessLookupError):
+            os.killpg(receipt['controller_session_id'], 0)
 
     def test_low_disk_and_credentials_refuse_before_source_execution(self):
         self.resources.free = 1
