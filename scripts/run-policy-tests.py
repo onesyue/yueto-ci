@@ -8,13 +8,16 @@ process, so an import error fails that module and the run.
 
 from __future__ import annotations
 
+import argparse
 import os
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+REQUIRED_TOOLS = ("bash", "curl", "git", "go", "gpg", "gpgv", "jq", "node", "sha256sum", "tar")
 
 
 def discovered_modules(directory: Path) -> list[str]:
@@ -79,6 +82,15 @@ def run_policy_tests(
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check-toolchain", action="store_true", help="Check prerequisites without running tests")
+    args = parser.parse_args()
+    missing = [tool for tool in REQUIRED_TOOLS if shutil.which(tool) is None]
+    if missing:
+        print(f"policy toolchain missing required executables: {', '.join(missing)}", file=sys.stderr)
+        return 2
+    if args.check_toolchain:
+        return 0
     return run_policy_tests(ROOT / "tests", cwd=ROOT)
 
 
