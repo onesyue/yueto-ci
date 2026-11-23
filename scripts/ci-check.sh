@@ -32,8 +32,6 @@ case "$repo" in
   yue-node)
     [ "$prepare_only" = false ] && [ -z "$prepared" ] &&
       [ -z "${CI_CHECK_MIGRATION_BASE:-}" ] || fail 'base/prepared options apply only to yueops'
-    [ "$board_ref_given" = false ] || [ "$mode" = --local ] ||
-      fail '--board-ref requires --local for yue-node'
     ;;
   *) fail "unsupported validation repository: $repo" ;;
 esac
@@ -46,7 +44,7 @@ if [ "$prepare_only" = true ] || [ -n "$prepared" ]; then
 fi
 # ci-check is always validation-only. Explicit historical context is never a
 # publication default; ordinary use resolves the signed desired Board snapshot.
-if [ "$repo" = yueops ] || { [ "$repo" = yue-node ] && [ "$mode" = --local ]; }; then
+if [ "$repo" = yueops ] || [ "$repo" = yue-node ]; then
   if [ "$board_ref_given" = false ]; then
     export YUETO_ROOT=${YUETO_ROOT:-$(dirname "$ROOT")}
     board_sha=$(python3 "$ROOT/scripts/ci_check_board.py" --root "$YUETO_ROOT") ||

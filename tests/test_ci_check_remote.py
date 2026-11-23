@@ -74,7 +74,10 @@ class DispatchBinding(unittest.TestCase):
             ('yueboard', 'a'*7, 'c'*40, '', ''),
             ('yue-node', 'a'*40, 'c'*7, '', ''),
             ('yueboard', 'a'*40, 'c'*40, 'd'*40, ''),
-            ('yue-node', 'a'*40, 'c'*40, '', 'b'*40),
+            ('yue-node', 'a'*40, 'c'*40, '', ''),
+            ('yue-node', 'a'*40, 'c'*40, '', 'b'*39),
+            ('yue-node', 'a'*40, 'c'*40, 'd'*40, 'b'*40),
+            ('yueboard', 'a'*40, 'c'*40, '', 'b'*40),
             ('yueops', 'a'*40, 'c'*40, '', 'b'*40),
         ]:
             with self.subTest(repo=repo, base=base, board=board), patch.object(REMOTE, 'gh') as gh:
@@ -93,6 +96,7 @@ class DispatchBinding(unittest.TestCase):
             ]:
                 with self.subTest(repo=repo, conclusion=conclusion, log=log):
                     policy, source, nonce = 'a'*40, 'c'*40, 'e'*32
+                    board = 'b'*40 if repo == 'yue-node' else ''
                     row = self.row(title=f'Build & publish images {repo} {source} [nonce:{nonce}]')
                     final = row | {'conclusion': conclusion}
                     def gh(*args):
@@ -101,7 +105,9 @@ class DispatchBinding(unittest.TestCase):
                         if args[:2] == ('workflow', 'run'):
                             for field in (f'service={repo}', f'ref={source}', 'validation_only=true', 'promote=false'):
                                 self.assertIn(field, args)
-                            self.assertFalse(any(x.startswith(('migration_base=', 'yueboard_contract_ref=')) for x in args))
+                            self.assertFalse(any(x.startswith('migration_base=') for x in args))
+                            board_fields = [x for x in args if x.startswith('yueboard_contract_ref=')]
+                            self.assertEqual(board_fields, [f'yueboard_contract_ref={board}'] if board else [])
                             return ''
                         return log if '--log' in args else json.dumps(final)
                     with tempfile.TemporaryDirectory() as directory, \
@@ -111,10 +117,13 @@ class DispatchBinding(unittest.TestCase):
                             patch.object(REMOTE.subprocess, 'run'):
                         uid.return_value.hex = nonce
                         output = Path(directory)
-                        self.assertEqual(REMOTE.dispatch('branch', policy, source, '', output, repo=repo), expected)
+                        self.assertEqual(REMOTE.dispatch('branch', policy, source, '', output,
+                                                         board=board, repo=repo), expected)
                         self.assertEqual((output / 'remote.log').read_text(), log)
                         self.assertEqual(json.loads((output / 'result.json').read_text()), final)
-                        self.assertEqual(json.loads((output / 'dispatch.json').read_text())['repository'], repo)
+                        receipt = json.loads((output / 'dispatch.json').read_text())
+                        self.assertEqual(receipt['repository'], repo)
+                        self.assertEqual(receipt['board_revision'], board)
                         if 'S1009' in log:
                             self.assertIn('S1009', (output / 'failures.txt').read_text())
 
