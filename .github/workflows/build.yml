@@ -181,6 +181,8 @@ jobs:
       resume: ${{ steps.plan.outputs.resume }}
       validation_matrix: ${{ steps.ops_plan.outputs.validation_matrix }}
       freshness_matrix: ${{ steps.ops_plan.outputs.freshness_matrix }}
+      evidence_run: ${{ steps.evidence.outputs.run }}
+      evidence_attempt: ${{ steps.evidence.outputs.attempt }}
       validation_parallelism: ${{ steps.ops_plan.outputs.max_parallel }}
       ops_mode: ${{ steps.ops_plan.outputs.ops_mode }}
       ops_source: ${{ steps.plan.outputs.ops_source }}
@@ -574,6 +576,35 @@ jobs:
             echo "admission_sha256=$(jq -er '.admission_sha256' "$RUNNER_TEMP/ops-admission.json")"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Fingerprint effective validation inputs
+        id: identity
+        if: steps.plan.outputs.resume != 'true' && inputs.runner == 'ubuntu-24.04'
+        env:
+          EVIDENCE_SERVICE: ${{ inputs.service }}
+          EVIDENCE_BASE: ${{ inputs.migration_base }}
+          EVIDENCE_SELECTION: ${{ steps.ops_scope.outputs.ops_selection_matrix || '[]' }}
+        run: |
+          python3 scripts/verification-evidence.py identity >> "$GITHUB_OUTPUT" ||
+            echo 'Validation identity unavailable. Running full validation.'
+
+      - name: Select an exact green validation attempt
+        id: evidence
+        if: steps.identity.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VALIDATION_IDENTITY: ${{ steps.identity.outputs.binding }}
+          EVIDENCE_SERVICE: ${{ inputs.service }}
+          EVIDENCE_REF: ${{ inputs.ref }}
+          EVIDENCE_SELECTION: ${{ steps.ops_scope.outputs.ops_selection_matrix || '[]' }}
+          EVIDENCE_BUILDS: ${{ steps.ops_scope.outputs.matrix || steps.plan.outputs.matrix }}
+          EVIDENCE_PROMOTE: ${{ steps.plan.outputs.promote }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REUSE_YUE_NODE: ${{ vars.YUETO_REUSE_YUE_NODE }}
+          REUSE_YUEOPS: ${{ vars.YUETO_REUSE_YUEOPS }}
+        run: |
+          timeout 90s python3 scripts/verification-evidence.py decide ||
+            echo 'Evidence lookup unavailable. Running full validation.'
+
       - name: Authenticate read-only original OCI proof retrieval
         if: steps.plan.outputs.resume == 'true'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
@@ -623,6 +654,7 @@ jobs:
 
   validate:
     needs: [plan]
+    if: needs.plan.outputs.evidence_run == ''
     container:
       # Visual baselines were captured on the host; an empty image disables the job container.
       image: ${{ matrix.board_role != 'e2e' && 'ghcr.io/onesyue/yueops-ci-toolchain@sha256:96b3439fd16effe9686cb6297026e97fac605db4d1ab8ce674aa45c121873017' || '' }}
@@ -1403,7 +1435,7 @@ jobs:
   validation-evidence:
     needs: [plan, validate, freshness, ops-service-selection]
     outputs:
-      services: ${{ steps.service_report.outputs.services }}
+      services: ${{ steps.service_report.outputs.services || steps.reused_services.outputs.services }}
     if: always() && needs.plan.result == 'success'
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 10
@@ -1424,7 +1456,7 @@ jobs:
         run: echo "built_attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
       - name: Select verified admission attempt
         id: handoff
-        if: needs.plan.outputs.resume != 'true'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.resume != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           HANDOFF_RUN_ID: ${{ github.run_id }}
@@ -1437,6 +1469,7 @@ jobs:
             --run-attempt "$HANDOFF_RUN_ATTEMPT" \
             >> "$GITHUB_OUTPUT"
       - name: Download original admission plan
+        if: needs.plan.outputs.evidence_run == ''
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ops-admission-${{ github.run_id }}-${{ steps.resume_handoff.outputs.built_attempt || steps.handoff.outputs.built_attempt }}
@@ -1444,7 +1477,7 @@ jobs:
           digest-mismatch: error
       - name: Collect service validation conclusions
         id: service_checks
-        if: needs.plan.outputs.has_builds == 'true' || needs.plan.outputs.ops_selection_matrix != '[]'
+        if: needs.plan.outputs.evidence_run == '' && (needs.plan.outputs.has_builds == 'true' || needs.plan.outputs.ops_selection_matrix != '[]')
         env:
           GH_TOKEN: ${{ github.token }}
           BUILDS: ${{ needs.plan.outputs.matrix }}
@@ -1458,7 +1491,7 @@ jobs:
 
       - name: Mint read-only source evidence token (GitHub App)
         id: evidence_source_token
-        if: needs.plan.outputs.ops_mode == 'sharded' && vars.YUETO_CI_APP_CLIENT_ID != ''
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded' && vars.YUETO_CI_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
@@ -1467,7 +1500,7 @@ jobs:
           repositories: yueops
           permission-contents: read
       - name: Checkout exact Ops objects for independent evidence verification
-        if: needs.plan.outputs.ops_mode == 'sharded'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueops
@@ -1479,7 +1512,7 @@ jobs:
           persist-credentials: false
 
       - name: Fetch the default branch for evidence admission
-        if: needs.plan.outputs.ops_mode == 'sharded'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded'
         env:
           GIT_TOKEN: ${{ vars.YUETO_CI_APP_CLIENT_ID != '' && steps.evidence_source_token.outputs.token || secrets.YUETO_CI_PAT }}
         run: |
@@ -1490,7 +1523,7 @@ jobs:
             fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
           git -C .admission-source rev-parse --verify refs/remotes/origin/master >/dev/null
       - name: Download all current Ops role evidence
-        if: needs.plan.outputs.ops_mode == 'sharded'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: ops-shard-${{ github.run_id }}-${{ steps.resume_handoff.outputs.built_attempt || steps.handoff.outputs.built_attempt }}-*
@@ -1498,6 +1531,7 @@ jobs:
           merge-multiple: false
           digest-mismatch: error
       - name: Require complete selected validation and corpus
+        if: needs.plan.outputs.evidence_run == ''
         env:
           VALIDATION_RESULT: ${{ !inputs.validation_only && needs.plan.outputs.ops_mode != 'none' && steps.service_checks.outputs.ops_result || needs.validate.result }}
           ADMISSION_SHA256: ${{ needs.plan.outputs.admission_sha256 }}
@@ -1539,7 +1573,7 @@ jobs:
           PY
 
       - name: Publish ordinary shard weights
-        if: needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
         run: |
           set -euo pipefail
           python3 scripts/pytest-shards.py publish-ordinary-weights \
@@ -1548,13 +1582,26 @@ jobs:
             --output "${RUNNER_TEMP:?}/ordinary-weights.json"
 
       - name: Upload ordinary shard weights
-        if: needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ops-ordinary-weights-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/ordinary-weights.json
           if-no-files-found: warn
           retention-days: 14
+      - name: Record prior validation and require current freshness
+        if: needs.plan.outputs.evidence_run != ''
+        env:
+          PRIOR_RUN: ${{ needs.plan.outputs.evidence_run }}
+          PRIOR_ATTEMPT: ${{ needs.plan.outputs.evidence_attempt }}
+          FRESHNESS: ${{ needs.freshness.result }}
+        run: |
+          set -euo pipefail
+          test "$FRESHNESS" = success
+          jq -n --arg run "$PRIOR_RUN" --arg attempt "$PRIOR_ATTEMPT" \
+            '{status:"REPRODUCED_BY_IDENTITY", evidence_run:$run, evidence_attempt:$attempt}' \
+            > "$RUNNER_TEMP/ops-validation-evidence-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+
       - name: Retain complete validation verdict
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1573,6 +1620,15 @@ jobs:
           SERVICES: ${{ steps.service_checks.outputs.services }}
           JOIN_RESULT: ${{ job.status }}
         run: python3 scripts/service-validation.py report >> "$GITHUB_OUTPUT"
+
+      - name: Admit services covered by the reused attempt
+        id: reused_services
+        if: success() && needs.plan.outputs.evidence_run != '' && needs.freshness.result == 'success'
+        env:
+          BUILDS: ${{ needs.plan.outputs.matrix }}
+        run: |
+          jq -cr '"services=" + (map({key:.service, value:true}) | from_entries | tojson)' \
+            <<< "$BUILDS" >> "$GITHUB_OUTPUT"
 
   build:
     needs: [plan]
@@ -2017,7 +2073,7 @@ jobs:
 
   ops-service-selection:
     needs: [plan]
-    if: needs.plan.outputs.ops_selection_matrix != '[]' && needs.plan.outputs.ops_selection_matrix != ''
+    if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_selection_matrix != '[]' && needs.plan.outputs.ops_selection_matrix != ''
     container:
       image: ghcr.io/onesyue/yueops-ci-toolchain@sha256:96b3439fd16effe9686cb6297026e97fac605db4d1ab8ce674aa45c121873017
       options: --user runner --volume /var/run/docker.sock:/var/run/docker.sock
@@ -2393,7 +2449,9 @@ jobs:
         if: matrix.validation == 'yueops'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: ops-selection-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.service }}
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.plan.outputs.evidence_run || github.run_id }}
+          name: ops-selection-${{ needs.plan.outputs.evidence_run || github.run_id }}-${{ needs.plan.outputs.evidence_attempt || github.run_attempt }}-${{ matrix.service }}
           path: ${{ runner.temp }}/ops-selection-verdicts
           digest-mismatch: error
 
