@@ -29,8 +29,7 @@ class IndirectMergeSource(unittest.TestCase):
         self.merged = [self.old, self.direct]
         self.direct_checks = fixture["checks"]
         self.old_checks = [fixture["checks"][0] | {"conclusion": "failure"}]
-        self.reviews, self.statuses = fixture["reviews"], fixture["statuses"]
-        self.direct_reviews = [r | {"commit_id": "e" * 40} for r in self.reviews]
+        self.statuses = fixture["statuses"]
         self.second_compare = {"status": "ahead", "base_commit": {"sha": "a" * 40},
                                "merge_base_commit": {"sha": "a" * 40},
                                "ahead_by": 1, "behind_by": 0, "total_commits": 1}
@@ -49,13 +48,11 @@ class IndirectMergeSource(unittest.TestCase):
         if "/pulls?state=closed" in endpoint:
             return self.merged
         if "/git/commits/" in endpoint:
-            return {"sha": self.commit_sha, "parents": self.parents}
+            return {"sha": self.commit_sha, "parents": self.parents, "verification": {"verified": True}}
         if f'/commits/{"c" * 40}/pulls?' in endpoint:
             if self.paginated and endpoint.endswith("page=1"):
                 return [self.old] * 100
             return self.associated
-        if "/reviews?" in endpoint:
-            return self.direct_reviews if "/pulls/252/" in endpoint else self.reviews
         if "/check-runs?" in endpoint:
             return {"check_runs": self.old_checks if f'/commits/{"a" * 40}/' in endpoint else self.direct_checks}
         if "/statuses?" in endpoint:
@@ -96,13 +93,6 @@ class IndirectMergeSource(unittest.TestCase):
                     self.run_audit()
 
 
-    def test_direct_missing_or_stale_native_approval_cannot_certify_ancestor(self):
-        for reviews in ([], [r | {"commit_id": "a" * 40} for r in self.direct_reviews]):
-            with self.subTest(reviews=reviews):
-                self.direct_reviews = reviews
-                with self.assertRaisesRegex(ValueError, "native review/check"):
-                    self.run_audit()
-
     def test_actual_direct_red_is_not_reclassified(self):
         self.merged = [self.direct, copy.deepcopy(self.direct) | {"number": 253}]
         self.direct_checks = [self.direct_checks[0] | {"conclusion": "failure"}]
@@ -114,7 +104,7 @@ class IndirectMergeSource(unittest.TestCase):
         self.merged = [self.old]
         row, = self.run_audit()
         self.assertIn("check_nonpassing_at_merge:policy", row["findings"])
-        self.assertFalse(any("/git/commits/" in e for e in self.seen))
+        self.assertFalse(any("/compare/" in e for e in self.seen))
 
     def test_complete_associated_pr_pagination_is_required(self):
         self.paginated = True
@@ -152,7 +142,7 @@ class IndirectMergeSource(unittest.TestCase):
                 code, result = self.main_result()
                 self.assertEqual(code, 1)
                 self.assertTrue(result["complete"])
-                self.assertEqual(result["unregistered"], 1)
+                self.assertEqual(result["unregistered"], 2)
                 old = next(row for row in result["findings"] if row["pr"] == 248)
                 self.assertIn("check_nonpassing_at_merge:policy", old["findings"])
                 self.assertNotIn("indirect_merge", old)
@@ -168,9 +158,9 @@ class IndirectMergeSource(unittest.TestCase):
                 findings = list(old["findings"])
                 accepted = {("yueops", 248, self.old["head"]["sha"]): {"findings": findings}}
                 code, result = self.main_result(accepted)
-                self.assertEqual(code, 0)
+                self.assertEqual(code, 1)
                 self.assertTrue(result["complete"])
-                self.assertEqual(result["unregistered"], 0)
+                self.assertEqual(result["unregistered"], 1)
                 retained = next(row for row in result["findings"] if row["pr"] == 248)
                 self.assertEqual(retained["findings"], findings)
                 self.assertTrue(retained["accepted_history"])

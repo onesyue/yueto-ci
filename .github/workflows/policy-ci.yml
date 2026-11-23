@@ -43,7 +43,7 @@ jobs:
 
       # The PostgreSQL execution guard's negative controls run real Go tests;
       # a fake go executable cannot prove skips/non-execution are rejected.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6.5.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.27.2'
           cache: false # Public policy has no go.mod/go.sum dependency cache.
@@ -73,22 +73,7 @@ jobs:
         run: 'python3 -m pip install --require-hashes --only-binary=:all: -r requirements-policy.txt'
 
       - name: Validate central policy
-        run: |
-          set -euo pipefail
-          # Discovery, not a hand-kept list: a new tests/test_*.py runs the
-          # moment it lands. scripts/run-policy-tests.py runs each discovered
-          # module in its own process. tests/test_policy_discovery_contract.py
-          # keeps every case reachable (TestCase or load_tests), and a module
-          # that fails to import is a failing test, never a skip.
-          python3 scripts/run-policy-tests.py
-          python3 -m compileall -q scripts tests
-          for script in scripts/*.sh; do
-            bash -n "$script"
-          done
-          # The hosted image ships ShellCheck; absence is a failure, not a pass.
-          command -v shellcheck
-          shellcheck --severity=warning scripts/*.sh
-          actionlint .github/workflows/*.yml
+        run: scripts/check-policy.sh ci
 
   local-replay:
     name: complete ci-check --local replay
@@ -143,7 +128,7 @@ jobs:
           owner: onesyue
           repositories: yueops,yueboard
           permission-contents: read
-          skip-token-revoke: true # Explicitly revoked before any source execution.
+        # Keep the action's post-job revoke as a fallback for interrupted preparation.
 
       - name: Prepare exact standalone clones and clear credential
         timeout-minutes: 20

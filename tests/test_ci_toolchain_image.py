@@ -56,7 +56,7 @@ class CiToolchainImageTest(unittest.TestCase):
             self.assertEqual(steps[name]['if'], host_condition)
         for name in ('Set up Python on GitHub-hosted runner', 'Select Python on GitHub-hosted runner'):
             self.assertEqual(steps[name]['if'], host_condition.replace("== 'e2e'", "!= 'e2e'"))
-        self.assertEqual(steps['Set up Python for host Board e2e']['with']['python-version'], '3.13')
+        self.assertRegex(steps['Set up Python for host Board e2e']['with']['python-version'], r'^3\.13\.[0-9]+$')
         self.assertIn('command -v python3', steps['Select Python for host Board e2e']['run'])
         e2e = steps['Validate YueBoard end-to-end suite']
         self.assertIn('--database-adapter loopback', e2e['run'])
@@ -133,7 +133,18 @@ class CiToolchainImageTest(unittest.TestCase):
             completed = subprocess.run(
                 ["bash", str(wrapper), "run", "-v",
                  "/__w/yueto-ci/yueto-ci/scripts/yueops-harden.sh:/review/yueops-harden.sh:ro",
-                 "--mount", "type=bind,source=/__w/yueto-ci/yueto-ci,target=/src"],
+                 "--mount", "type=bind,source=/__w/yueto-ci/yueto-ci,target=/src",
+                 "--volume", "/__w:/workspace",
+                 "-v", "/__w/project/__w:/nested",
+                 "-v", "/__workspace:/separate",
+                 "-v", "/tmp/__w:/temporary",
+                 "-v", "cache:/__w",
+                 "-v", "/__w/target-only",
+                 "--mount", "type=bind,source=/__w,target=/workspace",
+                 "--mount", "type=bind,source=/__workspace,target=/separate",
+                 "--mount", "type=bind,source=/tmp/__w,target=/temporary",
+                 "--mount", 'type=bind,"src=/__w/with,comma",target=/quoted',
+                 "--mount", 'type=bind,"target=/tmp,source=/__w",source=/tmp'],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -148,6 +159,19 @@ class CiToolchainImageTest(unittest.TestCase):
             lines[4],
             "type=bind,source=/home/runner/work/yueto-ci/yueto-ci,target=/src",
         )
+        self.assertEqual(lines[6::2], [
+            "/home/runner/work:/workspace",
+            "/home/runner/work/project/__w:/nested",
+            "/__workspace:/separate",
+            "/tmp/__w:/temporary",
+            "cache:/__w",
+            "/__w/target-only",
+            "type=bind,source=/home/runner/work,target=/workspace",
+            "type=bind,source=/__workspace,target=/separate",
+            "type=bind,source=/tmp/__w,target=/temporary",
+            'type=bind,"src=/home/runner/work/with,comma",target=/quoted',
+            'type=bind,"target=/tmp,source=/__w",source=/tmp',
+        ])
         self.assertFalse(fake.exists())
 
 

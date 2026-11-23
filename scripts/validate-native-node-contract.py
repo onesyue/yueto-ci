@@ -1156,7 +1156,6 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         [
             "export function requireSubscriptionURL(",
             'parsed.protocol !== "https:"',
-            'parsed.hash !== ""',
             '"clash"',
             '"stash"',
             '"hiddify"',
@@ -1168,6 +1167,12 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         ],
         "YueBoard mainstream-client subscription import",
     )
+    # The export must reject URL fragments; either spelling is equivalent
+    # (rawURL.includes("#") also rejects an empty trailing "#").
+    if 'parsed.hash !== ""' not in subscription_client and 'rawURL.includes("#")' not in subscription_client:
+        raise RuntimeError(
+            "YueBoard mainstream-client subscription import is missing a URL fragment guard"
+        )
     forbid(
         web_runtime,
         [
@@ -1177,11 +1182,11 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         ],
         "YueBoard retired Portal installation and unsupported client catalogue",
     )
-    # 2026-09-24: the approved compatibility section exposes copy-only node
-    # subscriptions and explains HTTPS latency testing. It must not silently
-    # promote Shadowrocket into the managed-profile/one-click catalogue.
+    # 2026-09-24: Shadowrocket must not enter the managed-profile catalogue.
+    # 2026-11-23: the owner approved Shadowrocket/Quantumult X one-click node
+    # subscription import (yueboard #291), so shadowrocket:// is no longer a
+    # retired fragment; the export still has to pass requireSubscriptionURL.
     validate_managed_subscription_catalogue(subscription_client)
-    forbid_casefold(web_runtime, ["shadowrocket://"], "YueBoard unsupported one-click import")
     require(
         subscription_client,
         ["export function shadowrocketSubscriptionURL(", "new URL(requireSubscriptionURL(rawURL))"],

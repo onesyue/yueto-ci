@@ -5,7 +5,7 @@ executed once someone also remembered to add that line; PolicyCiRunsEveryTestFil
 caught the omission, but only because it happened to exist in one of the listed
 files. Discovery removes the list; this contract keeps discovery honest:
 
-* the workflow really runs ``python3 scripts/run-policy-tests.py``
+* the shared policy entry runs ``python3 scripts/run-policy-tests.py``
   and no longer carries a per-file list that could silently diverge;
 * every ``test_*`` case in ``tests/test_*.py`` is reachable by unittest: it lives
   on a ``unittest.TestCase`` subclass, or the module defines ``load_tests`` (the
@@ -18,12 +18,16 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_CI = ROOT / ".github" / "workflows" / "policy-ci.yml"
+ENTRY = ROOT / "scripts/check-policy.sh"
 DISCOVER = "python3 scripts/run-policy-tests.py"
 # 2026-09-28: 8 files / 150+ cases. Floors, not exact counts.
 MIN_FILES = 8
@@ -80,9 +84,11 @@ def count_cases(suite: unittest.TestSuite) -> int:
 class PolicyDiscoveryContractTest(unittest.TestCase):
     def test_policy_ci_runs_discovery_not_a_hand_kept_list(self) -> None:
         workflow = POLICY_CI.read_text(encoding="utf-8")
-        self.assertIn(DISCOVER, workflow)
+        self.assertIn("run: scripts/check-policy.sh ci", workflow)
+        entry = ENTRY.read_text(encoding="utf-8")
+        self.assertIn(DISCOVER, entry)
         # A leftover per-file line would mean two sources of truth again.
-        self.assertNotRegex(workflow, r"python3 tests/test_[a-z0-9_]+\.py")
+        self.assertNotRegex(workflow + entry, r"python3 tests/test_[a-z0-9_]+\.py")
 
     def test_every_case_is_reachable_by_unittest(self) -> None:
         directory = ROOT / "tests"
@@ -118,9 +124,8 @@ class PolicyDiscoveryContractTest(unittest.TestCase):
             )
             self.assertEqual(undiscovered_cases(directory), [])
 
-    def test_rejects_a_workflow_that_went_back_to_a_list(self) -> None:
-        workflow = POLICY_CI.read_text(encoding="utf-8")
-        mutated = workflow.replace(DISCOVER, "python3 tests/test_build_policy.py")
+    def test_rejects_an_entry_that_went_back_to_a_list(self) -> None:
+        mutated = ENTRY.read_text(encoding="utf-8").replace(DISCOVER, "python3 tests/test_build_policy.py")
         self.assertNotIn(DISCOVER, mutated)
         self.assertRegex(mutated, r"python3 tests/test_[a-z0-9_]+\.py")
 
@@ -130,6 +135,26 @@ class PolicyDiscoveryContractTest(unittest.TestCase):
         self.assertIn("unittest", script)
         self.assertIn("discover", script)
         self.assertNotIn("test_build_policy.py", script)
+
+    def test_runner_requires_policy_tools_before_discovery(self) -> None:
+        script = ROOT / "scripts" / "run-policy-tests.py"
+        tools = ("bash", "curl", "git", "go", "gpg", "gpgv", "jq", "node", "sha256sum", "tar")
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            for tool in tools:
+                (directory / tool).symlink_to(sys.executable)
+            env = dict(os.environ, PATH=tmp)
+            command = [sys.executable, str(script)]
+            complete = subprocess.run([*command, "--check-toolchain"], env=env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(complete.returncode, 0, complete.stderr)
+            for tool in ("gpgv", "jq", "node"):
+                with self.subTest(tool=tool):
+                    (directory / tool).unlink()
+                    missing = subprocess.run(command, env=env, capture_output=True, text=True, timeout=10)
+                    self.assertEqual(missing.returncode, 2, missing.stderr)
+                    self.assertEqual(missing.stderr.strip(), f"policy toolchain missing required executables: {tool}")
+                    self.assertEqual(missing.stdout, "")
+                    (directory / tool).symlink_to(sys.executable)
 
     def test_parallel_processes_run_every_discovered_module(self) -> None:
         runner = _runner()
