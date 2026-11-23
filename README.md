@@ -245,8 +245,13 @@ schema-reset behavior before changing execution order.
 
 [input-fingerprint.py](scripts/input-fingerprint.py) derives actual COPY/ADD/bind
 inputs for polling and publication admission. Its optional feedback CLI retains
-complete/unknown reports, with full validation always required. Shared evidence
-identity helpers remain in verification-evidence.py; verification reuse is disabled.
+complete/unknown reports. Hosted promotion can reuse a successful validation from
+the previous 24 hours when the source SHA, yueto-ci commit, workflow SHA-256,
+hosted runner image version and effective validation inputs match. Set the repository
+variable `YUETO_REUSE_YUE_NODE` or `YUETO_REUSE_YUEOPS` to `true` to opt in for
+that service group. Both default to off. Missing evidence, a changed input, or a
+lookup failure runs full validation. Freshness runs on every promotion. The plan
+summary records the original run and attempt when evidence is reused.
 The former non-gating `input-shadow` reporting job is retired. No release job
 consumes its diagnostic artifacts, so no scheduled probe or artifact upload remains.
 
@@ -429,13 +434,13 @@ python3 scripts/merge-hygiene-audit.py --hours 24
 python3 scripts/merge-hygiene-audit.py --hours 24 --format json
 ```
 
-The audit reads native GitHub reviews, checks and statuses using authenticated
-`gh api`. It defaults to all seven repositories: `yueops`, `yueboard`, `yueto`,
-`yueto-ci`, `yuelink`, `yuelink-ci`, and `yue-node`. The credential needs read
-access to this evidence. A non-author, non-bot approval must name the exact PR
-head in its `commit_id`; an approval of an older commit cannot admit a new head.
-Latest review state and checks/statuses are evaluated at merge time. Later green
-reruns cannot erase observed failures. Completed `success`, `neutral`, and
+The audit reads native GitHub commit metadata, checks and statuses using
+authenticated `gh api`. It defaults to all seven repositories: `yueops`,
+`yueboard`, `yueto`, `yueto-ci`, `yuelink`, `yuelink-ci`, and `yue-node`.
+Independent PR approval is optional in every repository under the 2026-11-23
+owner decision (t1396u). Merged PRs require a GitHub-verified merge commit
+signature and two parents. Checks and statuses are evaluated at merge time.
+Later green reruns cannot erase observed failures. Completed `success`, `neutral`, and
 `skipped` checks retain GitHub's passing-conclusion semantics; this does not
 claim that skipped work executed. Missing, pending, red or ambiguous evidence
 remains a finding. API/input failures exit **2**, never clean.

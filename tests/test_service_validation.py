@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -22,7 +23,7 @@ class ServiceValidationTest(unittest.TestCase):
         builds = [dict(service=name, validation="yue-node" if name == "yue-node" else "yueops") for name in names]
         validations = [dict(validation="yueops", ops_role="ordinary-1"), dict(validation="yue-node", node_profile="hy2")]
         jobs = [dict(name=name, status="completed", conclusion="success") for name in
-                ("validate-yueops-ordinary-1", "validate-yue-node-hy2", "select-yue-bot", "select-checkin-api")]
+                ("validate-yueops-ordinary-1", "validate-yue-node-hy2", "freshness-yueops", "freshness-yue-node", "select-yue-bot", "select-checkin-api")]
         def verdict():
             return policy.results(builds, validations, jobs)
         jobs[0].update(conclusion="failure", steps=[dict(name="Owned pytest verdict for yue-bot", conclusion="failure")])
@@ -33,6 +34,52 @@ class ServiceValidationTest(unittest.TestCase):
         jobs.pop(1)
         jobs[-1]["conclusion"] = "failure"
         self.assertEqual(verdict(), (dict(zip(names, [True, False, False])), True))
+
+    def test_advisories_require_one_successful_completion_for_their_source(self):
+        groups = ("yueboard", "yue-node", "yueops")
+        builds = [dict(service=g, validation=g) for g in groups]
+        validations = [dict(validation=g) for g in groups]
+        for group in groups:
+            jobs = [dict(name=name, status="completed", conclusion="success") for name in
+                    [*("validate-" + g for g in groups), *("freshness-" + g for g in groups if g != group),
+                     "select-yueops"]]
+            good = dict(name="freshness-" + group, status="completed", conclusion="success")
+            for extra in ([], [good, good], [good | {"status": "in_progress"}],
+                          [good | {"conclusion": "skipped"}], [good | {"conclusion": "failure"}], [good]):
+                services, shared = policy.results(builds, validations, jobs + extra)
+                self.assertEqual(services, {g: g != group or extra == [good] for g in groups})
+                self.assertEqual(shared, services["yueops"])
+
+    def test_validate_executors_leave_live_audits_to_freshness(self):
+        jobs = yaml.safe_load((ROOT / ".github/workflows/build.yml").read_text())["jobs"]
+        self.assertIn("freshness", jobs["validation-evidence"]["needs"])
+        self.assertIn("validate", jobs["validation-evidence"]["needs"])
+        for job in ("validate", "ops-service-selection"):
+            self.assertEqual(jobs[job]["env"]["NPM_CONFIG_AUDIT"], "false")
+            commands = "\n".join(step.get("run", "") for step in jobs[job]["steps"])
+            paths = set(re.findall(r"\.ci-policy/(scripts/[\w.-]+\.(?:sh|py))", commands))
+            self.assertIn("scripts/ops-validation-dependencies.sh", paths)
+            if job == "validate":
+                self.assertIn("scripts/board-validation-output.py", paths)
+                paths.add("scripts/board-validation.sh")  # Invoked by the output adapter.
+            for path in paths:
+                commands += "\n" + (ROOT / path).read_text()
+            self.assertNotRegex(commands, r"pip-audit|(?:p?npm)[- ]audit|govulncheck\s+\./|bash scripts/check-vulnerabilities\.sh")
+
+        fresh = jobs["freshness"]
+        self.assertEqual(fresh["needs"], ["plan"])
+        self.assertEqual(fresh["strategy"]["matrix"]["include"], "${{ fromJSON(needs.plan.outputs.freshness_matrix) }}")
+        self.assertEqual(fresh["name"], "freshness-${{ matrix.validation }}")
+        steps = fresh["steps"]
+        for group, gate in (("yueops", "ops-validation-python-audit.sh"),
+                            ("yueops", "ops-validation-npm-audit.sh"),
+                            ("yueboard", "board-frontend-audit.sh"),
+                            ("yueboard", 'govulncheck" ./...'),
+                            ("yue-node", "bash scripts/check-vulnerabilities.sh")):
+            owners = [step for step in steps if gate in step.get("run", "")]
+            self.assertEqual(len(owners), 1, gate)
+            self.assertEqual(owners[0]["if"], f"matrix.validation == '{group}'")
+            self.assertNotIn("continue-on-error", owners[0])
 
     def test_publish_cell_uses_only_its_own_result_and_artifact(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/build.yml").read_text())

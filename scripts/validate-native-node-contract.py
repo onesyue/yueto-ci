@@ -6,8 +6,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import runpy
 import subprocess
 import sys
 
@@ -1154,7 +1156,6 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         [
             "export function requireSubscriptionURL(",
             'parsed.protocol !== "https:"',
-            'parsed.hash !== ""',
             '"clash"',
             '"stash"',
             '"hiddify"',
@@ -1166,6 +1167,12 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         ],
         "YueBoard mainstream-client subscription import",
     )
+    # The export must reject URL fragments; either spelling is equivalent
+    # (rawURL.includes("#") also rejects an empty trailing "#").
+    if 'parsed.hash !== ""' not in subscription_client and 'rawURL.includes("#")' not in subscription_client:
+        raise RuntimeError(
+            "YueBoard mainstream-client subscription import is missing a URL fragment guard"
+        )
     forbid(
         web_runtime,
         [
@@ -1175,11 +1182,11 @@ def validate_yueboard(root: Path, contract: dict) -> None:
         ],
         "YueBoard retired Portal installation and unsupported client catalogue",
     )
-    # 2026-09-24: the approved compatibility section exposes copy-only node
-    # subscriptions and explains HTTPS latency testing. It must not silently
-    # promote Shadowrocket into the managed-profile/one-click catalogue.
+    # 2026-09-24: Shadowrocket must not enter the managed-profile catalogue.
+    # 2026-11-23: the owner approved Shadowrocket/Quantumult X one-click node
+    # subscription import (yueboard #291), so shadowrocket:// is no longer a
+    # retired fragment; the export still has to pass requireSubscriptionURL.
     validate_managed_subscription_catalogue(subscription_client)
-    forbid_casefold(web_runtime, ["shadowrocket://"], "YueBoard unsupported one-click import")
     require(
         subscription_client,
         ["export function shadowrocketSubscriptionURL(", "new URL(requireSubscriptionURL(rawURL))"],
@@ -1341,6 +1348,33 @@ def validate_yuelink(root: Path, contract: dict) -> None:
     )
 
 
+def resolve_yueboard_contract_ref(explicit: str) -> str:
+    revision = explicit
+    if not explicit:
+        # Use the same digest and revision reader as the image fingerprint check.
+        registry = runpy.run_path(str(POLICY_ROOT / "scripts/input-fingerprint.py"))
+        try:
+            _, revision = registry["ghcr_latest"](
+                "yueboard", os.environ["GHCR_USER"], os.environ["GHCR_PASSWORD"]
+            )
+        except (KeyError, registry["Unknown"]) as exc:
+            raise ValueError("cannot resolve promoted YueBoard revision") from exc
+    if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise ValueError("YueBoard contract ref must be an exact 40-hex commit SHA")
+    return revision
+
+
+def resolve_ref_cli() -> int:
+    parser = argparse.ArgumentParser(description="Select the YueBoard wire contract revision")
+    parser.add_argument("--explicit", default="")
+    args = parser.parse_args(sys.argv[2:])
+    try:
+        print(resolve_yueboard_contract_ref(args.explicit))
+    except ValueError as exc:
+        parser.exit(1, f"{exc}\n")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1381,4 +1415,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["resolve-yueboard-ref"]:
+        raise SystemExit(resolve_ref_cli())
     raise SystemExit(main())

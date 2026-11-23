@@ -1,7 +1,10 @@
 """Board defaults use the existing signed snapshot API, with no pin fallback."""
 import importlib.util
+import io
+import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -73,23 +76,54 @@ def assert_desired_unchanged(snapshot):
             with self.assertRaisesRegex(RuntimeError, 'positive integer'):
                 native.validate_board_schema_input(board)
 
-    def test_real_workflow_requires_explicit_ops_context_but_keeps_board_publication_pin(self):
+    def test_ambiguous_promoted_board_manifest_fails_before_reading_a_child(self):
+        spec = importlib.util.spec_from_file_location('fingerprint', ROOT / 'scripts/input-fingerprint.py')
+        registry = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(registry)
+        candidates = [{'platform': {'architecture': 'amd64', 'os': 'linux'}, 'digest': 'sha256:' + c*64}
+                      for c in ('a', 'b')]
+        index = io.BytesIO(json.dumps({'manifests': candidates}).encode())
+        index.headers = {'Docker-Content-Digest': 'sha256:' + 'c'*64}
+        with patch('urllib.request.urlopen', side_effect=[io.BytesIO(b'{"token":"fixture"}'), index]) as read:
+            with self.assertRaisesRegex(registry.Unknown, 'ambiguous'):
+                registry.ghcr_latest('yueboard', 'fixture', 'fixture')
+        self.assertEqual(read.call_count, 2)
+
+    def test_real_workflow_resolves_contract_and_keeps_board_preflight_on_promoted_revision(self):
         text = (ROOT / '.github/workflows/build.yml').read_text()
-        self.assertIn("matrix.validation == 'yueops' && needs.plan.outputs.yueboard_contract_ref || needs.plan.outputs.yueboard_policy_pin", text)
         self.assertIn('YUEBOARD_CONTRACT_REF: ${{ github.event.inputs.yueboard_contract_ref', text)
-        start = text.index("          if jq -e 'any(.validation_matrix[]; .validation == \"yueops\")'")
+        self.assertIn('promoted_board_ref: ${{ steps.plan.outputs.promoted_board_ref }}', text)
+        self.assertIn('PROMOTED_BOARD_REF: ${{ needs.plan.outputs.promoted_board_ref }}', text)
+        self.assertIn('echo "promoted_board_ref=$promoted_board_ref"', text)
+        start = text.index('          promoted_board_ref=""')
         end = text.index('          if [ "$validation_only" = true ]; then', start)
-        shell = '\n'.join(line[10:] for line in text[start:end].splitlines())
-        for kind, explicit, pin, ok in [
-            ('yueops', '', 'a' * 40, False),
-            ('yueops', 'master', 'a' * 40, False),
-            ('yueops', 'b' * 40, 'a' * 40, True),
-            ('yueboard', '', 'a' * 40, True),
-            ('yueboard', 'b' * 40, 'a' * 40, True),
-        ]:
-            with self.subTest(kind=kind, explicit=explicit):
-                env = os.environ | {'target_plan': '{"validation_matrix":[{"validation":"' + kind + '"}]}',
-                                    'explicit_board_ref': explicit, 'yueboard_contract_pin': pin}
-                result = subprocess.run(['bash', '-c', 'set -euo pipefail\n' + shell],
-                                        env=env, capture_output=True, text=True)
-                self.assertEqual(result.returncode == 0, ok, result.stderr)
+        shell = text[start:end] + 'printf "%s|%s" "$yueboard_contract_ref" "$promoted_board_ref"'
+        promoted, explicit = 'a'*40, 'b'*40
+        with tempfile.TemporaryDirectory() as directory:
+            scripts = Path(directory) / 'scripts'
+            scripts.mkdir()
+            shutil.copy(ROOT / 'scripts/validate-native-node-contract.py', scripts)
+            (scripts / 'input-fingerprint.py').write_text(
+                'import os\nclass Unknown(Exception): pass\n'
+                'def ghcr_latest(service, user, password):\n'
+                '    return "fixture", os.environ["FIXTURE_PROMOTED"]\n')
+            for targets, override, available, expected in [
+                (['yueops'], '', promoted, promoted + '|'),
+                (['yue-node'], '', promoted, promoted + '|'),
+                (['yueops'], explicit, '', explicit + '|'),
+                (['yueops'], 'master', promoted, None),
+                (['yue-node'], '', '', None),
+                (['yueops'], '', promoted + '\n' + explicit, None),
+                (['yueboard'], '', promoted, promoted + '|' + promoted),
+                (['yueboard', 'yueops'], explicit, promoted, explicit + '|' + promoted),
+                (['yueboard'], explicit, '', None),
+                (['yuelink'], '', '', '|'),
+            ]:
+                with self.subTest(targets=targets, override=override, available=available):
+                    env = os.environ | {'target_plan': json.dumps({'validation_matrix': [
+                        {'validation': target} for target in targets]}), 'YUEBOARD_CONTRACT_REF': override,
+                        'FIXTURE_PROMOTED': available, 'GHCR_USER': 'fixture', 'GHCR_PASSWORD': 'fixture'}
+                    result = subprocess.run(['bash', '-euc', shell], cwd=directory, env=env,
+                                            capture_output=True, text=True)
+                    self.assertEqual(result.returncode == 0, expected is not None, result.stderr)
+                    self.assertEqual(result.stdout, expected or '')

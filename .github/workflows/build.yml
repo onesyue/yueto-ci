@@ -42,7 +42,7 @@ on:
         type: boolean
         default: false
       yueboard_contract_ref:
-        description: 'required for Ops: exact production Board SHA from signed desired; historical context for validation_only'
+        description: 'exact YueBoard wire contract SHA for node and Ops validation; defaults to the promoted revision'
         required: false
         type: string
       resume_build_run_id:
@@ -180,6 +180,9 @@ jobs:
       matrix: ${{ steps.resume.outputs.matrix || steps.ops_scope.outputs.matrix || steps.plan.outputs.matrix }}
       resume: ${{ steps.plan.outputs.resume }}
       validation_matrix: ${{ steps.ops_plan.outputs.validation_matrix }}
+      freshness_matrix: ${{ steps.ops_plan.outputs.freshness_matrix }}
+      evidence_run: ${{ steps.evidence.outputs.run }}
+      evidence_attempt: ${{ steps.evidence.outputs.attempt }}
       validation_parallelism: ${{ steps.ops_plan.outputs.max_parallel }}
       ops_mode: ${{ steps.ops_plan.outputs.ops_mode }}
       ops_source: ${{ steps.plan.outputs.ops_source }}
@@ -188,7 +191,7 @@ jobs:
       has_builds: ${{ steps.ops_scope.outputs.has_builds || steps.plan.outputs.has_builds }}
       promote: ${{ steps.plan.outputs.promote }}
       yueboard_contract_ref: ${{ steps.plan.outputs.yueboard_contract_ref }}
-      yueboard_policy_pin: ${{ steps.plan.outputs.yueboard_policy_pin }}
+      promoted_board_ref: ${{ steps.plan.outputs.promoted_board_ref }}
       ops_selection_matrix: ${{ steps.ops_scope.outputs.ops_selection_matrix || '[]' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -234,6 +237,8 @@ jobs:
           VALIDATION_ONLY: ${{ inputs.validation_only && 'true' || 'false' }}
           MANUAL_PROMOTE: ${{ github.event.inputs.promote || 'false' }}
           DISPATCH_PROMOTE: ${{ github.event.client_payload.promote || 'false' }}
+          GHCR_USER: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
+          GHCR_PASSWORD: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
           YUEBOARD_CONTRACT_REF: ${{ github.event.inputs.yueboard_contract_ref || github.event.client_payload.yueboard_contract_ref || '' }}
         run: |
           set -euo pipefail
@@ -268,17 +273,8 @@ jobs:
             false) ;;
             *) echo 'invalid validation_only value' >&2; exit 1 ;;
           esac
-          # The recorded pin remains the default contract tree for node validation.
-          # It does not reject a YueBoard commit. Ops still requires an explicit ref.
-          yueboard_contract_pin="$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' native-node-contract.json)"
-          yueboard_contract_ref="$yueboard_contract_pin"
-          explicit_board_ref=""
           case "$EVENT_NAME" in
             workflow_dispatch)
-              if [ -n "$YUEBOARD_CONTRACT_REF" ]; then
-                explicit_board_ref="$YUEBOARD_CONTRACT_REF"
-                yueboard_contract_ref="$explicit_board_ref"
-              fi
               case "$MANUAL_PROMOTE" in
                 true) promote=true ;;
                 false|'') ;;
@@ -289,10 +285,6 @@ jobs:
               esac
               ;;
             repository_dispatch)
-              explicit_board_ref="$YUEBOARD_CONTRACT_REF"
-              if [ -n "$explicit_board_ref" ]; then
-                yueboard_contract_ref="$explicit_board_ref"
-              fi
               case "$DISPATCH_PROMOTE" in
                 true)
                   [ "$EVENT_ACTOR" = "onesyue" ] || {
@@ -321,10 +313,6 @@ jobs:
               exit 1
               ;;
           esac
-          [[ "$yueboard_contract_ref" =~ ^[0-9a-f]{40}$ ]] || {
-            echo "YueBoard contract ref must be an exact 40-hex commit SHA" >&2
-            exit 1
-          }
           if [[ "$REF_OVERRIDE" =~ ^[0-9a-f]{7,39}$ ]]; then
             echo "short commit refs are not reproducible; pass the exact 40-hex source SHA" >&2
             exit 1
@@ -352,13 +340,16 @@ jobs:
           # validators in separate registries. `all` covers YueLink without
           # ever inventing a Docker target for it.
           target_plan="$(bash scripts/plan-build-targets.sh "$SERVICE" "$REF_OVERRIDE")"
-          if jq -e 'any(.validation_matrix[]; .validation == "yueops")' <<<"$target_plan" >/dev/null; then
-            [[ "$explicit_board_ref" =~ ^[0-9a-f]{40}$ ]] || {
-              echo 'YueOps requires explicit yueboard_contract_ref from signed desired (historical override only for validation_only)' >&2
-              exit 1
-            }
-          # yueboard_contract_pin does not reject a different commit. Computed
-          # checks run in verify-yueboard-commit.py at the commit under build.
+          promoted_board_ref=""
+          if jq -e 'any(.validation_matrix[]; .validation == "yueboard")' <<<"$target_plan" >/dev/null; then
+            promoted_board_ref="$(python3 scripts/validate-native-node-contract.py resolve-yueboard-ref)"
+          fi
+          yueboard_contract_ref="$promoted_board_ref"
+          if [ -n "$YUEBOARD_CONTRACT_REF" ] || {
+            [ -z "$promoted_board_ref" ] &&
+              jq -e 'any(.validation_matrix[]; .validation == "yue-node" or .validation == "yueops")' <<<"$target_plan" >/dev/null
+          }; then
+            yueboard_contract_ref="$(python3 scripts/validate-native-node-contract.py resolve-yueboard-ref --explicit="$YUEBOARD_CONTRACT_REF")"
           fi
           if [ "$validation_only" = true ]; then
             # One SHA cannot identify commits in several independent repositories.
@@ -418,7 +409,7 @@ jobs:
               fi
               target_plan="$(
                 bash scripts/authorize-yueboard-build-plan.sh \
-                  "$yueboard_contract_pin" "$board_source_sha" "$promote" \
+                  "" "$board_source_sha" "$promote" \
                   <<<"$target_plan"
               )"
               ;;
@@ -473,8 +464,8 @@ jobs:
             echo "validation_matrix=$validation_matrix"
             echo "has_builds=$has_builds"
             echo "promote=$promote"
+            echo "promoted_board_ref=$promoted_board_ref"
             echo "yueboard_contract_ref=$yueboard_contract_ref"
-            echo "yueboard_policy_pin=$yueboard_contract_pin"
           } >> "$GITHUB_OUTPUT"
 
       - name: Checkout exact Ops source for module planning
@@ -579,10 +570,40 @@ jobs:
           "${expand_args[@]}" > "$RUNNER_TEMP/ops-admission.json"
           {
             echo "validation_matrix=$(jq -c '.validation_matrix' "$RUNNER_TEMP/ops-admission.json")"
+            echo "freshness_matrix=$(jq -c '[.validation_matrix[] | select(.ops_role == "native" or .ops_role == "legacy" or .board_role == "quality" or .node_profile == "vless")]' "$RUNNER_TEMP/ops-admission.json")"
             echo "max_parallel=$(jq -er '.max_parallel' "$RUNNER_TEMP/ops-admission.json")"
             echo "ops_mode=$(jq -er '.mode' "$RUNNER_TEMP/ops-admission.json")"
             echo "admission_sha256=$(jq -er '.admission_sha256' "$RUNNER_TEMP/ops-admission.json")"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Fingerprint effective validation inputs
+        id: identity
+        if: steps.plan.outputs.resume != 'true' && inputs.runner == 'ubuntu-24.04'
+        env:
+          EVIDENCE_SERVICE: ${{ inputs.service }}
+          EVIDENCE_BASE: ${{ inputs.migration_base }}
+          EVIDENCE_SELECTION: ${{ steps.ops_scope.outputs.ops_selection_matrix || '[]' }}
+        run: |
+          python3 scripts/verification-evidence.py identity >> "$GITHUB_OUTPUT" ||
+            echo 'Validation identity unavailable. Running full validation.'
+
+      - name: Select an exact green validation attempt
+        id: evidence
+        if: steps.identity.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VALIDATION_IDENTITY: ${{ steps.identity.outputs.binding }}
+          EVIDENCE_SERVICE: ${{ inputs.service }}
+          EVIDENCE_REF: ${{ inputs.ref }}
+          EVIDENCE_SELECTION: ${{ steps.ops_scope.outputs.ops_selection_matrix || '[]' }}
+          EVIDENCE_BUILDS: ${{ steps.ops_scope.outputs.matrix || steps.plan.outputs.matrix }}
+          EVIDENCE_PROMOTE: ${{ steps.plan.outputs.promote }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REUSE_YUE_NODE: ${{ vars.YUETO_REUSE_YUE_NODE }}
+          REUSE_YUEOPS: ${{ vars.YUETO_REUSE_YUEOPS }}
+        run: |
+          timeout 90s python3 scripts/verification-evidence.py decide ||
+            echo 'Evidence lookup unavailable. Running full validation.'
 
       - name: Authenticate read-only original OCI proof retrieval
         if: steps.plan.outputs.resume == 'true'
@@ -633,6 +654,7 @@ jobs:
 
   validate:
     needs: [plan]
+    if: needs.plan.outputs.evidence_run == ''
     container:
       # Visual baselines were captured on the host; an empty image disables the job container.
       image: ${{ matrix.board_role != 'e2e' && 'ghcr.io/onesyue/yueops-ci-toolchain@sha256:96b3439fd16effe9686cb6297026e97fac605db4d1ab8ce674aa45c121873017' || '' }}
@@ -653,6 +675,8 @@ jobs:
     # gauntlet that is green under a different zone is not evidence.
     env:
       TZ: UTC
+      # npm ci otherwise sends an advisory request even for a locked install.
+      NPM_CONFIG_AUDIT: 'false'
       # The host ImageVersion is not passed into a job container. Shard
       # admission rejects a missing identity. OS and architecture still come
       # from the runner; this names the toolchain image.
@@ -727,7 +751,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueboard
-          ref: ${{ matrix.validation == 'yueops' && needs.plan.outputs.yueboard_contract_ref || needs.plan.outputs.yueboard_policy_pin }}
+          ref: ${{ needs.plan.outputs.yueboard_contract_ref }}
           token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
           path: .ci-yueboard
           fetch-depth: 0
@@ -789,7 +813,7 @@ jobs:
         if: matrix.board_role == 'e2e' && (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.13'
+          python-version: '3.13.17'
 
       - name: Select Python for host Board e2e
         if: matrix.board_role == 'e2e' && (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
@@ -862,7 +886,7 @@ jobs:
         if: matrix.validation == 'yueboard' || startsWith(matrix.validation, 'ui-')
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '24'
+          node-version-file: .ci-policy/.node-version
 
       - name: Prepare host Board e2e tools
         if: matrix.board_role == 'e2e'
@@ -1031,12 +1055,11 @@ jobs:
         if: matrix.validation == 'yue-node'
         run: go clean -testcache
 
-      # Computed checks at this checkout replace pin equality. A commit that is
-      # not yueboard_contract_pin still validates and can be built. The pin is
-      # informational. Publish repeats verify-yueboard-commit.py before retag.
+      # Publish repeats the computed checks at this source revision before retagging.
       - name: Classify YueBoard reviewed-pin authorization
         if: matrix.validation == 'yueboard'
         env:
+          PROMOTED_BOARD_REF: ${{ needs.plan.outputs.promoted_board_ref }}
           PROMOTE: ${{ needs.plan.outputs.promote }}
         run: |
           bash .ci-policy/scripts/board-validation-preflight.sh contract \
@@ -1319,16 +1342,6 @@ jobs:
         run: |
           bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-backend.sh"
 
-      # Provider JSON is diagnostic only. Never put it in native/shard evidence.
-      - name: Retain Ops Python audit diagnostics
-        if: always() && matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ops-audit-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.ops_role }}
-          path: ${{ runner.temp }}/python-audit-reports.${{ github.run_id }}.${{ github.run_attempt }}.${{ matrix.ops_role }}.*/*.json
-          if-no-files-found: warn
-          retention-days: 14
-
       - name: Summarize passive yueops pytest timing
         if: always() && matrix.validation == 'yueops' && matrix.ops_role == 'legacy'
         run: |
@@ -1420,9 +1433,9 @@ jobs:
         run: test ! -e "$YUETO_OWNED_FAILURES/yueops-web"
 
   validation-evidence:
-    needs: [plan, validate, ops-service-selection]
+    needs: [plan, validate, freshness, ops-service-selection]
     outputs:
-      services: ${{ steps.service_report.outputs.services }}
+      services: ${{ steps.service_report.outputs.services || steps.reused_services.outputs.services }}
     if: always() && needs.plan.result == 'success'
     runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
     timeout-minutes: 10
@@ -1434,13 +1447,16 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Require selected freshness checks for validation-only runs
+        if: (inputs.validation_only || needs.plan.outputs.has_builds != 'true') && needs.plan.outputs.freshness_matrix != '[]' && needs.freshness.result != 'success'
+        run: exit 1
       - name: Select current resume admission attempt
         id: resume_handoff
         if: needs.plan.outputs.resume == 'true'
         run: echo "built_attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
       - name: Select verified admission attempt
         id: handoff
-        if: needs.plan.outputs.resume != 'true'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.resume != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           HANDOFF_RUN_ID: ${{ github.run_id }}
@@ -1453,6 +1469,7 @@ jobs:
             --run-attempt "$HANDOFF_RUN_ATTEMPT" \
             >> "$GITHUB_OUTPUT"
       - name: Download original admission plan
+        if: needs.plan.outputs.evidence_run == ''
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ops-admission-${{ github.run_id }}-${{ steps.resume_handoff.outputs.built_attempt || steps.handoff.outputs.built_attempt }}
@@ -1460,7 +1477,7 @@ jobs:
           digest-mismatch: error
       - name: Collect service validation conclusions
         id: service_checks
-        if: needs.plan.outputs.has_builds == 'true' || needs.plan.outputs.ops_selection_matrix != '[]'
+        if: needs.plan.outputs.evidence_run == '' && (needs.plan.outputs.has_builds == 'true' || needs.plan.outputs.ops_selection_matrix != '[]')
         env:
           GH_TOKEN: ${{ github.token }}
           BUILDS: ${{ needs.plan.outputs.matrix }}
@@ -1474,7 +1491,7 @@ jobs:
 
       - name: Mint read-only source evidence token (GitHub App)
         id: evidence_source_token
-        if: needs.plan.outputs.ops_mode == 'sharded' && vars.YUETO_CI_APP_CLIENT_ID != ''
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded' && vars.YUETO_CI_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
@@ -1483,7 +1500,7 @@ jobs:
           repositories: yueops
           permission-contents: read
       - name: Checkout exact Ops objects for independent evidence verification
-        if: needs.plan.outputs.ops_mode == 'sharded'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueops
@@ -1495,7 +1512,7 @@ jobs:
           persist-credentials: false
 
       - name: Fetch the default branch for evidence admission
-        if: needs.plan.outputs.ops_mode == 'sharded'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded'
         env:
           GIT_TOKEN: ${{ vars.YUETO_CI_APP_CLIENT_ID != '' && steps.evidence_source_token.outputs.token || secrets.YUETO_CI_PAT }}
         run: |
@@ -1506,7 +1523,7 @@ jobs:
             fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
           git -C .admission-source rev-parse --verify refs/remotes/origin/master >/dev/null
       - name: Download all current Ops role evidence
-        if: needs.plan.outputs.ops_mode == 'sharded'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: ops-shard-${{ github.run_id }}-${{ steps.resume_handoff.outputs.built_attempt || steps.handoff.outputs.built_attempt }}-*
@@ -1514,6 +1531,7 @@ jobs:
           merge-multiple: false
           digest-mismatch: error
       - name: Require complete selected validation and corpus
+        if: needs.plan.outputs.evidence_run == ''
         env:
           VALIDATION_RESULT: ${{ !inputs.validation_only && needs.plan.outputs.ops_mode != 'none' && steps.service_checks.outputs.ops_result || needs.validate.result }}
           ADMISSION_SHA256: ${{ needs.plan.outputs.admission_sha256 }}
@@ -1555,7 +1573,7 @@ jobs:
           PY
 
       - name: Publish ordinary shard weights
-        if: needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
         run: |
           set -euo pipefail
           python3 scripts/pytest-shards.py publish-ordinary-weights \
@@ -1564,13 +1582,26 @@ jobs:
             --output "${RUNNER_TEMP:?}/ordinary-weights.json"
 
       - name: Upload ordinary shard weights
-        if: needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
+        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded' && needs.validate.result == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ops-ordinary-weights-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/ordinary-weights.json
           if-no-files-found: warn
           retention-days: 14
+      - name: Record prior validation and require current freshness
+        if: needs.plan.outputs.evidence_run != ''
+        env:
+          PRIOR_RUN: ${{ needs.plan.outputs.evidence_run }}
+          PRIOR_ATTEMPT: ${{ needs.plan.outputs.evidence_attempt }}
+          FRESHNESS: ${{ needs.freshness.result }}
+        run: |
+          set -euo pipefail
+          test "$FRESHNESS" = success
+          jq -n --arg run "$PRIOR_RUN" --arg attempt "$PRIOR_ATTEMPT" \
+            '{status:"REPRODUCED_BY_IDENTITY", evidence_run:$run, evidence_attempt:$attempt}' \
+            > "$RUNNER_TEMP/ops-validation-evidence-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+
       - name: Retain complete validation verdict
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1589,6 +1620,15 @@ jobs:
           SERVICES: ${{ steps.service_checks.outputs.services }}
           JOIN_RESULT: ${{ job.status }}
         run: python3 scripts/service-validation.py report >> "$GITHUB_OUTPUT"
+
+      - name: Admit services covered by the reused attempt
+        id: reused_services
+        if: success() && needs.plan.outputs.evidence_run != '' && needs.freshness.result == 'success'
+        env:
+          BUILDS: ${{ needs.plan.outputs.matrix }}
+        run: |
+          jq -cr '"services=" + (map({key:.service, value:true}) | from_entries | tojson)' \
+            <<< "$BUILDS" >> "$GITHUB_OUTPUT"
 
   build:
     needs: [plan]
@@ -2033,7 +2073,7 @@ jobs:
 
   ops-service-selection:
     needs: [plan]
-    if: needs.plan.outputs.ops_selection_matrix != '[]' && needs.plan.outputs.ops_selection_matrix != ''
+    if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_selection_matrix != '[]' && needs.plan.outputs.ops_selection_matrix != ''
     container:
       image: ghcr.io/onesyue/yueops-ci-toolchain@sha256:96b3439fd16effe9686cb6297026e97fac605db4d1ab8ce674aa45c121873017
       options: --user runner --volume /var/run/docker.sock:/var/run/docker.sock
@@ -2044,6 +2084,8 @@ jobs:
     timeout-minutes: 120
     env:
       TZ: UTC
+      # npm ci otherwise sends an advisory request even for a locked install.
+      NPM_CONFIG_AUDIT: 'false'
       ImageVersion: yueops-ci-toolchain
       TMPDIR: /__w/_temp
     strategy:
@@ -2407,7 +2449,9 @@ jobs:
         if: matrix.validation == 'yueops'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: ops-selection-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.service }}
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.plan.outputs.evidence_run || github.run_id }}
+          name: ops-selection-${{ needs.plan.outputs.evidence_run || github.run_id }}-${{ needs.plan.outputs.evidence_attempt || github.run_attempt }}-${{ matrix.service }}
           path: ${{ runner.temp }}/ops-selection-verdicts
           digest-mismatch: error
 
@@ -2489,9 +2533,8 @@ jobs:
           }
           if [ "$VALIDATION_KIND" = yueboard ]; then
             python3 .ci-policy/scripts/verify-yueboard-commit.py --source .
-            contract_pin="$(jq -r '.yueboard_contract_pin // empty' .ci-policy/native-node-contract.json)"
             bash .ci-policy/scripts/authorize-yueboard-promotion.sh \
-              "$SOURCE_SHA" "$contract_pin" true
+              "$SOURCE_SHA" "" true
           fi
           if [ "$EVENT_NAME" = "repository_dispatch" ] &&
              [ "$DISPATCH_REF" != "$SOURCE_SHA" ]; then
@@ -2726,3 +2769,90 @@ jobs:
           set -euo pipefail
           echo "::error::a required job failed; cancelling run $RUN_ID so nothing keeps running on a failed release"
           gh run cancel "$RUN_ID"
+
+  freshness:
+    needs: [plan]
+    if: needs.plan.outputs.freshness_matrix != '[]'
+    name: freshness-${{ matrix.validation }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    container:
+      image: ghcr.io/onesyue/yueops-ci-toolchain@sha256:96b3439fd16effe9686cb6297026e97fac605db4d1ab8ce674aa45c121873017
+      options: --user runner
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(needs.plan.outputs.validation_parallelism) }}
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.freshness_matrix) }}
+    steps:
+      - name: Mint read-only source token (GitHub App)
+        id: source_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueboard,yue-node,yueops
+          permission-contents: read
+      - name: Checkout source repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          persist-credentials: false
+      - name: Checkout immutable central native-node policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueto-ci
+          ref: ${{ github.sha }}
+          path: .ci-policy
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Audit YueOps locked Python dependencies
+        if: matrix.validation == 'yueops'
+        env:
+          UV_PYTHON_DOWNLOADS: never
+          OPS_ROLE: ${{ matrix.ops_role }}
+        run: |
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-python-audit.sh"
+
+      # Provider JSON is diagnostic only. Never put it in native/shard evidence.
+      - name: Retain Ops Python audit diagnostics
+        if: always() && matrix.validation == 'yueops' && (matrix.ops_role == 'native' || matrix.ops_role == 'legacy')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ops-audit-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.ops_role }}
+          path: ${{ runner.temp }}/python-audit-reports.${{ github.run_id }}.${{ github.run_attempt }}.${{ matrix.ops_role }}.*/*.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Audit YueOps frontend and mini app
+        if: matrix.validation == 'yueops'
+        env:
+          YUE_CI_PYTHON: /usr/local/bin/python3
+        run: |
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-npm-audit.sh"
+
+      - name: Audit YueBoard dependencies
+        if: matrix.validation == 'yueboard'
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          set -euo pipefail
+          bash .ci-policy/scripts/install-board-quality-tools.sh "$RUNNER_TEMP/board-quality-tools"
+          "$RUNNER_TEMP/board-quality-tools/govulncheck" ./...
+          bash .ci-policy/scripts/board-frontend-audit.sh
+
+      - name: Audit yue-node vendored profiles
+        if: matrix.validation == 'yue-node'
+        env:
+          CGO_ENABLED: '1'
+          GOFLAGS: -mod=vendor
+          NODE_PROFILE: vless
+        run: bash scripts/check-vulnerabilities.sh

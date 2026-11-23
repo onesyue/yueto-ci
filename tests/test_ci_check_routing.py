@@ -39,18 +39,16 @@ class RepositoryRouting(unittest.TestCase):
                 self.assertEqual(fields['--board'], '')
                 self.assertEqual(fields['--branch'], 'fixture')
 
-    def test_unsupported_local_and_ops_options_rejected_before_network(self):
+    def test_ops_options_rejected_before_network(self):
         for repo in ('yueboard', 'yue-node'):
             options_list = [['--board-ref', 'b'*40], ['--prepare-only'], ['--prepared', 'receipt']]
-            if repo == 'yue-node':
-                options_list.append(['--local'])
+            options_list += [['--local', *options] for options in options_list]
             for options in options_list:
                 with self.subTest(repo=repo, options=options):
                     result = subprocess.run(['bash', str(ROOT / 'scripts/ci-check.sh'), repo, 'c'*40, *options],
                                             capture_output=True, text=True)
                     self.assertEqual(result.returncode, 2)
-                    self.assertIn('local validation is not implemented' if '--local' in options else
-                                  'options apply only to yueops', result.stderr)
+                    self.assertIn('options apply only to yueops', result.stderr)
 
     def test_non_ops_migration_base_rejected(self):
         result = subprocess.run(

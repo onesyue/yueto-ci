@@ -130,7 +130,7 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
         output = self.output.read_text() if self.output.exists() else ''
         return completed, rows, output
 
-    def test_prepare_both_layouts_build_both_apps_audit_and_output(self):
+    def test_prepare_both_layouts_build_both_apps_and_output(self):
         for layout in ('workspace', 'legacy'):
             if layout == 'legacy': (self.source / 'pnpm-workspace.yaml').unlink()
             for role in ('frontends', 'components', 'e2e'):
@@ -140,7 +140,7 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
                     self.assertEqual(output, f'layout={layout}\n')
                     keys = [row['key'] for row in rows]
                     self.assertEqual(keys[0], 'corepack enable')
-                    self.assertEqual(keys[-1], 'node scripts/ci/pnpm-audit-gate.mjs web web-admin')
+                    self.assertFalse(any('audit' in key for key in keys))
                     self.assertEqual(keys.count('node scripts/verify-dist.mjs dist'), 2)
                     self.assertTrue(all('--frozen-lockfile --ignore-scripts' in key for key in keys if ' install' in key and key.startswith('pnpm')))
                     if layout == 'workspace':
@@ -163,7 +163,7 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
                     self.assertNotEqual(result.returncode, 0)
                     self.assertEqual([r['key'] for r in rows], [r['key'] for r in expected[:index + 1]])
                     if phase == 'prepare' and index == len(expected) - 1:
-                        self.assertEqual(output, 'layout=workspace\n')
+                        self.assertEqual(output, '')
                     if role == 'e2e' and index == len(expected) - 1:
                         self.assertEqual(output, 'visual=compared\n')
 
@@ -173,7 +173,7 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
                 result, rows, output = self.run_phase(phase='design', **extra)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 keys = [row['key'] for row in rows]
-                self.assertEqual(keys[-3], 'node scripts/ci/pnpm-audit-gate.mjs test/a11y test/e2e')
+                self.assertFalse(any('audit' in key for key in keys))
                 self.assertEqual(keys[-2], 'pnpm --dir test/a11y exec playwright-core install ' + ('--with-deps ' if with_deps else '') + 'chromium')
                 self.assertEqual(keys[-1], 'node test/a11y/a11y-smoke.mjs')
                 self.assertEqual(output, '')
@@ -195,29 +195,30 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
         self.assertEqual(result.returncode, 2)
         self.assertFalse(any('playwright-core' in row['key'] for row in rows))
 
-    def test_tooling_audit_blocks_accessibility_for_advisory_or_infrastructure_failure(self):
-        audit = 'node scripts/ci/pnpm-audit-gate.mjs test/a11y test/e2e'
-        for status in (1, 2):
-            with self.subTest(status=status):
-                result, rows, output = self.run_phase('frontends', 'design',
-                    FAIL_COMMAND=audit, FAIL_STATUS=str(status))
+    def test_freshness_audits_both_layouts_and_propagates_failures(self):
+        gate = ['bash', str(ROOT / 'scripts/board-frontend-audit.sh')]
+        for layout in ('workspace', 'legacy'):
+            if layout == 'legacy':
+                (self.source / 'pnpm-workspace.yaml').unlink()
+            commands = ['node scripts/ci/pnpm-audit-gate.mjs ' + projects
+                        for projects in ('web web-admin', 'test/a11y test/e2e')]
+            for failed, status in (('', 0), (commands[0], 1), (commands[1], 2)):
+                self.log.unlink(missing_ok=True)
+                result = subprocess.run(gate, cwd=self.source, capture_output=True,
+                                        env=self.env | {'FAIL_COMMAND': failed, 'FAIL_STATUS': str(status)})
                 self.assertEqual(result.returncode, status)
-                self.assertEqual(rows[-1]['key'], audit)
-                self.assertFalse(any('playwright-core' in row['key'] or 'a11y-smoke' in row['key']
-                                     for row in rows))
-                self.assertEqual(output, '')
+                keys = [json.loads(line)['key'] for line in self.log.read_text().splitlines()]
+                self.assertEqual([key for key in keys if 'audit-gate' in key],
+                                 commands[:1] if failed == commands[0] else commands)
+        (self.source / 'scripts/ci/pnpm-audit-gate.mjs').unlink()
+        self.assertNotEqual(subprocess.run(gate, cwd=self.source, env=self.env,
+                                           capture_output=True).returncode, 0)
 
     def test_layout_missing_entries_and_source_audit_fail_closed(self):
         for extra in ({'MISSING_PM': '1'},):
             result, _, output = self.run_phase(**extra)
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(output, '')
-        audit = self.source / 'scripts/ci/pnpm-audit-gate.mjs'
-        audit.unlink()
-        result, _, output = self.run_phase()
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(output, 'layout=workspace\n')
-        audit.touch()
         for role, phase in [('frontends', 'lint'), ('components', 'test')]:
             result, rows, _ = self.run_phase(role, phase, MISSING_SCRIPT='1')
             self.assertNotEqual(result.returncode, 0)
@@ -389,7 +390,7 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
             with self.subTest(uri=changed), patch.dict(os.environ, clean_env | {'YUEBOARD_E2E_DATABASE_URL': changed}):
                 with self.assertRaises(RuntimeError): PG.check_e2e_environment('loopback')
 
-    def test_legacy_prepare_each_failure_stops_and_audit_status_two_is_red(self):
+    def test_legacy_prepare_each_failure_stops(self):
         (self.source / 'pnpm-workspace.yaml').unlink()
         good, expected, _ = self.run_phase()
         self.assertEqual(good.returncode, 0, good.stderr)
@@ -397,10 +398,6 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
             result, rows, _ = self.run_phase(FAIL_INDEX=str(index))
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual([r['key'] for r in rows], [r['key'] for r in expected[:index + 1]])
-        for code in (1, 2):
-            result, _, output = self.run_phase(FAIL_COMMAND='node scripts/ci/pnpm-audit-gate.mjs web web-admin', FAIL_STATUS=str(code))
-            self.assertEqual(result.returncode, code)
-            self.assertEqual(output, 'layout=legacy\n')
 
     def test_missing_e2e_suite_fails_before_any_database_command(self):
         (self.source / 'test/e2e/playwright.config.ts').unlink()

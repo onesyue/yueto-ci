@@ -19,8 +19,8 @@ def capture(command: list[str], env: dict) -> str:
 def toolchain(contract: dict, env: dict) -> None:
     if capture(['go', 'env', 'GOVERSION'], env) != 'go' + contract['go']:
         raise ValueError('image Go compiler differs from workflow')
-    if capture(['node', '--version'], env).split('.')[0] != 'v' + contract['node']:
-        raise ValueError('image Node major differs from workflow')
+    if capture(['node', '--version'], env) != 'v' + contract['node']:
+        raise ValueError('image Node version differs from workflow')
     buf = shutil.which('buf', path=env.get('PATH'))
     if not buf or hashlib.sha256(Path(buf).read_bytes()).hexdigest() != contract['buf_sha256']:
         raise ValueError('image Buf checksum differs from workflow')
@@ -84,7 +84,8 @@ def run(report: dict) -> int:
     try:
         command(['bash', str(policy / 'scripts/board-validation-preflight.sh'), 'dependencies', str(source), str(policy)])
         # Cold isolated caches: no cache hit can bypass native checks.
-        command(['bash', str(policy / 'scripts/board-validation-preflight.sh'), 'contract', str(source), str(policy)])
+        command(['bash', str(policy / 'scripts/board-validation-preflight.sh'), 'contract', str(source), str(policy)],
+                {'PROMOTED_BOARD_REF': contract['promoted_board_ref']})
         if role in ('postgres', 'migration', 'e2e'):
             pg_id = capture(['docker', 'create', '--platform', 'linux/amd64',
                              '-e', 'POSTGRES_PASSWORD=ci', '-e', 'POSTGRES_DB=yueboard_test',
@@ -111,6 +112,8 @@ def run(report: dict) -> int:
         validation_started = True
         if role in ('quality', 'race'):
             backend(role)
+            if role == 'quality':
+                command([str(temp / 'board-quality-tools/govulncheck'), './...'], {'CGO_ENABLED': '1'})
         elif role in ('postgres', 'migration'):
             backend(role, phase_environment(role), pg=True)
             if role == 'postgres':
@@ -127,6 +130,7 @@ def run(report: dict) -> int:
                     raise
             if role == 'frontends':
                 frontend('design')
+                command(['bash', str(policy / 'scripts/board-frontend-audit.sh')])
     except subprocess.CalledProcessError as error:
         status = error.returncode if error.returncode > 0 else 128 - error.returncode
         print('ci-check: Board phase failed', file=sys.stderr)
