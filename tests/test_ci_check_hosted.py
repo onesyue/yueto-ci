@@ -4,6 +4,8 @@ import copy
 import json
 import os
 from pathlib import Path
+import select
+import shlex
 import subprocess
 import tempfile
 import time
@@ -78,11 +80,30 @@ class HostedExecution(unittest.TestCase):
         self.assertIn('contradicts', receipt['problem'])
 
     def test_real_timeout_terminates_child_and_keeps_incomplete_receipt(self):
-        started = time.monotonic()
-        code, receipt = self.execute('echo started\nsleep 60\n', timeout_seconds=0.1)
+        ready = self.root / 'child-ready'
+        os.mkfifo(ready)
+        reader = os.open(ready, os.O_RDWR | os.O_NONBLOCK)
+        self.addCleanup(os.close, reader)
+        real_sample = HOSTED.sample_resources
+        started = None
+
+        def sample_after_child_starts(output):
+            nonlocal started
+            if started is None:
+                readable, _, _ = select.select([reader], [], [], 5)
+                self.assertTrue(readable, 'controlled child never reached its startup marker')
+                self.assertEqual(os.read(reader, 32), b'started\n')
+                started = time.monotonic()
+            return real_sample(output)
+
+        body = f'echo started; echo started > {shlex.quote(str(ready))}; exec sleep 60\n'
+        with patch.object(HOSTED, 'sample_resources', side_effect=sample_after_child_starts):
+            code, receipt = self.execute(body, timeout_seconds=0.1)
         self.assertEqual(code, 2)
+        self.assertIsNotNone(started)
         self.assertLess(time.monotonic() - started, 5)
         self.assertIn('time budget', receipt['problem'])
+        self.assertNotIn('session_cleanup_problem', receipt)
         self.assertIn('started', (self.output / 'hosted.log').read_text())
 
     def test_low_disk_and_credentials_refuse_before_source_execution(self):
