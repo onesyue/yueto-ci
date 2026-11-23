@@ -315,6 +315,7 @@ class ManualWorkflow(unittest.TestCase):
         self.assertEqual(prepare['env']['REPLAY_APP_CLIENT_ID'], '${{ vars.YUETO_CI_APP_CLIENT_ID }}')
         mint = next(step for step in steps if step.get('id') == 'source_token')
         self.assertNotIn('continue-on-error', mint)
+        self.assertNotIn('skip-token-revoke', mint['with'])
         self.assertNotIn('if', prepare)  # Default success() blocks after mint failure.
         for step in steps[steps.index(prepare) + 1:]:
             self.assertNotIn('secrets.', str(step))

@@ -43,7 +43,7 @@ jobs:
 
       # The PostgreSQL execution guard's negative controls run real Go tests;
       # a fake go executable cannot prove skips/non-execution are rejected.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6.5.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '1.27.2'
           cache: false # Public policy has no go.mod/go.sum dependency cache.
@@ -128,7 +128,7 @@ jobs:
           owner: onesyue
           repositories: yueops,yueboard
           permission-contents: read
-          skip-token-revoke: true # Explicitly revoked before any source execution.
+        # Keep the action's post-job revoke as a fallback for interrupted preparation.
 
       - name: Prepare exact standalone clones and clear credential
         timeout-minutes: 20

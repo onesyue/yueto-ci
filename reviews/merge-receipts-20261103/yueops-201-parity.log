@@ -1,7 +1,0 @@
-PARITY: fail
-head: 8bdb123fc718ff054587262b0845da88eaa0afb9
-ran_at: 2026-11-02T18:37:52Z
-rc: 1
-passed: 3165
-failed: 1
-skipped: 211

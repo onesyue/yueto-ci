@@ -43,12 +43,14 @@ def dispatch(branch: str, policy: str, source: str, base: str, output: Path, *, 
     for name, value in (("policy", policy), ("source", source)):
         if re.fullmatch(r"[0-9a-f]{40}", value) is None:
             raise ValueError(f"{name} must be an exact commit SHA")
-    if repo == "yueops":
-        for name, value in (("Board context", board), ("migration base", base)):
-            if re.fullmatch(r"[0-9a-f]{40}", value) is None:
-                raise ValueError(f"{name} must be an exact commit SHA")
-    elif board or base:
-        raise ValueError("Board/base context applies only to yueops")
+    if repo == "yueboard" and board:
+        raise ValueError("Board context applies only to yueops and yue-node")
+    if repo != "yueops" and base:
+        raise ValueError("migration base applies only to yueops")
+    if repo != "yueboard" and re.fullmatch(r"[0-9a-f]{40}", board) is None:
+        raise ValueError("Board context must be an exact commit SHA")
+    if repo == "yueops" and re.fullmatch(r"[0-9a-f]{40}", base) is None:
+        raise ValueError("migration base must be an exact commit SHA")
     remote = gh("api", f"repos/{REPO}/commits/{branch}", "--jq", ".sha").strip()
     if remote != policy:
         raise ValueError("push the exact local policy commit before dispatching")
@@ -64,7 +66,9 @@ def dispatch(branch: str, policy: str, source: str, base: str, output: Path, *, 
               "-f", "validation_only=true", "-f", "promote=false",
               "-f", "runner=ubuntu-24.04", "-f", f"nonce={request}"]
     if repo == "yueops":
-        fields += ["-f", f"migration_base={base}", "-f", f"yueboard_contract_ref={board}"]
+        fields += ["-f", f"migration_base={base}"]
+    if board:
+        fields += ["-f", f"yueboard_contract_ref={board}"]
     gh("workflow", "run", "build.yml", "--repo", REPO, "--ref", branch, *fields)
     deadline = time.monotonic() + 180
     row = None

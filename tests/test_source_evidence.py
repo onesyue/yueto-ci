@@ -150,6 +150,18 @@ class SourceEvidence(unittest.TestCase):
                 with self.assertRaisesRegex(E.Rejected, "unauthorized"):
                     E._load(self.repo, self.head, policy)
 
+    def test_trusted_keyring_with_mismatched_digest_is_rejected(self):
+        policy = self.repo / "test-policy"
+        shutil.copytree(self.policy, policy)
+        self.assertEqual(E._load(self.repo, self.head, policy)["source_revision"], self.head)
+
+        keyring = policy / "yueops-owner.gpg"
+        # Repeating the public packets preserves the signing key but changes the digest.
+        public_packets = keyring.read_bytes()
+        keyring.write_bytes(public_packets + public_packets)
+        with self.assertRaisesRegex(E.Rejected, "^invalid trusted keyring$"):
+            E._load(self.repo, self.head, policy)
+
     def test_injected_git_environment_cannot_redirect_source(self):
         with patch.dict(os.environ, {"GIT_DIR": "/nonexistent", "GIT_CONFIG_COUNT": "1",
                                     "GIT_CONFIG_KEY_0": "core.hooksPath",
