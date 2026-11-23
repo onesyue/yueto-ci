@@ -64,7 +64,7 @@ class ValidationWrapperFailureTests(unittest.TestCase):
         result = self.run_script("ops-validation-npm-audit.sh")
         self.assert_exit(result, 1)
         self.assertIn("source-owned npm audit gate is missing", result.stdout)
-        self.assertEqual(self.calls.read_text(), "")
+        self.assertFalse(self.calls.exists())
 
     def test_frontend_and_miniapp_run_their_build_steps(self):
         self.stub("bin/npm", 'printf "%s\\n" "$*" >> "$CALLS"')
@@ -78,22 +78,15 @@ class ValidationWrapperFailureTests(unittest.TestCase):
                 self.assert_exit(result, 0)
                 self.assertEqual(self.calls.read_text().splitlines(), expected_calls)
 
-    def test_node_toolchain_refuses_ambiguous_release_metadata(self):
-        self.stub(
-            ".ci-policy/scripts/ci-retry.sh",
-            """ci_download() {
-                printf '%s\\n' "${@: -3:1}" >> "$CALLS"
-                [ "${@: -3:1}" = https://nodejs.org/dist/latest-v24.x/SHASUMS256.txt ]
-                printf 'digest node-v24.1.2-linux-x64.tar.xz\\ndigest node-v24.1.3-linux-x64.tar.xz\\n' > "${@: -1}"
-            }""",
-        )
+    def test_node_toolchain_refuses_an_ambiguous_release_pin(self):
+        policy = self.workspace / ".ci-policy"
+        policy.mkdir()
+        (policy / ".node-version").write_text("24.1.2\n24.1.3\n")
+        self.stub(".ci-policy/scripts/ci-retry.sh", 'echo unexpected-download >> "$CALLS"')
         result = self.run_script("ops-validation-node-toolchain.sh")
         self.assert_exit(result, 1)
-        self.assertIn("must select exactly one Linux x64 archive", result.stderr)
-        self.assertEqual(
-            self.calls.read_text().splitlines(),
-            ["https://nodejs.org/dist/latest-v24.x/SHASUMS256.txt"],
-        )
+        self.assertIn("Expected an exact Node 24 release", result.stderr)
+        self.assertFalse(self.calls.exists())
         self.assertFalse(Path(self.env["GITHUB_PATH"]).exists())
 
     def test_node_refuses_missing_package_manager_pin(self):
