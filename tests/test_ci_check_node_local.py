@@ -20,6 +20,105 @@ import ci_check_node_local as local
 SHA = 'a' * 40
 
 
+class NodeLocalBoardRouting(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        scripts = self.root / 'scripts'
+        scripts.mkdir()
+        (scripts / 'ci-check.sh').write_text((ROOT / 'scripts/ci-check.sh').read_text())
+        (scripts / 'ci_check_board.py').write_text(
+            'from pathlib import Path\nimport sys\n'
+            'assert len(sys.argv) == 3 and sys.argv[1] == "--root"\n'
+            'root = Path(sys.argv[2])\n'
+            '(root / "resolver-called").touch()\n'
+            'if not (root / "revision").exists():\n'
+            '    sys.exit(2)\n'
+            'print((root / "revision").read_text(), end="")\n')
+        (scripts / 'ci_check_node_local.py').write_text(
+            'from pathlib import Path\nimport sys\n'
+            'print((Path(sys.argv[3]) / "revision").read_text(), end="")\n')
+        self.desired = self.root / 'desired'
+        self.desired.mkdir()
+        tools = self.root / 'bin'
+        tools.mkdir()
+        git = tools / 'git'
+        # Stub Git transport and record the commit actually checked out for the adapter.
+        git.write_text('''#!/bin/bash
+set -eu
+case "$1" in
+  clone)
+    destination=${@: -1}
+    mkdir -p "$destination"
+    if [[ "$destination" = */policy ]]; then
+      cp -R "$FIXTURE_ROOT/scripts" "$FIXTURE_ROOT/native-node-contract.json" "$destination"
+    fi
+    ;;
+  -C)
+    case "$3" in
+      rev-parse) printf '%040d\\n' 1 ;;
+      checkout) printf '%s\\n' "${@: -1}" > "$2/revision" ;;
+      status|remote|fetch) ;;
+      -c) [[ "$5" = -c && "$7" = fetch ]] ;;
+      *) exit 99 ;;
+    esac
+    ;;
+  *) exit 99 ;;
+esac
+''')
+        git.chmod(0o755)
+        self.env = {
+            'PATH': f'{tools}{os.pathsep}{os.environ["PATH"]}',
+            'YUETO_ROOT': str(self.desired),
+            'CI_CHECK_OUTPUT': str(self.root / 'output'),
+            'FIXTURE_ROOT': str(self.root),
+        }
+        self.write_pin('d' * 40)
+
+    def write_pin(self, sha):
+        (self.root / 'native-node-contract.json').write_text(json.dumps({'yueboard_contract_pin': sha}))
+
+    def run_cli(self, *options):
+        return subprocess.run(
+            ['bash', self.root / 'scripts/ci-check.sh', 'yue-node', SHA, '--local', *options],
+            env=self.env, capture_output=True, text=True, timeout=15)
+
+    def test_explicit_board_revision_bypasses_resolver(self):
+        result = self.run_cli('--board-ref', 'b' * 40)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), 'b' * 40)
+        self.assertFalse((self.desired / 'resolver-called').exists())
+
+    def test_signed_desired_revision_is_independent_of_legacy_pin(self):
+        (self.desired / 'revision').write_text('c' * 40)
+        for pin in ('d' * 40, 'e' * 40):
+            with self.subTest(pin=pin):
+                self.write_pin(pin)
+                result = self.run_cli()
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), 'c' * 40)
+        self.assertTrue((self.desired / 'resolver-called').exists())
+
+    def test_invalid_explicit_ref_fails_without_resolving(self):
+        for ref in ('', 'b' * 39, 'g' * 40):
+            with self.subTest(ref=ref):
+                result = self.run_cli('--board-ref', ref)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn('board ref must be an exact 40-hex commit SHA', result.stderr)
+        self.assertFalse((self.desired / 'resolver-called').exists())
+
+    def test_unavailable_or_invalid_desired_fails_without_pin_fallback(self):
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('could not resolve the signed desired Board revision', result.stderr)
+        (self.desired / 'revision').write_text('invalid')
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('board ref must be an exact 40-hex commit SHA', result.stderr)
+        self.assertFalse((self.root / 'output').exists())
+
+
 class NodeLocal(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
