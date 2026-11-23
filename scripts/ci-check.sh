@@ -11,6 +11,7 @@ raw_sha=$2
 shift 2
 mode=remote
 board_sha=""
+board_ref_given=false
 prepare_only=false
 prepared=""
 while [ "$#" -gt 0 ]; do
@@ -18,15 +19,21 @@ while [ "$#" -gt 0 ]; do
     --local) mode=--local; shift ;;
     --prepare-only) prepare_only=true; shift ;;
     --prepared) [ "$#" -ge 2 ] || usage; prepared=$2; shift 2 ;;
-    --board-ref) [ "$#" -ge 2 ] || usage; board_sha=$2; shift 2 ;;
+    --board-ref) [ "$#" -ge 2 ] || usage; board_sha=$2; board_ref_given=true; shift 2 ;;
     *) usage ;;
   esac
 done
 case "$repo" in
   yueops) ;;
-  yueboard|yue-node)
+  yueboard)
     [ "$prepare_only" = false ] && [ -z "$prepared" ] && [ -z "$board_sha" ] &&
       [ -z "${CI_CHECK_MIGRATION_BASE:-}" ] || fail 'Board/base/prepared options apply only to yueops'
+    ;;
+  yue-node)
+    [ "$prepare_only" = false ] && [ -z "$prepared" ] &&
+      [ -z "${CI_CHECK_MIGRATION_BASE:-}" ] || fail 'base/prepared options apply only to yueops'
+    [ "$board_ref_given" = false ] || [ "$mode" = --local ] ||
+      fail '--board-ref requires --local for yue-node'
     ;;
   *) fail "unsupported validation repository: $repo" ;;
 esac
@@ -39,16 +46,17 @@ if [ "$prepare_only" = true ] || [ -n "$prepared" ]; then
 fi
 # ci-check is always validation-only. Explicit historical context is never a
 # publication default; ordinary use resolves the signed desired Board snapshot.
-if [ "$repo" = yueops ]; then
-  if [ -z "$board_sha" ]; then
+if [ "$repo" = yueops ] || { [ "$repo" = yue-node ] && [ "$mode" = --local ]; }; then
+  if [ "$board_ref_given" = false ]; then
     export YUETO_ROOT=${YUETO_ROOT:-$(dirname "$ROOT")}
-    board_sha=$(python3 "$ROOT/scripts/ci_check_board.py" --root "$YUETO_ROOT")
+    board_sha=$(python3 "$ROOT/scripts/ci_check_board.py" --root "$YUETO_ROOT") ||
+      fail 'could not resolve the signed desired Board revision; supply --board-ref SHA'
   fi
   [[ "$board_sha" =~ ^[0-9a-f]{40}$ ]] || fail 'board ref must be an exact 40-hex commit SHA'
 fi
 [ "$mode" = remote ] || [ "$mode" = --local ] || usage
 if [ "$repo" = yue-node ] && [ "$mode" = --local ]; then
-  for tool in bash git jq python3; do
+  for tool in bash git python3; do
     command -v "$tool" >/dev/null || fail "$tool is required for yue-node --local"
   done
   if [ "${#raw_sha}" -lt 40 ]; then
@@ -105,10 +113,8 @@ clone_at() {
 if [ "$repo" = yue-node ]; then
   checkouts=$(mktemp -d "$output/checkouts.XXXXXX")
   clone_at yueto-ci "$policy_sha" "$checkouts/policy" "$ROOT"
-  board_pin=$(jq -er '.yueboard_contract_pin | select(test("^[0-9a-f]{40}$"))' \
-    "$checkouts/policy/native-node-contract.json") || fail 'invalid pinned Board revision'
   clone_at yue-node "$full_sha" "$checkouts/source" "${YUE_NODE_CHECKOUT:-}"
-  clone_at yueboard "$board_pin" "$checkouts/board" "${YUEBOARD_CHECKOUT:-}"
+  clone_at yueboard "$board_sha" "$checkouts/board" "${YUEBOARD_CHECKOUT:-}"
   python3 "$checkouts/policy/scripts/ci_check_node_local.py" "$checkouts/source" "$full_sha" \
     "$checkouts/board" "$output"
   exit

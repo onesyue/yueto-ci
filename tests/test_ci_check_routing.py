@@ -41,7 +41,9 @@ class RepositoryRouting(unittest.TestCase):
 
     def test_ops_options_rejected_before_network(self):
         for repo in ('yueboard', 'yue-node'):
-            options_list = [['--board-ref', 'b'*40], ['--prepare-only'], ['--prepared', 'receipt']]
+            options_list = [['--prepare-only'], ['--prepared', 'receipt']]
+            if repo == 'yueboard':
+                options_list.append(['--board-ref', 'b'*40])
             options_list += [['--local', *options] for options in options_list]
             for options in options_list:
                 with self.subTest(repo=repo, options=options):
@@ -50,9 +52,18 @@ class RepositoryRouting(unittest.TestCase):
                     self.assertEqual(result.returncode, 2)
                     self.assertIn('options apply only to yueops', result.stderr)
 
-    def test_non_ops_migration_base_rejected(self):
+    def test_node_remote_board_override_rejected_before_network(self):
         result = subprocess.run(
-            ['bash', str(ROOT / 'scripts/ci-check.sh'), 'yueboard', 'c'*40],
-            env=dict(os.environ, CI_CHECK_MIGRATION_BASE='d'*40), capture_output=True, text=True)
+            ['bash', str(ROOT / 'scripts/ci-check.sh'), 'yue-node', 'c'*40, '--board-ref', 'b'*40],
+            capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
-        self.assertIn('options apply only to yueops', result.stderr)
+        self.assertIn('--board-ref requires --local for yue-node', result.stderr)
+
+    def test_non_ops_migration_base_rejected(self):
+        for repo in ('yueboard', 'yue-node'):
+            with self.subTest(repo=repo):
+                result = subprocess.run(
+                    ['bash', str(ROOT / 'scripts/ci-check.sh'), repo, 'c'*40],
+                    env=dict(os.environ, CI_CHECK_MIGRATION_BASE='d'*40), capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn('options apply only to yueops', result.stderr)
