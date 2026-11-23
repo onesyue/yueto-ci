@@ -58,9 +58,6 @@ exit 22
         path.write_text("#!/bin/sh\nset -eu\n" + body)
         path.chmod(0o755)
 
-    def shim_uname(self, system="Linux", machine="x86_64"):
-        self.shim("uname", f'case "$1" in -s) echo {system};; -m) echo {machine};; *) exit 98;; esac\n')
-
     def run_helper(self, command, **env):
         for name in ("calls", "sleeps", "tokens"):
             (self.base / name).unlink(missing_ok=True)
@@ -285,7 +282,29 @@ exit 0
         for name in ("install-verified-buildx.sh", "install-verified-trivy.sh", "install-cosign.sh"):
             self.assertIn("ci_release_asset_api", (ROOT / "scripts" / name).read_text())
 
+    def cosign_fixture_platform(self, system="Linux", machine="x86_64"):
+        # The artifact in these installer controls is a shell fixture. Exercise
+        # the real platform on matching hosts and supply it on other hosts.
+        if (os.uname().sysname, os.uname().machine) != (system, machine):
+            self.shim("uname", f'case "$1" in -s) echo {system} ;; -m) echo {machine} ;; *) exit 2 ;; esac')
+
+    def test_cosign_rejects_unsupported_platform_before_download(self):
+        self.shim("curl", 'echo unexpected-download >> "$CALLS"; exit 97')
+        github_path = self.base / "github_path"
+        for system, machine in (("Darwin", "x86_64"), ("Linux", "aarch64")):
+            with self.subTest(system=system, machine=machine):
+                (self.base / "uname").unlink(missing_ok=True)
+                self.cosign_fixture_platform(system, machine)
+                result = subprocess.run(["bash", str(ROOT / "scripts/install-cosign.sh")],
+                                        env={**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)},
+                                        capture_output=True, text=True, timeout=15)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn("reviewed only for Linux x86_64", result.stderr)
+                self.assertEqual(self.lines("calls"), [])
+                self.assertFalse(github_path.exists())
+
     def test_cosign_verified_install_and_version_gate(self):
+        self.cosign_fixture_platform()
         # Replace only the reviewed digest in a private fixture copy so real
         # sha256sum, install and PATH handoff can run without a network fetch.
         source = (ROOT / "scripts/install-cosign.sh").read_text()
@@ -296,7 +315,6 @@ exit 0
         self.assertEqual(workflow.count("run: bash .ci-policy/scripts/install-cosign.sh"), 2)
         self.assertNotIn("sigstore/cosign-installer@", workflow)
         (self.base / "ci-retry.sh").write_text(HELPER.read_text())
-        self.shim_uname()
         fixture = self.base / "artifact"
         installer = self.base / "installer.sh"
         github_path = self.base / "github_path"
@@ -383,7 +401,7 @@ exit 97
                     self.assertEqual(installed.stat().st_mode & 0o777, 0o755)
 
     def test_cosign_bad_digest_stops_before_install_or_execution(self):
-        self.shim_uname()
+        self.cosign_fixture_platform()
         self.shim("curl", """
 while [ "$#" -gt 0 ]; do
   if [ "$1" = -o ]; then echo corrupt > "$2"; exit 0; fi
@@ -408,22 +426,6 @@ exit 97
         self.assertEqual(self.lines("calls"), [])
         self.assertFalse(github_path.exists())
         self.assertEqual(list(self.base.glob("yueto-cosign.*")), [])
-
-    def test_cosign_unsupported_platform_refuses_before_download(self):
-        installer = ROOT / "scripts/install-cosign.sh"
-        github_path = self.base / "github_path"
-        for system, machine in (("Linux", "aarch64"), ("Darwin", "x86_64")):
-            with self.subTest(system=system, machine=machine):
-                self.shim_uname(system, machine)
-                result = subprocess.run(
-                    ["bash", str(installer)],
-                    env={**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)},
-                    capture_output=True, text=True, timeout=15,
-                )
-                self.assertEqual(result.returncode, 1, result.stderr)
-                self.assertIn("reviewed only for Linux x86_64 runners", result.stderr)
-                self.assertEqual(self.lines("calls"), [])
-                self.assertFalse(github_path.exists())
 
     def test_actionlint_bad_digest_stops_before_extraction(self):
         import shutil

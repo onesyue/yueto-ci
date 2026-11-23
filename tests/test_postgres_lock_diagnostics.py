@@ -39,25 +39,39 @@ class LockDiagnostics(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             docker = root / 'docker'
-            docker.write_text('''#!/usr/bin/env python3
-import os, sys
-from pathlib import Path
-args = sys.argv[1:]
-with (Path(os.environ['RUNNER_TEMP']) / 'calls').open('a') as f:
-    f.write(repr(args) + '\\n')
-if args[0] == 'logs':
-    print('deadlock detected\\nProcess 123: query one\\nProcess 456: query two')
-    sys.exit(17 if os.environ['MODE'] == 'logs_fail' else 0)
-assert args[:2] == ['exec', 'exact-service-id']
-assert '-X' in args and 'ON_ERROR_STOP=1' in args
-sql = args[-1]
-if os.environ['MODE'] == 'sql_fail': sys.exit(19)
-values = {'SELECT pg_reload_conf()': 't', 'SHOW log_lock_waits': 'on',
-          'SHOW deadlock_timeout': '200ms',
-          'SHOW log_line_prefix': '%m [%p] %q%u@%d app=%a xid=%x '}
-if sql in values:
-    print('wrong' if os.environ['MODE'] == sql else values[sql])
-else: assert sql.startswith('ALTER SYSTEM SET ')
+            # The failed-reload cases can invoke Docker 60 times in one test.
+            docker.write_text(r'''#!/usr/bin/env bash
+set -eu
+printf '%s\n' "$@" >> "$RUNNER_TEMP/calls"
+if [[ "$1" == logs ]]; then
+    printf '%s\n' 'deadlock detected' 'Process 123: query one' 'Process 456: query two'
+    [[ "$MODE" != logs_fail ]] || exit 17
+    exit 0
+fi
+[[ "$1" == exec && "$2" == exact-service-id ]]
+ignore_psqlrc=false
+stop_on_error=false
+for arg in "$@"; do
+    case "$arg" in
+        -X) ignore_psqlrc=true ;;
+        ON_ERROR_STOP=1) stop_on_error=true ;;
+    esac
+done
+[[ "$ignore_psqlrc" == true && "$stop_on_error" == true ]]
+sql=${!#}
+[[ "$MODE" != sql_fail ]] || exit 19
+case "$sql" in
+    'SELECT pg_reload_conf()') value=t ;;
+    'SHOW log_lock_waits') value=on ;;
+    'SHOW deadlock_timeout') value=200ms ;;
+    'SHOW log_line_prefix') value='%m [%p] %q%u@%d app=%a xid=%x ' ;;
+    'ALTER SYSTEM SET '*) exit 0 ;;
+    *) exit 1 ;;
+esac
+if [[ "$MODE" == "$sql" ]]; then
+    value=wrong
+fi
+printf '%s\n' "$value"
 ''')
             docker.chmod(0o755)
             sleep = root / 'sleep'

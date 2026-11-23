@@ -241,7 +241,7 @@ class PytestTimingConsumer(unittest.TestCase):
         policy = (ROOT / ".github/workflows/policy-ci.yml").read_text()
         install = "python3 -m pip install --require-hashes --only-binary=:all: -r requirements-policy.txt"
         self.assertIn(install, policy)
-        self.assertLess(policy.index(install), policy.index("python3 scripts/run-policy-tests.py"))
+        self.assertLess(policy.index(install), policy.index("run: scripts/check-policy.sh ci"))
         requirements = (ROOT / "requirements-policy.txt").read_text()
         self.assertEqual(len(re.findall(r"^[a-z]+==.*--hash=sha256:[0-9a-f]{64}$",
                                         requirements, re.M)), 6)

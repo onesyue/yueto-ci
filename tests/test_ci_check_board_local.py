@@ -261,7 +261,7 @@ class BoardRole(unittest.TestCase):
             for mode in ('ok', 'go', 'node', 'buf-version', 'buf-bytes'):
                 def capture(command, env):
                     if command[0] == 'go': return 'bad' if mode=='go' else 'go'+contract['go']
-                    if command[0] == 'node': return 'v0.1' if mode=='node' else 'v'+contract['node']+'.1'
+                    if command[0] == 'node': return 'v24.0.0' if mode=='node' else 'v'+contract['node']
                     return 'bad' if mode=='buf-version' else contract['buf']
                 expected = dict(contract)
                 if mode == 'buf-bytes': expected['buf_sha256'] = '0'*64
