@@ -58,6 +58,9 @@ exit 22
         path.write_text("#!/bin/sh\nset -eu\n" + body)
         path.chmod(0o755)
 
+    def shim_uname(self, system="Linux", machine="x86_64"):
+        self.shim("uname", f'case "$1" in -s) echo {system};; -m) echo {machine};; *) exit 98;; esac\n')
+
     def run_helper(self, command, **env):
         for name in ("calls", "sleeps", "tokens"):
             (self.base / name).unlink(missing_ok=True)
@@ -293,6 +296,7 @@ exit 0
         self.assertEqual(workflow.count("run: bash .ci-policy/scripts/install-cosign.sh"), 2)
         self.assertNotIn("sigstore/cosign-installer@", workflow)
         (self.base / "ci-retry.sh").write_text(HELPER.read_text())
+        self.shim_uname()
         fixture = self.base / "artifact"
         installer = self.base / "installer.sh"
         github_path = self.base / "github_path"
@@ -379,6 +383,7 @@ exit 97
                     self.assertEqual(installed.stat().st_mode & 0o777, 0o755)
 
     def test_cosign_bad_digest_stops_before_install_or_execution(self):
+        self.shim_uname()
         self.shim("curl", """
 while [ "$#" -gt 0 ]; do
   if [ "$1" = -o ]; then echo corrupt > "$2"; exit 0; fi
@@ -403,6 +408,22 @@ exit 97
         self.assertEqual(self.lines("calls"), [])
         self.assertFalse(github_path.exists())
         self.assertEqual(list(self.base.glob("yueto-cosign.*")), [])
+
+    def test_cosign_unsupported_platform_refuses_before_download(self):
+        installer = ROOT / "scripts/install-cosign.sh"
+        github_path = self.base / "github_path"
+        for system, machine in (("Linux", "aarch64"), ("Darwin", "x86_64")):
+            with self.subTest(system=system, machine=machine):
+                self.shim_uname(system, machine)
+                result = subprocess.run(
+                    ["bash", str(installer)],
+                    env={**self.env, "RUNNER_TEMP": str(self.base), "GITHUB_PATH": str(github_path)},
+                    capture_output=True, text=True, timeout=15,
+                )
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn("reviewed only for Linux x86_64 runners", result.stderr)
+                self.assertEqual(self.lines("calls"), [])
+                self.assertFalse(github_path.exists())
 
     def test_actionlint_bad_digest_stops_before_extraction(self):
         import shutil
