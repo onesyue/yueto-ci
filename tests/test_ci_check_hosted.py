@@ -35,7 +35,9 @@ class HostedExecution(unittest.TestCase):
         self.addCleanup(self.env.stop)
         self.resources = types.SimpleNamespace(free=20 * 1024**3)
 
-    def execute(self, body, timeout_seconds=5):
+    def execute(self, body, timeout_seconds=30):
+        # The classification fixtures need a watchdog, not a competing clock
+        # assertion. The timeout test supplies and verifies its short budget.
         self.cli.write_text('#!/bin/bash\nset -eu\n' + body)
         with patch.object(HOSTED, 'ROOT', self.root), \
                 patch.object(HOSTED, 'cleanup_containers') as cleanup, \
@@ -69,7 +71,7 @@ class HostedExecution(unittest.TestCase):
     def test_complete_product_failure_is_retained_as_failure(self):
         self.full_receipt(1)
         code, receipt = self.execute('exit 1\n')
-        self.assertEqual(code, 1)
+        self.assertEqual(code, 1, receipt)
         self.assertEqual(receipt['status'], 'VALIDATION_FAILED')
         self.assertTrue(receipt['complete'])
 
