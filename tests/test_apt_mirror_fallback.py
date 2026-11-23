@@ -105,6 +105,7 @@ exit 0
         self.executable(self.tools / 'curl', """\
 printf '%s\\n' "curl $*" >> "$ORDER_LOG"
 printf '%s\\n' "$*" >> "$CURL_LOG"
+case "$*" in *"https://${REACHABLE_HOST:-invalid}/"*) exit 0;; esac
 exit "${CURL_EXIT:-1}"
 """)
         self.executable(self.tools / 'apt-get', """\
@@ -243,7 +244,10 @@ exit "${APT_EXIT:-0}"
                 self.assertIn('https://azure.archive.ubuntu.com', rewritten)
                 self.assertNotIn('https://security.ubuntu.com', rewritten)
                 self.assertNotIn('http://archive.ubuntu.com', rewritten)
-                self.assertEqual(self.text(self.curl_log), PROBE.format(codename='jammy') + '\n')
+                http = PROBE.format(codename='jammy')
+                https = http.replace('http:', 'https:')
+                self.assertEqual(self.text(self.curl_log).splitlines(),
+                                 [http, https, https.replace('//archive.', '//azure.archive.')])
                 self.assertEqual(self.text(self.apt_log), UPDATE + '\n')
                 self.assertNotIn('POISON', self.text(self.order_log))
                 sudo = self.text(self.sudo_log)
@@ -254,6 +258,19 @@ exit "${APT_EXIT:-0}"
                     self.assertIn('tee ', sudo)
                     self.assertIn('Acquire::Retries=3', sudo)
                     self.assertIn('Acquire::http::Timeout=20', sudo)
+
+    def test_port_80_outage_uses_a_reachable_https_archive(self):
+        for host in ('archive.ubuntu.com', 'azure.archive.ubuntu.com'):
+            with self.subTest(host=host):
+                self.write_sources()
+                result = self.run_helper(REACHABLE_HOST=host)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn(f'https://{host}', result.stdout)
+                sources = (self.sources / 'sources.list.d' / 'ubuntu.sources').read_text()
+                self.assertIn(f'URIs: https://{host}/ubuntu/ https://{host}/ubuntu/', sources)
+                self.assertNotIn('http://archive.ubuntu.com', sources)
+                self.assertEqual(self.text(self.apt_log), UPDATE + '\n')
+                self.assert_unchanged_outside_ubuntu_archives()
 
     def test_unprivileged_does_not_probe_or_rewrite(self):
         before = (self.sources / 'sources.list').read_text()

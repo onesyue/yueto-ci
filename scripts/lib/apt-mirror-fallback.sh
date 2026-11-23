@@ -2,7 +2,7 @@
 # Sourced immediately before Playwright's privileged `install --with-deps`.
 # No-op unless this process is root or has passwordless sudo. When
 # archive.ubuntu.com does not answer, rewrite only those Ubuntu archive hosts
-# (and security.ubuntu.com) to azure.archive.ubuntu.com, then apt-get update.
+# (and security.ubuntu.com) to a reachable official HTTPS archive when available.
 # Other repositories, schemes, and an already-working probe stay untouched.
 #
 # Tests can point this at a fake curl and a temporary sources tree:
@@ -22,6 +22,7 @@ yueto_apt_mirror_fallback() {
   os_release=${YUETO_APT_OS_RELEASE:-/etc/os-release}
   curl_bin=${YUETO_APT_CURL:-curl}
   apt_get=${YUETO_APT_GET:-apt-get}
+  local mirror="" host
   changed=0
 
   if [ "$(id -u)" -eq 0 ]; then
@@ -56,6 +57,13 @@ yueto_apt_mirror_fallback() {
     return 1
   fi
 
+  for host in archive.ubuntu.com azure.archive.ubuntu.com; do
+    if "$curl_bin" -fsS --max-time 10 -o /dev/null "https://$host/ubuntu/dists/${codename}/InRelease"; then
+      mirror=$host
+      break
+    fi
+  done
+
   for file in \
     "$sources_dir/sources.list" \
     "$sources_dir/sources.list.d/"*.list \
@@ -65,10 +73,14 @@ yueto_apt_mirror_fallback() {
     # A symlink can point at a non-Ubuntu file outside this directory.
     [ -L "$file" ] && continue
     tmp=$(mktemp "${TMPDIR:-/tmp}/apt-mirror-fallback.XXXXXX") || return 1
-    sed -E \
+    if [ -n "$mirror" ]; then
+      sed -E "s#(^|[[:space:]+])https?://((azure\.)?archive|security)\.ubuntu\.com(/|[[:space:]]|$)#\1https://${mirror}\4#g" "$file" > "$tmp"
+    else
+      sed -E \
       -e 's#(^|[^A-Za-z0-9.-])archive\.ubuntu\.com([^A-Za-z0-9.-]|$)#\1azure.archive.ubuntu.com\2#g' \
       -e 's#(^|[^A-Za-z0-9.-])security\.ubuntu\.com([^A-Za-z0-9.-]|$)#\1azure.archive.ubuntu.com\2#g' \
-      "$file" > "$tmp" || { rm -f -- "$tmp"; return 1; }
+      "$file" > "$tmp"
+    fi || { rm -f -- "$tmp"; return 1; }
     if cmp -s "$file" "$tmp"; then
       rm -f -- "$tmp"
       continue
@@ -82,7 +94,7 @@ yueto_apt_mirror_fallback() {
   done
 
   if [ "$changed" -eq 1 ]; then
-    echo "::notice::Ubuntu archive mirror unreachable; apt sources now use azure.archive.ubuntu.com"
+    echo "::notice::Ubuntu archive mirror unreachable; apt sources now use ${mirror:+https://}${mirror:-azure.archive.ubuntu.com}"
   fi
   yueto_apt_run "$apt_get" -o Acquire::Retries=3 -o Acquire::http::Timeout=20 update
 }
