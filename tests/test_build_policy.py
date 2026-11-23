@@ -1094,6 +1094,7 @@ class BuildPolicyTest(unittest.TestCase):
                 "board-visual-capture.yml",
                 "build.yml",
                 "ci-toolchain.yml",
+                "hy2-probe.yml",
                 "image-rescan.yml",
                 "policy-ci.yml",
                 "quality-ratchet.yml",
@@ -1136,6 +1137,14 @@ class BuildPolicyTest(unittest.TestCase):
         toolchain_operations = toolchain_code.replace("      - scripts/install-cosign.sh\n", "")
         for forbidden in ("cosign", "imagetools", "promote", "id-token: write"):
             self.assertNotIn(forbidden, toolchain_operations)
+
+        probe = (WORKFLOW_DIR / "hy2-probe.yml").read_text()
+        self.assertIn("permissions:\n  contents: read\n", probe)
+        for repository in ("hysteria", "quic-go"):
+            self.assertRegex(probe, rf"repository: onesyue/{repository}\n          ref: [0-9a-f]{{40}}\n")
+        self.assertIn("uses: actions/upload-artifact@", probe)
+        for forbidden in ("packages: write", "id-token: write", "contents: write", "build-push-action", "docker push", "imagetools create", "gh release"):
+            self.assertNotIn(forbidden, probe)
 
         capture = (WORKFLOW_DIR / "board-visual-capture.yml").read_text()
         capture_code = "\n".join(
