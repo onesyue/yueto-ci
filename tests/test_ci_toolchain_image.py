@@ -166,6 +166,25 @@ class CiToolchainImageTest(unittest.TestCase):
         )
         self.assertFalse(fake.exists())
 
+    def test_docker_wrapper_propagates_backend_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            stub = Path(directory) / "docker"
+            stub.write_text(
+                '#!/bin/sh\n[ "$1" = run ] || exit 99\nprintf "fixture: daemon unavailable\\n" >&2\nexit 42\n',
+                encoding="utf-8",
+            )
+            stub.chmod(0o755)
+            completed = subprocess.run(
+                ["/bin/bash", str(IMAGE / "docker-hostpath.sh"), "run"],
+                env={"DOCKER_REAL": str(stub)},
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        self.assertEqual(completed.returncode, 42)
+        self.assertEqual(completed.stderr, "fixture: daemon unavailable\n")
+        self.assertEqual(completed.stdout, "")
+
 
 if __name__ == "__main__":
     unittest.main()
