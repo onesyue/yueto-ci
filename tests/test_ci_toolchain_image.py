@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from workflow_source import workflow_text
+import os
 import re
-import yaml
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
+
+import yaml
+from workflow_source import workflow_text
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
@@ -118,14 +122,26 @@ class CiToolchainImageTest(unittest.TestCase):
         self.assertIn("provenance: false", rebuild)
         self.assertIn("yueops-ci-toolchain-selfcheck", rebuild)
 
+    def test_selfcheck_rejects_root_before_checking_the_image(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            fake_id = Path(directory) / "id"
+            fake_id.write_text('#!/bin/sh\n[ "$1" = -u ] || exit 99\nprintf "0\\n"\n', encoding="utf-8")
+            fake_id.chmod(0o755)
+            completed = subprocess.run(
+                ["/bin/bash", str(IMAGE / "selfcheck.sh")],
+                env={"PATH": directory},
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        self.assertEqual(completed.returncode, 1)
+        self.assertEqual(completed.stderr, "::error::initdb fixtures require the non-root runner user\n")
+        self.assertEqual(completed.stdout, "")
+
     def test_docker_wrapper_rewrites_host_work_path(self) -> None:
         wrapper = IMAGE / "docker-hostpath.sh"
         fake = ROOT / ".docker-fake-not-used"
         # The wrapper execs DOCKER_REAL. A shell stub records its arguments.
-        import os
-        import subprocess
-        import tempfile
-
         with tempfile.TemporaryDirectory() as directory:
             stub = Path(directory) / "docker"
             stub.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n", encoding="utf-8")
