@@ -78,12 +78,30 @@ class HostedExecution(unittest.TestCase):
         self.assertIn('contradicts', receipt['problem'])
 
     def test_real_timeout_terminates_child_and_keeps_incomplete_receipt(self):
-        started = time.monotonic()
-        code, receipt = self.execute('echo started\nsleep 60\n', timeout_seconds=0.1)
+        log = self.output / 'hosted.log'
+        started = None
+
+        def budget_clock():
+            nonlocal started
+            if started is None:
+                # Start the short budget after the real child reaches the gate.
+                deadline = time.monotonic() + 5
+                while 'started\n' not in log.read_text():
+                    self.assertLess(time.monotonic(), deadline, 'timeout fixture did not start')
+                    time.sleep(0.01)
+                started = time.monotonic()
+            return time.monotonic()
+
+        with patch.object(HOSTED, 'time', wraps=time) as clock:
+            clock.monotonic.side_effect = budget_clock
+            code, receipt = self.execute('echo started\nexec sleep 60\n', timeout_seconds=0.1)
         self.assertEqual(code, 2)
         self.assertLess(time.monotonic() - started, 5)
         self.assertIn('time budget', receipt['problem'])
-        self.assertIn('started', (self.output / 'hosted.log').read_text())
+        self.assertFalse(receipt['complete'])
+        self.assertIn('started', log.read_text())
+        with self.assertRaises(ProcessLookupError):
+            os.killpg(receipt['controller_session_id'], 0)
 
     def test_low_disk_and_credentials_refuse_before_source_execution(self):
         self.resources.free = 1
