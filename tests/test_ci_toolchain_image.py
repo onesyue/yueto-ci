@@ -56,7 +56,7 @@ class CiToolchainImageTest(unittest.TestCase):
             self.assertEqual(steps[name]['if'], host_condition)
         for name in ('Set up Python on GitHub-hosted runner', 'Select Python on GitHub-hosted runner'):
             self.assertEqual(steps[name]['if'], host_condition.replace("== 'e2e'", "!= 'e2e'"))
-        self.assertEqual(steps['Set up Python for host Board e2e']['with']['python-version'], '3.13')
+        self.assertRegex(steps['Set up Python for host Board e2e']['with']['python-version'], r'^3\.13\.[0-9]+$')
         self.assertIn('command -v python3', steps['Select Python for host Board e2e']['run'])
         e2e = steps['Validate YueBoard end-to-end suite']
         self.assertIn('--database-adapter loopback', e2e['run'])
