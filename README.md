@@ -349,13 +349,19 @@ tags in workflow source. Review permission changes before adding a new action.
 
 ## Local policy checks
 
-Install [requirements-policy.txt](requirements-policy.txt) in the test environment
-for real-pytest recorder controls, then run:
+Build the Linux/amd64 toolchain used to replay the local premerge policy stage:
 
 ```sh
-python3 -m unittest discover -s tests -p 'test_*.py' -v
+docker build --platform linux/amd64 -f images/policy-test/Dockerfile -t yueto-policy-test .
+docker run --rm --platform linux/amd64 -v "$PWD:/policy:ro" -w /policy yueto-policy-test \
+  python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
+Use the rebuilt image for the Linux `yt-premerge` wrapper when replaying an
+exact candidate bundle. It runs as UID/GID 1000, so any mounted evidence
+directory must be writable by that identity. For a host run, install
+[requirements-policy.txt](requirements-policy.txt) and run
+`python3 scripts/run-policy-tests.py` to check PATH and run the policy modules.
 Discovery rejects unreachable test cases and import failures. Policy CI also
 compiles Python, checks shell syntax, runs pinned actionlint and ShellCheck.
 See [policy-ci.yml](.github/workflows/policy-ci.yml) for exact commands and pins.

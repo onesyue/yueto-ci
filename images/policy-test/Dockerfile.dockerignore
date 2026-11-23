@@ -1,0 +1,5 @@
+**
+!requirements-policy.txt
+!scripts/ci-retry.sh
+!scripts/lint-tool-versions.sh
+!scripts/run-policy-tests.py
