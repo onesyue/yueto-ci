@@ -20,7 +20,11 @@ python3 scripts/run-policy-tests.py --check-tools
 
 if [[ "$mode" == ci ]]; then
   python3 scripts/run-policy-tests.py
-  python3 -m compileall -q scripts tests
+  # compileall writes .pyc; keep that cache off a read-only checkout
+  # (local official docker replay mounts the tree ro).
+  pycache=${TMPDIR:-/tmp}/yueto-policy-pycache
+  mkdir -p "$pycache"
+  PYTHONPYCACHEPREFIX=$pycache python3 -m compileall -q scripts tests
   for script in scripts/*.sh; do
     bash -n "$script"
   done

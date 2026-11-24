@@ -117,3 +117,55 @@ class PolicyEntryTest(unittest.TestCase):
         (tests / "test_new.py").touch()
         self.assertEqual(runner.changed_modules(self.root),
                          ["test_check_policy_entry", "test_new", "test_staged", "test_tool"])
+
+
+def official_compileall_body(entry: str) -> str:
+    lines = []
+    for line in entry.splitlines():
+        if "compileall" in line or "PYCACHEPREFIX" in line or (
+            lines and "pycache" in line.lower()
+        ):
+            lines.append(line)
+    if not any("compileall" in line for line in lines):
+        raise AssertionError("check-policy.sh no longer compiles scripts and tests")
+    return "\n".join(lines)
+
+
+class CompileallReadOnlyTreeTest(unittest.TestCase):
+    """Local official replay mounts the checkout read-only; compileall must still run."""
+
+    def test_ci_compileall_checks_syntax_on_a_read_only_tree(self):
+        entry = (ROOT / ENTRY).read_text()
+        self.assertIn("python3 -m compileall -q scripts tests", entry)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "src"
+            scripts = root / "scripts"
+            tests = root / "tests"
+            scripts.mkdir(parents=True)
+            tests.mkdir()
+            (scripts / "ok.py").write_text("value = 1\n", encoding="utf-8")
+            (tests / "ok.py").write_text("value = 2\n", encoding="utf-8")
+            self._freeze(root)
+            result = self._compile(root, entry)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            os.chmod(tests, 0o755)
+            bad = tests / "bad.py"
+            bad.write_text("def (\n", encoding="utf-8")
+            os.chmod(bad, 0o444)
+            os.chmod(tests, 0o555)
+            result = self._compile(root, entry)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("bad.py", result.stderr + result.stdout)
+
+    def _compile(self, root: Path, entry: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["bash", "-c", official_compileall_body(entry)],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def _freeze(self, root: Path) -> None:
+        for path in [root, *root.rglob("*")]:
+            os.chmod(path, 0o555 if path.is_dir() else 0o444)
