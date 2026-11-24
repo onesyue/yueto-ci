@@ -358,9 +358,20 @@ Build the Linux/amd64 toolchain used to replay the local premerge policy stage:
 
 ```sh
 docker build --platform linux/amd64 -f images/policy-test/Dockerfile -t yueto-policy-test .
-docker run --rm --platform linux/amd64 -v "$PWD:/policy:ro" -w /policy yueto-policy-test \
-  python3 -m unittest discover -s tests -p 'test_*.py' -v
+scripts/run-policy-docker.sh
 ```
+
+The official policy entry is [check-policy.sh](scripts/check-policy.sh) `ci`,
+which runs each `tests/test_*.py` module in its own process via
+[run-policy-tests.py](scripts/run-policy-tests.py). Do not use a single
+`unittest discover` sweep as a substitute: an intentional import-error fixture
+used by the discovery contract would otherwise look like a suite failure, and
+sibling modules would not be isolated. [run-policy-docker.sh](scripts/run-policy-docker.sh)
+replays that official command in the Linux/amd64 policy-test image, with a
+read-only mount. A git worktree is not mounted naively (`.git` is a pointer
+outside the tree); the script builds a disposable, credential-free snapshot
+with verifiable `.git` metadata and does not rewrite the user's gitdir. The
+script never pushes the image or publishes a tag.
 
 Use the rebuilt image for the Linux `yt-premerge` wrapper when replaying an
 exact candidate bundle. It runs as UID/GID 1000, so any mounted evidence

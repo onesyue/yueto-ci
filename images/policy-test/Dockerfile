@@ -4,7 +4,7 @@ FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf107
 COPY --from=go_toolchain /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin" GOTOOLCHAIN=local TZ=UTC
 RUN apt-get update -qq \
-    && apt-get install -y --no-install-recommends bash ca-certificates curl git gnupg gpgv jq nodejs shellcheck \
+    && apt-get install -y --no-install-recommends bash ca-certificates curl git gnupg gpgv jq nodejs shellcheck xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-policy.txt scripts/run-policy-tests.py scripts/lint-tool-versions.sh scripts/ci-retry.sh /tmp/policy/
