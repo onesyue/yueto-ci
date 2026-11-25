@@ -16,9 +16,13 @@ import os
 import re
 import subprocess
 import zipfile
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards.sharding import validate_plan as validate_shard_plan
+from pytest_shards.support import encoded as shard_encoded, role_order as shard_role_order
 REPOSITORY = "onesyue/yueto-ci"
 SHA = re.compile(r"[0-9a-f]{40}")
 DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
@@ -281,17 +285,16 @@ def validation_proof(api, binding, source):
     require(documents["resume-binding.json"] == binding, "authoritative plan binding differs")
     documents, _ = artifact(api, artifacts, f"ops-admission-{run_id}-{run_attempt}", run_id, policy, {"ops-admission.json"})
     admission = documents["ops-admission.json"]
-    shards = load("pytest-shards")
     expected = dict(admission)
     admission_hash = expected.pop("admission_sha256", None)
-    require(admission_hash == sha(shards.encoded(expected)) and admission.get("schema") == 1
+    require(admission_hash == sha(shard_encoded(expected)) and admission.get("schema") == 1
             and admission.get("mode") == "sharded"
             and admission.get("source_revision") == identity["source_revision"]
             and admission.get("board_revision") == binding["board_revision"]
             and admission.get("identity") == {"policy_revision": policy, "run_id": run_id, "run_attempt": run_attempt},
             "canonical admission belongs to different validation inputs")
-    plan = shards.validate_plan(admission["ops_plan"])
-    roles = shards.role_order(plan)
+    plan = validate_shard_plan(admission["ops_plan"])
+    roles = shard_role_order(plan)
     require(plan["source_revision"] == identity["source_revision"]
             and [row.get("ops_role") for row in admission["validation_matrix"]] == roles
             and all(row.get("repo") == "onesyue/yueops" and row.get("ref") == identity["source_revision"]

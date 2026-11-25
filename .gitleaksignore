@@ -103,6 +103,9 @@ eabc886f4d38200d6c48be10d4e6d769f1af98ac:reviews/ops-collection-shuffle-20261031
 # Lookup key for a retirement record in the pytest baseline.
 bee330db4ad5de6d68b4c0e2311fd506f30bbfd3:scripts/pytest-shards.py:generic-api-key:748
 
+# The same reviewed pin after the shard config move.
+4dfa6f00e0d828b4fbaadeded5758d77861de275:scripts/pytest_shards/config.py:generic-api-key:210
+
 # Named validation check in a recorded argument list.
 113fb85f084933a5e89fc77ca2dc179577a71243:reviews/merge-receipts-20261104/yueto-94.log:generic-api-key:1
 

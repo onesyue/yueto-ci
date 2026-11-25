@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """The reference collect must overlap independent parts and keep their order."""
 import concurrent.futures
-import importlib.util
 import json
 import os
 import subprocess
@@ -14,11 +13,11 @@ from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    "ops_shards_parallel", ROOT / "scripts" / "pytest-shards.py")
-assert SPEC and SPEC.loader
-SHARDS = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(SHARDS)
+sys.path.insert(0, str(ROOT / "scripts"))
+import pytest_shards.collection as collection_mod
+from pytest_shards.collection import inspect_session, map_bounded
+from pytest_shards.config import LOG_LINE_LIMIT
+
 
 
 class ReferenceCollectParallelTest(unittest.TestCase):
@@ -50,12 +49,12 @@ class ReferenceCollectParallelTest(unittest.TestCase):
             return name
 
         # Release a only after b's Future is done, not merely before b returns.
-        with patch.object(SHARDS.concurrent.futures, "ThreadPoolExecutor", ObservedExecutor):
-            self.assertEqual(SHARDS.map_bounded([lambda: work("a"), lambda: work("b")], 2), ["a", "b"])
+        with patch.object(collection_mod.concurrent.futures, "ThreadPoolExecutor", ObservedExecutor):
+            self.assertEqual(map_bounded([lambda: work("a"), lambda: work("b")], 2), ["a", "b"])
         self.assertEqual(completed, ["b", "a"])
-        self.assertEqual(SHARDS.map_bounded([lambda: "only"], 4), ["only"])
+        self.assertEqual(map_bounded([lambda: "only"], 4), ["only"])
         with self.assertRaises(ValueError):
-            SHARDS.map_bounded([], 0)
+            map_bounded([], 0)
 
 
 class ActualReferenceCollectorTest(unittest.TestCase):
@@ -120,29 +119,31 @@ class ActualReferenceCollectorTest(unittest.TestCase):
 
     def collect(self, scenario="normal", **extra):
         driver = """
-import importlib.util, json, os, sys
+import json, os, sys
 from pathlib import Path
-spec = importlib.util.spec_from_file_location('actual_collector', sys.argv[1])
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
+sys.path.insert(0, sys.argv[1])
+from pytest_shards.sharding import plan
+from pytest_shards.support import runner_context
+from pytest_shards.timing import load_timing
+from pytest_shards import collection
 source, output, site = map(Path, sys.argv[2:5])
 context = dict(policy_revision=os.environ['GITHUB_SHA'], board_revision='b' * 40,
                run_id='42', run_attempt='2', runner_os='Linux', runner_arch='X64',
                runner_image='fixture-image')
-expected = module.plan(source, context, 2, [])
-runner = module.runner_context(context, os.environ)
+expected = plan(source, context, 2, [])
+runner = runner_context(context, os.environ)
 if sys.argv[5] == 'duplicate':
     expected['assignments'][1]['modules'] = expected['assignments'][0]['modules']
 if sys.argv[5] == 'runner':
     runner['runner_image'] = 'changed-before-collection'
-timing = module.load_timing()
+timing = load_timing()
 timing.install(output, site)
 (output / 'expected-plan.json').write_text(json.dumps(expected))
-module.os.cpu_count = lambda: 2
-raise SystemExit(module.collect_reference_parts(expected, source, output, site, runner, timing))
+collection.os.cpu_count = lambda: 2
+raise SystemExit(collection.collect_reference_parts(expected, source, output, site, runner, timing))
 """
         return subprocess.run(
-            [sys.executable, "-c", driver, str(ROOT / "scripts/pytest-shards.py"),
+            [sys.executable, "-c", driver, str(ROOT / "scripts"),
              str(self.source), str(self.output), str(self.base / "shared site"), scenario],
             cwd=self.source, env=self.env | extra, capture_output=True, text=True,
             timeout=25, check=False)
@@ -175,7 +176,7 @@ raise SystemExit(module.collect_reference_parts(expected, source, output, site, 
             self.assertEqual(selection["pytest_addopts"], "--durations=25")
             assignment = next(a for a in expected["assignments"] if a["id"] == role)
             assignment = assignment | {"collect_only": True}
-            inspected = SHARDS.inspect_session(part, expected, assignment)
+            inspected = inspect_session(part, expected, assignment)
             self.assertEqual(inspected["invocation_id"], metadata["invocation_id"])
             original = (part / "selection.json").read_bytes()
             for option in ("cache_dir=relative", f"cache_dir={self.base}", "-k"):
@@ -184,7 +185,7 @@ raise SystemExit(module.collect_reference_parts(expected, source, output, site, 
                     changed["pytest_argv"][argv.index("-o") + 1] = option
                     (part / "selection.json").write_text(json.dumps(changed))
                     with self.assertRaisesRegex(ValueError, "unexpected pytest arguments"):
-                        SHARDS.inspect_session(part, expected, assignment)
+                        inspect_session(part, expected, assignment)
             (part / "selection.json").write_bytes(original)
         self.assertEqual(joined["invocation_id"], invocations[0])
         self.assertEqual(len(set(invocations)), 2)
@@ -195,8 +196,8 @@ raise SystemExit(module.collect_reference_parts(expected, source, output, site, 
         result = self.collect(REFERENCE_LONG_ID="a")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         longest = max(len(line) for line in result.stdout.splitlines())
-        self.assertLessEqual(longest, SHARDS.LOG_LINE_LIMIT + 120)
-        self.assertNotIn("x" * (SHARDS.LOG_LINE_LIMIT + 1), result.stdout)
+        self.assertLessEqual(longest, LOG_LINE_LIMIT + 120)
+        self.assertNotIn("x" * (LOG_LINE_LIMIT + 1), result.stdout)
         joined = json.loads((self.output / "joined.json").read_text())
         long_ids = [n for n in joined["nodeids"] if "test_long_id" in n]
         self.assertEqual(len(long_ids), 1)

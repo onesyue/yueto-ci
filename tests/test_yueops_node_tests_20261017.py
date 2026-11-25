@@ -5,6 +5,7 @@ never executed by any CI. This pins the central step, its job gate and the
 three entry points so a removed or renamed line turns red.
 """
 from __future__ import annotations
+import sys
 
 from workflow_source import workflow_text
 from pathlib import Path
@@ -15,6 +16,22 @@ import textwrap
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards import cli as shard_cli
+from pytest_shards import skip_baseline as skip_baseline_mod
+from pytest_shards import transitions_native
+from pytest_shards.cli import native_receipts
+from pytest_shards.config import (
+    HISTORICAL_NATIVE_INPUTS,
+    NATIVE_INPUTS,
+    NATIVE_INPUT_SUCCESSOR_KEY,
+    NATIVE_TARGETS,
+)
+from pytest_shards.skip_baseline import skip_baseline
+from pytest_shards.support import baseline_bytes, encoded, sha
+from pytest_shards.transitions_estate import reviewed_estate_input_transition
+from pytest_shards.transitions_native import required_native_inputs, reviewed_retired_host_transition
+
 
 
 def _validate_steps(text: str | None = None) -> list[dict]:
@@ -489,23 +506,18 @@ class PersistedNativeReceipts(unittest.TestCase):
 
 class LoadShedNativeRegistration(unittest.TestCase):
     def setUp(self):
-        import importlib.util
         import json
-        spec = importlib.util.spec_from_file_location("loadshed_policy", ROOT / "scripts/pytest-shards.py")
-        assert spec is not None and spec.loader is not None
-        self.consumer = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(self.consumer)
         self.baseline = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
         self.target = "tests/native_loadshed_installer_20261030.py"
 
     def test_baseline_pin_inventory_and_workflow_agree(self):
-        original, inputs = self.consumer.required_native_inputs(self.baseline)
-        self.assertEqual(inputs, self.consumer.NATIVE_INPUTS)
+        original, inputs = required_native_inputs(self.baseline)
+        self.assertEqual(inputs, NATIVE_INPUTS)
         self.assertEqual(set(inputs), {self.target})
-        self.assertEqual(self.consumer.NATIVE_TARGETS[self.target], (14, 0))
-        predecessor, _ = self.consumer.reviewed_retired_host_transition(self.baseline)
+        self.assertEqual(NATIVE_TARGETS[self.target], (14, 0))
+        predecessor, _ = reviewed_retired_host_transition(self.baseline)
         self.assertEqual(original["cases"], predecessor["cases"])
-        self.consumer.reviewed_estate_input_transition(self.baseline)
+        reviewed_estate_input_transition(self.baseline)
 
     def test_pin_and_historical_seal_mutations_fail(self):
         import copy
@@ -518,12 +530,12 @@ class LoadShedNativeRegistration(unittest.TestCase):
             else:
                 changed["required_native_inputs"]["inputs"]["tests/extra.py"] = "f" * 40
             with self.subTest(mode=mode), self.assertRaises(ValueError):
-                self.consumer.required_native_inputs(changed)
+                required_native_inputs(changed)
 
     def test_successor_is_exact_and_cannot_replace_historical_evidence(self):
         import copy
         from unittest.mock import patch
-        key = self.consumer.NATIVE_INPUT_SUCCESSOR_KEY
+        key = NATIVE_INPUT_SUCCESSOR_KEY
         for mode in ("before", "after", "mode", "floor", "uid", "review", "source"):
             changed = copy.deepcopy(self.baseline)
             record = changed[key]
@@ -536,24 +548,24 @@ class LoadShedNativeRegistration(unittest.TestCase):
             elif mode == "review": record["independent_review_sha256"] = "0" * 64
             else: record["source_before"] = "f" * 40
             with self.subTest(mode=mode), self.assertRaises(ValueError):
-                self.consumer.required_native_inputs(changed)
+                required_native_inputs(changed)
         old = copy.deepcopy(self.baseline)
         old.pop(key)
-        original, inputs = self.consumer.required_native_inputs(old)
-        self.assertEqual(inputs, self.consumer.HISTORICAL_NATIVE_INPUTS)
-        with patch.object(self.consumer, "read_json", return_value=old):
+        original, inputs = required_native_inputs(old)
+        self.assertEqual(inputs, HISTORICAL_NATIVE_INPUTS)
+        with patch.object(skip_baseline_mod, "read_json", return_value=old):
             with self.assertRaisesRegex(ValueError, "successor missing"):
-                self.consumer.skip_baseline()
+                skip_baseline()
         changed = copy.deepcopy(self.baseline)
         first = next(iter(changed["cases"]))
         changed["cases"][first]["reason"] = "invented historical reason"
         record = changed.pop(key)
-        record["prior_baseline_sha256"] = self.consumer.sha(self.consumer.baseline_bytes(changed))
+        record["prior_baseline_sha256"] = sha(baseline_bytes(changed))
         changed[key] = record
-        with patch.object(self.consumer, "NATIVE_INPUT_SUCCESSOR_SHA256",
-                          self.consumer.sha(self.consumer.encoded(record))):
+        with patch.object(transitions_native, "NATIVE_INPUT_SUCCESSOR_SHA256",
+                          sha(encoded(record))):
             with self.assertRaises(ValueError):
-                self.consumer.reviewed_estate_input_transition(changed)
+                reviewed_estate_input_transition(changed)
 
     def test_loadshed_receipt_is_required_and_cannot_reduce_floor_or_change_uid(self):
         import json
@@ -561,7 +573,7 @@ class LoadShedNativeRegistration(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             (output / "native-context.json").write_text("{}")
-            for target, (floor, uid) in self.consumer.NATIVE_TARGETS.items():
+            for target, (floor, uid) in NATIVE_TARGETS.items():
                 names = sorted(f"{target}::test_case_{i}" for i in range(floor))
                 row = dict(target=target, floor=floor, uid=uid, platform="linux", binding={},
                            required=names, passed=names, collection_bad=False,
@@ -569,8 +581,8 @@ class LoadShedNativeRegistration(unittest.TestCase):
                 (output / (Path(target).stem + ".json")).write_text(json.dumps(row))
             path = output / (Path(self.target).stem + ".json")
             original = path.read_text()
-            with patch.object(self.consumer, "native_execution_context", return_value={}):
-                self.consumer.native_receipts({}, output)
+            with patch.object(shard_cli, "native_execution_context", return_value={}):
+                native_receipts({}, output)
                 for mode in ("missing", "floor", "uid", "incomplete", "skip"):
                     row = json.loads(original)
                     if mode == "missing":
@@ -582,5 +594,5 @@ class LoadShedNativeRegistration(unittest.TestCase):
                         else: row["passed"] = row["passed"][:-1]
                         path.write_text(json.dumps(row))
                     with self.subTest(mode=mode), self.assertRaises(ValueError):
-                        self.consumer.native_receipts({}, output)
+                        native_receipts({}, output)
                     path.write_text(original)

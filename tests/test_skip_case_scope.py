@@ -6,15 +6,17 @@ same skip. Any edit to the case itself, its class, or ``pytestmark`` is new.
 """
 import importlib.util
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("case_scope_shards", ROOT / "scripts/pytest-shards.py")
-SHARDS = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(SHARDS)
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards.config import NATIVE_TARGETS
+from pytest_shards.skip_bindings import case_scope_successor, derive_prior_skips
+
 
 MODULE = "tests/test_sample.py"
 NODE = MODULE + "::test_needs_binary"
@@ -47,7 +49,7 @@ class CaseScopeTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def successor(self, text, nodeid=NODE, record=None):
-        return SHARDS.case_scope_successor(
+        return case_scope_successor(
             self.repo, nodeid, blob(self.repo, text), [record or self.record],
             lambda r: r["reason"] == "Skipped: binary missing")
 
@@ -65,23 +67,23 @@ class CaseScopeTest(unittest.TestCase):
 
     def test_reason_must_match(self):
         other = dict(self.record, reason="Skipped: different")
-        self.assertIsNone(SHARDS.case_scope_successor(
+        self.assertIsNone(case_scope_successor(
             self.repo, NODE, blob(self.repo, OTHER_EDIT), [other],
             lambda r: r["reason"] == "Skipped: binary missing"))
 
     def test_missing_source_or_unknown_case_is_new(self):
-        self.assertIsNone(SHARDS.case_scope_successor(
+        self.assertIsNone(case_scope_successor(
             None, NODE, blob(self.repo, OTHER_EDIT), [self.record], lambda r: True))
         self.assertIsNone(self.successor(OTHER_EDIT, MODULE + "::test_absent"))
 
     def test_native_modules_never_derive(self):
-        native = next(iter(SHARDS.NATIVE_TARGETS))
-        self.assertIsNone(SHARDS.case_scope_successor(
+        native = next(iter(NATIVE_TARGETS))
+        self.assertIsNone(case_scope_successor(
             self.repo, native + "::test_needs_binary", blob(self.repo, OTHER_EDIT),
             [self.record], lambda r: True))
 
     def test_derive_prior_skips_without_source_admits_nothing(self):
-        self.assertEqual(SHARDS.derive_prior_skips({}, None, [(NODE, {})]), set())
+        self.assertEqual(derive_prior_skips({}, None, [(NODE, {})]), set())
 
 
 if __name__ == "__main__":

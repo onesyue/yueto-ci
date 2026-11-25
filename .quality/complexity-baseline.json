@@ -32,37 +32,37 @@
       "ccn": 42,
       "nloc": 69
     },
-    "scripts/pytest-shards.py::_admit_existing_shared_inputs( baseline , common , files = None )#1": {
-      "ccn": 132,
-      "nloc": 256
-    },
-    "scripts/pytest-shards.py::_eval_skip_expr( node , env )#1": {
-      "ccn": 36,
-      "nloc": 51
-    },
-    "scripts/pytest-shards.py::admit_shared_inputs( baseline , common , files = None , * , source_revision = None , estate_successor_of = None , template_writer_retired_at = None , pin_is_ancestor = False )#1": {
-      "ccn": 111,
-      "nloc": 210
-    },
-    "scripts/pytest-shards.py::admit_skips( value , result , native , source = None )#1": {
-      "ccn": 33,
-      "nloc": 128
-    },
-    "scripts/pytest-shards.py::estate_successor_proof( baseline , source , revision )#1": {
-      "ccn": 55,
-      "nloc": 166
-    },
-    "scripts/pytest-shards.py::inspect_session( directory , value , assignment , * , expected_empty = False )#1": {
-      "ccn": 75,
-      "nloc": 112
-    },
-    "scripts/pytest-shards.py::reviewed_case_file_transition( baseline , files = None )#1": {
-      "ccn": 38,
-      "nloc": 75
-    },
     "scripts/pytest-timing.py::inspect( output )#1": {
       "ccn": 64,
       "nloc": 118
+    },
+    "scripts/pytest_shards/collection.py::inspect_session( directory , value , assignment , * , expected_empty = False )#1": {
+      "ccn": 75,
+      "nloc": 112
+    },
+    "scripts/pytest_shards/skip_bindings.py::admit_skips( value , result , native , source = None )#1": {
+      "ccn": 33,
+      "nloc": 128
+    },
+    "scripts/pytest_shards/skip_report.py::_eval_skip_expr( node , env )#1": {
+      "ccn": 36,
+      "nloc": 51
+    },
+    "scripts/pytest_shards/transitions_admit.py::_admit_existing_shared_inputs( baseline , common , files = None )#1": {
+      "ccn": 132,
+      "nloc": 256
+    },
+    "scripts/pytest_shards/transitions_admit.py::admit_shared_inputs( baseline , common , files = None , * , source_revision = None , estate_successor_of = None , template_writer_retired_at = None , pin_is_ancestor = False )#1": {
+      "ccn": 111,
+      "nloc": 210
+    },
+    "scripts/pytest_shards/transitions_estate.py::reviewed_case_file_transition( baseline , files = None )#1": {
+      "ccn": 38,
+      "nloc": 75
+    },
+    "scripts/pytest_shards/transitions_pr.py::estate_successor_proof( baseline , source , revision )#1": {
+      "ccn": 55,
+      "nloc": 166
     },
     "scripts/validate-native-node-contract.py::validate_yueboard( root : Path , contract : dict )#1": {
       "ccn": 11,

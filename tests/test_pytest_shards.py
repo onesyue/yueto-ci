@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import importlib.util
 import json
 import os
 import shutil
@@ -15,9 +14,13 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("pytest_shards", ROOT / "scripts/pytest-shards.py")
-SHARDS = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(SHARDS)
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards.collection import inspect_session, join_reference_collections, require_reference_join
+from pytest_shards.reporting import aggregate
+from pytest_shards.sharding import plan, validate_plan
+from pytest_shards.support import encoded, sha
+from pytest_shards.timing import detach_ordinary_weights
+
 
 
 class ShardPrimitives(unittest.TestCase):
@@ -95,6 +98,10 @@ class ShardPrimitives(unittest.TestCase):
                      "pytest-shards.py", "admission_diagnostics.py", "source_evidence.py",
                      "brand_literals.py"):
             shutil.copyfile(ROOT / "scripts" / name, self.policy / "scripts" / name)
+        shutil.copytree(
+            ROOT / "scripts" / "pytest_shards",
+            self.policy / "scripts" / "pytest_shards",
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         self.env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", TZ="UTC",
                         PYTEST_ADDOPTS="", PYTHONPATH=str(self.site),
                         GITHUB_REPOSITORY="onesyue/yueto-ci", GITHUB_RUN_ID="42",
@@ -126,7 +133,7 @@ class ShardPrimitives(unittest.TestCase):
             "run_id": "42", "run_attempt": "1", "runner_os": "Linux",
             "runner_arch": "X64", "runner_image": "fixture-image",
         }
-        self.plan = SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"])
+        self.plan = plan(self.source, self.context, 2, ["tests/test_c.py"])
         self.serial = next(a for a in self.plan["assignments"] if a["id"] == "serial")
         self.ordinal = 0
 
@@ -187,7 +194,7 @@ class ShardPrimitives(unittest.TestCase):
 
     def reject(self, reference, directories, pattern=None):
         with self.assertRaises(ValueError) as error:
-            SHARDS.aggregate(self.plan, reference, directories)
+            aggregate(self.plan, reference, directories)
         if pattern:
             self.assertIn(pattern, str(error.exception))
 
@@ -201,12 +208,12 @@ class ShardPrimitives(unittest.TestCase):
         return original
 
     def test_deterministic_plan_tracks_whole_modules_and_serial_ownership(self):
-        self.assertEqual(self.plan, SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"]))
+        self.assertEqual(self.plan, plan(self.source, self.context, 2, ["tests/test_c.py"]))
         modules = [p for a in self.plan["assignments"] for p in a["modules"]]
         self.assertEqual(sorted(modules), sorted(self.plan["modules"]))
         self.assertIn("tests/test_b é.py", modules)
         self.assertEqual(self.serial["modules"], ["tests/test_c.py"])
-        self.assertEqual(SHARDS.validate_plan(self.plan), self.plan)
+        self.assertEqual(validate_plan(self.plan), self.plan)
 
     def test_measured_weights_rebalance_without_entering_the_plan_digest(self):
         heavy = {
@@ -214,20 +221,20 @@ class ShardPrimitives(unittest.TestCase):
             "tests/test_b é.py": 1000,
             "tests/test_skip_module.py": 1000,
         }
-        weighted = SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"], weights=heavy)
-        stored = SHARDS.detach_ordinary_weights(weighted)
+        weighted = plan(self.source, self.context, 2, ["tests/test_c.py"], weights=heavy)
+        stored = detach_ordinary_weights(weighted)
         self.assertEqual(stored, heavy)
         self.assertNotIn("ordinary_weights", weighted)
-        self.assertEqual(SHARDS.validate_plan(weighted), weighted)
+        self.assertEqual(validate_plan(weighted), weighted)
         body = {key: value for key, value in weighted.items() if key != "plan_sha256"}
-        self.assertEqual(weighted["plan_sha256"], SHARDS.sha(SHARDS.encoded(body)))
+        self.assertEqual(weighted["plan_sha256"], sha(encoded(body)))
         groups = {item["id"]: item["modules"] for item in weighted["assignments"]}
         self.assertEqual(groups["ordinary-000"], ["tests/test_a.py"])
         self.assertEqual(groups["ordinary-001"], ["tests/test_b é.py", "tests/test_skip_module.py"])
-        again = SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"], weights=stored)
-        SHARDS.detach_ordinary_weights(again)
+        again = plan(self.source, self.context, 2, ["tests/test_c.py"], weights=stored)
+        detach_ordinary_weights(again)
         self.assertEqual(again, weighted)
-        ignored = SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"])
+        ignored = plan(self.source, self.context, 2, ["tests/test_c.py"])
         self.assertEqual(ignored, self.plan)
         self.assertEqual(
             [item["modules"] for item in ignored["assignments"] if item["id"] == "ordinary-000"],
@@ -236,26 +243,26 @@ class ShardPrimitives(unittest.TestCase):
         corrupt = self.base / "corrupt-events.jsonl"
         corrupt.write_text("{not json\n")
         self.assertEqual(
-            SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"], timing=corrupt),
+            plan(self.source, self.context, 2, ["tests/test_c.py"], timing=corrupt),
             self.plan)
         self.assertEqual(
-            SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"],
+            plan(self.source, self.context, 2, ["tests/test_c.py"],
                         timing=self.base / "missing-events.jsonl"),
             self.plan)
 
     def test_plan_rejects_wrong_root_dirty_untracked_and_configuration(self):
         with self.assertRaises(ValueError):
-            SHARDS.plan(self.source / "tests", self.context, 2, [])
+            plan(self.source / "tests", self.context, 2, [])
         path = self.source / "tests/test_a.py"
         original = path.read_bytes()
         path.write_text("dirty\n")
         with self.assertRaises(ValueError):
-            SHARDS.plan(self.source, self.context, 2, [])
+            plan(self.source, self.context, 2, [])
         path.write_bytes(original)
         untracked = self.source / "tests/test_extra.py"
         untracked.write_text("def test_extra(): pass\n")
         with self.assertRaises(ValueError):
-            SHARDS.plan(self.source, self.context, 2, [])
+            plan(self.source, self.context, 2, [])
         untracked.unlink()
         # An ignored conftest still executes during collection.
         self.git(self.source, "config", "core.excludesFile", str(self.base / "excludes"))
@@ -263,7 +270,7 @@ class ShardPrimitives(unittest.TestCase):
         ignored = self.source / "tests/conftest.py"
         ignored.write_text("raise RuntimeError('untracked collection hook')\n")
         with self.assertRaisesRegex(ValueError, "test Python input"):
-            SHARDS.plan(self.source, self.context, 2, [])
+            plan(self.source, self.context, 2, [])
         ignored.unlink()
         config = self.source / "pytest.ini"
         base_config = config.read_text()
@@ -272,38 +279,38 @@ class ShardPrimitives(unittest.TestCase):
                           "tmp_path_retention_count = 1\n")
         self.git(self.source, "add", "pytest.ini")
         self.commit(self.source)
-        SHARDS.plan(self.source, self.context, 2, [])
+        plan(self.source, self.context, 2, [])
         for extra in ("tmp_path_retention_policy = all\n",
                       "tmp_path_retention_count = 3\n"):
             config.write_text(base_config + extra)
             self.git(self.source, "add", "pytest.ini")
             self.commit(self.source)
             with self.assertRaisesRegex(ValueError, "unsupported"):
-                SHARDS.plan(self.source, self.context, 2, [])
+                plan(self.source, self.context, 2, [])
         config.write_text(base_config + "addopts = --ignore=tests/test_a.py\n")
         self.git(self.source, "add", "pytest.ini")
         self.commit(self.source)
         with self.assertRaisesRegex(ValueError, "unsupported"):
-            SHARDS.plan(self.source, self.context, 2, [])
+            plan(self.source, self.context, 2, [])
 
     def test_invalid_capacity_serial_assignment_empty_and_symlink_are_rejected(self):
         for count in (0, -1, True, 99):
             with self.subTest(count=count), self.assertRaises(ValueError):
-                SHARDS.plan(self.source, self.context, count, [])
+                plan(self.source, self.context, count, [])
         for serial in (["../escape.py"], ["tests/test_c.py"] * 2):
             with self.subTest(serial=serial), self.assertRaises(ValueError):
-                SHARDS.plan(self.source, self.context, 1, serial)
+                plan(self.source, self.context, 1, serial)
         path = self.source / "tests/test_a.py"
         path.unlink()
         path.symlink_to(self.source / "tests/test_c.py")
         self.git(self.source, "add", "tests/test_a.py")
         self.commit(self.source)
         with self.assertRaisesRegex(ValueError, "symlink"):
-            SHARDS.plan(self.source, self.context, 2, [])
+            plan(self.source, self.context, 2, [])
         self.git(self.source, "rm", "-r", "tests")
         self.commit(self.source)
         with self.assertRaisesRegex(ValueError, "empty"):
-            SHARDS.plan(self.source, self.context, 1, [])
+            plan(self.source, self.context, 1, [])
 
     def test_actual_root_conftest_and_collection_symlinks_require_owned_sources(self):
         hook = self.source / "conftest.py"
@@ -320,12 +327,12 @@ class ShardPrimitives(unittest.TestCase):
                 self.assertEqual(result.returncode, 4, result.stdout + result.stderr)
                 self.assertIn("controlled external collection hook", result.stderr)
                 with self.assertRaisesRegex(ValueError, "untracked root conftest"):
-                    SHARDS.plan(self.source, self.context, 2, [])
+                    plan(self.source, self.context, 2, [])
         # A tracked in-repository collection hook remains a supported input.
         hook.write_text("def pytest_collection_modifyitems(items): assert items\n")
         self.git(self.source, "add", "-f", "conftest.py")
         self.commit(self.source)
-        SHARDS.plan(self.source, self.context, 2, [])
+        plan(self.source, self.context, 2, [])
         _, result = self.run_session()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         hook.unlink()
@@ -340,14 +347,14 @@ class ShardPrimitives(unittest.TestCase):
                 self.assertEqual(result.returncode, 4, result.stdout + result.stderr)
                 self.assertIn("controlled external collection hook", result.stderr)
                 with self.assertRaisesRegex(ValueError, "symlink"):
-                    SHARDS.plan(self.source, self.context, 2, [])
+                    plan(self.source, self.context, 2, [])
                 self.git(self.source, "rm", relative)
                 self.commit(self.source)
 
     def test_actual_pytest_ini_cuts_off_conftest_above_source_root(self):
         (self.base / "conftest.py").write_text(
             "raise RuntimeError('outside supported collection root')\n")
-        self.assertEqual(self.plan, SHARDS.plan(self.source, self.context, 2,
+        self.assertEqual(self.plan, plan(self.source, self.context, 2,
                                               ["tests/test_c.py"]))
         _, result = self.run_session()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -357,7 +364,7 @@ class ShardPrimitives(unittest.TestCase):
         reference, directories = self.bundle()
         before = {str(p): hashlib.sha256(p.read_bytes()).hexdigest()
                   for d in [reference, *directories] for p in d.iterdir()}
-        result = SHARDS.aggregate(self.plan, reference, directories)
+        result = aggregate(self.plan, reference, directories)
         self.assertEqual(result["status"], "ORDINARY_CORPUS_COMPLETE")
         self.assertEqual(result["case_count"], 6)
         self.assertFalse(result["release_acceptance"])
@@ -391,7 +398,7 @@ class ShardPrimitives(unittest.TestCase):
         plan = copy.deepcopy(self.plan)
         plan["assignments"][0]["modules"] = plan["assignments"][1]["modules"]
         with self.assertRaisesRegex(ValueError, "digest"):
-            SHARDS.aggregate(plan, reference, directories)
+            aggregate(plan, reference, directories)
 
     def test_actual_sessions_bind_each_image_without_replacing_planning_provenance(self):
         reference, ran = self.run_session(ImageVersion="20261012.334.1")
@@ -401,7 +408,7 @@ class ShardPrimitives(unittest.TestCase):
             output, ran = self.run_session(assignment, ImageVersion=f"20261018.{340+i}.1")
             self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
             directories.append(output)
-        result = SHARDS.aggregate(self.plan, reference, directories)
+        result = aggregate(self.plan, reference, directories)
         observations = result["runner_observations"]
         self.assertEqual(observations["planning_runner_image"], "fixture-image")
         self.assertTrue(observations["mixed_execution_images"])
@@ -472,7 +479,7 @@ class ShardPrimitives(unittest.TestCase):
                 output, result = self.run_session(self.serial, CASE_FAILURE=kind)
                 self.assertNotEqual(result.returncode, 0)
                 with self.assertRaises(ValueError):
-                    SHARDS.inspect_session(output, self.plan, self.serial)
+                    inspect_session(output, self.plan, self.serial)
         self.assertTrue((reference / "events.jsonl").is_file())
 
     def test_actual_collection_error_is_not_missing_success(self):
@@ -480,14 +487,14 @@ class ShardPrimitives(unittest.TestCase):
         (self.source / "tests/test_c.py").write_text("raise RuntimeError('collection failure')\n")
         self.git(self.source, "add", "tests/test_c.py")
         self.commit(self.source)
-        self.plan = SHARDS.plan(self.source, self.context, 2, ["tests/test_c.py"])
+        self.plan = plan(self.source, self.context, 2, ["tests/test_c.py"])
         output, result = self.run_session(self.plan["assignments"][-1])
         self.assertEqual(result.returncode, 2)
         with self.assertRaises(ValueError):
-            SHARDS.inspect_session(output, self.plan, self.plan["assignments"][-1])
+            inspect_session(output, self.plan, self.plan["assignments"][-1])
 
     def test_expected_empty_module_keeps_exit_five_and_never_counts_as_a_pass(self):
-        self.plan = SHARDS.plan(self.source, self.context, 4, [])
+        self.plan = plan(self.source, self.context, 4, [])
         reference, result = self.run_session()
         self.assertEqual(result.returncode, 0)
         directories, empty = [], None
@@ -499,7 +506,7 @@ class ShardPrimitives(unittest.TestCase):
                 self.assertEqual(result.returncode, 5)
             else:
                 self.assertEqual(result.returncode, 0)
-        result = SHARDS.aggregate(self.plan, reference, directories)
+        result = aggregate(self.plan, reference, directories)
         self.assertEqual(result["case_count"], 6)
         recorded = [r for r in result["shards"] if r["empty_assigned_collection"]]
         self.assertEqual(len(recorded), 1)
@@ -539,15 +546,15 @@ class ShardPrimitives(unittest.TestCase):
             rows = [json.loads(line) for line in (output / "events.jsonl").read_text().splitlines()]
             corpus = next(row for row in rows if row.get("event") == "collection_corpus")
             parts.append({"nodeids": list(corpus["nodeids"]), "collection_skips": {}})
-        joined = SHARDS.join_reference_collections(parts)
+        joined = join_reference_collections(parts)
         self.assertEqual(set(joined["nodeids"]), set().union(*(part["nodeids"] for part in parts)))
         self.assertGreaterEqual(len({nodeid.split("::", 1)[0] for nodeid in joined["nodeids"]}), 2)
         dropped = [dict(parts[0], nodeids=parts[0]["nodeids"][:-1]), *parts[1:]]
         with self.assertRaisesRegex(ValueError, "missing node id"):
-            SHARDS.require_reference_join(dropped, joined["nodeids"], {})
+            require_reference_join(dropped, joined["nodeids"], {})
         mismatched = [parts[0], dict(parts[1], collection_skips={"tests/test_a.py": "other"})]
         with self.assertRaisesRegex(ValueError, "collection skip mismatch"):
-            SHARDS.require_reference_join(mismatched, joined["nodeids"], {})
+            require_reference_join(mismatched, joined["nodeids"], {})
 
 if __name__ == "__main__":
     unittest.main()

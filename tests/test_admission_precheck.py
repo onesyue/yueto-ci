@@ -17,6 +17,8 @@ import admission_diagnostics
 spec = importlib.util.spec_from_file_location("precheck", ROOT / "scripts/admission-precheck.py")
 PRE = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(PRE)
+from pytest_shards import policy_history, skip_bindings
+from pytest_shards.support import git as shard_git, shared_inputs
 
 
 class AdmissionPrecheck(unittest.TestCase):
@@ -30,8 +32,8 @@ class AdmissionPrecheck(unittest.TestCase):
         self.base = self.commit()
         # Small historical fixture; discovery, Git trees and the entire production
         # admission chain remain real. No production policy/seal is changed.
-        self.baseline = {"common_inputs": PRE.POLICY.shared_inputs(self.source, self.base)}
-        real_skip_baseline = PRE.POLICY.skip_baseline
+        self.baseline = {"common_inputs": shared_inputs(self.source, self.base)}
+        real_skip_baseline = skip_bindings.skip_baseline
 
         def skip_baseline():
             # The fixture baseline only satisfies shared-input admission.
@@ -41,7 +43,7 @@ class AdmissionPrecheck(unittest.TestCase):
                 return real_skip_baseline()
             return self.baseline
 
-        patched = patch.object(PRE.POLICY, "skip_baseline", skip_baseline)
+        patched = patch.object(skip_bindings, "skip_baseline", skip_baseline)
         patched.start()
         self.addCleanup(patched.stop)
 
@@ -81,7 +83,7 @@ class AdmissionPrecheck(unittest.TestCase):
             "    pytest.skip('changed fixture skip')\n"
         )
         head = self.commit()
-        self.assertEqual(PRE.POLICY.skip_blob_precheck(self.source, head), [])
+        self.assertEqual(policy_history.skip_blob_precheck(self.source, head), [])
         accepted, reason = PRE.precheck(self.source, self.base, head)
         self.assertFalse(accepted)
         self.assertIn("unauthorized source signature", reason)
@@ -94,7 +96,7 @@ class AdmissionPrecheck(unittest.TestCase):
             "(tests/test_runtime_release_holds_20261009.py::"
             "test_native_dns_apply_noop_rollback_hold_lock_and_unknown_state)"
         )
-        with patch.object(PRE.POLICY, "skip_blob_precheck", return_value=[sentinel]) as called:
+        with patch.object(policy_history, "skip_blob_precheck", return_value=[sentinel]) as called:
             accepted, reason = PRE.precheck(self.source, self.base, self.base)
         called.assert_called_once_with(self.source, self.base)
         self.assertFalse(accepted)
@@ -121,7 +123,7 @@ class AdmissionPrecheck(unittest.TestCase):
         (self.source / "pyproject.toml").write_text("unrelated history")
         unrelated = self.commit()
         with self.assertRaises(subprocess.CalledProcessError) as caught:
-            PRE.POLICY.git(self.source, "merge-base", "--is-ancestor", self.base, unrelated)
+            shard_git(self.source, "merge-base", "--is-ancestor", self.base, unrelated)
         self.assertEqual(caught.exception.returncode, 1)
         with patch("sys.argv", ["precheck", "--repo", "yueops", "--source", str(self.source),
                                 "--base", self.base, "--head", unrelated]):
