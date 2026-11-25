@@ -207,21 +207,8 @@ def rpc_name(path: str) -> str:
     return path.rsplit("/", 1)[-1]
 
 
-def validate_node_test_chain(makefile: str) -> None:
-    """Recognize the two reviewed Make test chains without executing Make.
-
-    This is a closed subset for the owned declarations, not a general Make
-    evaluator. Detached words/comments, conditional or ambiguous definitions
-    cannot authorize the default test entry.
-    """
-    owned_checks = {
-        "check-runtime-constants": [
-            (0, 'python3 scripts/sync-host-paths.py --source "$(HOST_PATH_SOURCE)" --check'),
-            (0, "python3 scripts/check-runtime-constants.py"),
-        ],
-        "test-owned-contracts": [(0, "python3 scripts/test_owned_contracts.py")],
-    }
-    names = {"test", "test-vendored", "verify-fork-tags", "fork-ledger-check", "check-profile-deps", *owned_checks}
+def _owned_make_targets(makefile: str, names: set[str]) -> tuple[dict[str, tuple[list[str], list[tuple[int, str]]]], set[str]]:
+    """Parse the closed Make subset used by the owned yue-node test chain."""
     targets: dict[str, tuple[list[str], list[tuple[int, str]]]] = {}
     phony: set[str] = set()
     current = None
@@ -266,11 +253,34 @@ def validate_node_test_chain(makefile: str) -> None:
             targets[current] = (rhs.split(), [])
     if depth != 0:
         raise RuntimeError("yue-node Make test chain has unmatched conditional")
+    return targets, phony
+
+
+def _require_owned_phony(targets, phony, name: str):
+    if name not in targets or name not in phony:
+        raise RuntimeError(f"yue-node Make test chain lacks owned phony target {name}")
+    return targets[name]
+
+
+def validate_node_test_chain(makefile: str) -> None:
+    """Recognize the two reviewed Make test chains without executing Make.
+
+    This is a closed subset for the owned declarations, not a general Make
+    evaluator. Detached words/comments, conditional or ambiguous definitions
+    cannot authorize the default test entry.
+    """
+    owned_checks = {
+        "check-runtime-constants": [
+            (0, 'python3 scripts/sync-host-paths.py --source "$(HOST_PATH_SOURCE)" --check'),
+            (0, "python3 scripts/check-runtime-constants.py"),
+        ],
+        "test-owned-contracts": [(0, "python3 scripts/test_owned_contracts.py")],
+    }
+    names = {"test", "test-vendored", "verify-fork-tags", "fork-ledger-check", "check-profile-deps", *owned_checks}
+    targets, phony = _owned_make_targets(makefile, names)
 
     def target(name: str) -> tuple[list[str], list[tuple[int, str]]]:
-        if name not in targets or name not in phony:
-            raise RuntimeError(f"yue-node Make test chain lacks owned phony target {name}")
-        return targets[name]
+        return _require_owned_phony(targets, phony, name)
 
     for name, command in (("verify-fork-tags", "bash scripts/verify-fork-tags.sh"),
                           ("check-profile-deps", "sh scripts/check-profile-deps.sh")):
@@ -300,6 +310,7 @@ def validate_node_test_chain(makefile: str) -> None:
     ]
     if recipe[:len(expected)] != expected:
         raise RuntimeError("yue-node Make test chain disconnects the required test body")
+
 
 
 def validate_node(root: Path, contract: dict) -> None:
