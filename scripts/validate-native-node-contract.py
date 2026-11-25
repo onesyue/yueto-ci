@@ -607,7 +607,7 @@ def validate_yueops(
             f'expected_kernel = {{1: "{layout["node-1"]["kernel"]}", 2: "{layout["node-2"]["kernel"]}"}}',
             "kernel aliases and role swaps are retired",
             "panel.url must be a root YueBoard ConnectRPC base URL",
-            'entrypoint: ["/usr/local/bin/yue-node-{role}"]',
+            'entrypoint: ["{BIN_YUE_NODE_PREFIX}{role}"]',
         ],
         "YueOps deployment generator",
     )
@@ -725,7 +725,7 @@ def validate_yueops(
         [
             "native_healthy",
             "/readyz",
-            'expected_path = f"/usr/local/bin/yue-node-{role}"',
+            'expected_path = f"{BIN_YUE_NODE_PREFIX}{role}"',
         ],
         "YueOps native status",
     )
