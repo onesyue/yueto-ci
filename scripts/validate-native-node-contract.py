@@ -221,7 +221,7 @@ def validate_node_test_chain(makefile: str) -> None:
         ],
         "test-owned-contracts": [(0, "python3 scripts/test_owned_contracts.py")],
     }
-    names = {"test", "test-vendored", "verify-fork-tags", "check-profile-deps", *owned_checks}
+    names = {"test", "test-vendored", "verify-fork-tags", "fork-ledger-check", "check-profile-deps", *owned_checks}
     targets: dict[str, tuple[list[str], list[tuple[int, str]]]] = {}
     phony: set[str] = set()
     current = None
@@ -276,8 +276,11 @@ def validate_node_test_chain(makefile: str) -> None:
                           ("check-profile-deps", "sh scripts/check-profile-deps.sh")):
         if target(name) != ([], [(0, command)]):
             raise RuntimeError(f"yue-node Make test chain disconnects {name}")
+    fork_ledger_recipe = [(0, "go run ./tools/forkledger --check --release tools/forkledger/release-excerpt.yaml")]
     dependencies, recipe = target("test")
-    if dependencies == ["verify-fork-tags"]:
+    if dependencies in (["verify-fork-tags"], ["verify-fork-tags", "fork-ledger-check"]):
+        if "fork-ledger-check" in dependencies and target("fork-ledger-check") != ([], fork_ledger_recipe):
+            raise RuntimeError("yue-node Make test chain disconnects fork-ledger-check")
         if recipe != [(0, "$(MAKE) test-vendored")]:
             raise RuntimeError("yue-node Make test chain lacks required recursive delegation")
         dependencies, recipe = target("test-vendored")
