@@ -95,6 +95,11 @@ jobs:
                   raise SystemExit(f'{label} checker hash mismatch: {actual}')
           print(f'deadman checker mirror: ok ({expected})')
           PY
+          python3 .ci-receiver/deadman/canonical/scripts/deadman_producer.py --check
+          pin_sha="$(python3 -c 'import json; print(json.load(open(".ci-receiver/deadman/canonical/yueops-producer.json"))["sha"])')"
+          if git -C .ci-yueops cat-file -e "${pin_sha}^{commit}"; then
+            python3 .ci-receiver/deadman/canonical/scripts/deadman_producer.py --check --repo .ci-yueops
+          fi
           python3 .ci-receiver/deadman/canonical/scripts/ops_host_public.py \
             --check \
             --inventory .ci-yueops/config/hosts.json
