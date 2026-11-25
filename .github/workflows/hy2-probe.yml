@@ -2,6 +2,14 @@ name: Build reviewed HY2 probe
 
 on:
   workflow_dispatch:
+    inputs:
+      probe_version:
+        description: Reviewed Hysteria module version
+        type: choice
+        default: v2.14.0-yue.1
+        options:
+          - v2.14.0-yue.1
+          - v2.14.0-yue.2
 
 permissions:
   contents: read
@@ -16,6 +24,24 @@ jobs:
         with:
           path: policy
           persist-credentials: false
+      - name: Select reviewed Hysteria release
+        id: reviewed
+        env:
+          REQUESTED_VERSION: ${{ inputs.probe_version }}
+        run: |
+          set -euo pipefail
+          case "$REQUESTED_VERSION" in
+            ''|v2.14.0-yue.1)
+              version=v2.14.0-yue.1
+              revision=c7c91bb398460031aeda898297a5ef4743c4c583
+              ;;
+            v2.14.0-yue.2)
+              version=v2.14.0-yue.2
+              revision=ea5418dc7468ccee899adc4680891d962ec2ccf2
+              ;;
+            *) echo 'Unsupported Hysteria probe version' >&2; exit 1 ;;
+          esac
+          printf 'version=%s\nrevision=%s\n' "$version" "$revision" >> "$GITHUB_OUTPUT"
       - name: Mint read-only source token
         id: source
         if: vars.YUETO_CI_APP_CLIENT_ID != ''
@@ -48,6 +74,8 @@ jobs:
           cache: false
       - name: Verify signed tags and build the Linux observer
         env:
+          HYSTERIA_VERSION: ${{ steps.reviewed.outputs.version }}
+          HYSTERIA_REVISION: ${{ steps.reviewed.outputs.revision }}
           GOWORK: 'off'
           GOTOOLCHAIN: local
           CGO_ENABLED: '0'
@@ -57,10 +85,12 @@ jobs:
           GOPRIVATE: github.com/onesyue/*
         run: |
           set -euo pipefail
+          # The full checkout also contains the separately reviewed successor.
+          git -C hysteria checkout --detach "$HYSTERIA_REVISION"
           export GNUPGHOME
           GNUPGHOME=$(mktemp -d)
           gpg --batch --import policy/policy/yueops-owner.gpg
-          for item in hysteria:core/v2.14.0-yue.1 hysteria:extras/v2.14.0-yue.1 quic-go:v0.65.1-yue.1; do
+          for item in "hysteria:core/$HYSTERIA_VERSION" "hysteria:extras/$HYSTERIA_VERSION" quic-go:v0.65.1-yue.1; do
             repo=${item%%:*}
             tag=${item#*:}
             test "$(git -C "$repo" rev-parse "$tag^{}")" = "$(git -C "$repo" rev-parse HEAD)"
@@ -72,12 +102,12 @@ jobs:
           (cd hysteria/app && go build -mod=readonly -trimpath -buildvcs=true -o ../../artifact/hysteria-probe .)
           cd artifact
           go version -m hysteria-probe > buildinfo.txt
-          grep -Fx $'\tbuild\tvcs.revision=c7c91bb398460031aeda898297a5ef4743c4c583' buildinfo.txt
+          grep -Fx $'\tbuild\tvcs.revision='"$HYSTERIA_REVISION" buildinfo.txt
           grep -Fx $'\tbuild\tvcs.modified=false' buildinfo.txt
           grep -Fx $'\t=>\tgithub.com/onesyue/quic-go\tv0.65.1-yue.1\th1:PakWfZivnEvnlMLIinntBoQ7vYoFd8cvv1iX5gVtX54=' buildinfo.txt
           sha256sum hysteria-probe > SHA256SUMS
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: hy2-probe-c7c91bb398460031aeda898297a5ef4743c4c583
+          name: hy2-probe-${{ steps.reviewed.outputs.revision }}
           path: artifact/
           if-no-files-found: error

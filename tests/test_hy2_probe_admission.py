@@ -7,18 +7,26 @@ those failure paths offline and never dispatches the workflow.
 """
 from __future__ import annotations
 
+import os
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github/workflows/hy2-probe.yml"
 HYSTERIA_SHA = "c7c91bb398460031aeda898297a5ef4743c4c583"
+SUCCESSOR_SHA = "ea5418dc7468ccee899adc4680891d962ec2ccf2"
 QUIC_SHA = "6e04cc5812b7d1041bd0382c953149076e1a5def"
 VALIDSIG = (
     r"grep -Eq '^\[GNUPG:\] VALIDSIG CEF96E9A4ECB741C78329CA3FE2659E6AC769954 "
     r".* D9D3C6E59E7465BD07C2177142239A996FDA9F55$' "
     r'"$RUNNER_TEMP/tag-status"'
 )
+
+BUILD_REVISION_CHECK = r"""grep -Fx $'\tbuild\tvcs.revision='"$HYSTERIA_REVISION" buildinfo.txt"""
 
 ADMISSION_MARKERS = (
     "on:\n  workflow_dispatch:\n",
@@ -29,16 +37,19 @@ ADMISSION_MARKERS = (
     f"repository: onesyue/hysteria\n          ref: {HYSTERIA_SHA}\n",
     f"repository: onesyue/quic-go\n          ref: {QUIC_SHA}\n",
     "gpg --batch --import policy/policy/yueops-owner.gpg",
-    "hysteria:core/v2.14.0-yue.1 hysteria:extras/v2.14.0-yue.1 quic-go:v0.65.1-yue.1",
+    'HYSTERIA_VERSION: ${{ steps.reviewed.outputs.version }}',
+    'HYSTERIA_REVISION: ${{ steps.reviewed.outputs.revision }}',
+    'git -C hysteria checkout --detach "$HYSTERIA_REVISION"',
+    '"hysteria:core/$HYSTERIA_VERSION" "hysteria:extras/$HYSTERIA_VERSION" quic-go:v0.65.1-yue.1',
     'test "$(git -C "$repo" rev-parse "$tag^{}")" = "$(git -C "$repo" rev-parse HEAD)"',
     'git -C "$repo" verify-tag --raw "$tag"',
     VALIDSIG,
     "go build -mod=readonly -trimpath -buildvcs=true",
-    rf"grep -Fx $'\tbuild\tvcs.revision={HYSTERIA_SHA}' buildinfo.txt",
+    BUILD_REVISION_CHECK,
     r"grep -Fx $'\tbuild\tvcs.modified=false' buildinfo.txt",
     r"grep -Fx $'\t=>\tgithub.com/onesyue/quic-go\tv0.65.1-yue.1\th1:PakWfZivnEvnlMLIinntBoQ7vYoFd8cvv1iX5gVtX54=' buildinfo.txt",
     "sha256sum hysteria-probe > SHA256SUMS",
-    f"name: hy2-probe-{HYSTERIA_SHA}",
+    "name: hy2-probe-${{ steps.reviewed.outputs.revision }}",
 )
 
 FORBIDDEN_MARKERS = (
@@ -72,6 +83,54 @@ class Hy2ProbeAdmissionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.workflow = WORKFLOW.read_text(encoding="utf-8")
 
+    def test_dispatch_only_allows_the_two_reviewed_module_versions(self) -> None:
+        workflow = yaml.load(self.workflow, Loader=yaml.BaseLoader)
+        field = workflow["on"]["workflow_dispatch"]["inputs"]["probe_version"]
+        self.assertEqual(field["type"], "choice")
+        self.assertEqual(field["default"], "v2.14.0-yue.1")
+        self.assertEqual(field["options"], ["v2.14.0-yue.1", "v2.14.0-yue.2"])
+        steps = workflow["jobs"]["build"]["steps"]
+        selector = next(step for step in steps if step.get("id") == "reviewed")
+        self.assertEqual(selector["env"], {"REQUESTED_VERSION": "${{ inputs.probe_version }}"})
+        self.assertEqual(self.workflow.count("inputs.probe_version"), 1)
+        self.assertLess(steps.index(selector), next(i for i, step in enumerate(steps) if step.get("id") == "source"))
+        cases = {
+            "": ("v2.14.0-yue.1", HYSTERIA_SHA),
+            "v2.14.0-yue.1": ("v2.14.0-yue.1", HYSTERIA_SHA),
+            "v2.14.0-yue.2": ("v2.14.0-yue.2", SUCCESSOR_SHA),
+            "master": None,
+            SUCCESSOR_SHA: None,
+            "v2.14.0-yue.3": None,
+            "v2.14.0-yue.2\nrevision=other": None,
+        }
+        for requested, expected in cases.items():
+            with self.subTest(version=requested), tempfile.TemporaryDirectory() as temp:
+                output = Path(temp) / "output"
+                result = subprocess.run(
+                    ["bash", "-c", selector["run"]],
+                    env={**os.environ, "REQUESTED_VERSION": requested, "GITHUB_OUTPUT": str(output)},
+                    capture_output=True, text=True, timeout=10,
+                )
+                if expected is None:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(output.exists())
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    version, revision = expected
+                    self.assertEqual(output.read_text(), f"version={version}\nrevision={revision}\n")
+
+    def test_build_revision_cannot_be_swapped_between_artifacts(self) -> None:
+        self.assertIn(BUILD_REVISION_CHECK, self.workflow)
+        for expected, wrong in [(HYSTERIA_SHA, SUCCESSOR_SHA), (SUCCESSOR_SHA, HYSTERIA_SHA)]:
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temp:
+                for actual in (expected, wrong):
+                    Path(temp, "buildinfo.txt").write_text(f"\tbuild\tvcs.revision={actual}\n")
+                    result = subprocess.run(
+                        ["bash", "-c", BUILD_REVISION_CHECK], cwd=temp,
+                        env={**os.environ, "HYSTERIA_REVISION": expected}, capture_output=True, timeout=10,
+                    )
+                    self.assertEqual(result.returncode == 0, actual == expected)
+
     def test_signed_tag_and_hash_admission_markers_are_present(self) -> None:
         self.assertEqual(admission_issues(self.workflow), [])
 
@@ -94,7 +153,7 @@ class Hy2ProbeAdmissionTests(unittest.TestCase):
 
     def test_buildinfo_and_checksum_sidecars_are_required(self) -> None:
         for marker in (
-            rf"grep -Fx $'\tbuild\tvcs.revision={HYSTERIA_SHA}' buildinfo.txt",
+            BUILD_REVISION_CHECK,
             r"grep -Fx $'\tbuild\tvcs.modified=false' buildinfo.txt",
             "sha256sum hysteria-probe > SHA256SUMS",
         ):
