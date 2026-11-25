@@ -146,6 +146,62 @@ def _call_function_return(name, env):
         env["stack"].discard(name)
 
 
+def _eval_name(node, env):
+    if node.id not in env["values"]:
+        return _SKIP_UNKNOWN
+    value = env["values"][node.id]
+    if isinstance(value, ast.AST):
+        return _eval_skip_expr(value, env)
+    return value
+
+
+def _eval_attribute(node, env):
+    if _dotted(node) == "sys.platform":
+        return "linux"
+    base = _eval_skip_expr(node.value, env)
+    if isinstance(base, dict) and node.attr in base:
+        return base[node.attr]
+    return _SKIP_UNKNOWN
+
+
+def _eval_not(node, env):
+    value = _eval_skip_expr(node.operand, env)
+    if value is _SKIP_UNKNOWN:
+        return _SKIP_UNKNOWN
+    return not value
+
+
+def _eval_bool(node, env):
+    values = [_eval_skip_expr(item, env) for item in node.values]
+    if isinstance(node.op, ast.And):
+        if any(value is False for value in values):
+            return False
+        if any(value is _SKIP_UNKNOWN for value in values):
+            return _SKIP_UNKNOWN
+        return all(value is True or value not in (False, _SKIP_UNKNOWN) and bool(value)
+                   for value in values)
+    if any(value is True for value in values):
+        return True
+    if any(value is _SKIP_UNKNOWN for value in values):
+        return _SKIP_UNKNOWN
+    return any(bool(value) for value in values)
+
+
+def _eval_compare(node, env):
+    if len(node.ops) != 1 or len(node.comparators) != 1:
+        return _SKIP_UNKNOWN
+    left = _eval_skip_expr(node.left, env)
+    right = _eval_skip_expr(node.comparators[0], env)
+    if left is _SKIP_UNKNOWN or right is _SKIP_UNKNOWN:
+        return _SKIP_UNKNOWN
+    op = node.ops[0]
+    if isinstance(op, (ast.Eq, ast.Is)):
+        return left == right
+    if isinstance(op, (ast.NotEq, ast.IsNot)):
+        return left != right
+    return _SKIP_UNKNOWN
+
+
 def _eval_skip_expr(node, env):
     """True/False when the central runner decides the expression, else unknown."""
     if node is None:
@@ -153,50 +209,17 @@ def _eval_skip_expr(node, env):
     if isinstance(node, ast.Constant):
         return node.value
     if isinstance(node, ast.Name):
-        if node.id not in env["values"]:
-            return _SKIP_UNKNOWN
-        value = env["values"][node.id]
-        if isinstance(value, ast.AST):
-            return _eval_skip_expr(value, env)
-        return value
+        return _eval_name(node, env)
     if isinstance(node, ast.Attribute):
-        if _dotted(node) == "sys.platform":
-            return "linux"
-        base = _eval_skip_expr(node.value, env)
-        if isinstance(base, dict) and node.attr in base:
-            return base[node.attr]
-        return _SKIP_UNKNOWN
+        return _eval_attribute(node, env)
     if isinstance(node, ast.Call):
         return _eval_call(node, env)
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
-        value = _eval_skip_expr(node.operand, env)
-        if value is _SKIP_UNKNOWN:
-            return _SKIP_UNKNOWN
-        return not value
+        return _eval_not(node, env)
     if isinstance(node, ast.BoolOp):
-        values = [_eval_skip_expr(item, env) for item in node.values]
-        if isinstance(node.op, ast.And):
-            if any(value is False for value in values):
-                return False
-            if any(value is _SKIP_UNKNOWN for value in values):
-                return _SKIP_UNKNOWN
-            return all(value is True or value not in (False, _SKIP_UNKNOWN) and bool(value)
-                       for value in values)
-        if any(value is True for value in values):
-            return True
-        if any(value is _SKIP_UNKNOWN for value in values):
-            return _SKIP_UNKNOWN
-        return any(bool(value) for value in values)
-    if isinstance(node, ast.Compare) and len(node.ops) == 1 and len(node.comparators) == 1:
-        left = _eval_skip_expr(node.left, env)
-        right = _eval_skip_expr(node.comparators[0], env)
-        if left is _SKIP_UNKNOWN or right is _SKIP_UNKNOWN:
-            return _SKIP_UNKNOWN
-        op = node.ops[0]
-        if isinstance(op, (ast.Eq, ast.Is)):
-            return left == right
-        if isinstance(op, (ast.NotEq, ast.IsNot)):
-            return left != right
+        return _eval_bool(node, env)
+    if isinstance(node, ast.Compare):
+        return _eval_compare(node, env)
     return _SKIP_UNKNOWN
 
 

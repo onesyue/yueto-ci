@@ -15,16 +15,16 @@ from .support import read_json, require, runner_context, sha
 from .timing import load_timing
 
 
-def inspect_session(directory, value, assignment, *, expected_empty=False):
-    """Validate immutable invocation binding before consuming passive case evidence."""
+def _require_evidence_directory(directory):
     require(directory.is_dir() and not directory.is_symlink(), "invalid evidence directory")
     require(not (directory / "rejected.json").exists()
             and not (directory / "rejected.json").is_symlink(), "rejected execution evidence")
     for name in FILES:
         require((directory / name).is_file() and not (directory / name).is_symlink(),
                 f"missing or symlink evidence: {name}")
-    metadata = read_json(directory / "metadata.json")
-    selection = read_json(directory / "selection.json")
+
+
+def _selection_plan(selection, value, assignment):
     reference = assignment is None
     collect_only = reference or bool(isinstance(assignment, dict) and assignment.get("collect_only"))
     modules = ["tests"] if reference else assignment["modules"]
@@ -35,7 +35,10 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
             and selection["assignment_id"] == role and selection["modules"] == modules
             and selection["pytest_addopts"] in ("", "--durations=25"),
             "selection does not match the exact plan")
-    argv = selection["pytest_argv"]
+    return reference, collect_only, modules, role
+
+
+def _normalize_pytest_argv(argv, collect_only, reference, modules):
     # Receipts may move; bind the cache to the original JUnit path, not the reader's cwd.
     if (collect_only and not reference and isinstance(argv, list)
             and len(argv) >= 4 and isinstance(argv[-1], str) and argv[-2] == "--junitxml"
@@ -48,6 +51,10 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
     require(isinstance(argv, list) and isinstance(argv[0], str) and argv[0]
             and (argv[1:-2] == suffix if has_xml else argv[1:] == suffix),
             "unexpected pytest arguments or filtering")
+    return argv, has_xml
+
+
+def _require_run_identity(metadata, value, argv):
     require(metadata.get("source_revision") == value["source_revision"]
             and metadata.get("policy_revision") == value["context"]["policy_revision"]
             and metadata.get("source_tracked_dirty") is False
@@ -67,20 +74,32 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
     require(invocation == sha(json.dumps(identity_copy, sort_keys=True).encode()),
             "prepared invocation digest mismatch")
     require(argv[0] == metadata.get("python_executable"), "wrong Python executable")
+    return actual_runner
+
+
+def _require_session_events(directory):
     rows = [json.loads(line) for line in (directory / "events.jsonl").read_text().splitlines()]
     require(all(isinstance(row, dict) for row in rows), "invalid event record")
+
     def one(event):
         selected = [r for r in rows if r.get("event") == event]
         require(len(selected) == 1, f"missing or duplicate {event}")
         return selected[0]
+
     require(rows and rows[0].get("event") == "start"
             and rows[-1].get("event") == "finish", "absent session boundary")
-    start = one("start")
-    terminal = one("finish")
-    session = one("session_identity")
-    timing = one("session_timing")
-    collection = one("collection_timing")
-    corpus = one("collection_corpus")
+    return (
+        rows,
+        one("start"),
+        one("finish"),
+        one("session_identity"),
+        one("session_timing"),
+        one("collection_timing"),
+        one("collection_corpus"),
+    )
+
+
+def _require_bound_session(metadata, session, timing, collection, corpus, rows):
     require(session.get("invocation_id") == metadata.get("invocation_id")
             and isinstance(session.get("invocation_id"), str)
             and session["invocation_id"] and session.get("executor") == "serial",
@@ -93,6 +112,9 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
             and collection.get("status") == "finished"
             and not any(r.get("event") in ("collect_error", "collection_deselected")
                         for r in rows), "collection or recorder incomplete")
+
+
+def _require_corpus(corpus):
     nodeids = corpus.get("nodeids")
     require(corpus.get("scope") == "controller_selected" and isinstance(nodeids, list)
             and all(isinstance(n, str) for n in nodeids)
@@ -100,9 +122,11 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
             and corpus.get("ordered_nodeids_sha256")
             == sha(json.dumps(nodeids, ensure_ascii=False).encode()),
             "invalid selected corpus")
-    allowed = set(value["modules"]) if reference else set(modules)
-    require(all(n.split("::", 1)[0] in allowed for n in nodeids),
-            "collected case outside assigned modules")
+    return nodeids
+
+
+def _require_process_result(directory, collect_only, nodeids, reference, rows, terminal, timing,
+                            expected_empty):
     rc = int((directory / "pytest-exit-code.txt").read_text())
     expected_rc = 5 if expected_empty and not nodeids and not reference else 0
     require(type(terminal.get("exitstatus")) is int and type(timing.get("exitstatus")) is int
@@ -120,6 +144,26 @@ def inspect_session(directory, value, assignment, *, expected_empty=False):
                 "incomplete diagnostic evidence: " + "; ".join(diagnostic["problems"]))
         require(not any(r.get("outcome") == "failed" for r in rows),
                 "failed outcome contradicts successful exit")
+    return rc, expected_rc, begin, end
+
+
+def inspect_session(directory, value, assignment, *, expected_empty=False):
+    """Validate immutable invocation binding before consuming passive case evidence."""
+    _require_evidence_directory(directory)
+    metadata = read_json(directory / "metadata.json")
+    selection = read_json(directory / "selection.json")
+    reference, collect_only, modules, role = _selection_plan(selection, value, assignment)
+    argv, has_xml = _normalize_pytest_argv(
+        selection["pytest_argv"], collect_only, reference, modules)
+    actual_runner = _require_run_identity(metadata, value, argv)
+    rows, start, terminal, session, timing, collection, corpus = _require_session_events(directory)
+    _require_bound_session(metadata, session, timing, collection, corpus, rows)
+    nodeids = _require_corpus(corpus)
+    allowed = set(value["modules"]) if reference else set(modules)
+    require(all(n.split("::", 1)[0] in allowed for n in nodeids),
+            "collected case outside assigned modules")
+    rc, expected_rc, begin, end = _require_process_result(
+        directory, collect_only, nodeids, reference, rows, terminal, timing, expected_empty)
     outcomes = [r for r in rows if "event" not in r and r.get("outcome") in ("skipped", "xfail")]
     return {
         "assignment_id": role, "invocation_id": session["invocation_id"], "nodeids": nodeids,

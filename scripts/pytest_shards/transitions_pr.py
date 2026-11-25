@@ -38,6 +38,165 @@ from .transitions_native import (
 )
 
 
+def _prove_npm_security_successor(baseline, source, revision):
+    _, security = reviewed_npm_security_transition(baseline)
+    if security is None:
+        return
+    successor = revision == security["source_after"]
+    if revision not in (security["source_before"], security["source_after"]):
+        try:
+            git(source, "merge-base", "--is-ancestor", security["source_after"], revision)
+            successor = True
+        except subprocess.CalledProcessError as exc:
+            require(exc.returncode == 1, "npm security ancestry unavailable")
+    files = tree_inputs(source, revision)
+    changed = any(files.get(path, (None, None))[1] == item["after_blob"]
+                  for path, item in security["changes"].items())
+    if successor or changed:
+        try:
+            git(source, "merge-base", "--is-ancestor", security["source_before"], security["source_after"])
+            git(source, "merge-base", "--is-ancestor", security["source_after"], revision)
+            parent_revision = git(source, "rev-parse", security["source_after"] + "^1").decode().strip()
+            parent = tree_inputs(source, parent_revision)
+            introduced = tree_inputs(source, security["source_after"])
+            before = tree_inputs(source, security["source_before"])
+        except subprocess.CalledProcessError:
+            raise ValueError("npm security source ancestry differs") from None
+        for path, item in security["changes"].items():
+            require(files.get(path) == introduced.get(path) == (item["mode"], item["after_blob"])
+                    and parent.get(path) == before.get(path) == (item["mode"], item["before_blob"]),
+                    "npm security successor blob or mode differs")
+
+
+def _prove_collection_shuffle_successor(baseline, source, revision):
+    _, shuffle = reviewed_collection_shuffle_transition(baseline)
+    if shuffle is None:
+        return
+    change = shuffle["changes"][COLLECTION_SHUFFLE_INPUT]
+    try:
+        blob = git(source, "rev-parse", f"{revision}:{COLLECTION_SHUFFLE_INPUT}").decode().strip()
+    except subprocess.CalledProcessError:
+        blob = None
+    qualified_successor = revision == shuffle["source_after"]
+    if revision not in (shuffle["source_before"], shuffle["source_after"]):
+        try:
+            git(source, "merge-base", "--is-ancestor", shuffle["source_after"], revision)
+            qualified_successor = True
+        except subprocess.CalledProcessError as exc:
+            require(exc.returncode == 1,
+                    "collection shuffle successor ancestry unavailable")
+    # Absence is historical only before the qualified source. A descendant
+    # cannot delete the hook and silently regain the old baseline admission.
+    if qualified_successor or blob is not None:
+        try:
+            git(source, "merge-base", "--is-ancestor", shuffle["source_before"], change["source"])
+            git(source, "merge-base", "--is-ancestor", change["source"], shuffle["source_after"])
+            git(source, "merge-base", "--is-ancestor", shuffle["source_after"], revision)
+            introduced = git(source, "rev-parse",
+                             f"{change['source']}:{COLLECTION_SHUFFLE_INPUT}").decode().strip()
+        except subprocess.CalledProcessError:
+            raise ValueError("collection shuffle successor source revision differs") from None
+        try:
+            parent = git(source, "rev-parse",
+                         f"{change['source']}^1:{COLLECTION_SHUFFLE_INPUT}").decode().strip()
+        except subprocess.CalledProcessError:
+            parent = None
+        require(blob == introduced == change["after_blob"] and parent is None,
+                "collection shuffle successor source revision differs")
+
+
+def _prove_hang_guard_successor(hang, source, revision):
+    if hang is None:
+        return
+    try:
+        blob = git(source, "rev-parse", f"{revision}:{HANG_GUARD_INPUT}").decode().strip()
+    except subprocess.CalledProcessError:
+        blob = None
+    if blob is not None:
+        try:
+            git(source, "merge-base", "--is-ancestor", hang["source_after"], revision)
+        except subprocess.CalledProcessError:
+            raise ValueError("hang guard successor source revision differs") from None
+
+
+def _prove_reviewed_input_successor(record, source, revision, path, message):
+    if record is None:
+        return
+    try:
+        blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
+    except subprocess.CalledProcessError:
+        blob = None
+    if blob == record["changes"][path]["after_blob"]:
+        try:
+            git(source, "merge-base", "--is-ancestor", record["source_after"], revision)
+        except subprocess.CalledProcessError:
+            raise ValueError(message) from None
+
+
+def _prove_ops_packaging_successor(packaging, source, revision):
+    if packaging is None:
+        return
+    for path, change in sorted(packaging["changes"].items()):
+        try:
+            blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
+        except subprocess.CalledProcessError:
+            blob = None
+        if blob != change["after_blob"]:
+            continue
+        # The named signed source must descend from the Tornado successor, must
+        # itself introduce exactly this blob transition, and must be an
+        # ancestor of the revision being planned.
+        try:
+            git(source, "merge-base", "--is-ancestor",
+                packaging["source_before"], change["source"])
+            git(source, "merge-base", "--is-ancestor", change["source"], revision)
+            introduced = git(source, "rev-parse",
+                             f"{change['source']}:{path}").decode().strip()
+        except subprocess.CalledProcessError:
+            raise ValueError("ops packaging successor source revision differs") from None
+        try:
+            parent = git(source, "rev-parse",
+                         f"{change['source']}^1:{path}").decode().strip()
+        except subprocess.CalledProcessError:
+            parent = None
+        require(introduced == change["after_blob"] and parent == change["before_blob"],
+                "ops packaging successor source revision differs")
+
+
+def _prove_tornado_successor(tornado, source, revision):
+    if tornado is None:
+        return
+    for path, change in tornado["changes"].items():
+        try:
+            blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
+        except subprocess.CalledProcessError:
+            blob = None
+        if blob == change["after_blob"]:
+            try:
+                git(source, "merge-base", "--is-ancestor",
+                    tornado["source_before"], tornado["source_after"])
+                git(source, "merge-base", "--is-ancestor", tornado["source_after"], revision)
+            except subprocess.CalledProcessError:
+                raise ValueError("Tornado dependency successor source revision differs") from None
+            break
+
+
+def _prove_runtime_successor(runtime, source, revision):
+    if runtime is None:
+        return
+    for path, change in runtime["changes"].items():
+        try:
+            blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
+        except subprocess.CalledProcessError:
+            blob = None
+        if blob == change["after_blob"]:
+            try:
+                git(source, "merge-base", "--is-ancestor", runtime["source_after"], revision)
+            except subprocess.CalledProcessError:
+                raise ValueError(
+                    "runtime dependency successor source revision differs") from None
+
+
 def estate_successor_proof(baseline, source, revision):
     """Prove a later Ops revision descends from the sealed estate successor.
 
@@ -48,65 +207,8 @@ def estate_successor_proof(baseline, source, revision):
     native_protocol_helper_proof(source, revision)
     pr_shared_input_successor_proof(source, revision)
     reviewed_pr_input_proof(source, revision)
-    _, security = reviewed_npm_security_transition(baseline)
-    if security is not None:
-        successor = revision == security["source_after"]
-        if revision not in (security["source_before"], security["source_after"]):
-            try:
-                git(source, "merge-base", "--is-ancestor", security["source_after"], revision)
-                successor = True
-            except subprocess.CalledProcessError as exc:
-                require(exc.returncode == 1, "npm security ancestry unavailable")
-        files = tree_inputs(source, revision)
-        changed = any(files.get(path, (None, None))[1] == item["after_blob"]
-                      for path, item in security["changes"].items())
-        if successor or changed:
-            try:
-                git(source, "merge-base", "--is-ancestor", security["source_before"], security["source_after"])
-                git(source, "merge-base", "--is-ancestor", security["source_after"], revision)
-                parent_revision = git(source, "rev-parse", security["source_after"] + "^1").decode().strip()
-                parent = tree_inputs(source, parent_revision)
-                introduced = tree_inputs(source, security["source_after"])
-                before = tree_inputs(source, security["source_before"])
-            except subprocess.CalledProcessError:
-                raise ValueError("npm security source ancestry differs") from None
-            for path, item in security["changes"].items():
-                require(files.get(path) == introduced.get(path) == (item["mode"], item["after_blob"])
-                        and parent.get(path) == before.get(path) == (item["mode"], item["before_blob"]),
-                        "npm security successor blob or mode differs")
-    _, shuffle = reviewed_collection_shuffle_transition(baseline)
-    if shuffle is not None:
-        change = shuffle["changes"][COLLECTION_SHUFFLE_INPUT]
-        try:
-            blob = git(source, "rev-parse", f"{revision}:{COLLECTION_SHUFFLE_INPUT}").decode().strip()
-        except subprocess.CalledProcessError:
-            blob = None
-        qualified_successor = revision == shuffle["source_after"]
-        if revision not in (shuffle["source_before"], shuffle["source_after"]):
-            try:
-                git(source, "merge-base", "--is-ancestor", shuffle["source_after"], revision)
-                qualified_successor = True
-            except subprocess.CalledProcessError as exc:
-                require(exc.returncode == 1,
-                        "collection shuffle successor ancestry unavailable")
-        # Absence is historical only before the qualified source. A descendant
-        # cannot delete the hook and silently regain the old baseline admission.
-        if qualified_successor or blob is not None:
-            try:
-                git(source, "merge-base", "--is-ancestor", shuffle["source_before"], change["source"])
-                git(source, "merge-base", "--is-ancestor", change["source"], shuffle["source_after"])
-                git(source, "merge-base", "--is-ancestor", shuffle["source_after"], revision)
-                introduced = git(source, "rev-parse",
-                                 f"{change['source']}:{COLLECTION_SHUFFLE_INPUT}").decode().strip()
-            except subprocess.CalledProcessError:
-                raise ValueError("collection shuffle successor source revision differs") from None
-            try:
-                parent = git(source, "rev-parse",
-                             f"{change['source']}^1:{COLLECTION_SHUFFLE_INPUT}").decode().strip()
-            except subprocess.CalledProcessError:
-                parent = None
-            require(blob == introduced == change["after_blob"] and parent is None,
-                    "collection shuffle successor source revision differs")
+    _prove_npm_security_successor(baseline, source, revision)
+    _prove_collection_shuffle_successor(baseline, source, revision)
     _, packaging = reviewed_ops_packaging_transition(baseline)
     _, tornado = reviewed_tornado66_dependency_transition(baseline)
     _, hang = reviewed_hang_guard_input_transition(baseline)
@@ -117,103 +219,22 @@ def estate_successor_proof(baseline, source, revision):
     _, record = reviewed_estate_input_transition(baseline)
     if record is None or revision == record["source_after"]:
         return None
-    if hang is not None:
-        try:
-            blob = git(source, "rev-parse", f"{revision}:{HANG_GUARD_INPUT}").decode().strip()
-        except subprocess.CalledProcessError:
-            blob = None
-        if blob is not None:
-            try:
-                git(source, "merge-base", "--is-ancestor", hang["source_after"], revision)
-            except subprocess.CalledProcessError:
-                raise ValueError("hang guard successor source revision differs") from None
+    _prove_hang_guard_successor(hang, source, revision)
     after = record["source_after"]
     try:
         git(source, "merge-base", "--is-ancestor", after, revision)
     except subprocess.CalledProcessError:
         raise ValueError("estate successor source revision differs") from None
-    if site is not None:
-        try:
-            blob = git(source, "rev-parse", f"{revision}:{SITE_LOCK_INPUT}").decode().strip()
-        except subprocess.CalledProcessError:
-            blob = None
-        if blob == site["changes"][SITE_LOCK_INPUT]["after_blob"]:
-            try:
-                git(source, "merge-base", "--is-ancestor", site["source_after"], revision)
-            except subprocess.CalledProcessError:
-                raise ValueError("site lock successor source revision differs") from None
-    if bot is not None:
-        try:
-            blob = git(source, "rev-parse", f"{revision}:{BOT_PACKAGING_INPUT}").decode().strip()
-        except subprocess.CalledProcessError:
-            blob = None
-        if blob == bot["changes"][BOT_PACKAGING_INPUT]["after_blob"]:
-            try:
-                git(source, "merge-base", "--is-ancestor", bot["source_after"], revision)
-            except subprocess.CalledProcessError:
-                raise ValueError("bot packaging successor source revision differs") from None
-    if lock is not None:
-        try:
-            blob = git(source, "rev-parse", f"{revision}:{AUDIT_LOCK_INPUT}").decode().strip()
-        except subprocess.CalledProcessError:
-            blob = None
-        if blob == lock["changes"][AUDIT_LOCK_INPUT]["after_blob"]:
-            try:
-                git(source, "merge-base", "--is-ancestor", lock["source_after"], revision)
-            except subprocess.CalledProcessError:
-                raise ValueError("audit lock successor source revision differs") from None
-    if packaging is not None:
-        for path, change in sorted(packaging["changes"].items()):
-            try:
-                blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
-            except subprocess.CalledProcessError:
-                blob = None
-            if blob != change["after_blob"]:
-                continue
-            # The named signed source must descend from the Tornado successor, must
-            # itself introduce exactly this blob transition, and must be an
-            # ancestor of the revision being planned.
-            try:
-                git(source, "merge-base", "--is-ancestor",
-                    packaging["source_before"], change["source"])
-                git(source, "merge-base", "--is-ancestor", change["source"], revision)
-                introduced = git(source, "rev-parse",
-                                 f"{change['source']}:{path}").decode().strip()
-            except subprocess.CalledProcessError:
-                raise ValueError("ops packaging successor source revision differs") from None
-            try:
-                parent = git(source, "rev-parse",
-                             f"{change['source']}^1:{path}").decode().strip()
-            except subprocess.CalledProcessError:
-                parent = None
-            require(introduced == change["after_blob"] and parent == change["before_blob"],
-                    "ops packaging successor source revision differs")
-    if tornado is not None:
-        for path, change in tornado["changes"].items():
-            try:
-                blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
-            except subprocess.CalledProcessError:
-                blob = None
-            if blob == change["after_blob"]:
-                try:
-                    git(source, "merge-base", "--is-ancestor",
-                        tornado["source_before"], tornado["source_after"])
-                    git(source, "merge-base", "--is-ancestor", tornado["source_after"], revision)
-                except subprocess.CalledProcessError:
-                    raise ValueError("Tornado dependency successor source revision differs") from None
-                break
-    if runtime is not None:
-        for path, change in runtime["changes"].items():
-            try:
-                blob = git(source, "rev-parse", f"{revision}:{path}").decode().strip()
-            except subprocess.CalledProcessError:
-                blob = None
-            if blob == change["after_blob"]:
-                try:
-                    git(source, "merge-base", "--is-ancestor", runtime["source_after"], revision)
-                except subprocess.CalledProcessError:
-                    raise ValueError(
-                        "runtime dependency successor source revision differs") from None
+    _prove_reviewed_input_successor(
+        site, source, revision, SITE_LOCK_INPUT, "site lock successor source revision differs")
+    _prove_reviewed_input_successor(
+        bot, source, revision, BOT_PACKAGING_INPUT,
+        "bot packaging successor source revision differs")
+    _prove_reviewed_input_successor(
+        lock, source, revision, AUDIT_LOCK_INPUT, "audit lock successor source revision differs")
+    _prove_ops_packaging_successor(packaging, source, revision)
+    _prove_tornado_successor(tornado, source, revision)
+    _prove_runtime_successor(runtime, source, revision)
     return after
 
 

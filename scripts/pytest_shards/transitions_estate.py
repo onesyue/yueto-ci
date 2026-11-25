@@ -81,20 +81,7 @@ def admit_retired_template_writer(baseline, common, files, source_revision,
     return dict(common) | {ESTATE_ADDED_INPUT: TEMPLATE_WRITER_BEFORE_BLOB}, files
 
 
-def reviewed_case_file_transition(baseline, files=None):
-    """Admit reviewed file versions of existing environmental skips.
-
-    The historical reason and outcome stay on the predecessor record. A later
-    test-module blob is accepted only when this exact review names that blob.
-    New cases are limited to the pinned additions and never replace a case
-    that already has an admitted skip.
-    """
-    baseline, _ = reviewed_bot_packaging_transition(baseline)
-    original = dict(baseline)
-    key = "reviewed_case_file_transition"
-    record = original.pop(key, None)
-    if key not in baseline:
-        return original, {}
+def _require_case_file_identity(record, original):
     require(isinstance(record, dict) and set(record) == {
         "schema", "prior_baseline_sha256", "source_revision",
         "independent_review_sha256", "additions", "updates",
@@ -111,24 +98,9 @@ def reviewed_case_file_transition(baseline, files=None):
             and re.fullmatch(r"[0-9a-f]{64}", record["independent_review_sha256"])
             and record["independent_review_sha256"] != "0" * 64,
             "missing exact case file review identity")
-    peeled, _ = reviewed_estate_input_transition(original)
-    peeled, preservation = reviewed_relay_preservation_module_transition(peeled)
-    peeled, meter = reviewed_relay_meter_module_transition(peeled)
-    peeled, metrics = reviewed_relay_metrics_module_transition(peeled)
-    peeled, relay = reviewed_relay_skip_module_transition(peeled)
-    peeled, extra = reviewed_current_skip_transition(peeled)
-    _, ssh = reviewed_skip_module_transition(peeled)
-    effective = {nodeid: dict(case) for nodeid, case in original["cases"].items()}
-    for mapping in (ssh, extra, relay, metrics, meter, preservation):
-        for nodeid, case in mapping.items():
-            effective[nodeid] = case
-    additions = record["additions"]
-    updates = record["updates"]
-    require(isinstance(additions, dict) and isinstance(updates, dict)
-            and not (set(additions) & set(updates) or set(additions) & set(effective)),
-            "case file transition cases overlap history")
-    module_blob = {}
-    successors = {}
+
+
+def _admit_case_file_updates(updates, effective, module_blob, successors, files):
     for nodeid, change in updates.items():
         historical = effective.get(nodeid)
         require(isinstance(nodeid, str) and "::" in nodeid
@@ -149,6 +121,9 @@ def reviewed_case_file_transition(baseline, files=None):
             "outcome": "skipped", "reason": historical["reason"],
             "module_blob": change["after_blob"],
         }
+
+
+def _admit_case_file_additions(additions, module_blob, successors, files):
     for nodeid, case in additions.items():
         require(isinstance(nodeid, str) and "::" in nodeid
                 and isinstance(case, dict) and set(case) == {"outcome", "reason", "module_blob"}
@@ -162,6 +137,43 @@ def reviewed_case_file_transition(baseline, files=None):
         if files is not None and files.get(module, (None, None))[1] == case["module_blob"]:
             require(files[module][0] == "100644", "case file module mode changed")
         successors[nodeid] = dict(case)
+
+
+def reviewed_case_file_transition(baseline, files=None):
+    """Admit reviewed file versions of existing environmental skips.
+
+    The historical reason and outcome stay on the predecessor record. A later
+    test-module blob is accepted only when this exact review names that blob.
+    New cases are limited to the pinned additions and never replace a case
+    that already has an admitted skip.
+    """
+    baseline, _ = reviewed_bot_packaging_transition(baseline)
+    original = dict(baseline)
+    key = "reviewed_case_file_transition"
+    record = original.pop(key, None)
+    if key not in baseline:
+        return original, {}
+    _require_case_file_identity(record, original)
+    peeled, _ = reviewed_estate_input_transition(original)
+    peeled, preservation = reviewed_relay_preservation_module_transition(peeled)
+    peeled, meter = reviewed_relay_meter_module_transition(peeled)
+    peeled, metrics = reviewed_relay_metrics_module_transition(peeled)
+    peeled, relay = reviewed_relay_skip_module_transition(peeled)
+    peeled, extra = reviewed_current_skip_transition(peeled)
+    _, ssh = reviewed_skip_module_transition(peeled)
+    effective = {nodeid: dict(case) for nodeid, case in original["cases"].items()}
+    for mapping in (ssh, extra, relay, metrics, meter, preservation):
+        for nodeid, case in mapping.items():
+            effective[nodeid] = case
+    additions = record["additions"]
+    updates = record["updates"]
+    require(isinstance(additions, dict) and isinstance(updates, dict)
+            and not (set(additions) & set(updates) or set(additions) & set(effective)),
+            "case file transition cases overlap history")
+    module_blob = {}
+    successors = {}
+    _admit_case_file_updates(updates, effective, module_blob, successors, files)
+    _admit_case_file_additions(additions, module_blob, successors, files)
     return original, successors
 
 

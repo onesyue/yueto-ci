@@ -532,6 +532,79 @@ def skip_has_reason(reason):
     return isinstance(reason, str) and bool(reason.strip())
 
 
+def _admit_skip_row(row, *, value, source, session, sealed_baseline, retirement,
+                    reviewed, baseline, successors, relay_successors,
+                    metrics_successors, meter_successors, preservation_successors,
+                    case_successors, blob_successors, release_blob_successors,
+                    i10_blob_successors, ordinary_skips, native, counts,
+                    unknown, reported, case_scoped, pending):
+    nodeid = row["nodeid"]
+    if (row.get("outcome") not in ("skipped", "xfail")
+            or not skip_has_reason(row.get("reason"))):
+        unknown.append(nodeid)
+        return None
+    module = nodeid.split("::", 1)[0]
+    require(NEZHA_RETIREMENT_KEY not in sealed_baseline or module != NEZHA_RETIRED_MODULE,
+            "retired Nezha test cannot inherit a historical skip: " + nodeid)
+    if retirement is not None and module == RETIRED_HOST_MODULE:
+        require(retired_host_case_admitted(
+                    retirement, sealed_baseline["cases"], nodeid, row,
+                    value["skip_module_blobs"].get(module)),
+                "retired host case or successor blob differs: " + nodeid)
+        return "HISTORICAL_UNEXECUTED"
+    specific = reviewed.get("cases", {}).get(nodeid)
+    if specific is None:
+        observed = {
+            "outcome": row["outcome"], "reason": row.get("reason"),
+            "module_blob": value["skip_module_blobs"].get(module),
+        }
+        records = (baseline["cases"].get(nodeid), successors.get(nodeid),
+                   relay_successors.get(nodeid), metrics_successors.get(nodeid),
+                   meter_successors.get(nodeid), preservation_successors.get(nodeid),
+                   case_successors.get(nodeid), blob_successors.get(nodeid),
+                   release_blob_successors.get(nodeid),
+                   i10_blob_successors.get(nodeid),
+                   ordinary_skips.get(nodeid), sealed_baseline["cases"].get(nodeid))
+        if observed not in records[:-1]:
+            if case_scope_successor(
+                    source, nodeid, observed["module_blob"], records,
+                    lambda r: (r.get("outcome"), r.get("reason"))
+                    == (observed["outcome"], observed["reason"])) is None:
+                pending.append((nodeid, observed))
+                return None
+            case_scoped.append(nodeid)
+        disposition = "HISTORICAL_UNEXECUTED"
+    else:
+        current_blob = value["skip_module_blobs"].get(module)
+        variant = {"when": row.get("when"), "reason": row.get("reason")}
+        if (specific.get("module_blob") != current_blob
+                and specific.get("outcome") == row["outcome"]
+                and variant in specific.get("variants", [])
+                and case_scope_successor(source, nodeid, current_blob, [specific],
+                                         lambda r: True) is not None):
+            specific = dict(specific, module_blob=current_blob)
+            case_scoped.append(nodeid)
+        matched = (reviewed.get("schema") == 1
+                   and session["execution_context"] == reviewed.get("context")
+                   and all(value["ops_plan"]["context"].get(k) == v
+                           for k, v in reviewed["runner"].items())
+                   and specific["module_blob"] == value["skip_module_blobs"].get(module)
+                   and specific["outcome"] == row["outcome"]
+                   and {"when": row.get("when"), "reason": row.get("reason")}
+                   in specific["variants"])
+        if not matched:
+            # The hosted variant list is not an allow-list. A reason is enough.
+            reported.append(nodeid)
+            return None
+        disposition = specific["disposition"]
+        require(disposition in counts, "unknown reviewed skip disposition")
+        if disposition == "SAME_RUN_NATIVE_REQUIRED":
+            require(nodeid in native["obligations"].get(
+                specific["native_target"], {}).get("passed", []),
+                "ordinary skip missing exact same-run native call: " + nodeid)
+    return disposition
+
+
 def admit_skips(value, result, native, source=None):
     if "source_evidence" in value:
         return source_evidence.admit_skips(value["source_evidence"], value["skip_module_blobs"],
@@ -564,72 +637,22 @@ def admit_skips(value, result, native, source=None):
         require(isinstance(session["collection_skips"], dict) and session["junit_sha256"],
                 "missing collection-skip evidence")
         for row in session["nonpassing_outcomes"]:
-            nodeid = row["nodeid"]
-            if (row.get("outcome") not in ("skipped", "xfail")
-                    or not skip_has_reason(row.get("reason"))):
-                unknown.append(nodeid)
-                continue
-            module = nodeid.split("::", 1)[0]
-            require(NEZHA_RETIREMENT_KEY not in sealed_baseline or module != NEZHA_RETIRED_MODULE,
-                    "retired Nezha test cannot inherit a historical skip: " + nodeid)
-            if retirement is not None and module == RETIRED_HOST_MODULE:
-                require(retired_host_case_admitted(
-                            retirement, sealed_baseline["cases"], nodeid, row,
-                            value["skip_module_blobs"].get(module)),
-                        "retired host case or successor blob differs: " + nodeid)
-                counts["HISTORICAL_UNEXECUTED"] += 1
-                continue
-            specific = reviewed.get("cases", {}).get(nodeid)
-            if specific is None:
-                observed = {
-                    "outcome": row["outcome"], "reason": row.get("reason"),
-                    "module_blob": value["skip_module_blobs"].get(module),
-                }
-                records = (baseline["cases"].get(nodeid), successors.get(nodeid),
-                           relay_successors.get(nodeid), metrics_successors.get(nodeid),
-                           meter_successors.get(nodeid), preservation_successors.get(nodeid),
-                           case_successors.get(nodeid), blob_successors.get(nodeid),
-                           release_blob_successors.get(nodeid),
-                           i10_blob_successors.get(nodeid),
-                           ordinary_skips.get(nodeid), sealed_baseline["cases"].get(nodeid))
-                if observed not in records[:-1]:
-                    if case_scope_successor(
-                            source, nodeid, observed["module_blob"], records,
-                            lambda r: (r.get("outcome"), r.get("reason"))
-                            == (observed["outcome"], observed["reason"])) is None:
-                        pending.append((nodeid, observed))
-                        continue
-                    case_scoped.append(nodeid)
-                disposition = "HISTORICAL_UNEXECUTED"
-            else:
-                current_blob = value["skip_module_blobs"].get(module)
-                variant = {"when": row.get("when"), "reason": row.get("reason")}
-                if (specific.get("module_blob") != current_blob
-                        and specific.get("outcome") == row["outcome"]
-                        and variant in specific.get("variants", [])
-                        and case_scope_successor(source, nodeid, current_blob, [specific],
-                                                 lambda r: True) is not None):
-                    specific = dict(specific, module_blob=current_blob)
-                    case_scoped.append(nodeid)
-                matched = (reviewed.get("schema") == 1
-                           and session["execution_context"] == reviewed.get("context")
-                           and all(value["ops_plan"]["context"].get(k) == v
-                                   for k, v in reviewed["runner"].items())
-                           and specific["module_blob"] == value["skip_module_blobs"].get(module)
-                           and specific["outcome"] == row["outcome"]
-                           and {"when": row.get("when"), "reason": row.get("reason")}
-                           in specific["variants"])
-                if not matched:
-                    # The hosted variant list is not an allow-list. A reason is enough.
-                    reported.append(nodeid)
-                    continue
-                disposition = specific["disposition"]
-                require(disposition in counts, "unknown reviewed skip disposition")
-                if disposition == "SAME_RUN_NATIVE_REQUIRED":
-                    require(nodeid in native["obligations"].get(
-                        specific["native_target"], {}).get("passed", []),
-                        "ordinary skip missing exact same-run native call: " + nodeid)
-            counts[disposition] += 1
+            disposition = _admit_skip_row(
+                row, value=value, source=source, session=session,
+                sealed_baseline=sealed_baseline, retirement=retirement,
+                reviewed=reviewed, baseline=baseline, successors=successors,
+                relay_successors=relay_successors,
+                metrics_successors=metrics_successors,
+                meter_successors=meter_successors,
+                preservation_successors=preservation_successors,
+                case_successors=case_successors, blob_successors=blob_successors,
+                release_blob_successors=release_blob_successors,
+                i10_blob_successors=i10_blob_successors,
+                ordinary_skips=ordinary_skips, native=native, counts=counts,
+                unknown=unknown, reported=reported, case_scoped=case_scoped,
+                pending=pending)
+            if disposition is not None:
+                counts[disposition] += 1
         for module, reason in session["collection_skips"].items():
             expected = {
                 "reason": reason, "module_blob": value["skip_module_blobs"].get(module),
