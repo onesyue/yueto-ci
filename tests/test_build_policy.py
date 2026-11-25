@@ -1846,12 +1846,16 @@ class BuildPolicyTest(unittest.TestCase):
         frontend_wiring = self.workflow[frontend_start:design_start]
         self.assertIn('board-validation-output.py', frontend_wiring)
         frontend = executor.rsplit('case "$role:$frontend_phase" in', 1)[1]
-        # Two layouts (W9.1): legacy per-app locks and the root pnpm
-        # workspace; each verifies both embedded dists.
-        self.assertEqual(frontend.count("node scripts/verify-dist.mjs dist"), 4)
-        self.assertIn("if [ -f pnpm-workspace.yaml ]; then", frontend)
+        # Workspace layout only: one root install, both embedded dists.
+        self.assertIn("FRONTEND_LAYOUT=workspace", executor)
+        self.assertNotIn("layout=legacy", executor)
+        self.assertNotIn("pnpm --dir web install", executor)
+        self.assertNotIn("pnpm --dir web-admin", executor)
+        self.assertEqual(frontend.count("node scripts/verify-dist.mjs dist"), 2)
+        self.assertIn("require_workspace", frontend)
         self.assertIn("pnpm install --frozen-lockfile --ignore-scripts\n", frontend)
-        self.assertIn('emit_frontend_result "layout=$layout"', frontend)
+        self.assertIn('emit_frontend_result "layout=$FRONTEND_LAYOUT"', frontend)
+        self.assertIn("pnpm --filter yueboard-web --filter yueboard-web-admin run build", frontend)
         workspace_only = "steps.board_frontend.outputs.layout == 'workspace'"
         for stage, phase, gate in (
             ("Validate YueBoard frontend lint", "frontends:lint)", "pnpm run lint"),

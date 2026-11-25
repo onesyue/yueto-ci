@@ -11,6 +11,9 @@ import subprocess
 import sys
 import time
 
+# Must match scripts/board-validation-output.py FRONTEND_LAYOUT.
+FRONTEND_LAYOUT = 'workspace'
+
 
 def capture(command: list[str], env: dict) -> str:
     return subprocess.check_output(command, text=True, env=env).strip()
@@ -120,14 +123,13 @@ def run(report: dict) -> int:
                 backend('postgres-clean', phase_environment('clean'), pg=True)
         else:
             layout = frontend('prepare')
-            if layout not in ('layout=workspace\n', 'layout=legacy\n'):
+            if layout != f'layout={FRONTEND_LAYOUT}\n':
                 raise ValueError('invalid frontend layout output')
-            if layout == 'layout=workspace\n':
-                try:
-                    frontend('lint' if role == 'frontends' else 'test', phase_environment('e2e') if role == 'e2e' else None)
-                except subprocess.CalledProcessError:
-                    e2e_failed = role == 'e2e'
-                    raise
+            try:
+                frontend('lint' if role == 'frontends' else 'test', phase_environment('e2e') if role == 'e2e' else None)
+            except subprocess.CalledProcessError:
+                e2e_failed = role == 'e2e'
+                raise
             if role == 'frontends':
                 frontend('design')
                 command(['bash', str(policy / 'scripts/board-frontend-audit.sh')])
