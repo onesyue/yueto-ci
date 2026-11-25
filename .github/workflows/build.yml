@@ -960,10 +960,14 @@ jobs:
       # Same local-release gate as the explicit Go caches below: the disposable runner's
       # GHA cache upload can sleep indefinitely, and it keeps caches on its
       # own disk anyway.
+      # 2026-11-25 runs 45649770105 (fail) and 45651087036 (pass), same yueops
+      # SHA 97abfa28: actions/cache tar exit 2 on a partial restore is a cache
+      # miss. The restore step must not fail the job; lockfile install stays strict.
       - name: Restore npm cache (yueops frontends)
         if: >-
           matrix.validation == 'yueops' &&
           (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
+        continue-on-error: true
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.npm
@@ -973,6 +977,7 @@ jobs:
         if: >-
           matrix.validation == 'yueboard' &&
           (github.event_name != 'workflow_dispatch' || github.event.inputs.runner != 'yue-local-release')
+        continue-on-error: true
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.local/share/pnpm/store
