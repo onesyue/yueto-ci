@@ -155,7 +155,7 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         build = (WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8")
         build_job = build[build.index("\n  build:\n") :]
         self.assertIn("      packages: write\n", build_job)
-        for name in ("image-rescan.yml",):
+        for name in ("image-rescan.yml", "yueops-master-validate.yml"):
             text = (WORKFLOW_DIR / name).read_text(encoding="utf-8")
             with self.subTest(workflow=name):
                 top = text.split("\npermissions:\n", 1)[1].split("\n\n", 1)[0]

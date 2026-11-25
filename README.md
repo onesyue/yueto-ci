@@ -269,6 +269,8 @@ minutes. Keep the 30-minute cron and freshness threshold; scheduling delay is
 not a reason to weaken stale-heartbeat detection. The maintained runbook is
 `docs/runbook/panel-alert-chain-deadman.md` in YueOps.
 
+[yueops-master-validate.yml](.github/workflows/yueops-master-validate.yml) dispatches the official `build.yml` `validation_only` path against current yueops `origin/master` every hour, and again at 00:30 Asia/Singapore. Private yueops has no hosted Actions, so native and ordinary reds previously appeared only at ship time. The job resolves the default-branch SHA, the newest promoted `yueops-web` revision as `migration_base`, and the reviewed Board contract pin, then waits for that validate run. It skips or attaches when that SHA already has a successful or in-flight official validate. It does not build, sign, or promote images.
+
 [image-rescan.yml](.github/workflows/image-rescan.yml) scans every declared platform
 of each latest image plus the three most recent promoted revision/digest markers.
 Those markers bound current/rollback coverage because this public repository has
