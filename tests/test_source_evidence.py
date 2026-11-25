@@ -126,6 +126,37 @@ class SourceEvidence(unittest.TestCase):
         with self.assertRaisesRegex(E.Rejected, "OpenPGP"):
             self.load(self.commit(signed=False))
 
+    def test_verify_signed_tree_accepts_direct_signature(self):
+        E.verify_signed_tree(self.repo, self.head, self.policy)
+
+    def test_verify_signed_tree_accepts_unsigned_merge_of_signed_same_tree(self):
+        signed = self.head
+        self.git("checkout", "-q", "-B", "master", "HEAD~1")
+        self.git("merge", "--no-ff", "--no-gpg-sign", "-m", "Merge signed tip", signed)
+        merge = self.git("rev-parse", "HEAD")
+        self.assertEqual(self.git("rev-parse", merge + "^{tree}"),
+                         self.git("rev-parse", signed + "^{tree}"))
+        E.verify_signed_tree(self.repo, merge, self.policy)
+
+    def test_verify_signed_tree_rejects_unsigned_unique_tree(self):
+        (self.repo / "app.py").write_text("changed again\n")
+        unsigned = self.commit(signed=False)
+        with self.assertRaisesRegex(E.Rejected, "unauthorized source signature"):
+            E.verify_signed_tree(self.repo, unsigned, self.policy)
+
+    def test_verify_signed_tree_rejects_unsigned_merge_when_parent_tree_differs(self):
+        signed = self.head
+        self.git("checkout", "-q", "-B", "master", "HEAD~1")
+        (self.repo / "other.py").write_text("other\n")
+        self.commit(signed=False)
+        self.git("merge", "--no-ff", "--no-gpg-sign", "-m", "Merge diverged tip", signed)
+        merge = self.git("rev-parse", "HEAD")
+        merge_tree = self.git("rev-parse", merge + "^{tree}")
+        for parent in (merge + "^1", merge + "^2"):
+            self.assertNotEqual(merge_tree, self.git("rev-parse", parent + "^{tree}"))
+        with self.assertRaisesRegex(E.Rejected, "unauthorized source signature"):
+            E.verify_signed_tree(self.repo, merge, self.policy)
+
     def test_authorized_signature_cannot_approve_wrong_blob(self):
         (self.repo / "app.py").write_text("changed")
         with self.assertRaisesRegex(E.Rejected, "manifest mismatch"):

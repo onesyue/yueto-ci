@@ -217,10 +217,57 @@ def optional(repo, revision):
     return load(repo, revision)
 
 
+def _commit_tree(commit):
+    header = commit.split(b"\n\n", 1)[0]
+    trees = [line[5:].decode("ascii") for line in header.split(b"\n")
+             if line.startswith(b"tree ")]
+    require(len(trees) == 1 and HEX40.fullmatch(trees[0]), "invalid commit tree")
+    return trees[0]
+
+
+def _commit_parents(commit):
+    header = commit.split(b"\n\n", 1)[0]
+    parents = []
+    for line in header.split(b"\n"):
+        if line.startswith(b"parent "):
+            sha = line[7:].decode("ascii")
+            require(HEX40.fullmatch(sha), "invalid parent")
+            parents.append(sha)
+    return parents
+
+
 def verify_signed_commit(repo, revision):
-    """Require one owner signature. Branch membership is not an input."""
+    """Require one owner signature on this exact revision. Branch membership is not an input."""
     require(isinstance(revision, str) and HEX40.fullmatch(revision), "exact source SHA required")
     _verify(_object(repo, "commit", revision), ROOT / "policy")
+
+
+def verify_signed_tree(repo, revision, policy_dir=None):
+    """Admit a revision whose tree bytes are owner-signed.
+
+    A direct owner signature on the revision is sufficient. A merge
+    wrapper (including a GitHub merge) is admitted only when a parent
+    with an identical tree carries the owner signature. A different
+    tree still requires a direct signature. This authenticates contract
+    fixture bytes; it does not admit a product tip for ship.
+    """
+    require(isinstance(revision, str) and HEX40.fullmatch(revision), "exact source SHA required")
+    policy = Path(policy_dir) if policy_dir is not None else ROOT / "policy"
+    commit = _object(repo, "commit", revision)
+    try:
+        _verify(commit, policy)
+        return
+    except Rejected as error:
+        if str(error) == "gpgv unavailable":
+            raise
+    tree = _commit_tree(commit)
+    for parent in _commit_parents(commit):
+        parent_commit = _object(repo, "commit", parent)
+        if _commit_tree(parent_commit) != tree:
+            continue
+        _verify(parent_commit, policy)
+        return
+    raise Rejected("unauthorized source signature")
 
 
 def validate_baseline(bound, module_blobs):
