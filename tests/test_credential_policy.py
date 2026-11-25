@@ -1,21 +1,13 @@
-"""Central credential and dependency-install policy (2026-09-23, L9).
+"""Central credential and dependency-install policy.
 
-Two families live here because both are about "what may execute or read while
-this public repository's jobs hold private-repository credentials":
+Private source reads use a GitHub App installation token minted in the job.
+The token names its repositories and carries ``contents: read`` only. GHCR
+cannot accept that installation token, so registry login and package API
+reads use the job ``GITHUB_TOKEN``. The job ``permissions`` block is that
+scope.
 
-1. The classic, all-repo ``YUETO_CI_PAT`` is being replaced without downtime.
-   Every use must be a *fallback* behind an explicit switch:
-     * source reads   -> a GitHub App installation token minted per job by
-       ``actions/create-github-app-token`` when ``vars.YUETO_CI_APP_CLIENT_ID``
-       is set, scoped to named repositories and ``contents: read`` only;
-     * GHCR           -> this repository's own ``GITHUB_TOKEN`` when
-       ``vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true'`` (GitHub Apps cannot
-       authenticate to GHCR).
-   A bare ``secrets.YUETO_CI_PAT`` anywhere would make deleting the PAT an
-   outage, which is exactly what the switch exists to avoid.
-
-2. Dependency lifecycle scripts never run in a credential-holding job:
-   every ``npm ci`` and ``pnpm install`` carries ``--ignore-scripts``.
+Dependency lifecycle scripts never run in a credential-holding job:
+every ``npm ci`` and ``pnpm install`` carries ``--ignore-scripts``.
 """
 
 from __future__ import annotations
@@ -28,23 +20,6 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 APP_ACTION = (
     "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1"
-)
-PAT_FALLBACKS = (
-    re.compile(
-        r"\$\{\{ steps\.[a-z_]+\.outputs\.token \|\| secrets\.YUETO_CI_PAT \}\}"
-    ),
-    re.compile(
-        r"\$\{\{ vars\.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github\.token"
-        r" \|\| secrets\.YUETO_CI_PAT \}\}"
-    ),
-    re.compile(
-        r"\$\{\{ vars\.YUETO_CI_APP_CLIENT_ID != '' && github\.token"
-        r" \|\| secrets\.YUETO_CI_PAT \}\}"
-    ),
-    re.compile(
-        r"\$\{\{ vars\.YUETO_CI_APP_CLIENT_ID != '' && steps\.evidence_source_token\.outputs\.token"
-        r" \|\| secrets\.YUETO_CI_PAT \}\}"
-    ),
 )
 SOURCE_REPOS = {"yueboard", "yue-node", "yueops", "quic-go"}
 WEEKLY_SOURCE_REPOS = {"yueops", "yueboard", "yue-node", "yueto", "yuelink"}
@@ -76,35 +51,13 @@ def _jobs(text: str) -> dict[str, str]:
 
 
 class CredentialSwitchPolicyTest(unittest.TestCase):
-    def test_pat_is_only_ever_a_switch_fallback(self) -> None:
-        uses = 0
+    def test_workflows_do_not_reference_the_personal_access_token(self) -> None:
         for name, text in _workflows().items():
-            for line in _code(text).splitlines():
-                if "secrets.YUETO_CI_PAT" not in line:
-                    continue
-                uses += 1
-                with self.subTest(workflow=name, line=line.strip()):
-                    self.assertTrue(
-                        any(pattern.search(line) for pattern in PAT_FALLBACKS),
-                        "YUETO_CI_PAT must only appear as the fallback of a switch",
-                    )
-        # Scan floor: plan, validate x3, build checkout, GHCR, promote,
-        # poll x3, rescan, deadman.  A refactor that stops finding them
-        # must not read as "no bare PAT left".
-        self.assertGreaterEqual(uses, 11)
+            with self.subTest(workflow=name):
+                self.assertNotIn("YUETO_CI_PAT", text)
+                self.assertNotIn("YUETO_CI_GHCR_VIA_GITHUB_TOKEN", text)
 
-    def test_evidence_source_fallback_requires_exact_switch_and_minter(self) -> None:
-        approved = "${{ vars.YUETO_CI_APP_CLIENT_ID != '' && steps.evidence_source_token.outputs.token || secrets.YUETO_CI_PAT }}"
-        self.assertTrue(any(pattern.fullmatch(approved) for pattern in PAT_FALLBACKS))
-        for invalid in (
-            "${{ secrets.YUETO_CI_PAT }}",
-            approved.replace("evidence_source_token", "unreviewed_token"),
-            approved.replace("vars.YUETO_CI_APP_CLIENT_ID != ''", "true"),
-        ):
-            with self.subTest(expression=invalid):
-                self.assertFalse(any(pattern.fullmatch(invalid) for pattern in PAT_FALLBACKS))
-
-    def test_every_app_token_is_switched_pinned_and_least_privilege(self) -> None:
+    def test_every_app_token_is_pinned_and_least_privilege(self) -> None:
         steps = [
             (name, job, step)
             for name, text in _workflows().items()
@@ -115,7 +68,7 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         for name, job, step in steps:
             with self.subTest(workflow=name, step=step.splitlines()[0]):
                 self.assertIn(APP_ACTION, step)
-                self.assertIn("vars.YUETO_CI_APP_CLIENT_ID != ''", step)
+                self.assertNotIn("vars.YUETO_CI_APP_CLIENT_ID != ''", step)
                 self.assertIn("client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}", step)
                 self.assertIn(
                     "private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}", step
@@ -147,9 +100,24 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         self.assertLess(workflow.index("- name: Build & push"), mint)
         self.assertLess(mint, promote)
         self.assertIn(
-            "GH_API_TOKEN: ${{ steps.promote_token.outputs.token || secrets.YUETO_CI_PAT }}",
+            "GH_API_TOKEN: ${{ steps.promote_token.outputs.token }}",
             workflow[promote:],
         )
+
+    def test_registry_calls_use_the_job_github_token(self) -> None:
+        workflows = _workflows()
+        build = workflows["build.yml"]
+        self.assertIn("GHCR_USER: ${{ github.actor }}", build)
+        self.assertIn("GHCR_PASSWORD: ${{ github.token }}", build)
+        self.assertIn("username: ${{ github.actor }}", build)
+        self.assertIn("password: ${{ github.token }}", build)
+        rescan = workflows["image-rescan.yml"]
+        self.assertIn("GH_API_TOKEN: ${{ github.token }}", rescan)
+        self.assertIn("username: ${{ github.actor }}", rescan)
+        self.assertIn("password: ${{ github.token }}", rescan)
+        capture = workflows["board-visual-capture.yml"]
+        self.assertIn("GHCR_USER: ${{ github.actor }}", capture)
+        self.assertIn("GHCR_PASSWORD: ${{ github.token }}", capture)
 
     def test_ghcr_consumers_declare_the_package_scope_they_need(self) -> None:
         build = (WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8")
@@ -168,8 +136,8 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         for anchor in (
             "YUETO_CI_APP_CLIENT_ID",
             "YUETO_CI_APP_PRIVATE_KEY",
-            "YUETO_CI_GHCR_VIA_GITHUB_TOKEN",
             "Manage Actions access",
+            "Delete the retired Actions secret after one green week",
         ):
             with self.subTest(anchor=anchor):
                 self.assertIn(anchor, readme)

@@ -1354,7 +1354,7 @@ class BuildPolicyTest(unittest.TestCase):
             "Use the runner Docker daemon",
             "Preflight validation dependencies",
             "node-validation-preflight.sh dependencies",
-            "YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}",
+            "YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token }}",
             "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \\\n",
             "            make verify-fork-tags\n",
             "board-validation-preflight.sh dependencies",
@@ -2607,9 +2607,8 @@ class BuildPolicyTest(unittest.TestCase):
         promote digest 且三门验签后**签名**提交推送。这里刻意不写，理由：
           * 根仓是私有免费档，ruleset/分支保护不可用，「签名提交」只能靠约定；
             CI 机器人写不出业主签名的提交，把签名私钥塞进公开仓 secrets 更糟。
-          * YUETO_CI_PAT 是 classic `repo` scope——对每个私仓**已经可写**，但本仓
-            从未用它写过任何仓。第一条「用它推私仓」的步骤会把那份 scope 从持有变成
-            在用，本公开仓一旦被改坏，写权限爆炸半径是全部私仓。
+          * 一份覆盖全部私仓的写入凭据一旦被本公开仓使用，写权限爆炸半径就是
+            全部私仓。本 workflow 不写任何仓。
           * yueops 按 group 派发时三个矩阵 job 并行 promote，三处同时提交根仓 master
             必然互撞，还得再加串行化 job；工作站那一侧三个 digest 本来就在一个进程里。
         判据：workflow 顶层与 build job 的 permissions 里 contents 只读；全 workflow

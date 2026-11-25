@@ -51,7 +51,7 @@ class BrowserOriginAuthorityTest(unittest.TestCase):
         )
         self.assertEqual(
             checkout['with']['token'],
-            '${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}',
+            '${{ steps.source_token.outputs.token }}',
         )
         self.assertEqual(gate['env'], {'ORIGIN_COMPONENT': '${{ matrix.validation }}'})
         self.assertIn(RESOLVE, gate['run'])
@@ -136,7 +136,7 @@ print(os.environ['EXPECTED_AUTHORITY'])
 
     def test_root_token_scope_cannot_leak_into_build_or_plan(self):
         texts = credentials._workflows()
-        credentials.CredentialSwitchPolicyTest().test_every_app_token_is_switched_pinned_and_least_privilege()
+        credentials.CredentialSwitchPolicyTest().test_every_app_token_is_pinned_and_least_privilege()
         for job in ('plan', 'build', 'publish'):
             changed = dict(texts)
             prefix, tail = texts['build.yml'].split('\n  ' + job + ':\n', 1)
@@ -148,4 +148,4 @@ print(os.environ['EXPECTED_AUTHORITY'])
                 repos.group(0), repos.group(0) + ',yueto', 1)
             with self.subTest(job=job), mock.patch.object(credentials, '_workflows', return_value=changed):
                 with self.assertRaises(AssertionError):
-                    credentials.CredentialSwitchPolicyTest().test_every_app_token_is_switched_pinned_and_least_privilege()
+                    credentials.CredentialSwitchPolicyTest().test_every_app_token_is_pinned_and_least_privilege()
