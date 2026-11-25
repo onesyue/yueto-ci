@@ -14,6 +14,19 @@ import sys
 import time
 import uuid
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import (
+    DOCKER_HOSTED_CLEANUP_TIMEOUT_SECONDS,
+    DOCKER_INSPECT_TIMEOUT_SECONDS,
+    GIT_REV_PARSE_SHORT_TIMEOUT_SECONDS,
+    PROCESS_GROUP_JOIN_SECONDS,
+    PROCESS_GROUP_POLL_SECONDS,
+    PROCESS_GROUP_SETTLE_SECONDS,
+    PROCESS_WAIT_TIMEOUT_SECONDS,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 SECRET_ENV = ('GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN')
 EXECUTION_SECONDS = 330 * 60
@@ -52,7 +65,7 @@ def cleanup_containers(output: Path) -> None:
             seen.add(container)
             inspected = subprocess.run(['docker', 'inspect', '--format',
                                          '{{index .Config.Labels "ci-check.owner"}}', container],
-                                        text=True, capture_output=True, timeout=30, check=False)
+                                        text=True, capture_output=True, timeout=DOCKER_INSPECT_TIMEOUT_SECONDS, check=False)
             if inspected.returncode:
                 if 'No such object' in inspected.stderr or 'No such container' in inspected.stderr:
                     continue
@@ -62,10 +75,10 @@ def cleanup_containers(output: Path) -> None:
             try:
                 with (output / f'timeout-container-{container}.log').open('w') as log:
                     subprocess.run(['docker', 'logs', container], stdout=log, stderr=subprocess.STDOUT,
-                                   check=True, timeout=60)
+                                   check=True, timeout=DOCKER_HOSTED_CLEANUP_TIMEOUT_SECONDS)
             finally:
                 subprocess.run(['docker', 'rm', '--force', container], check=True,
-                               stdout=subprocess.DEVNULL, timeout=60)
+                               stdout=subprocess.DEVNULL, timeout=DOCKER_HOSTED_CLEANUP_TIMEOUT_SECONDS)
         except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
             errors.append(f'{receipt.parent.name}/{receipt.name}: {error}')
     if errors:
@@ -80,15 +93,15 @@ def stop_session(process: subprocess.Popen | None, session_id: int) -> None:
         os.killpg(session_id, signal.SIGTERM)
     except ProcessLookupError:
         if process is not None:
-            process.wait(timeout=10)
+            process.wait(timeout=PROCESS_WAIT_TIMEOUT_SECONDS)
         return
     if process is not None:
         try:
-            process.wait(timeout=10)
+            process.wait(timeout=PROCESS_WAIT_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired:
             pass
     else:
-        time.sleep(0.5)
+        time.sleep(PROCESS_GROUP_SETTLE_SECONDS)
     # Reaping the leader does not prove descendants have stopped. Always send
     # KILL to this same owned group, even when the leader exited after TERM.
     try:
@@ -96,8 +109,8 @@ def stop_session(process: subprocess.Popen | None, session_id: int) -> None:
     except ProcessLookupError:
         pass
     if process is not None:
-        process.wait(timeout=10)
-    deadline = time.monotonic() + 5
+        process.wait(timeout=PROCESS_WAIT_TIMEOUT_SECONDS)
+    deadline = time.monotonic() + PROCESS_GROUP_JOIN_SECONDS
     while True:
         try:
             os.killpg(session_id, 0)
@@ -105,7 +118,7 @@ def stop_session(process: subprocess.Popen | None, session_id: int) -> None:
             return
         if time.monotonic() >= deadline:
             raise ValueError('owned process group still exists after bounded termination')
-        time.sleep(0.05)
+        time.sleep(PROCESS_GROUP_POLL_SECONDS)
 
 
 def process_identity(pid: int) -> dict:
@@ -174,7 +187,7 @@ def completed(output: Path) -> bool:
 
 def policy_revision() -> str:
     return subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'],
-                                   text=True, timeout=15).strip()
+                                   text=True, timeout=GIT_REV_PARSE_SHORT_TIMEOUT_SECONDS).strip()
 
 
 def run(source: str, board: str, base: str, output: Path, *, timeout_seconds: int = EXECUTION_SECONDS) -> int:
@@ -234,7 +247,7 @@ def run(source: str, board: str, base: str, output: Path, *, timeout_seconds: in
                 if remaining <= 0:
                     raise ValueError('execution time budget exhausted; full role coverage is unproven')
                 try:
-                    result = process.wait(timeout=min(5, remaining))
+                    result = process.wait(timeout=min(PROCESS_GROUP_JOIN_SECONDS, remaining))
                     break
                 except subprocess.TimeoutExpired:
                     continue

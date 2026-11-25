@@ -16,13 +16,18 @@ import json
 import re
 import sys
 from typing import Any
+from pathlib import Path
+
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import CYCLONEDX_BOM_PREDICATE, IN_TOTO_STATEMENT_V01, SPDX_DOCUMENT_PREDICATE
 
 
 ALLOWED_ARCHITECTURES = frozenset({"amd64", "arm64"})
-STATEMENT_TYPE = "https://in-toto.io/Statement/v0.1"
 PREDICATE_TYPES = {
-    "cyclonedx": "https://cyclonedx.org/bom",
-    "spdxjson": "https://spdx.dev/Document",
+    "cyclonedx": CYCLONEDX_BOM_PREDICATE,
+    "spdxjson": SPDX_DOCUMENT_PREDICATE,
 }
 
 
@@ -52,7 +57,7 @@ def _decode_statement(document: Any) -> dict[str, Any]:
 def _statement_architectures(
     statement: dict[str, Any], image: str, digest: str, sbom_format: str
 ) -> frozenset[str] | None:
-    if statement.get("_type") != STATEMENT_TYPE:
+    if statement.get("_type") != IN_TOTO_STATEMENT_V01:
         return None
     if statement.get("predicateType") != PREDICATE_TYPES[sbom_format]:
         return None

@@ -7,6 +7,12 @@ import re
 import sys
 from typing import NoReturn
 from urllib.parse import parse_qsl, urlsplit
+from pathlib import Path
+
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import POSTGRES_PORT
 
 
 def fail(message: str) -> NoReturn:
@@ -35,7 +41,7 @@ def check_address(key: str, value: str, adapter: str, database: str) -> None:
     if not value:
         fail(f'{key} is required; refusing a silently skipped integration suite')
     if adapter == 'github-service':
-        if value not in {f'{scheme}://postgres:ci@postgres:5432/{database}' for scheme in ('postgres', 'postgresql')}:
+        if value not in {f'{scheme}://postgres:ci@postgres:{POSTGRES_PORT}/{database}' for scheme in ('postgres', 'postgresql')}:
             fail(f'{key} must be a canonical github-service disposable {database} URI')
     else:
         # urlsplit strips some control characters; reject before parsing.

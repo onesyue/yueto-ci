@@ -86,6 +86,9 @@ class SourceEvidence(unittest.TestCase):
             for name in ("pytest-shards.py", "source_evidence.py", "brand_literals.py"):
                 shutil.copyfile(E.ROOT / "scripts" / name, public / "scripts" / name)
             shutil.copytree(self.policy, public / "policy")
+            lib = public / "scripts" / "lib"
+            lib.mkdir(exist_ok=True)
+            (lib / "ci_constants.py").write_bytes((E.ROOT / "scripts/lib/ci_constants.py").read_bytes())
 
             def command(head):
                 return subprocess.run([

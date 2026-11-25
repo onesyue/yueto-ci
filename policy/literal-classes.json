@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "area": "scripts",
+  "classes": ["tunable", "host-path", "domain", "port"],
+  "files": {}
+}

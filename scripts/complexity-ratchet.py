@@ -12,8 +12,13 @@ from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import COMPLEXITY_CCN_LIMIT, COMPLEXITY_NLOC_LIMIT, DEADCODE_MIN_CONFIDENCE
+
 BASELINE = ".quality/complexity-baseline.json"
-LIMITS = {"ccn": 30, "nloc": 200}
+LIMITS = {"ccn": COMPLEXITY_CCN_LIMIT, "nloc": COMPLEXITY_NLOC_LIMIT}
 DEAD_CODE = ("go", "python")
 EXTENSIONS = {".py", ".go", ".ts", ".tsx", ".dart"}
 EXCLUDED_DIRS = {".venv", "venv", "vendor", "node_modules", ".dart_tool"}
@@ -158,7 +163,7 @@ def count_dead_code(repo, paths, sources):
                     dead_go.add((file, position["Line"], position["Col"]))
     return {
         "go": len(dead_go),
-        "python": len(scanner.get_unused_code(min_confidence=100)),
+        "python": len(scanner.get_unused_code(min_confidence=DEADCODE_MIN_CONFIDENCE)),
     }
 
 

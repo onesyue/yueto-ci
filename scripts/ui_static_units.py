@@ -20,6 +20,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GH_API_TIMEOUT_SECONDS
+
 ROOT = Path(__file__).resolve().parents[1]
 CHECKS = ["lint", "tsc", "unit", "a11y", "bundle-budget"]
 # Index digest of library/node:24-bookworm-slim (linux manifest list), 2026-10-28.
@@ -262,7 +267,7 @@ def _fingerprint():
 
 def _gh_json(path: str) -> dict:
     proc = subprocess.run(
-        ["gh", "api", path], capture_output=True, text=True, timeout=60, check=False
+        ["gh", "api", path], capture_output=True, text=True, timeout=GH_API_TIMEOUT_SECONDS, check=False
     )
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.strip()[-300:] or f"gh api {path} failed")

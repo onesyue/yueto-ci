@@ -18,6 +18,9 @@ class NativeNodeContractRef(unittest.TestCase):
         scripts.mkdir()
         self.validator = scripts / VALIDATOR.name
         self.validator.write_bytes(VALIDATOR.read_bytes())
+        lib = scripts / "lib"
+        lib.mkdir()
+        (lib / "ci_constants.py").write_bytes((ROOT / "scripts/lib/ci_constants.py").read_bytes())
         # No native-node-contract.json in the policy tree.
         (scripts / "input-fingerprint.py").write_text(
             "import os\n"

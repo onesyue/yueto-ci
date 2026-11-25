@@ -13,6 +13,31 @@ import runpy
 import subprocess
 import sys
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import (
+    BOARD_DEVICE_IDENTITY_MIN_FILES,
+    BOARD_MODULE_MIN_FILES,
+    BOARD_NODESYNC_MIN_FILES,
+    BOARD_SUBSCRIBE_MIN_FILES,
+    BOARD_WEB_MIN_FILES,
+    NODE_CONFIG_MIN_FILES,
+    NODE_CONTROLPLANE_MIN_FILES,
+    NODE_ENTRYPOINT_NEEDLE,
+    NODE_EXPECTED_PATH_NEEDLE,
+    NODE_HYSTERIA_MIN_FILES,
+    NODE_HYSTERIA_TEST_MIN_FILES,
+    NODE_IMAGE_BIN_COPY,
+    NODE_MODEL_MIN_FILES,
+    NODE_SERVICE_MIN_FILES,
+    NODE_SERVICE_TEST_MIN_FILES,
+    NODE_SUBPROCESS_TIMEOUT_SECONDS,
+    NODE_XRAY_MIN_FILES,
+    NODE_XRAY_TEST_MIN_FILES,
+    OPS_DEPLOY_MIN_FILES,
+)
+
 
 POLICY_ROOT = Path(__file__).resolve().parents[1]
 PROTO_RELATIVE_PATH = Path("proto/yuenode/v1/yuenode.proto")
@@ -307,17 +332,17 @@ def validate_node(root: Path, contract: dict) -> None:
     capability = read(root / "internal/capability/manifest.go")
     # 同 §上：主语是包不是文件。这两个包 2026-09-20 也各被拆成 5–8 个文件。
     config = read_package(
-        root / "internal/config", "*.go", min_files=5, exclude_suffixes=("_test.go",)
+        root / "internal/config", "*.go", min_files=NODE_CONFIG_MIN_FILES, exclude_suffixes=("_test.go",)
     )
     controlplane = read_package(
-        root / "internal/controlplane", "*.go", min_files=5, exclude_suffixes=("_test.go",)
+        root / "internal/controlplane", "*.go", min_files=NODE_CONTROLPLANE_MIN_FILES, exclude_suffixes=("_test.go",)
     )
     proto = read(root / "proto/yuenode/v1/yuenode.proto")
     # The whole package, not one file — see read_package. yue-node's service
     # package is deliberately split by responsibility (service/state/sync/
     # transaction/users/kernel/reporting/observability/devices/validate).
-    service = read_package(root / "internal/service", "*.go", min_files=8)
-    service_test = read_package(root / "internal/service", "*_test.go", min_files=3)
+    service = read_package(root / "internal/service", "*.go", min_files=NODE_SERVICE_MIN_FILES)
+    service_test = read_package(root / "internal/service", "*_test.go", min_files=NODE_SERVICE_TEST_MIN_FILES)
     # 🚨 2026-09-20：下面四条此前是单文件 read()，而 read_package 的 docstring 里
     # 早就记着同一件事（上一次拆 internal/service/service.go 时这条守卫把
     # credential-generation 边界报成"缺失"）。那次的修法**只应用到了 service**，
@@ -327,17 +352,17 @@ def validate_node(root: Path, contract: dict) -> None:
     # dispatcher_session.go / device_limit.go / traffic_presence.go）。
     # 契约片段的主语是**包**，不是文件；地板负责让"扫到空气"不被当成通过。
     model_types = read_package(
-        root / "internal/model", "*.go", min_files=8, exclude_suffixes=("_test.go",)
+        root / "internal/model", "*.go", min_files=NODE_MODEL_MIN_FILES, exclude_suffixes=("_test.go",)
     )
     xray_dispatcher = read_package(
-        root / "internal/kernel/xray", "*.go", min_files=20, exclude_suffixes=("_test.go",)
+        root / "internal/kernel/xray", "*.go", min_files=NODE_XRAY_MIN_FILES, exclude_suffixes=("_test.go",)
     )
-    xray_test = read_package(root / "internal/kernel/xray", "*_test.go", min_files=10)
+    xray_test = read_package(root / "internal/kernel/xray", "*_test.go", min_files=NODE_XRAY_TEST_MIN_FILES)
     hysteria = read_package(
-        root / "internal/kernel/hysteria", "*.go", min_files=8, exclude_suffixes=("_test.go",)
+        root / "internal/kernel/hysteria", "*.go", min_files=NODE_HYSTERIA_MIN_FILES, exclude_suffixes=("_test.go",)
     )
     hysteria_test = read_package(
-        root / "internal/kernel/hysteria", "*_test.go", min_files=10
+        root / "internal/kernel/hysteria", "*_test.go", min_files=NODE_HYSTERIA_TEST_MIN_FILES
     )
     artifacts = [slot["artifact"] for slot in contract["layout"].values()]
     presence = contract["presence"]
@@ -349,7 +374,7 @@ def validate_node(root: Path, contract: dict) -> None:
             "-o yue-node-hy2 ./cmd/yue-node",
             "-o yue-node-vless ./cmd/yue-node",
             "-o yue-node ./cmd/yue-node-launcher",
-            "COPY --from=builder /build/yue-node* /usr/local/bin/",
+            NODE_IMAGE_BIN_COPY,
         ],
         "yue-node Dockerfile",
     )
@@ -518,7 +543,7 @@ for (const [input, expected] of [
 """
     try:
         subprocess.run(["node", "-e", script], input=model, text=True,
-                       capture_output=True, check=True, timeout=10)
+                       capture_output=True, check=True, timeout=NODE_SUBPROCESS_TIMEOUT_SECONDS)
     except (OSError, subprocess.SubprocessError) as exc:
         raise RuntimeError("published widget identity behavior failed") from exc
 
@@ -535,7 +560,7 @@ def validate_widget_projection(root: Path) -> str:
     script = "import { inputsDigest } from './site/scripts/lib.mjs'; process.stdout.write(await inputsDigest());"
     try:
         result = subprocess.run(["node", "--input-type=module", "-e", script],
-                                cwd=root, capture_output=True, text=True, check=True, timeout=10)
+                                cwd=root, capture_output=True, text=True, check=True, timeout=NODE_SUBPROCESS_TIMEOUT_SECONDS)
     except (OSError, subprocess.SubprocessError) as exc:
         raise RuntimeError("published widget input digest could not be verified") from exc
     if manifest.get("inputs_sha256") != result.stdout:
@@ -566,7 +591,7 @@ def validate_yueops(
     validate_board_schema_input(yueboard_contract_root)
     # 2026-09-20：deploy.py 3004 → 513 行 + 8 个 deploy_*.py。片段的主语是**部署生成器
     # 这个模块族**，不是那一个文件。地板让"glob 写错扫到空气"不能被当成通过。
-    deploy = read_package(root / "yueops", "deploy*.py", min_files=5)
+    deploy = read_package(root / "yueops", "deploy*.py", min_files=OPS_DEPLOY_MIN_FILES)
     nodeauth = read(root / "yueops/nodeauth.py")
     agent = read(root / "scripts/agent.sh")
     guard = read(root / "scripts/assert-node-recreate-safe.sh")
@@ -607,7 +632,7 @@ def validate_yueops(
             f'expected_kernel = {{1: "{layout["node-1"]["kernel"]}", 2: "{layout["node-2"]["kernel"]}"}}',
             "kernel aliases and role swaps are retired",
             "panel.url must be a root YueBoard ConnectRPC base URL",
-            'entrypoint: ["/usr/local/bin/yue-node-{role}"]',
+            NODE_ENTRYPOINT_NEEDLE,
         ],
         "YueOps deployment generator",
     )
@@ -725,7 +750,7 @@ def validate_yueops(
         [
             "native_healthy",
             "/readyz",
-            'expected_path = f"/usr/local/bin/yue-node-{role}"',
+            NODE_EXPECTED_PATH_NEEDLE,
         ],
         "YueOps native status",
     )
@@ -849,7 +874,7 @@ def validate_yueboard(root: Path, contract: dict) -> None:
     # 两者都改读整个 nodesync 包（下面的 require/forbid 原本就是对
     # connectrpc+builders 的并集做的，并集换成整包只会更严，不会更松）。
     nodesync_pkg = read_package(
-        root / "internal/modules/nodesync", "*.go", min_files=30,
+        root / "internal/modules/nodesync", "*.go", min_files=BOARD_NODESYNC_MIN_FILES,
         exclude_suffixes=("_test.go",),
     )
     connectrpc = nodesync_pkg
@@ -867,25 +892,25 @@ def validate_yueboard(root: Path, contract: dict) -> None:
     subscribe_runtime = read_package(
         root / "internal/modules/subscribe",
         "*.go",
-        min_files=10,
+        min_files=BOARD_SUBSCRIBE_MIN_FILES,
         exclude_suffixes=("_test.go",),
     )
     device_identity_runtime = read_package(
         root / "internal/platform/deviceidentity",
         "*.go",
-        min_files=2,
+        min_files=BOARD_DEVICE_IDENTITY_MIN_FILES,
         exclude_suffixes=("_test.go",),
     )
     module_runtime = read_tree(
         root / "internal/modules",
         ("*.go",),
-        min_files=100,
+        min_files=BOARD_MODULE_MIN_FILES,
         exclude_suffixes=("_test.go",),
     )
     web_runtime = read_tree(
         root / "web/src",
         ("*.ts", "*.tsx"),
-        min_files=50,
+        min_files=BOARD_WEB_MIN_FILES,
         exclude_suffixes=(".test.ts", ".test.tsx"),
     )
     handoff = read(root / "internal/modules/handoff/handoff.go")

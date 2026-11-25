@@ -53,6 +53,11 @@ import urllib.parse
 import urllib.request
 from pathlib import Path, PurePosixPath
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GHCR_ORIGIN, GITHUB_API_ORIGIN, GITHUB_HTTPS_ORIGIN, GITHUB_HTTP_TIMEOUT_SECONDS
+
 SCHEMA = "yue-input-fingerprint/1"
 RECIPE_SCHEMA = "yue-build-recipe/1"
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
@@ -109,7 +114,7 @@ class LocalGit:
 class GitHubTree:
     """The same data through the GitHub REST API (CI planning job)."""
 
-    def __init__(self, repo: str, token: str, api: str = "https://api.github.com"):
+    def __init__(self, repo: str, token: str, api: str = GITHUB_API_ORIGIN):
         if not re.fullmatch(r"[A-Za-z0-9._-]+/[A-Za-z0-9._-]+", repo):
             raise Unknown(f"invalid repository name {repo!r}")
         self.repo, self.token, self.api = repo, token, api.rstrip("/")
@@ -124,7 +129,7 @@ class GitHubTree:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=GITHUB_HTTP_TIMEOUT_SECONDS) as response:
                 return json.load(response)
         except (urllib.error.URLError, TimeoutError, ValueError) as exc:
             raise Unknown(f"GitHub API {path.split('?')[0]} unavailable: {exc}") from exc
@@ -813,11 +818,11 @@ def ghcr_latest(service: str, user: str, password: str) -> tuple[str, str]:
     repo = f"onesyue/{service}"
     auth = base64.b64encode(f"{user}:{password}".encode()).decode()
     token_req = urllib.request.Request(
-        f"https://ghcr.io/token?scope=repository:{repo}:pull&service=ghcr.io",
+        f"{GHCR_ORIGIN}/token?scope=repository:{repo}:pull&service=ghcr.io",
         headers={"Authorization": f"Basic {auth}"},
     )
     try:
-        with urllib.request.urlopen(token_req, timeout=30) as response:
+        with urllib.request.urlopen(token_req, timeout=GITHUB_HTTP_TIMEOUT_SECONDS) as response:
             token = json.load(response)["token"]
         accept = ", ".join([
             "application/vnd.oci.image.index.v1+json",
@@ -828,10 +833,10 @@ def ghcr_latest(service: str, user: str, password: str) -> tuple[str, str]:
 
         def get(path: str, accept_header: str = accept):
             req = urllib.request.Request(
-                f"https://ghcr.io/v2/{repo}/{path}",
+                f"{GHCR_ORIGIN}/v2/{repo}/{path}",
                 headers={"Authorization": f"Bearer {token}", "Accept": accept_header},
             )
-            return urllib.request.urlopen(req, timeout=30)
+            return urllib.request.urlopen(req, timeout=GITHUB_HTTP_TIMEOUT_SECONDS)
 
         with get("manifests/latest") as response:
             digest = response.headers.get("Docker-Content-Digest", "")
@@ -871,7 +876,7 @@ def provenance_builder(digest: str, token: str, repo: str = "onesyue/yueto-ci") 
             builder = statement["predicate"]["runDetails"]["builder"]["id"]
         except (KeyError, ValueError, TypeError):
             continue
-        if not builder.startswith(f"https://github.com/{repo}/.github/workflows/build.yml@"):
+        if not builder.startswith(f"{GITHUB_HTTPS_ORIGIN}/{repo}/.github/workflows/build.yml@"):
             continue
         for dep in deps:
             commit = dep.get("digest", {}).get("gitCommit", "")

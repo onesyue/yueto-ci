@@ -176,6 +176,9 @@ class PlanPromotionGateTest(unittest.TestCase):
                          "freeze-build-plan.sh", "ci-retry.sh"):
                 (scripts / name).symlink_to(ROOT / "scripts" / name)
             shutil.copy(ROOT / "scripts/validate-native-node-contract.py", scripts)
+            lib = scripts / "lib"
+            lib.mkdir()
+            (lib / "ci_constants.py").write_bytes((ROOT / "scripts/lib/ci_constants.py").read_bytes())
             (scripts / "input-fingerprint.py").write_text(
                 'class Unknown(Exception): pass\n'
                 'def ghcr_latest(service, user, password):\n'

@@ -14,6 +14,11 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GITHUB_API_ORIGIN, GITHUB_HTTP_TIMEOUT_SECONDS, LOG_HEADER_BYTE_LIMIT, VALIDATION_IMAGE_WORKERS
+
 WORKFLOW_PATH = ".github/workflows/build.yml"
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -100,10 +105,10 @@ def matching_candidate(current, run, api):
         return False
 
     def same_image(job):
-        header = api.get(f"actions/jobs/{job['id']}/logs", raw=True, limit=65536)
+        header = api.get(f"actions/jobs/{job['id']}/logs", raw=True, limit=LOG_HEADER_BYTE_LIMIT)
         return image_version(header) == current["image_version"]
 
-    with ThreadPoolExecutor(max_workers=5) as pool:
+    with ThreadPoolExecutor(max_workers=VALIDATION_IMAGE_WORKERS) as pool:
         return all(pool.map(same_image, required))
 
 
@@ -134,7 +139,7 @@ def validation_job_names(matrix: list[dict]) -> list[str]:
 
 class Api:
     def __init__(self, repository: str, token: str):
-        self.base = f"https://api.github.com/repos/{repository}"
+        self.base = f"{GITHUB_API_ORIGIN}/repos/{repository}"
         self.token = token
 
     def get(self, path: str, raw: bool = False, limit: int | None = None):
@@ -144,7 +149,7 @@ class Api:
         })
         # Actions log downloads redirect to signed storage URLs.
         req.add_unredirected_header("Authorization", f"Bearer {self.token}")
-        with urllib.request.urlopen(req, timeout=30) as response:
+        with urllib.request.urlopen(req, timeout=GITHUB_HTTP_TIMEOUT_SECONDS) as response:
             data = response.read(limit) if limit else response.read()
         return data.decode("utf-8", "replace") if raw else json.loads(data)
 

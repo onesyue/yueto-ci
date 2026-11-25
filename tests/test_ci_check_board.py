@@ -103,6 +103,9 @@ def assert_desired_unchanged(snapshot):
             scripts = Path(directory) / 'scripts'
             scripts.mkdir()
             shutil.copy(ROOT / 'scripts/validate-native-node-contract.py', scripts)
+            lib = scripts / "lib"
+            lib.mkdir()
+            (lib / "ci_constants.py").write_bytes((ROOT / "scripts/lib/ci_constants.py").read_bytes())
             (scripts / 'input-fingerprint.py').write_text(
                 'import os\nclass Unknown(Exception): pass\n'
                 'def ghcr_latest(service, user, password):\n'

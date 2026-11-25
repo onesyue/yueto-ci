@@ -95,6 +95,9 @@ class ShardPrimitives(unittest.TestCase):
                      "pytest-shards.py", "admission_diagnostics.py", "source_evidence.py",
                      "brand_literals.py"):
             shutil.copyfile(ROOT / "scripts" / name, self.policy / "scripts" / name)
+        lib = self.policy / "scripts" / "lib"
+        lib.mkdir(exist_ok=True)
+        (lib / "ci_constants.py").write_bytes((ROOT / "scripts/lib/ci_constants.py").read_bytes())
         self.env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", TZ="UTC",
                         PYTEST_ADDOPTS="", PYTHONPATH=str(self.site),
                         GITHUB_REPOSITORY="onesyue/yueto-ci", GITHUB_RUN_ID="42",

@@ -12,6 +12,12 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+import sys
+
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GIT_OBJECT_TIMEOUT_SECONDS, GPGV_TIMEOUT_SECONDS
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = "ci/evidence/pytest-skip-baseline.json"
@@ -65,7 +71,7 @@ def _git(repo, *args, input_data=None):
     with tempfile.TemporaryDirectory(prefix="source-git-") as home:
         result = subprocess.run([executable, "--no-replace-objects", "-C", str(repo),
                                  *args], env=_environment(home), input=input_data, capture_output=True,
-                                timeout=60, check=False)
+                                timeout=GIT_OBJECT_TIMEOUT_SECONDS, check=False)
     require(result.returncode == 0, "Git object unavailable")
     return result.stdout
 
@@ -110,7 +116,7 @@ def _verify(commit, policy_dir):
                                  str(home / "keyring.gpg"), "--status-fd", "1",
                                  str(home / "signature.asc"), str(home / "commit")],
                                 env=_environment(home), capture_output=True,
-                                timeout=30, check=False)
+                                timeout=GPGV_TIMEOUT_SECONDS, check=False)
     valid = [line.split() for line in result.stdout.decode("utf-8", "replace").splitlines()
              if line.startswith("[GNUPG:] VALIDSIG ")]
     require(result.returncode == 0 and len(valid) == 1 and len(valid[0]) == 12

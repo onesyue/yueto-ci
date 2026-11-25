@@ -93,6 +93,9 @@ class PreparedClones(unittest.TestCase):
         scripts.mkdir()
         for name in ('ci-check.sh', 'ci_check_prepared.py'):
             shutil.copyfile(ROOT / 'scripts' / name, scripts / name)
+        lib = scripts / "lib"
+        lib.mkdir(exist_ok=True)
+        (lib / "ci_constants.py").write_bytes((ROOT / "scripts/lib/ci_constants.py").read_bytes())
         sentinel = self.output / 'planner-ran'
         (scripts / 'pytest-shards.py').write_text(
             'import os,pathlib\nassert not os.environ.get("GH_TOKEN")\n'

@@ -10,6 +10,12 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
+import sys
+
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GIT_COMMAND_TIMEOUT_SECONDS, GITHUB_HTTPS_ORIGIN
 
 
 POLICY = Path(__file__).resolve().parents[1]
@@ -21,7 +27,7 @@ GO_FIELDS = (
 
 
 def command(*args: str) -> str:
-    return subprocess.check_output(args, text=True, stderr=subprocess.DEVNULL, timeout=20).strip()
+    return subprocess.check_output(args, text=True, stderr=subprocess.DEVNULL, timeout=GIT_COMMAND_TIMEOUT_SECONDS).strip()
 
 
 def digest(value: object) -> str:
@@ -48,7 +54,7 @@ def plan() -> dict[str, str]:
     if os.environ.get("SOURCE_REPOSITORY") != repo:
         return disabled
     remote = command("git", "remote", "get-url", "origin").removesuffix(".git")
-    if remote != f"https://github.com/{repo}":
+    if remote != f"{GITHUB_HTTPS_ORIGIN}/{repo}":
         return disabled
     source = command("git", "rev-parse", "HEAD")
     if not re.fullmatch(r"[0-9a-f]{40}", source):

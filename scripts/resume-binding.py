@@ -17,6 +17,18 @@ import re
 import subprocess
 import zipfile
 from pathlib import Path
+import sys
+
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import (
+    ACTIONS_OIDC_ISSUER,
+    GH_API_TIMEOUT_SECONDS,
+    GH_ATTESTATION_TIMEOUT_SECONDS,
+    GITHUB_HTTPS_ORIGIN,
+    SLSA_PROVENANCE_PREDICATE,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "onesyue/yueto-ci"
@@ -58,7 +70,7 @@ def selected(service):
 
 class GitHub:
     def raw(self, path):
-        return subprocess.check_output(["gh", "api", "--method", "GET", f"repos/{REPOSITORY}/{path}"], timeout=60)
+        return subprocess.check_output(["gh", "api", "--method", "GET", f"repos/{REPOSITORY}/{path}"], timeout=GH_API_TIMEOUT_SECONDS)
 
     def get(self, path):
         return json.loads(self.raw(path))
@@ -94,9 +106,9 @@ class GitHub:
         result = subprocess.run([
             "gh", "attestation", "verify", f"oci://{candidate['image']}@{candidate['digest']}",
             "--repo", REPOSITORY, "--bundle-from-oci", "--signer-workflow", "github.com/onesyue/yueto-ci/.github/workflows/build.yml",
-            "--cert-oidc-issuer", "https://token.actions.githubusercontent.com",
-            "--predicate-type", "https://slsa.dev/provenance/v1", "--format", "json",
-        ], check=True, capture_output=True, text=True, timeout=180)
+            "--cert-oidc-issuer", ACTIONS_OIDC_ISSUER,
+            "--predicate-type", SLSA_PROVENANCE_PREDICATE, "--format", "json",
+        ], check=True, capture_output=True, text=True, timeout=GH_ATTESTATION_TIMEOUT_SECONDS)
         verify_provenance(json.loads(result.stdout), candidate)
 
 
@@ -105,11 +117,11 @@ def verify_provenance(results, candidate):
     for item in results if isinstance(results, list) else []:
         verified = item["verificationResult"]
         cert, statement = verified["signature"]["certificate"], verified["statement"]
-        require(cert.get("buildSignerURI") == f"https://github.com/{REPOSITORY}/.github/workflows/build.yml@refs/heads/master"
+        require(cert.get("buildSignerURI") == f"{GITHUB_HTTPS_ORIGIN}/{REPOSITORY}/.github/workflows/build.yml@refs/heads/master"
                 and cert.get("sourceRepositoryRef") == "refs/heads/master"
                 and any(s.get("digest", {}).get("sha256") == candidate["digest"][7:]
                         for s in statement["subject"]), "verified original image provenance differs")
-        invocation = re.fullmatch(rf"https://github.com/{REPOSITORY}/actions/runs/([1-9][0-9]*)/attempts/([1-9][0-9]*)",
+        invocation = re.fullmatch(rf"{GITHUB_HTTPS_ORIGIN}/{REPOSITORY}/actions/runs/([1-9][0-9]*)/attempts/([1-9][0-9]*)",
                                   cert.get("runInvocationURI", ""))
         if invocation is None:
             raise ValueError("verified certificate has no original run identity")

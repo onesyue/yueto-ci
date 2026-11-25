@@ -34,14 +34,17 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GITHUB_API_ORIGIN, GITHUB_HTTP_TIMEOUT_SECONDS, MAX_VERSION_PAGES
+
 ROOT = Path(__file__).resolve().parents[1]
 OWNER = "onesyue"
 # Current promotion + its predecessor (the rollback target) + one more for a
 # deploy that lags :latest by two promotions.
 PROMOTED_DEPTH = 3
 PAGE_SIZE = 100
-MAX_VERSION_PAGES = 100
-REQUEST_TIMEOUT_SECONDS = 30
 # Five catalogs are hundreds of version pages. Run 43121533913 used the whole
 # five-minute plan job walking them one request at a time. Keep this many
 # registry reads in flight, each with its own timeout.
@@ -91,7 +94,7 @@ def pagination_relations(service: str, header: str, page: int, *, empty_page: bo
 
 def read_version_page(service: str, page: int, token: str) -> tuple[object, str]:
     request = urllib.request.Request(
-        f"https://api.github.com/users/{OWNER}/packages/container/{service}/versions"
+        f"{GITHUB_API_ORIGIN}/users/{OWNER}/packages/container/{service}/versions"
         f"?per_page={PAGE_SIZE}&page={page}",
         headers={
             "Authorization": f"Bearer {token}",
@@ -99,7 +102,7 @@ def read_version_page(service: str, page: int, token: str) -> tuple[object, str]
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
-    with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:  # noqa: S310 - fixed https URL
+    with urllib.request.urlopen(request, timeout=GITHUB_HTTP_TIMEOUT_SECONDS) as response:  # noqa: S310 - fixed https URL
         return json.load(response), response.headers.get("Link", "")
 
 
