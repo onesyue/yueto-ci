@@ -52,6 +52,18 @@ class NativeNodeMakeChainTest(unittest.TestCase):
     )
     CURRENT = "test: verify-fork-tags\n\t$(MAKE) test-vendored\ntest-vendored: check-profile-deps\n"
     LEGACY = "test: verify-fork-tags check-profile-deps\n"
+    FORK_LEDGER = (
+        "test: verify-fork-tags fork-ledger-check\n"
+        "\t$(MAKE) test-vendored\n"
+        "test-vendored: check-profile-deps\n"
+    )
+    FORK_LEDGER_PREFIX = (
+        "VALID_BUILD_PROFILES := auto hy2 vless\n"
+        ".PHONY: test test-vendored verify-fork-tags fork-ledger-check check-profile-deps\n"
+        "verify-fork-tags:\n\tbash scripts/verify-fork-tags.sh\n"
+        "fork-ledger-check:\n\tgo run ./tools/forkledger --check --release tools/forkledger/release-excerpt.yaml\n"
+        "check-profile-deps:\n\tsh scripts/check-profile-deps.sh\n"
+    )
 
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -121,6 +133,21 @@ class NativeNodeMakeChainTest(unittest.TestCase):
                 result = self.cli(self.PREFIX + topology + self.BODY)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn("verified for yue-node", result.stdout)
+
+    def test_actual_cli_accepts_fork_ledger_check_on_the_current_chain(self):
+        result = self.cli(self.FORK_LEDGER_PREFIX + self.FORK_LEDGER + self.BODY)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("verified for yue-node", result.stdout)
+        bad_recipe = self.FORK_LEDGER_PREFIX.replace(
+            "go run ./tools/forkledger --check --release tools/forkledger/release-excerpt.yaml",
+            "true",
+        )
+        self.assertNotEqual(self.cli(bad_recipe + self.FORK_LEDGER + self.BODY).returncode, 0)
+        missing_phony = self.FORK_LEDGER_PREFIX.replace(
+            ".PHONY: test test-vendored verify-fork-tags fork-ledger-check check-profile-deps\n",
+            ".PHONY: test test-vendored verify-fork-tags check-profile-deps\n",
+        )
+        self.assertNotEqual(self.cli(missing_phony + self.FORK_LEDGER + self.BODY).returncode, 0)
 
     def test_owned_prerequisites_run_exactly_the_reviewed_commands(self):
         rules = (
