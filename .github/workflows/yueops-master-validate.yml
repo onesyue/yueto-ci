@@ -1,0 +1,140 @@
+name: Validate yueops master
+
+# Private yueops has no hosted Actions. Native + ordinary validate used to
+# run only inside the ship-time "Build & publish images" dispatch, so a large
+# pile of merges could stay red until the next official ship. This workflow
+# runs that same validation_only path against origin/master (nightly, and on
+# demand) so those reds show up at merge time rather than at ship time.
+#
+# It does not build, sign, or promote images. It never interrupts an in-flight
+# validate. Failure of the scheduled run is the alert; do not treat a skip as
+# a pass.
+on:
+  schedule:
+    - cron: '30 16 * * *' # 00:30 Asia/Singapore nightly catch-all
+    - cron: '7 * * * *' # hourly; skipped when that SHA already validated
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Exact 40-hex yueops SHA (default: current origin/master)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+  packages: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: yueops-master-validate
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: dispatch official yueops validation_only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Mint read-only source token (GitHub App)
+        id: source_token
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueboard,yue-node,yueops,quic-go
+          permission-contents: read
+
+      - name: Plan official validation inputs
+        id: plan
+        env:
+          GH_SOURCE_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          GH_API_TOKEN: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+          YUEOPS_VALIDATE_REF: ${{ inputs.ref || 'master' }}
+        run: |
+          set -euo pipefail
+          python3 scripts/plan-yueops-master-validate.py > "$RUNNER_TEMP/yueops-master-validate.json"
+          jq -e '.source and .migration_base and .board_revision' \
+            "$RUNNER_TEMP/yueops-master-validate.json" >/dev/null
+          {
+            echo "source=$(jq -r '.source' "$RUNNER_TEMP/yueops-master-validate.json")"
+            echo "migration_base=$(jq -r '.migration_base' "$RUNNER_TEMP/yueops-master-validate.json")"
+            echo "board_revision=$(jq -r '.board_revision' "$RUNNER_TEMP/yueops-master-validate.json")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch and wait for official validation_only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE: ${{ steps.plan.outputs.source }}
+          MIGRATION_BASE: ${{ steps.plan.outputs.migration_base }}
+          BOARD_REVISION: ${{ steps.plan.outputs.board_revision }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$MIGRATION_BASE" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BOARD_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          gh run list --repo "${GITHUB_REPOSITORY}" --workflow build.yml \
+            --branch master --event workflow_dispatch --limit 200 \
+            --json databaseId,displayTitle,conclusion,status \
+            > "$RUNNER_TEMP/existing-runs.json"
+          decision="$(SOURCE="$SOURCE" python3 scripts/select-existing-yueops-validate-run.py \
+            < "$RUNNER_TEMP/existing-runs.json")"
+          case "$decision" in
+            success\ [1-9]*)
+              echo "Official validation already succeeded for ${SOURCE}: run ${decision#success }"
+              exit 0
+              ;;
+            pending\ [1-9]*)
+              run_id="${decision#pending }"
+              echo "Official validation already in flight for ${SOURCE}: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
+              gh run watch "$run_id" --repo "${GITHUB_REPOSITORY}" --exit-status
+              exit $?
+              ;;
+            none)
+              ;;
+            *)
+              echo "::error::unrecognized existing-run decision: ${decision}"
+              exit 1
+              ;;
+          esac
+          nonce="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
+          [[ "$nonce" =~ ^[0-9a-f]{32}$ ]]
+          title="Build & publish images yueops ${SOURCE} [nonce:${nonce}]"
+          gh run list --repo "${GITHUB_REPOSITORY}" --workflow build.yml \
+            --branch master --event workflow_dispatch --limit 100 \
+            --json databaseId,displayTitle > "$RUNNER_TEMP/before-runs.json"
+          gh workflow run build.yml --repo "${GITHUB_REPOSITORY}" --ref master \
+            -f service=yueops \
+            -f "ref=${SOURCE}" \
+            -f validation_only=true \
+            -f promote=false \
+            -f runner=ubuntu-24.04 \
+            -f "nonce=${nonce}" \
+            -f "migration_base=${MIGRATION_BASE}" \
+            -f "yueboard_contract_ref=${BOARD_REVISION}"
+          run_id=""
+          for _ in $(seq 1 36); do
+            gh run list --repo "${GITHUB_REPOSITORY}" --workflow build.yml \
+              --branch master --event workflow_dispatch --limit 100 \
+              --json databaseId,displayTitle > "$RUNNER_TEMP/after-runs.json"
+            run_id="$(TITLE="$title" python3 scripts/find-dispatched-workflow-run.py)"
+            if [[ "$run_id" =~ ^[1-9][0-9]*$ ]]; then
+              break
+            fi
+            run_id=""
+            sleep 5
+          done
+          [[ "$run_id" =~ ^[1-9][0-9]*$ ]] || {
+            echo "::error::official validation_only run was not found for nonce ${nonce}"
+            exit 1
+          }
+          echo "Official validation: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
+          gh run watch "$run_id" --repo "${GITHUB_REPOSITORY}" --exit-status

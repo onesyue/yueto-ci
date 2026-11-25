@@ -1127,6 +1127,7 @@ class BuildPolicyTest(unittest.TestCase):
                 "quality-ratchet.yml",
                 "scorecard.yml",
                 "weekly-vuln-sbom.yml",
+                "yueops-master-validate.yml",
             ],
         )
 
@@ -1203,6 +1204,35 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("cosign", deadman_code)
         self.assertNotIn("promote=true", deadman_code)
         self.assertIn("permissions:\n  contents: read", deadman)
+
+        # Nightly / hourly official validation_only against yueops master is
+        # a consumer of the existing build.yml path, never a second delivery
+        # path: it may dispatch and watch, but it must not build, sign, or
+        # promote images itself.
+        master_validate = (WORKFLOW_DIR / "yueops-master-validate.yml").read_text(
+            encoding="utf-8"
+        )
+        master_validate_code = "\n".join(
+            line
+            for line in master_validate.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        self.assertIn("permissions:\n  contents: read", master_validate)
+        self.assertIn("  actions: write", master_validate)
+        self.assertIn("  packages: read", master_validate)
+        self.assertIn("validation_only=true", master_validate_code)
+        self.assertIn("promote=false", master_validate_code)
+        for forbidden in (
+            "build-push-action",
+            "imagetools create",
+            "cosign",
+            "promote=true",
+            "packages: write",
+            "id-token: write",
+            "repository_dispatch",
+        ):
+            with self.subTest(master_validate_forbidden=forbidden):
+                self.assertNotIn(forbidden, master_validate_code)
 
         self.assertIn(
             "Authorize and promote verified default-branch digest",
