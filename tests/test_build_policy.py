@@ -1098,6 +1098,7 @@ class BuildPolicyTest(unittest.TestCase):
                 "image-rescan.yml",
                 "policy-ci.yml",
                 "quality-ratchet.yml",
+                "scorecard.yml",
                 "weekly-vuln-sbom.yml",
             ],
         )
@@ -1236,6 +1237,29 @@ class BuildPolicyTest(unittest.TestCase):
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, policy_lower)
+
+        # Scorecard is a private analysis workflow: it may mint an OIDC
+        # token for ossf/scorecard-action, but it must not publish
+        # results or open a product delivery path.
+        scorecard = (WORKFLOW_DIR / "scorecard.yml").read_text(encoding="utf-8")
+        scorecard_code = "\n".join(
+            line for line in scorecard.splitlines() if not line.lstrip().startswith("#")
+        )
+        self.assertIn("publish_results: false", scorecard_code)
+        self.assertIn("permissions: read-all", scorecard_code)
+        self.assertIn("id-token: write", scorecard_code)
+        self.assertIn("security-events: write", scorecard_code)
+        for forbidden in (
+            "build-push-action",
+            "imagetools create",
+            "cosign",
+            "promote=true",
+            "packages: write",
+            "docker push",
+            "gh release",
+        ):
+            with self.subTest(scorecard_forbidden=forbidden):
+                self.assertNotIn(forbidden, scorecard_code)
 
         weekly = (WORKFLOW_DIR / "weekly-vuln-sbom.yml").read_text(encoding="utf-8")
         weekly_code = "\n".join(
