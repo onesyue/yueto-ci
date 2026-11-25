@@ -18,10 +18,25 @@ WORKFLOW = ROOT / ".github" / "workflows" / "alert-chain-deadman.yml"
 MIRROR = ROOT / "deadman" / "canonical"
 CONTRACT = MIRROR / "config" / "alert-chain-deadman-observer-contract.json"
 CHECKER = MIRROR / "scripts" / "alert-chain-deadman-check.py"
+HOSTS = MIRROR / "config" / "hosts.json"
+BASTION_HOST = MIRROR / "scripts" / "bastion_host.py"
+BASTION_IP = "23.80.91.14"
+BASTION_IP_ALLOWED = {
+    "deadman/canonical/config/hosts.json",
+    "tests/test_deadman_policy.py",
+}
 
 
 def _checker():
     spec = importlib.util.spec_from_file_location("_public_deadman_check", CHECKER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+def _bastion_host():
+    spec = importlib.util.spec_from_file_location("_public_bastion_host", BASTION_HOST)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -236,6 +251,104 @@ def test_mirrored_checker_cli_rejects_zero_max_age() -> None:
     assert "--max-age-seconds" in result.stderr
     assert result.stdout == ""
 
+def test_bastion_address_resolves_from_the_inventory_name() -> None:
+    module = _bastion_host()
+    assert module.HOST_NAME == "bastion"
+    assert module.ENV_NAME == "YUEOPS_HOST_BASTION"
+    host = module.resolve_bastion_host(env={})
+    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    inventory = json.loads(HOSTS.read_text(encoding="utf-8"))
+    assert contract["transport"]["host_name"] == "bastion"
+    assert "host" not in contract["transport"]
+    assert inventory["hosts"] == [
+        {
+            "name": "bastion",
+            "role": "Operations services and PostgreSQL standby",
+            "ip": BASTION_IP,
+        }
+    ]
+    assert host == BASTION_IP
+    key = contract["transport"]["host_key"]
+    fetch = WORKFLOW.read_text(encoding="utf-8").split("Fetch heartbeat receipt", 1)[1]
+    assert f"${{BASTION_HOST}}" in fetch
+    assert key["algorithm"] in fetch and key["public_key"] in fetch
+    assert f"{host} {key['algorithm']} {key['public_key']}".startswith(BASTION_IP + " ssh-ed25519 ")
+    rendered = subprocess.run(
+        [sys.executable, str(BASTION_HOST)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        env={key: value for key, value in os.environ.items() if key != module.ENV_NAME},
+        check=False,
+    )
+    assert rendered.returncode == 0
+    assert rendered.stdout == BASTION_IP + "\n"
+
+
+def test_bastion_env_overrides_inventory_and_works_without_it() -> None:
+    module = _bastion_host()
+    assert module.resolve_bastion_host(env={module.ENV_NAME: "203.0.113.10"}) == "203.0.113.10"
+    with tempfile.TemporaryDirectory() as directory:
+        missing = Path(directory) / "hosts.json"
+        absent_contract = Path(directory) / "contract.json"
+        only_env = module.resolve_bastion_host(
+            inventory=missing,
+            contract=absent_contract,
+            env={module.ENV_NAME: "203.0.113.11"},
+        )
+        assert only_env == "203.0.113.11"
+        try:
+            module.resolve_bastion_host(
+                inventory=missing, contract=absent_contract, env={}
+            )
+        except SystemExit as exc:
+            assert exc.code == "YUEOPS_HOST_BASTION is unset and the host inventory is absent"
+        else:
+            raise AssertionError("missing inventory must fail closed")
+        try:
+            module.resolve_bastion_host(env={module.ENV_NAME: "not-an-address"})
+        except SystemExit as exc:
+            assert exc.code == "bastion host must be an IPv4 address"
+        else:
+            raise AssertionError("invalid override must fail closed")
+    overridden = subprocess.run(
+        [sys.executable, str(BASTION_HOST)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        env={**os.environ, module.ENV_NAME: "203.0.113.10"},
+        check=False,
+    )
+    assert overridden.returncode == 0
+    assert overridden.stdout == "203.0.113.10\n"
+
+
+def test_bastion_address_stays_in_the_inventory() -> None:
+    assert HOSTS.read_text(encoding="utf-8").count(BASTION_IP) == 1
+    assert BASTION_IP not in WORKFLOW.read_text(encoding="utf-8")
+    assert BASTION_IP not in CONTRACT.read_text(encoding="utf-8")
+    assert BASTION_IP not in BASTION_HOST.read_text(encoding="utf-8")
+    result = subprocess.run(
+        ["git", "grep", "-F", "-l", "--", BASTION_IP],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert result.returncode in (0, 1), result.stderr
+    found = set(result.stdout.splitlines())
+    tracked = subprocess.run(
+        ["git", "ls-files", "--", "deadman/canonical/config/hosts.json"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=True,
+    )
+    if tracked.stdout.strip():
+        assert "deadman/canonical/config/hosts.json" in found
+    assert sorted(found - BASTION_IP_ALLOWED) == []
 
 def load_tests(
     loader: unittest.TestLoader, tests: unittest.TestSuite, pattern: str | None

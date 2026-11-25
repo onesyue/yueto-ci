@@ -109,7 +109,7 @@ jobs:
           # receipt read; this public repository never receives a deployment,
           # fleet, root, or rotation key.
           SSH_KEY_B64: ${{ secrets.DEADMAN_SSH_KEY_B64 }}
-          BASTION_HOST: '23.80.91.14'
+          YUEOPS_HOST_BASTION: ${{ vars.YUEOPS_HOST_BASTION }}
           BASTION_USER: 'deadman-reader'
         run: |
           set -Eeuo pipefail
@@ -118,13 +118,15 @@ jobs:
             echo '::error::DEADMAN_SSH_KEY_B64 is absent; a skipped observer is not healthy.'
             exit 1
           fi
+          # Inventory name "bastion"; YUEOPS_HOST_BASTION overrides it.
+          BASTION_HOST="$(python3 .ci-receiver/deadman/canonical/scripts/bastion_host.py)"
           mkdir -p ~/.ssh
           printf '%s' "${SSH_KEY_B64}" | base64 --decode > ~/.ssh/id_deadman
           chmod 600 ~/.ssh/id_deadman
 
           # Pin the production bastion host key. TOFU / accept-new would let an
           # intercepted first connection manufacture a healthy receipt.
-          printf '%s %s %s\n' '23.80.91.14' 'ssh-ed25519' \
+          printf '%s %s %s\n' "${BASTION_HOST}" 'ssh-ed25519' \
             'AAAAC3NzaC1lZDI1NTE5AAAAICo9blX1VNOv83FROQ7Bt8/meWocnC/JsUzbOZGrEZY2' \
             > ~/.ssh/known_hosts_deadman
 

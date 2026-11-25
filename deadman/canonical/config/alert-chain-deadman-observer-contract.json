@@ -16,7 +16,7 @@
     "local_manual_fallback_workflow": ".github/workflows/alert-chain-deadman.yml"
   },
   "transport": {
-    "host": "23.80.91.14",
+    "host_name": "bastion",
     "port": 22,
     "user": "deadman-reader",
     "receipt_path": "/var/lib/yue-alert-heartbeat/heartbeat.json",
