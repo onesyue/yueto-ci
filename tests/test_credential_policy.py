@@ -129,6 +129,9 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
                 elif name == "hy2-probe.yml" and job == "build":
                     allowed = {"hysteria", "quic-go"}
                     self.assertEqual(set(repos.group(1).split(",")), allowed)
+                elif name == "client-core-matrix.yml":
+                    allowed = {"yue-node", "mihomo"}
+                    self.assertEqual(set(repos.group(1).split(",")), allowed)
                 else:
                     allowed = SOURCE_REPOS | (
                         {"yueto"} if name == "build.yml" and job == "validate" else set()

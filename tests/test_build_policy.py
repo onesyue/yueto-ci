@@ -1094,6 +1094,7 @@ class BuildPolicyTest(unittest.TestCase):
                 "board-visual-capture.yml",
                 "build.yml",
                 "ci-toolchain.yml",
+                "client-core-matrix.yml",
                 "hy2-probe.yml",
                 "image-rescan.yml",
                 "policy-ci.yml",
@@ -1145,6 +1146,19 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("uses: actions/upload-artifact@", probe)
         for forbidden in ("packages: write", "id-token: write", "contents: write", "build-push-action", "docker push", "imagetools create", "gh release"):
             self.assertNotIn(forbidden, probe)
+
+        matrix = (WORKFLOW_DIR / "client-core-matrix.yml").read_text(encoding="utf-8")
+        self.assertIn("permissions:\n  contents: read\n", matrix)
+        for forbidden in (
+            "packages: write",
+            "id-token: write",
+            "contents: write",
+            "build-push-action",
+            "cosign",
+            "promote",
+            "pull_request",
+        ):
+            self.assertNotIn(forbidden, matrix)
 
         capture = (WORKFLOW_DIR / "board-visual-capture.yml").read_text()
         capture_code = "\n".join(
