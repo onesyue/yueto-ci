@@ -9,73 +9,123 @@ import pytest
 
 
 POLICY_FILE = Path(__file__).resolve().parents[1] / "ci" / "quarantine.yaml"
-_ENTRY_KEYS = ("id", "owner", "issue", "expires")
+_ENTRY_KEYS = ("id", "owner", "expires", "commit", "failed", "passed")
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_ISSUE = re.compile(r"^https://github\.com/onesyue/\S+$")
+_SHA = re.compile(r"^[0-9a-f]{40}$")
+_RUN = re.compile(r"^https://github\.com/onesyue/[^/\s]+/actions/runs/[1-9][0-9]*$")
+
+
+class _Document:
+    def __init__(self):
+        self.schema = None
+        self.entries = None
+        self.current = None
+        self.closed = False
+
+
+def _reject_hostile_text(text):
+    if text.startswith("\ufeff") or "\t" in text or "\x00" in text:
+        raise ValueError("invalid ci/quarantine.yaml")
+
+
+def _skip_line(raw):
+    return not raw.strip() or raw.lstrip().startswith("#")
 
 
 def parse_quarantine_yaml(text):
     """Parse the policy quarantine document. Expired rows are not applied here."""
-    if text.startswith("\ufeff") or "\t" in text or "\x00" in text:
-        raise ValueError("invalid ci/quarantine.yaml")
-    schema = None
-    entries = None
-    current = None
-    closed = False
+    _reject_hostile_text(text)
+    document = _Document()
     for line_number, raw in enumerate(text.splitlines(), start=1):
-        if not raw.strip():
+        if _skip_line(raw):
             continue
-        if raw.startswith("#") or raw.strip().startswith("#") and raw.lstrip().startswith("#"):
-            continue
-        if raw.startswith("schema:"):
-            if schema is not None or entries is not None or not raw.startswith("schema: "):
-                raise ValueError("invalid ci/quarantine.yaml")
-            value = raw.split(": ", 1)[1]
-            if value != "1":
-                raise ValueError("invalid quarantine schema")
-            schema = 1
-            continue
-        if raw == "entries: []":
-            if schema != 1 or entries is not None:
-                raise ValueError("invalid ci/quarantine.yaml")
-            entries = []
-            closed = True
-            continue
-        if raw == "entries:":
-            if schema != 1 or entries is not None:
-                raise ValueError("invalid ci/quarantine.yaml")
-            entries = []
-            continue
-        if entries is None or closed:
-            raise ValueError("invalid ci/quarantine.yaml")
-        if raw.startswith("  - "):
-            current = _entry_field(raw[4:], True, line_number)
-            entries.append(current)
-            continue
-        if current is None or not raw.startswith("    "):
-            raise ValueError(f"invalid quarantine yaml line {line_number}")
-        _entry_field(raw[4:], False, line_number, current)
-    if schema != 1 or entries is None:
+        _consume_line(document, line_number, raw)
+    if document.schema != 1 or document.entries is None:
         raise ValueError("invalid ci/quarantine.yaml")
-    for entry in entries:
-        if tuple(entry) != _ENTRY_KEYS:
-            raise ValueError("invalid quarantine entry")
-        nodeid = entry["id"]
-        if (
-            not nodeid.startswith("tests/")
-            or "::" not in nodeid
-            or nodeid != nodeid.strip()
-            or any(character in nodeid for character in "\n\r")
-        ):
-            raise ValueError(f"invalid quarantine id: {nodeid}")
-        if not entry["owner"].strip() or entry["owner"] != entry["owner"].strip():
-            raise ValueError(f"invalid quarantine owner: {nodeid}")
-        if _ISSUE.fullmatch(entry["issue"]) is None:
-            raise ValueError(f"invalid quarantine issue: {nodeid}")
-        if _DATE.fullmatch(entry["expires"]) is None:
-            raise ValueError(f"invalid quarantine expiry: {nodeid}")
-        date.fromisoformat(entry["expires"])
-    return entries
+    for entry in document.entries:
+        _validate_entry(entry)
+    return document.entries
+
+
+def _consume_line(document, line_number, raw):
+    if raw.startswith("schema:"):
+        _read_schema(document, raw)
+        return
+    if raw == "entries: []" or raw == "entries:":
+        _open_entries(document, raw)
+        return
+    if document.entries is None or document.closed:
+        raise ValueError("invalid ci/quarantine.yaml")
+    if raw.startswith("  - "):
+        document.current = _entry_field(raw[4:], True, line_number)
+        document.entries.append(document.current)
+        return
+    if document.current is None or not raw.startswith("    "):
+        raise ValueError(f"invalid quarantine yaml line {line_number}")
+    _entry_field(raw[4:], False, line_number, document.current)
+
+
+def _read_schema(document, raw):
+    if document.schema is not None or document.entries is not None or not raw.startswith("schema: "):
+        raise ValueError("invalid ci/quarantine.yaml")
+    if raw.split(": ", 1)[1] != "1":
+        raise ValueError("invalid quarantine schema")
+    document.schema = 1
+
+
+def _open_entries(document, raw):
+    if document.schema != 1 or document.entries is not None:
+        raise ValueError("invalid ci/quarantine.yaml")
+    document.entries = []
+    document.closed = raw.endswith("[]")
+
+
+def _validate_entry(entry):
+    if tuple(entry) != _ENTRY_KEYS:
+        raise ValueError("invalid quarantine entry")
+    nodeid = entry["id"]
+    _validate_nodeid(nodeid)
+    _validate_owner(entry["owner"], nodeid)
+    _validate_expiry(entry["expires"], nodeid)
+    _validate_flake(entry, nodeid)
+
+
+def _validate_nodeid(nodeid):
+    if (
+        not nodeid.startswith("tests/")
+        or "::" not in nodeid
+        or nodeid != nodeid.strip()
+        or any(character in nodeid for character in "\n\r")
+    ):
+        raise ValueError(f"invalid quarantine id: {nodeid}")
+
+
+def _validate_owner(owner, nodeid):
+    if not owner.strip() or owner != owner.strip():
+        raise ValueError(f"invalid quarantine owner: {nodeid}")
+
+
+def _validate_expiry(expires, nodeid):
+    if _DATE.fullmatch(expires) is None:
+        raise ValueError(f"invalid quarantine expiry: {nodeid}")
+    date.fromisoformat(expires)
+
+
+def _validate_flake(entry, nodeid):
+    failed, passed = entry["failed"], entry["passed"]
+    if (
+        _SHA.fullmatch(entry["commit"]) is None
+        or _RUN.fullmatch(failed) is None
+        or _RUN.fullmatch(passed) is None
+        or failed == passed
+    ):
+        raise ValueError(f"invalid quarantine flake evidence: {nodeid}")
+
+
+def flake_reason(entry):
+    return (
+        f"proven flake {entry['commit']} failed {entry['failed']} passed {entry['passed']}"
+    )
 
 
 def _entry_field(text, start, line_number, entry=None):
@@ -108,7 +158,7 @@ def policy_cases(path, today=None):
             raise ValueError(f"expired quarantine entry: {nodeid}")
         if nodeid in cases:
             raise ValueError(f"duplicate quarantine entry: {nodeid}")
-        cases[nodeid] = entry["issue"]
+        cases[nodeid] = flake_reason(entry)
     return cases
 
 

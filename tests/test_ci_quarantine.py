@@ -19,18 +19,35 @@ DOCUMENT = """schema: 1
 entries:
   - id: tests/test_quarantine_case.py::test_bad
     owner: yueops
-    issue: https://github.com/onesyue/yueto-ci/actions/runs/45673449414
     expires: 2099-01-01
+    commit: 0123456789abcdef0123456789abcdef01234567
+    failed: https://github.com/onesyue/yueto-ci/actions/runs/1
+    passed: https://github.com/onesyue/yueto-ci/actions/runs/2
 """
+
+REAL_FAILURES = (
+    "tests/test_ops_unit_manifest.py::test_check_matches_committed_json",
+    "tests/test_alert_chain_deadman_dispatch_20261125.py::test_shell_syntax_and_shellcheck",
+    "tests/test_panel_deploy_bundle.py::test_manifest_and_projection",
+    "tests/test_panel_deploy_bundle.py::test_missing_library_fails_standalone_self_test",
+    "tests/test_panel_deploy_bundle.py::test_reproducible",
+    "tests/test_panel_deploy_bundle.py::test_self_test",
+    "tests/test_panel_deploy_bundle.py::test_sidecar_digest_mismatch",
+    "tests/test_relay_coordinator_management_dial_20261112.py::test_check_dials_inventory_literal_and_plans_the_stale_public_record",
+    "tests/test_relay_coordinator_management_dial_20261112.py::test_hostname_management_field_is_not_a_dial_target",
+    "tests/test_relay_coordinator_management_dial_20261112.py::test_unreadable_management_inventory_is_named",
+)
 
 
 class PolicyQuarantineTest(unittest.TestCase):
-    def test_committed_entries_are_active(self):
+    def test_committed_policy_has_no_real_failures(self):
+        text = QUARANTINE.POLICY_FILE.read_text(encoding="utf-8")
+        for nodeid in REAL_FAILURES:
+            self.assertNotIn(nodeid, text)
         cases = QUARANTINE.policy_cases(QUARANTINE.POLICY_FILE, today=date(2026, 11, 26))
-        self.assertGreaterEqual(len(cases), 1)
-        for nodeid in cases:
-            self.assertTrue(nodeid.startswith("tests/"))
-            self.assertIn("::", nodeid)
+        self.assertEqual(list(cases), [])
+        for reason in cases.values():
+            self.assertIn("proven flake", reason)
 
     def test_expired_entry_fails_the_policy_check(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -43,6 +60,26 @@ class PolicyQuarantineTest(unittest.TestCase):
         self.assertEqual(QUARANTINE.parse_quarantine_yaml("schema: 1\nentries: []\n"), [])
         with self.assertRaises(ValueError):
             QUARANTINE.parse_quarantine_yaml("schema: 1\nentries: []\n  - id: tests/a.py::test_b\n")
+
+    def test_real_failure_without_a_passing_rerun_is_rejected(self):
+        missing = DOCUMENT.replace(
+            "    passed: https://github.com/onesyue/yueto-ci/actions/runs/2\n",
+            "",
+        )
+        with self.assertRaisesRegex(ValueError, "invalid quarantine"):
+            QUARANTINE.parse_quarantine_yaml(missing)
+        same_run = DOCUMENT.replace("actions/runs/2", "actions/runs/1")
+        with self.assertRaisesRegex(ValueError, "flake evidence"):
+            QUARANTINE.parse_quarantine_yaml(same_run)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "quarantine.yaml"
+            path.write_text(DOCUMENT, encoding="utf-8")
+            cases = QUARANTINE.policy_cases(path, today=date(2026, 11, 26))
+        self.assertEqual(
+            list(cases),
+            ["tests/test_quarantine_case.py::test_bad"],
+        )
+        self.assertIn("proven flake", next(iter(cases.values())))
 
     def test_quarantined_failure_runs_and_does_not_fail_the_shard(self):
         with tempfile.TemporaryDirectory() as tmp:
