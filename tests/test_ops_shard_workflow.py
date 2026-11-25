@@ -31,7 +31,9 @@ TAIL = ["tests/test_telegram_locale_ordering_20260821.py",
 def assert_only_named_caches_are_optional(case, text):
     validation = text[text.index("  validate:\n"):text.index("  build:\n")]
     cache_action = "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"
-    for name in ("Restore Go modules", "Restore and refresh Go compiler cache",
+    for name in ("Restore npm cache (yueops frontends)",
+                 "Restore pnpm store (yueboard frontends)",
+                 "Restore Go modules", "Restore and refresh Go compiler cache",
                  "Restore verified public UA core archives"):
         pattern = (rf"^      - name: {re.escape(name)}\n"
                    r"(?:(?!^      - |^  [a-z]).*\n)*")
