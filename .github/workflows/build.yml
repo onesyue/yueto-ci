@@ -2711,6 +2711,41 @@ jobs:
             "${promotion_tag_args[@]}" \
             "${IMAGE}@${DIGEST}"
 
+      - name: Record promoted image
+        if: needs.plan.outputs.promote == 'true'
+        env:
+          SERVICE: ${{ matrix.service }}
+          SOURCE_SHA: ${{ steps.meta.outputs.source_sha }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE: ${{ steps.meta.outputs.image }}
+          ARCHITECTURES: ${{ contains(matrix.platforms, 'arm64') && 'amd64,arm64' || 'amd64' }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 .ci-policy/scripts/release_pr.py record-promoted \
+            --service "$SERVICE" \
+            --revision "$SOURCE_SHA" \
+            --digest "$DIGEST" \
+            --image "$IMAGE" \
+            --architectures "$ARCHITECTURES" \
+            --run-id "$RUN_ID" \
+            --run-attempt "$RUN_ATTEMPT" \
+            --workflow-sha "$WORKFLOW_SHA" \
+            --promoted-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --output "$RUNNER_TEMP/promoted.json"
+
+      - name: Retain promoted image identity
+        if: needs.plan.outputs.promote == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: promoted-${{ matrix.service }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/promoted.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 14
+
       - name: Record resumed publication after registry readback
         if: needs.plan.outputs.resume == 'true'
         env:
@@ -2733,6 +2768,113 @@ jobs:
           if-no-files-found: error
           overwrite: false
           retention-days: 14
+
+  release-pr:
+    needs: [publish, plan]
+    if: always() && !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.promote == 'true' && needs.plan.outputs.has_builds == 'true' && !inputs.validation_only
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '["self-hosted","Linux","X64","yue-local-release"]' || '["ubuntu-24.04"]') }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+      attestations: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    concurrency:
+      group: release-pr-${{ matrix.service }}
+      cancel-in-progress: false
+    name: release-pr-${{ matrix.service }}
+    steps:
+      - name: Checkout build policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueto-ci
+          ref: ${{ github.sha }}
+          path: .ci-policy
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download promoted image identity
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: promoted-${{ matrix.service }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/promoted
+          digest-mismatch: error
+
+      - name: Install pinned cosign
+        run: bash .ci-policy/scripts/install-cosign.sh
+
+      - name: Login to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Verify promoted supply chain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          receipt="${RUNNER_TEMP}/promoted/promoted.json"
+          test -f "$receipt"
+          bash .ci-policy/scripts/verify-promoted-supply-chain.sh "$receipt"
+
+      - name: Mint release pull request token (GitHub App)
+        id: release_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yueto
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout release ledger
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueto
+          ref: master
+          path: yueto
+          token: ${{ steps.release_token.outputs.token }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Render per-service release record
+        id: render
+        env:
+          RECEIPT: ${{ runner.temp }}/promoted/promoted.json
+        run: |
+          set -euo pipefail
+          python3 .ci-policy/scripts/release_pr.py render \
+            --receipt "$RECEIPT" \
+            --yueto-root yueto \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Sign release record
+        if: steps.render.outputs.status == 'rendered'
+        env:
+          RECEIPT: ${{ runner.temp }}/promoted/promoted.json
+        run: |
+          set -euo pipefail
+          service="$(python3 .ci-policy/scripts/release_pr.py field "$RECEIPT" service)"
+          bash .ci-policy/scripts/sign-release-blob.sh "yueto/release/${service}.yaml"
+
+      - name: Open release pull request
+        if: steps.render.outputs.status == 'rendered'
+        env:
+          GH_TOKEN: ${{ steps.release_token.outputs.token }}
+          RECEIPT: ${{ runner.temp }}/promoted/promoted.json
+        run: |
+          set -euo pipefail
+          python3 .ci-policy/scripts/release_pr.py open \
+            --receipt "$RECEIPT" \
+            --yueto-root yueto
 
   abort-on-build-failure:
     # Fail fast across jobs: as soon as any candidate image build fails, cancel the

@@ -141,10 +141,15 @@ Production accepts only this signing workflow and provenance source ref:
 
 `release.yaml` in the private workspace is the signed desired-state authority.
 `scripts/ship.sh` verifies the promoted digest, signature, SBOM and provenance,
-then writes, signs and pushes that record. This public CI never writes root Git
-state. Promotion's `DIGEST`, `SOURCE_SHA` and `IMAGE` anchors remain inputs to
-that workstation chain. Builds, promotion and installed production are separate
-facts; changing a source pin does not establish deployment.
+then writes, signs and pushes that root record with the owner key. This public
+CI does not rewrite root `release.yaml` or hold that key. After a green promote
+it verifies the image signature, SBOM and provenance, renders
+`release/<service>.yaml` through the workspace release_yaml library, signs that
+file with this workflow's keyless identity, and opens pull request
+`release/<service>-<sha12>` on the private workspace. Auto-merge is on for every
+catalogued service except node images. Promotion's `DIGEST`, `SOURCE_SHA` and
+`IMAGE` anchors remain inputs to that chain. A release pull request does not
+establish deployment.
 
 Keep public logs concise and free of sensitive values or environment dumps.
 Private source and images are never uploaded as artifacts. Only explicitly
