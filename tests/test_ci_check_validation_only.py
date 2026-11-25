@@ -4,6 +4,7 @@ from workflow_source import workflow_text
 import importlib.util
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,11 +12,12 @@ from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    "ci_check_shards", ROOT / "scripts/pytest-shards.py")
-assert SPEC is not None and SPEC.loader is not None
-SHARDS = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(SHARDS)
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards import cli as shard_cli
+from pytest_shards import transitions_admit
+from pytest_shards.cli import expand
+from pytest_shards.support import source_evidence
+
 FAIL_SPEC = importlib.util.spec_from_file_location(
     "ci_check_failures", ROOT / "scripts/ci_check_failures.py")
 assert FAIL_SPEC is not None and FAIL_SPEC.loader is not None
@@ -75,9 +77,9 @@ class ValidationOnlyAdmission(unittest.TestCase):
         directory, repo, sha = _unsigned_repo()
         self.addCleanup(directory.cleanup)
         with self.assertRaisesRegex(
-                SHARDS.source_evidence.Rejected,
+                source_evidence.Rejected,
                 "exactly one OpenPGP signature required"):
-            SHARDS.expand(
+            expand(
                 _targets(sha), repo, "b" * 40, "ubuntu-24.04", 20, 16,
                 validation_only=True)
 
@@ -85,7 +87,7 @@ class ValidationOnlyAdmission(unittest.TestCase):
         directory, repo, sha = _unsigned_repo()
         self.addCleanup(directory.cleanup)
         with self.assertRaises(Exception) as caught:
-            SHARDS.expand(
+            expand(
                 _targets(sha), repo, "b" * 40, "ubuntu-24.04", 20, 16,
                 validation_only=False)
         self.assertNotIn(
@@ -99,15 +101,15 @@ class ValidationOnlyAdmission(unittest.TestCase):
             "modules": [],
             "assignments": [{"id": "ordinary-000"}],
         }
-        with patch.object(SHARDS.source_evidence, "verify_signed_commit", return_value=None), \
-                patch.object(SHARDS.source_evidence, "optional", side_effect=AssertionError("stale seal read")), \
-                patch.object(SHARDS, "plan", return_value=expected), \
-                patch.object(SHARDS, "serial_modules", return_value=["tests/test_serial.py"]), \
-                patch.object(SHARDS, "tree_inputs", return_value={}), \
-                patch.object(SHARDS, "shared_inputs", return_value={}), \
-                patch.object(SHARDS, "admit_shared_inputs",
+        with patch.object(source_evidence, "verify_signed_commit", return_value=None), \
+                patch.object(source_evidence, "optional", side_effect=AssertionError("stale seal read")), \
+                patch.object(shard_cli, "plan", return_value=expected), \
+                patch.object(shard_cli, "serial_modules", return_value=["tests/test_serial.py"]), \
+                patch.object(shard_cli, "tree_inputs", return_value={}), \
+                patch.object(shard_cli, "shared_inputs", return_value={}), \
+                patch.object(transitions_admit, "admit_shared_inputs",
                              side_effect=AssertionError("seal opened")):
-            result = SHARDS.expand(
+            result = expand(
                 _targets(sha), repo, "b" * 40, "ubuntu-24.04", 20, 16,
                 validation_only=True)
         self.assertIs(result["validation_only"], True)

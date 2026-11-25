@@ -1,9 +1,11 @@
 """Resolve each planned image's validation from GitHub job conclusions."""
-import importlib
 import json
 import os
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from pytest_shards.reporting import envelope
 
 
 def results(builds, validations, jobs):
@@ -54,8 +56,7 @@ def results(builds, validations, jobs):
 if __name__ == "__main__":
     builds = json.loads(os.environ["BUILDS"]) or json.loads(os.environ["SELECTION"])
     if sys.argv[1] == "collect":
-        shards = importlib.import_module("pytest-shards")
-        admission = shards.envelope(json.loads(Path(sys.argv[2]).read_bytes()))
+        admission = envelope(json.loads(Path(sys.argv[2]).read_bytes()))
         if admission["admission_sha256"] != os.environ["ADMISSION_SHA256"]:
             raise ValueError("plan job admission digest differs")
         pages = json.load(sys.stdin)

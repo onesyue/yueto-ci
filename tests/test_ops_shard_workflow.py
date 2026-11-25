@@ -19,6 +19,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import test_pytest_shards as fixture
+from pytest_shards.policy_history import load_policy_tree
 import test_pytest_timing as yaml_consumer
 import test_yueops_node_tests_20261017 as native_consumer
 
@@ -140,15 +141,12 @@ class OpsShardWorkflow(unittest.TestCase):
         self.env["PATH"] = str(self.source / ".venv/bin") + os.pathsep + os.environ["PATH"]
         self.env["YUEBOARD_REPO_PATH"] = str(self.board)
         self.env["YUETO_CI_REPO_PATH"] = str(self.policy)
-        spec = importlib.util.spec_from_file_location("actual_ops_shards",
-                                                     self.policy / "scripts/pytest-shards.py")
-        self.consumer = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(self.consumer)
+        self.consumer = load_policy_tree(self.policy / "scripts")
         self.fixture.env["GITHUB_SHA"] = self.env["GITHUB_SHA"]
         baseline, ran = self.fixture.run_session(
             {"id": "ordinary-000", "modules": list(self.fixture.plan["modules"])})
         self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
-        self.baseline = self.consumer.generate_skip_baseline(
+        self.baseline = self.consumer.skip_baseline.generate_skip_baseline(
             self.source, self.source_sha, baseline / "events.jsonl", baseline / "pytest.xml",
             baseline / "events.jsonl", self.source_sha, "fixture original execution")
         (self.policy / "ops-pytest-skip-baseline.json").write_text(json.dumps(self.baseline))
@@ -164,7 +162,7 @@ class OpsShardWorkflow(unittest.TestCase):
                                    "ref": self.source_sha}], "has_builds": True,
         }
         with patch.dict(os.environ, self.env, clear=True):
-            self.admission = self.consumer.expand(self.targets, self.source, self.board_sha,
+            self.admission = self.consumer.cli.expand(self.targets, self.source, self.board_sha,
                                                    "ubuntu-24.04", 4, 4)
         self.artifacts = self.base / "artifacts"
         self.artifacts.mkdir()
@@ -177,7 +175,7 @@ class OpsShardWorkflow(unittest.TestCase):
     def rebind_board_signer(self, gpg, fingerprint, env):
         """A replaced fixture trust store must authenticate both source inputs."""
         with self.assertRaises(ValueError):
-            self.call(self.consumer.source_evidence.verify_signed_commit, self.board, self.board_sha)
+            self.call(self.consumer.support.source_evidence.verify_signed_commit, self.board, self.board_sha)
         subprocess.run([
             "git", "-C", str(self.board), "-c", "user.name=Fixture",
             "-c", "user.email=fixture@example.invalid", "-c", "gpg.program=" + gpg,
@@ -185,7 +183,7 @@ class OpsShardWorkflow(unittest.TestCase):
             "commit", "--amend", "-S", "--no-edit",
         ], env=env, check=True, capture_output=True)
         self.board_sha = self.fixture.git(self.board, "rev-parse", "HEAD").stdout.strip()
-        self.call(self.consumer.source_evidence.verify_signed_commit, self.board, self.board_sha)
+        self.call(self.consumer.support.source_evidence.verify_signed_commit, self.board, self.board_sha)
 
     def reviewed_lock_transition(self):
         """A signed master commit that changes a lockfile is admitted."""
@@ -202,11 +200,11 @@ class OpsShardWorkflow(unittest.TestCase):
         after = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
         for row in self.targets["matrix"] + self.targets["validation_matrix"]:
             row["ref"] = after
-        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+        self.admission = self.call(self.consumer.cli.expand, self.targets, self.source,
                                    self.board_sha, "ubuntu-24.04", 4, 4)
         self.assertEqual(self.admission["admission_rule"], "signed-default-branch")
         self.assertEqual(self.admission["common_inputs"],
-                         self.consumer.shared_inputs(self.source, after))
+                         self.consumer.support.shared_inputs(self.source, after))
         return after
 
     def test_reviewed_lock_reaches_actual_source_native_and_join_without_waiving_evidence(self):
@@ -217,9 +215,9 @@ class OpsShardWorkflow(unittest.TestCase):
         wrong = copy.deepcopy(self.admission)
         wrong["common_inputs"]["frontend/package-lock.json"] = "c" * 40
         del wrong["admission_sha256"]
-        self.consumer.seal(wrong, "admission_sha256")
+        self.consumer.support.seal(wrong, "admission_sha256")
         with self.assertRaisesRegex(ValueError, "shared inputs differ from the signed commit"):
-            self.call(self.consumer.check_source, wrong, self.source, self.board)
+            self.call(self.consumer.cli.check_source, wrong, self.source, self.board)
         (self.artifacts / (self.prefix + "native") / "native.json").unlink()
         with self.assertRaises(ValueError):
             self.join()
@@ -252,15 +250,15 @@ class OpsShardWorkflow(unittest.TestCase):
         self.admission = json.loads(admitted.stdout)
         self.assertEqual(self.admission["admission_rule"], "signed-default-branch")
         self.assertEqual(self.admission["common_inputs"],
-                         self.consumer.shared_inputs(self.source, security_source))
+                         self.consumer.support.shared_inputs(self.source, security_source))
         ran = self.run_role("reference")
         self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
         wrong = copy.deepcopy(self.admission)
         wrong["common_inputs"]["uv.lock"] = "c" * 40
         del wrong["admission_sha256"]
-        self.consumer.seal(wrong, "admission_sha256")
+        self.consumer.support.seal(wrong, "admission_sha256")
         with self.assertRaisesRegex(ValueError, "shared inputs differ from the signed commit"):
-            self.call(self.consumer.check_source, wrong, self.source, self.board)
+            self.call(self.consumer.cli.check_source, wrong, self.source, self.board)
 
     def test_miniapp_successor_reaches_expand_cli_reference_and_resealed_refusals(self):
         miniapp_path = "telegram-bot/yue/miniapp/package-lock.json"
@@ -289,16 +287,16 @@ class OpsShardWorkflow(unittest.TestCase):
         admitted = subprocess.run(command, env=self.env, capture_output=True, text=True)
         self.assertEqual(admitted.returncode, 0, admitted.stdout + admitted.stderr)
         self.admission = json.loads(admitted.stdout)
-        after = self.consumer.tree_inputs(self.source, after_source)
+        after = self.consumer.support.tree_inputs(self.source, after_source)
         self.assertEqual(self.admission["common_inputs"][miniapp_path], after[miniapp_path][1])
         ran = self.run_role("reference")
         self.assertEqual(ran.returncode, 0, ran.stdout + ran.stderr)
         wrong = copy.deepcopy(self.admission)
         wrong["common_inputs"][miniapp_path] = "0" * 40
         del wrong["admission_sha256"]
-        self.consumer.seal(wrong, "admission_sha256")
+        self.consumer.support.seal(wrong, "admission_sha256")
         with self.assertRaisesRegex(ValueError, "shared inputs differ from the signed commit"):
-            self.call(self.consumer.check_source, wrong, self.source, self.board)
+            self.call(self.consumer.cli.check_source, wrong, self.source, self.board)
 
     def test_reviewed_lock_admits_a_reasoned_new_skip(self):
         self.reviewed_lock_transition()
@@ -340,14 +338,14 @@ class OpsShardWorkflow(unittest.TestCase):
                     row["ref"] = revision
                 if change == "symlink":
                     with self.assertRaisesRegex(ValueError, "symlink shared test input"):
-                        self.call(self.consumer.expand, self.targets, self.source,
+                        self.call(self.consumer.cli.expand, self.targets, self.source,
                                   self.board_sha, "ubuntu-24.04", 4, 4)
                 else:
-                    admitted = self.call(self.consumer.expand, self.targets, self.source,
+                    admitted = self.call(self.consumer.cli.expand, self.targets, self.source,
                                          self.board_sha, "ubuntu-24.04", 4, 4)
                     self.assertEqual(admitted["admission_rule"], "signed-default-branch")
                     self.assertEqual(admitted["common_inputs"],
-                                     self.consumer.shared_inputs(self.source, revision))
+                                     self.consumer.support.shared_inputs(self.source, revision))
 
     def reviewed_python_transition(self):
         """Keep real dependency blobs in both sides of the Git fixture history."""
@@ -361,7 +359,7 @@ class OpsShardWorkflow(unittest.TestCase):
         before = self.reviewed_lock_transition()
         policy = self.policy / "ops-pytest-skip-baseline.json"
         baseline = json.loads(policy.read_text())
-        old_files = self.consumer.tree_inputs(self.source, before)
+        old_files = self.consumer.support.tree_inputs(self.source, before)
         for name in paths:
             (self.source / name).write_text("# reviewed dependency fixture\n")
         self.fixture.git(self.source, "add", *paths)
@@ -369,24 +367,24 @@ class OpsShardWorkflow(unittest.TestCase):
         after = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
         for row in self.targets["matrix"] + self.targets["validation_matrix"]:
             row["ref"] = after
-        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+        self.admission = self.call(self.consumer.cli.expand, self.targets, self.source,
                                    self.board_sha, "ubuntu-24.04", 4, 4)
         self.assertEqual(self.admission["common_inputs"],
-                         self.consumer.shared_inputs(self.source, after))
+                         self.consumer.support.shared_inputs(self.source, after))
 
     def test_reviewed_python_inputs_reach_actual_native_and_join(self):
         self.reviewed_python_transition()
         joined = self.full_bundle()
         self.assertFalse(joined["skip_admission"]["skips_are_passes"])
-        self.call(self.consumer.envelope, self.admission)
+        self.call(self.consumer.reporting.envelope, self.admission)
         for path in ("pyproject.toml", "uv.lock", "telegram-bot/yue/requirements.txt"):
             with self.subTest(path=path), self.assertRaisesRegex(
                     ValueError, "shared inputs differ from the signed commit"):
                 wrong = copy.deepcopy(self.admission)
                 wrong["common_inputs"][path] = "e" * 40
                 del wrong["admission_sha256"]
-                self.consumer.seal(wrong, "admission_sha256")
-                self.call(self.consumer.check_source, wrong, self.source, self.board)
+                self.consumer.support.seal(wrong, "admission_sha256")
+                self.call(self.consumer.cli.check_source, wrong, self.source, self.board)
         (self.artifacts / (self.prefix + "native") / "native.json").unlink()
         with self.assertRaises(ValueError):
             self.join()
@@ -407,9 +405,9 @@ class OpsShardWorkflow(unittest.TestCase):
         if role == "native":
             output = runner / "ops-shard-evidence"
             with patch.dict(os.environ, env, clear=True):
-                self.consumer.native_start(self.admission, self.source, self.board, output)
+                self.consumer.cli.native_start(self.admission, self.source, self.board, output)
             actual = native_consumer.execute_fixture_native(
-                runner / "native-fixture", output, self.consumer.NATIVE_TARGETS)
+                runner / "native-fixture", output, self.consumer.config.NATIVE_TARGETS)
             self.assertTrue(all(r.returncode == 0 for r, _ in actual),
                             "\n".join(r.stdout + r.stderr for r, _ in actual))
         _, script = yaml_consumer.step("Record complete Ops native and source gates"
@@ -448,13 +446,13 @@ class OpsShardWorkflow(unittest.TestCase):
         oracle = self.run_role("reference")
         self.assertEqual(oracle.returncode, 0, oracle.stdout + oracle.stderr)
         single = json.loads((self.artifacts / (self.prefix + "reference") / "joined.json").read_text())
-        joined = self.consumer.join_reference_collections(parts)
+        joined = self.consumer.collection.join_reference_collections(parts)
         self.assertGreater(len(joined["nodeids"]), 0)
         self.assertEqual(set(joined["nodeids"]), set(single["nodeids"]))
         self.assertEqual(len(joined["nodeids"]), len(set(joined["nodeids"])))
         self.assertEqual(len(joined["nodeids"]), len(single["nodeids"]))
         self.assertEqual(joined["collection_skips"], single["collection_skips"])
-        self.assertNotIn("reference", self.consumer.role_order(self.admission["ops_plan"]))
+        self.assertNotIn("reference", self.consumer.support.role_order(self.admission["ops_plan"]))
 
     def test_split_reference_refuses_a_missing_part_or_a_different_context(self):
         assignments = self.admission["ops_plan"]["assignments"]
@@ -475,11 +473,11 @@ class OpsShardWorkflow(unittest.TestCase):
         payload["execution_context"] = {"platform": "mutated", "uid": -1}
         payload_path.write_text(json.dumps(payload) + "\n")
         with self.assertRaisesRegex(ValueError, "reference part execution context differs"):
-            self.consumer.materialize_split_reference(
+            self.consumer.cli.materialize_split_reference(
                 self.artifacts, self.prefix, assignments, self.base / "mutated-reference")
 
     def join(self, result="success", expected=None):
-        return self.call(self.consumer.join, self.admission, self.artifacts, result,
+        return self.call(self.consumer.cli.join, self.admission, self.artifacts, result,
                          expected or self.admission["admission_sha256"], self.source)
 
     def test_subprocess_imports_from_bot_cwd_in_reference_ordinary_and_serial(self):
@@ -524,7 +522,7 @@ class OpsShardWorkflow(unittest.TestCase):
         revision = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
         for row in self.targets["matrix"] + self.targets["validation_matrix"]:
             row["ref"] = revision
-        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+        self.admission = self.call(self.consumer.cli.expand, self.targets, self.source,
                                    self.board_sha, "ubuntu-24.04", 4, 4)
         # Ambient import paths must not leak into the reviewed child path.
         poison = self.base / "ambient"
@@ -559,7 +557,7 @@ class OpsShardWorkflow(unittest.TestCase):
         directory = self.artifacts / (self.prefix + "native")
         (directory / "native.json").unlink()
         with self.assertRaisesRegex(ValueError, "changed during execution"):
-            self.call(self.consumer.native_terminal, self.admission, self.source, self.board, directory)
+            self.call(self.consumer.cli.native_terminal, self.admission, self.source, self.board, directory)
         self.assertFalse((directory / "native.json").exists())
 
     def test_actual_precollection_rejection_is_retained_without_a_test_terminal(self):
@@ -610,17 +608,17 @@ class OpsShardWorkflow(unittest.TestCase):
         admission.write_text(json.dumps(self.admission))
         output = self.base / "rejected"
         args = Namespace(command="run", output=output, role="reference", admission=admission)
-        self.call(self.consumer.retain_rejection, args, ValueError("private failure sentinel"))
+        self.call(self.consumer.support.retain_rejection, args, ValueError("private failure sentinel"))
         original = (output / "rejected.json").read_bytes()
         self.assertNotIn(b"private failure sentinel", original)
         with self.assertRaises(FileExistsError):
-            self.call(self.consumer.retain_rejection, args, ValueError("again"))
+            self.call(self.consumer.support.retain_rejection, args, ValueError("again"))
         self.assertEqual((output / "rejected.json").read_bytes(), original)
         link = self.base / "linked-output"
         link.symlink_to(output, target_is_directory=True)
         args.output = link / "child"
         with self.assertRaisesRegex(ValueError, "unsafe"):
-            self.call(self.consumer.retain_rejection, args, ValueError("failure"))
+            self.call(self.consumer.support.retain_rejection, args, ValueError("failure"))
         self.assertFalse((output / "child").exists())
 
     def test_actual_yaml_source_entry_and_join_keep_complete_corpus(self):
@@ -716,13 +714,13 @@ class OpsShardWorkflow(unittest.TestCase):
                           if "tests/test_a.py" in item["modules"])
         directory = root / "parts" / assignment["id"]
         marked = assignment | {"collect_only": True}
-        self.consumer.inspect_session(directory, self.admission["ops_plan"], marked)
+        self.consumer.collection.inspect_session(directory, self.admission["ops_plan"], marked)
         path = directory / "selection.json"
         receipt = json.loads(path.read_text())
         receipt["pytest_argv"][0] += ".wrong-interpreter"
         path.write_text(json.dumps(receipt))
         with self.assertRaisesRegex(ValueError, "wrong Python executable"):
-            self.consumer.inspect_session(directory, self.admission["ops_plan"], marked)
+            self.consumer.collection.inspect_session(directory, self.admission["ops_plan"], marked)
 
     def test_actual_failure_is_not_retried_as_legacy(self):
         assignment = next(a for a in self.admission["ops_plan"]["assignments"]
@@ -765,7 +763,7 @@ class OpsShardWorkflow(unittest.TestCase):
         revision = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
         for row in self.targets["matrix"] + self.targets["validation_matrix"]:
             row["ref"] = revision
-        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+        self.admission = self.call(self.consumer.cli.expand, self.targets, self.source,
                                    self.board_sha, "ubuntu-24.04", 4, 4)
         result = self.full_bundle()
         self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
@@ -778,32 +776,32 @@ class OpsShardWorkflow(unittest.TestCase):
             revision = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
             for row in self.targets["matrix"] + self.targets["validation_matrix"]:
                 row["ref"] = revision
-            admitted = self.call(self.consumer.expand, self.targets, self.source,
+            admitted = self.call(self.consumer.cli.expand, self.targets, self.source,
                                   self.board_sha, "ubuntu-24.04", 4, 4)
             self.assertEqual(admitted["admission_rule"], "signed-default-branch")
             self.assertEqual(admitted["common_inputs"],
-                             self.consumer.shared_inputs(self.source, revision))
+                             self.consumer.support.shared_inputs(self.source, revision))
 
     def reviewed_ssh_skip_transition(self, *, original_source=False):
         """Run real skips, then pin the isolated policy to exactly two successors."""
         actual = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
-        for nodeid in sorted(self.consumer.SSH_SKIP_CASES):
+        for nodeid in sorted(self.consumer.config.SSH_SKIP_CASES):
             module, case = nodeid.split("::")
             reason = actual["cases"][nodeid]["reason"].removeprefix("Skipped: ")
             (self.source / module).write_text(
                 "import os,pytest\n"
                 f"@pytest.mark.skip(reason=os.environ.get('SSH_REVIEWED_REASON',{reason!r}))\n"
                 f"def {case}(): pass\n")
-        paths = sorted(n.split("::")[0] for n in self.consumer.SSH_SKIP_CASES)
+        paths = sorted(n.split("::")[0] for n in self.consumer.config.SSH_SKIP_CASES)
         self.fixture.git(self.source, "add", *paths)
         self.fixture.commit(self.source)
         before = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
-        files = self.consumer.tree_inputs(self.source, before)
-        modules = sorted(p for p in files if self.consumer.safe_module(p))
+        files = self.consumer.support.tree_inputs(self.source, before)
+        modules = sorted(p for p in files if self.consumer.support.safe_module(p))
         self.fixture.env["GITHUB_SHA"] = self.env["GITHUB_SHA"]
         directory, executed = self.fixture.run_session({"id": "ordinary-000", "modules": modules})
         self.assertEqual(executed.returncode, 0, executed.stdout + executed.stderr)
-        baseline = self.consumer.generate_skip_baseline(
+        baseline = self.consumer.skip_baseline.generate_skip_baseline(
             self.source, before, directory / "events.jsonl", directory / "pytest.xml",
             directory / "events.jsonl", before, "fixture original execution")
         for name in paths:
@@ -812,26 +810,26 @@ class OpsShardWorkflow(unittest.TestCase):
         self.fixture.git(self.source, "add", *paths)
         self.fixture.commit(self.source)
         after = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
-        successors = self.consumer.tree_inputs(self.source, after)
+        successors = self.consumer.support.tree_inputs(self.source, after)
         record = {
             "schema": 1,
-            "prior_baseline_sha256": self.consumer.sha(
+            "prior_baseline_sha256": self.consumer.support.sha(
                 (json.dumps(baseline, indent=2, ensure_ascii=False) + "\n").encode()),
             "source_before": before, "source_after": after, "qualified_source": after,
             "independent_review_sha256": "1" * 64, "source_freeze_sha256": "2" * 64,
             "qualification_receipt_sha256": "3" * 64, "composition_review_sha256": "4" * 64,
             "cases": {n: {"before_blob": files[n.split("::")[0]][1],
                            "after_blob": successors[n.split("::")[0]][1], "mode": "100644"}
-                      for n in sorted(self.consumer.SSH_SKIP_CASES)},
+                      for n in sorted(self.consumer.config.SSH_SKIP_CASES)},
         }
         baseline["reviewed_ssh_skip_module_transition"] = record
         policy = self.policy / "ops-pytest-skip-baseline.json"
         policy.write_text(json.dumps(baseline, indent=2, ensure_ascii=False) + "\n")
         # Bind the actual copied CLI to this fixture's exact reviewed record.
         # Production has no environment override or mutable admission allowlist.
-        consumer = self.policy / "scripts/pytest-shards.py"
-        original_pin = self.consumer.SSH_SKIP_TRANSITION_SHA256
-        fixture_pin = self.consumer.sha(self.consumer.encoded(record))
+        consumer = self.policy / "scripts/pytest_shards/config.py"
+        original_pin = self.consumer.config.SSH_SKIP_TRANSITION_SHA256
+        fixture_pin = self.consumer.support.sha(self.consumer.support.encoded(record))
         original_stat = consumer.stat()
         original_bytes = consumer.read_bytes()
         py_compile.compile(str(consumer), doraise=True,
@@ -843,19 +841,16 @@ class OpsShardWorkflow(unittest.TestCase):
         os.utime(consumer, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
         self.assertEqual((consumer.stat().st_mtime_ns, consumer.stat().st_size),
                          (original_stat.st_mtime_ns, original_stat.st_size))
-        # Deliberately reproduce the public failure: a valid timestamp/size pyc
-        # still contains the old pin, even though the owned source bytes changed.
-        stale_spec = importlib.util.spec_from_file_location("stale_ssh_skip_consumer", consumer)
+        # A timestamp/size pyc still contains the old pin after the source bytes change.
+        stale_spec = importlib.util.spec_from_file_location("stale_ssh_skip_config", consumer)
         stale = importlib.util.module_from_spec(stale_spec)
         stale_spec.loader.exec_module(stale)
         self.assertEqual(stale.SSH_SKIP_TRANSITION_SHA256, original_pin)
-        spec = importlib.util.spec_from_file_location("actual_ssh_skip_consumer", consumer)
-        self.consumer = importlib.util.module_from_spec(spec)
-        # Preserve module metadata while executing this mutable fixture's exact
-        # written source, which is also the source used by the real CLI below.
-        exec(compile(consumer.read_bytes(), str(consumer), "exec"), self.consumer.__dict__)
-        self.assertEqual(self.consumer.SSH_SKIP_TRANSITION_SHA256, fixture_pin)
-        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json", "scripts/pytest-shards.py")
+        # Execute the written config into the package the checker already imported.
+        exec(compile(consumer.read_bytes(), str(consumer), "exec"), self.consumer.config.__dict__)
+        self.assertEqual(self.consumer.config.SSH_SKIP_TRANSITION_SHA256, fixture_pin)
+        self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json",
+                         "scripts/pytest_shards/config.py")
         self.fixture.commit(self.policy)
         self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
         revision = before if original_source else after
@@ -863,7 +858,7 @@ class OpsShardWorkflow(unittest.TestCase):
             self.fixture.git(self.source, "reset", "--hard", before)
         for row in self.targets["matrix"] + self.targets["validation_matrix"]:
             row["ref"] = revision
-        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+        self.admission = self.call(self.consumer.cli.expand, self.targets, self.source,
                                    self.board_sha, "ubuntu-24.04", 4, 4)
         return baseline
 
@@ -875,7 +870,7 @@ class OpsShardWorkflow(unittest.TestCase):
         self.assertEqual(result["skip_admission"]["disposition_counts"]["SAME_RUN_NATIVE_REQUIRED"], 0)
         rows = {r["nodeid"]: r for session in result["ordinary"]["shards"]
                 for r in session["nonpassing_outcomes"]}
-        for nodeid in self.consumer.SSH_SKIP_CASES:
+        for nodeid in self.consumer.config.SSH_SKIP_CASES:
             self.assertEqual(rows[nodeid]["outcome"], "skipped")
             self.assertEqual(rows[nodeid]["reason"], baseline["cases"][nodeid]["reason"])
         # Replacing a valid review digest cannot reuse an already admitted run.
@@ -887,7 +882,7 @@ class OpsShardWorkflow(unittest.TestCase):
             changed = copy.deepcopy(baseline)
             changed["reviewed_ssh_skip_module_transition"][field] = "f" * 64
             mutations.append((field, changed))
-        for nodeid in sorted(self.consumer.SSH_SKIP_CASES):
+        for nodeid in sorted(self.consumer.config.SSH_SKIP_CASES):
             changed = copy.deepcopy(baseline)
             changed["reviewed_ssh_skip_module_transition"]["cases"][nodeid]["after_blob"] = "f" * 40
             mutations.append((nodeid, changed))
@@ -898,10 +893,10 @@ class OpsShardWorkflow(unittest.TestCase):
                 self.join()
         policy.write_bytes(original)
         # A second, unreviewed module revision is not covered by the transition.
-        module = sorted(self.consumer.SSH_SKIP_CASES)[0].split("::")[0]
+        module = sorted(self.consumer.config.SSH_SKIP_CASES)[0].split("::")[0]
         wrong = copy.deepcopy(self.admission)
         wrong["skip_module_blobs"][module] = "e" * 40
-        accepted = self.consumer.admit_skips(wrong, result["ordinary"], result["native_and_source_gates"])
+        accepted = self.consumer.skip_bindings.admit_skips(wrong, result["ordinary"], result["native_and_source_gates"])
         self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
         self.assertFalse(accepted["skips_are_passes"])
         self.assertTrue(any(nodeid.startswith(module + "::") for nodeid in accepted["reported_skips"]))
@@ -930,7 +925,7 @@ class OpsShardWorkflow(unittest.TestCase):
         self.assertEqual(result["status"], "VALIDATION_MATRIX_COMPLETE")
         self.assertFalse(result["skip_admission"]["skips_are_passes"])
         self.assertTrue(any(nodeid in result["skip_admission"]["reported_skips"]
-                            for nodeid in self.consumer.SSH_SKIP_CASES))
+                            for nodeid in self.consumer.config.SSH_SKIP_CASES))
 
     def test_actual_plan_yaml_expands_all_targets_before_collection(self):
         other = [{"repo": "onesyue/yueboard", "ref": "b" * 40, "validation": "yueboard"},
@@ -955,7 +950,7 @@ class OpsShardWorkflow(unittest.TestCase):
         value = json.loads((runner / "ops-admission.json").read_text())
         self.assertEqual(value["max_parallel"], 2)
         ops_roles = [m["ops_role"] for m in value["validation_matrix"] if m.get("ops_role")]
-        self.assertEqual(ops_roles, self.consumer.role_order(value["ops_plan"]))
+        self.assertEqual(ops_roles, self.consumer.support.role_order(value["ops_plan"]))
         self.assertNotIn("reference", ops_roles)
         self.assertEqual(
             {role[len("reference-"):] for role in ops_roles if role.startswith("reference-")},
@@ -988,42 +983,42 @@ class OpsShardWorkflow(unittest.TestCase):
         value = json.loads((runner / "ops-admission.json").read_text())
         self.assertNotIn("ordinary_weights", value["ops_plan"])
         self.assertEqual(value["ordinary_weights"], weights)
-        self.consumer.validate_plan(value["ops_plan"])
+        self.consumer.sharding.validate_plan(value["ops_plan"])
         self.assertEqual(value["ops_plan"]["assignments"][0]["modules"], [ordinary[-1]])
-        ignored = self.call(self.consumer.plan, self.source, value["ops_plan"]["context"], 4, TAIL)
-        self.consumer.detach_ordinary_weights(ignored)
+        ignored = self.call(self.consumer.sharding.plan, self.source, value["ops_plan"]["context"], 4, TAIL)
+        self.consumer.timing.detach_ordinary_weights(ignored)
         self.assertEqual(ignored["assignments"][0]["modules"], [ordinary[0]])
         self.assertNotEqual(ignored["assignments"], value["ops_plan"]["assignments"])
 
     def test_matrix_selection_capacity_and_upfront_manual_compatibility(self):
         for count in (0, -1):
             with self.subTest(count=count), self.assertRaises(ValueError):
-                self.call(self.consumer.expand, self.targets, self.source, self.board_sha,
+                self.call(self.consumer.cli.expand, self.targets, self.source, self.board_sha,
                           "ubuntu-24.04", count, 4)
         for service in ("yueops-web", "yue-bot", "checkin-api"):
             targets = copy.deepcopy(self.targets)
             targets["matrix"] = [m for m in targets["matrix"] if m["service"] == service]
-            value = self.call(self.consumer.expand, targets, self.source, self.board_sha,
+            value = self.call(self.consumer.cli.expand, targets, self.source, self.board_sha,
                               "ubuntu-24.04", 1, 4)
             self.assertEqual(value["max_parallel"], 1)
             self.assertEqual(len(value["ops_plan"]["assignments"]), 5)
         # Missing hosted image identity never causes an automatic manual fallback.
         with patch.dict(os.environ, self.env | {"ImageVersion": ""}, clear=True):
             with self.assertRaises(ValueError):
-                self.consumer.expand(self.targets, self.source, self.board_sha,
+                self.consumer.cli.expand(self.targets, self.source, self.board_sha,
                                      "ubuntu-24.04", 1, 4)
-            manual = self.consumer.expand(self.targets, None, self.board_sha,
+            manual = self.consumer.cli.expand(self.targets, None, self.board_sha,
                                           "yue-local-release", 4, 4)
         self.assertEqual(manual["mode"], "legacy")
         self.assertEqual(manual["max_parallel"], 1)
         self.assertEqual([m["ops_role"] for m in manual["validation_matrix"]], ["legacy"])
         self.assertIsNone(manual["ops_plan"])
-        result = self.call(self.consumer.join, manual, self.artifacts, "success",
+        result = self.call(self.consumer.cli.join, manual, self.artifacts, "success",
                            manual["admission_sha256"])
         self.assertFalse(result["sharded_corpus_evaluated"])
         for state in ("failure", "cancelled", "skipped", "", "timed_out"):
             with self.subTest(state=state), self.assertRaises(ValueError):
-                self.call(self.consumer.join, manual, self.artifacts, state,
+                self.call(self.consumer.cli.join, manual, self.artifacts, state,
                           manual["admission_sha256"])
 
     def test_no_ops_and_source_only_node_preserve_mandatory_matrix(self):
@@ -1031,31 +1026,31 @@ class OpsShardWorkflow(unittest.TestCase):
             target = {"matrix": [] if source_only else [{"validation": kind}],
                       "validation_matrix": [{"validation": kind, "repo": "onesyue/" + kind,
                                              "ref": "b" * 40}]}
-            value = self.call(self.consumer.expand, target, None, self.board_sha,
+            value = self.call(self.consumer.cli.expand, target, None, self.board_sha,
                               "ubuntu-24.04", 4, 4)
             self.assertEqual(value["mode"], "none")
             self.assertEqual(value["validation_matrix"], target["validation_matrix"])
-            result = self.call(self.consumer.join, value, self.artifacts, "success",
+            result = self.call(self.consumer.cli.join, value, self.artifacts, "success",
                                value["admission_sha256"])
             self.assertFalse(result["sharded_corpus_evaluated"])
             with self.assertRaises(ValueError):
-                self.call(self.consumer.join, value, self.artifacts, "failure",
+                self.call(self.consumer.cli.join, value, self.artifacts, "failure",
                           value["admission_sha256"])
 
     def test_duplicate_or_moving_ops_source_and_wrong_board_are_rejected(self):
         targets = copy.deepcopy(self.targets)
         targets["validation_matrix"] *= 2
         with self.assertRaises(ValueError):
-            self.call(self.consumer.expand, targets, self.source, self.board_sha,
+            self.call(self.consumer.cli.expand, targets, self.source, self.board_sha,
                       "ubuntu-24.04", 4, 4)
         targets = copy.deepcopy(self.targets)
         targets["matrix"][0]["ref"] = "master"
         with self.assertRaises(ValueError):
-            self.call(self.consumer.expand, targets, self.source, self.board_sha,
+            self.call(self.consumer.cli.expand, targets, self.source, self.board_sha,
                       "ubuntu-24.04", 4, 4)
         (self.board / "schema.sql").write_text("-- changed\n")
         with self.assertRaisesRegex(ValueError, "Board"):
-            self.call(self.consumer.native_terminal, self.admission, self.source, self.board,
+            self.call(self.consumer.cli.native_terminal, self.admission, self.source, self.board,
                       self.base / "forbidden-native")
 
     def test_signed_board_identity_replaces_central_pin_without_accepting_unsigned_or_wrong_checkout(self):
@@ -1063,19 +1058,19 @@ class OpsShardWorkflow(unittest.TestCase):
         # pin update cannot silently alter that input or block this execution.
         (self.policy / "native-node-contract.json").write_text(
             json.dumps({"yueboard_contract_pin": "f" * 40}))
-        self.call(self.consumer.check_source, self.admission, self.source, self.board)
+        self.call(self.consumer.cli.check_source, self.admission, self.source, self.board)
         (self.board / "schema.sql").write_text("-- unsigned changed schema\n")
         self.fixture.git(self.board, "add", ".")
         self.fixture.git(self.board, "-c", "user.name=Unsigned Fixture",
                          "-c", "user.email=unsigned@example.invalid",
                          "-c", "commit.gpgsign=false", "commit", "-qm", "unsigned")
         with self.assertRaisesRegex(ValueError, "Board fixture differs"):
-            self.call(self.consumer.check_source, self.admission, self.source, self.board)
+            self.call(self.consumer.cli.check_source, self.admission, self.source, self.board)
         unsigned = self.fixture.git(self.board, "rev-parse", "HEAD").stdout.strip()
-        admitted = self.call(self.consumer.expand, self.targets, self.source, unsigned,
+        admitted = self.call(self.consumer.cli.expand, self.targets, self.source, unsigned,
                              "ubuntu-24.04", 4, 4)
         with self.assertRaises(ValueError):
-            self.call(self.consumer.check_source, admitted, self.source, self.board)
+            self.call(self.consumer.cli.check_source, admitted, self.source, self.board)
 
     def test_missing_native_stale_attempt_and_forged_plan_block_join(self):
         self.full_bundle()
@@ -1089,7 +1084,7 @@ class OpsShardWorkflow(unittest.TestCase):
             self.join(expected="a" * 64)
         with (patch.dict(os.environ, self.env | {"GITHUB_RUN_ATTEMPT": "2"}, clear=True),
               self.assertRaisesRegex(ValueError, "stale")):
-            self.consumer.join(self.admission, self.artifacts, "success",
+            self.consumer.cli.join(self.admission, self.artifacts, "success",
                                self.admission["admission_sha256"])
         native = json.loads((native_path / "native.json").read_text())
         native["status"] = "skipped"
@@ -1137,7 +1132,7 @@ class OpsShardWorkflow(unittest.TestCase):
         self.fixture.git(self.policy, "add", "ops-pytest-skip-baseline.json")
         self.fixture.commit(self.policy)
         self.env["GITHUB_SHA"] = self.fixture.git(self.policy, "rev-parse", "HEAD").stdout.strip()
-        self.admission = self.call(self.consumer.expand, self.targets, self.source,
+        self.admission = self.call(self.consumer.cli.expand, self.targets, self.source,
                                    self.board_sha, "ubuntu-24.04", 4, 4)
         result = self.full_bundle({"REVIEWED_REASON": "reviewed tool absent"})
         self.assertFalse(result["skip_admission"]["skips_are_passes"])
@@ -1148,7 +1143,7 @@ class OpsShardWorkflow(unittest.TestCase):
                    if r["nodeid"] == nodeid)
         self.assertEqual(row["when"], "setup")
         row["when"] = "call"
-        accepted = self.consumer.admit_skips(self.admission, ordinary, result["native_and_source_gates"])
+        accepted = self.consumer.skip_bindings.admit_skips(self.admission, ordinary, result["native_and_source_gates"])
         self.assertEqual(accepted["status"], "NO_NEW_SKIPS")
         self.assertFalse(accepted["skips_are_passes"])
         self.assertIn(nodeid, accepted["reported_skips"])
@@ -1190,12 +1185,12 @@ class OpsShardWorkflow(unittest.TestCase):
                     else: row["binding"][mode + "_revision"] = "e" * 40
                     path.write_text(json.dumps(row))
                 with self.assertRaises(ValueError):
-                    self.call(self.consumer.native_terminal, self.admission,
+                    self.call(self.consumer.cli.native_terminal, self.admission,
                               self.source, self.board, directory)
                 self.assertFalse((directory / "native.json").exists())
         # Conditional ACL closure is identity-based, never a six-count substitute.
         baseline = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text())
-        baseline, _ = self.consumer.reviewed_estate_input_transition(baseline)
+        baseline, _ = self.consumer.transitions_estate.reviewed_estate_input_transition(baseline)
         compatible = baseline["reviewed_hosted"]["cases"]
         rows = [{"nodeid": n, "outcome": r["outcome"], **r["variants"][0]}
                 for n, r in compatible.items() if r["disposition"] == "SAME_RUN_NATIVE_REQUIRED"]
@@ -1208,14 +1203,14 @@ class OpsShardWorkflow(unittest.TestCase):
         ordinary["shards"] = [ordinary["reference"] | {"assignment_id": "ordinary-000",
                                                        "nonpassing_outcomes": rows}]
         native = result["native_and_source_gates"]
-        with patch.object(self.consumer, "skip_baseline", return_value=baseline):
-            accepted = self.consumer.admit_skips(value, ordinary, native)
+        with patch.object(self.consumer.skip_bindings, "skip_baseline", return_value=baseline):
+            accepted = self.consumer.skip_bindings.admit_skips(value, ordinary, native)
             self.assertEqual(accepted["disposition_counts"]["SAME_RUN_NATIVE_REQUIRED"], 6)
             self.assertFalse(accepted["skips_are_passes"])
             forged = copy.deepcopy(native)
             forged["obligations"][target]["passed"][0] = target + "::wrong_same_count"
             with self.assertRaisesRegex(ValueError, "missing exact same-run native"):
-                self.consumer.admit_skips(value, ordinary, forged)
+                self.consumer.skip_bindings.admit_skips(value, ordinary, forged)
 
     def test_missing_junit_and_reference_collection_disagreement_refuse(self):
         import xml.etree.ElementTree as ET

@@ -16,9 +16,19 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("ordinary_shard_weights", ROOT / "scripts/pytest-shards.py")
-SHARDS = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(SHARDS)
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards.sharding import assign_ordinary
+from pytest_shards.timing import (
+    align_weights,
+    artifact_names_from_listing,
+    choose_weight_artifact,
+    fetch_previous_ordinary_weights,
+    previous_ordinary_weights_command,
+    publish_ordinary_weights,
+    select_weight_artifact,
+    weights_from_events,
+)
+
 WORKFLOW = (ROOT / ".github/workflows/build.yml").read_text()
 
 
@@ -45,7 +55,7 @@ class OrdinaryShardWeightTest(unittest.TestCase):
     def test_stride_matches_module_index_and_weights_split_the_slow_group(self):
         modules = [f"tests/test_{index:02d}.py" for index in range(16)]
         count = 4
-        stride = SHARDS.assign_ordinary(modules, count, None)
+        stride = assign_ordinary(modules, count, None)
         self.assertEqual(
             [item["modules"] for item in stride],
             [modules[index::count] for index in range(count)])
@@ -53,7 +63,7 @@ class OrdinaryShardWeightTest(unittest.TestCase):
         weights = {module: 1000 for module in modules}
         for rank, module in enumerate(sorted(slow)):
             weights[module] = 50000 - rank
-        balanced = SHARDS.assign_ordinary(modules, count, weights)
+        balanced = assign_ordinary(modules, count, weights)
         for item in balanced:
             self.assertEqual(len(slow.intersection(item["modules"])), 1)
         self.assertEqual(len(slow.intersection(stride[0]["modules"])), 4)
@@ -65,20 +75,20 @@ class OrdinaryShardWeightTest(unittest.TestCase):
 
     def test_unmeasured_module_uses_the_lower_median_not_zero(self):
         modules = ["tests/test_a.py", "tests/test_b.py", "tests/test_c.py", "tests/test_d.py"]
-        aligned = SHARDS.align_weights(modules + ["tests/test_e.py"], {
+        aligned = align_weights(modules + ["tests/test_e.py"], {
             "tests/test_a.py": 10, "tests/test_b.py": 20, "tests/test_c.py": 30,
             "tests/test_d.py": 40, "tests/test_unknown.py": 999,
         })
         self.assertEqual(aligned["tests/test_e.py"], 20)
         self.assertNotIn("tests/test_unknown.py", aligned)
-        missing = SHARDS.align_weights(
+        missing = align_weights(
             modules, {"tests/test_a.py": 10, "tests/test_b.py": 40, "tests/test_c.py": 0})
         self.assertEqual(missing["tests/test_c.py"], 10)
         self.assertEqual(missing["tests/test_d.py"], 10)
-        self.assertIsNone(SHARDS.align_weights(modules, {}))
-        self.assertIsNone(SHARDS.align_weights(modules, {"tests/test_a.py": 1.5}))
-        self.assertIsNone(SHARDS.align_weights(modules, {"tests/test_a.py": True}))
-        self.assertIsNone(SHARDS.align_weights(modules, ["tests/test_a.py"]))
+        self.assertIsNone(align_weights(modules, {}))
+        self.assertIsNone(align_weights(modules, {"tests/test_a.py": 1.5}))
+        self.assertIsNone(align_weights(modules, {"tests/test_a.py": True}))
+        self.assertIsNone(align_weights(modules, ["tests/test_a.py"]))
 
     def test_events_sum_case_phases_and_skip_corrupt_subtests_and_reference_copies(self):
         ordinary = {"tests/test_a.py", "tests/test_b.py"}
@@ -91,10 +101,10 @@ class OrdinaryShardWeightTest(unittest.TestCase):
             case("tests/test_other.py::test_three", 30),
             "{not json",
         ])
-        self.assertEqual(SHARDS.weights_from_events(events, ordinary), {
+        self.assertEqual(weights_from_events(events, ordinary), {
             "tests/test_a.py": 750, "tests/test_b.py": 1,
         })
-        self.assertEqual(SHARDS.weights_from_events(events.parent / "missing.jsonl", ordinary), {})
+        self.assertEqual(weights_from_events(events.parent / "missing.jsonl", ordinary), {})
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self._write(root / "ops-shard-9-1-ordinary-000" / "events.jsonl", [
@@ -107,7 +117,7 @@ class OrdinaryShardWeightTest(unittest.TestCase):
                 case("tests/test_b.py::test_two", 40),
             ])
             output = root / "ordinary-weights.json"
-            wrote = SHARDS.publish_ordinary_weights({
+            wrote = publish_ordinary_weights({
                 "ops_plan": {"assignments": [
                     {"id": "ordinary-000", "modules": ["tests/test_a.py", "tests/test_b.py"]},
                     {"id": "serial", "modules": ["tests/test_c.py"]},
@@ -115,36 +125,36 @@ class OrdinaryShardWeightTest(unittest.TestCase):
             }, root, output)
             self.assertTrue(wrote)
             self.assertEqual(json.loads(output.read_text()), {"tests/test_a.py": 1500})
-            self.assertFalse(SHARDS.publish_ordinary_weights(
+            self.assertFalse(publish_ordinary_weights(
                 {"ops_plan": {"assignments": []}}, root / "missing", output))
 
     def test_artifact_choice_prefers_weights_and_a_fetch_failure_keeps_the_stride(self):
-        self.assertEqual(SHARDS.choose_weight_artifact([
+        self.assertEqual(choose_weight_artifact([
             "yueops-pytest-timing-11-1", "ops-ordinary-weights-10-1", "unrelated",
         ]), "ops-ordinary-weights-10-1")
         self.assertEqual(
-            SHARDS.choose_weight_artifact(["yueops-pytest-timing-11-1"]),
+            choose_weight_artifact(["yueops-pytest-timing-11-1"]),
             "yueops-pytest-timing-11-1")
-        self.assertIsNone(SHARDS.choose_weight_artifact(["unrelated"]))
-        self.assertEqual(SHARDS.select_weight_artifact([
+        self.assertIsNone(choose_weight_artifact(["unrelated"]))
+        self.assertEqual(select_weight_artifact([
             (11, ["yueops-pytest-timing-11-1"]),
             (10, ["ops-ordinary-weights-10-1"]),
         ]), (10, "ops-ordinary-weights-10-1"))
-        self.assertEqual(SHARDS.artifact_names_from_listing(
+        self.assertEqual(artifact_names_from_listing(
             "ops-ordinary-weights-11-1\ttrue\nyueops-pytest-timing-11-1\tfalse\n"),
             ["yueops-pytest-timing-11-1"])
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             output = root / "weights.json"
             timing = root / "timing"
-            status, reason = SHARDS.fetch_previous_ordinary_weights(
+            status, reason = fetch_previous_ordinary_weights(
                 output, timing, runner=lambda _argv: (1, "", ""))
             self.assertEqual((status, reason), ("stride", "run list failed"))
             self.assertFalse(output.exists())
             captured = io.StringIO()
             args = type("Args", (), {"output": output, "timing_output": timing})()
             with contextlib.redirect_stderr(captured):
-                code = SHARDS.previous_ordinary_weights_command(
+                code = previous_ordinary_weights_command(
                     args, runner=lambda _argv: (1, "", ""))
             self.assertEqual(code, 0)
             self.assertIn("ORDINARY_WEIGHTS: stride (run list failed)", captured.getvalue())
@@ -162,7 +172,7 @@ class OrdinaryShardWeightTest(unittest.TestCase):
                     return 0, "", ""
                 return 1, "", ""
 
-            status, _reason = SHARDS.fetch_previous_ordinary_weights(output, timing, runner=runner)
+            status, _reason = fetch_previous_ordinary_weights(output, timing, runner=runner)
             self.assertEqual(status, "timed-events")
             self.assertTrue((timing / "events.jsonl").is_file())
             self.assertFalse(output.exists())
@@ -182,7 +192,7 @@ class OrdinaryShardWeightTest(unittest.TestCase):
                     return 0, "", ""
                 return 1, "", ""
 
-            status, reason = SHARDS.fetch_previous_ordinary_weights(output, timing, runner=weights_runner)
+            status, reason = fetch_previous_ordinary_weights(output, timing, runner=weights_runner)
             self.assertEqual(status, "stride")
             self.assertEqual(reason, "ordinary weights file unusable")
 

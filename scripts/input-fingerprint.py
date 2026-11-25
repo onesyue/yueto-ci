@@ -48,6 +48,7 @@ import os
 import re
 import subprocess
 import sys
+import types
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -613,6 +614,13 @@ FULL_GATES = ["validate", "validation-evidence"]
 
 
 def _feedback_policy(filename: str):
+    if filename == "pytest-shards.py":
+        # Two attributes only. Callers patch this object; the package is not re-exported.
+        if str(ROOT / "scripts") not in sys.path:
+            sys.path.insert(0, str(ROOT / "scripts"))
+        from pytest_shards.config import NATIVE_TARGETS
+        from pytest_shards.support import safe_module
+        return types.SimpleNamespace(safe_module=safe_module, NATIVE_TARGETS=NATIVE_TARGETS)
     spec = importlib.util.spec_from_file_location(filename, ROOT / "scripts" / filename)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

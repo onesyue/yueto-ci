@@ -7,15 +7,16 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    "signed_branch_admission", ROOT / "scripts" / "pytest-shards.py")
-POLICY = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(POLICY)
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards.skip_bindings import reviewed_first_native_successor
+from pytest_shards.support import admit_signed_default_branch, source_evidence
+
 
 
 class SignedDefaultBranchAdmission(unittest.TestCase):
@@ -45,7 +46,7 @@ class SignedDefaultBranchAdmission(unittest.TestCase):
         (cls.policy / "yueops-owner.gpg").write_bytes(key)
         (cls.policy / "yueops-owner-signers.json").write_text(json.dumps({
             "schema": 1, "signer": cls.fingerprint, "primary": cls.fingerprint,
-            "keyring_sha256": POLICY.source_evidence.digest(key),
+            "keyring_sha256": source_evidence.digest(key),
         }))
 
     def setUp(self):
@@ -70,7 +71,7 @@ class SignedDefaultBranchAdmission(unittest.TestCase):
         return self.git("rev-parse", "HEAD")
 
     def admit(self, revision):
-        POLICY.admit_signed_default_branch(self.repo, revision, self.policy)
+        admit_signed_default_branch(self.repo, revision, self.policy)
 
     def test_helper_and_conftest_on_a_signed_master_commit_are_admitted(self):
         tests = self.repo / "tests"
@@ -114,6 +115,6 @@ class SignedDefaultBranchAdmission(unittest.TestCase):
         value = {"admission_rule": "signed-default-branch", "source_revision": "a" * 40,
                  "skip_module_blobs": {}}
         self.assertIs(
-            POLICY.reviewed_first_native_successor(
+            reviewed_first_native_successor(
                 baseline, value, {"obligations": {}}),
             baseline)

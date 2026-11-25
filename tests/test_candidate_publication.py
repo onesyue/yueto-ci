@@ -12,6 +12,9 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards.support import workflow_identity
+
 RECEIPT = ROOT / "scripts/candidate-receipt.py"
 WORKFLOW = ROOT / ".github/workflows/build.yml"
 
@@ -309,10 +312,6 @@ class CandidateArtifactTest(unittest.TestCase):
 
 class HandoffAttemptIdentityTest(unittest.TestCase):
     def test_join_identity_uses_the_attempt_that_produced_the_admission(self):
-        spec = importlib.util.spec_from_file_location(
-            "handoff_pytest_shards", ROOT / "scripts/pytest-shards.py")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
         head = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
         keys = ("GITHUB_SHA", "GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT",
                 "GITHUB_REPOSITORY", "YUETO_HANDOFF_ATTEMPT")
@@ -323,17 +322,17 @@ class HandoffAttemptIdentityTest(unittest.TestCase):
         os.environ["GITHUB_REPOSITORY"] = "onesyue/yueto-ci"
         os.environ.pop("YUETO_HANDOFF_ATTEMPT", None)
         try:
-            self.assertEqual(module.workflow_identity()["run_attempt"], "2")
+            self.assertEqual(workflow_identity()["run_attempt"], "2")
             os.environ["YUETO_HANDOFF_ATTEMPT"] = "2"
-            self.assertEqual(module.workflow_identity()["run_attempt"], "2")
+            self.assertEqual(workflow_identity()["run_attempt"], "2")
             os.environ["YUETO_HANDOFF_ATTEMPT"] = "1"
-            self.assertEqual(module.workflow_identity()["run_attempt"], "1")
+            self.assertEqual(workflow_identity()["run_attempt"], "1")
             os.environ["YUETO_HANDOFF_ATTEMPT"] = "3"
             with self.assertRaisesRegex(ValueError, "newer"):
-                module.workflow_identity()
+                workflow_identity()
             os.environ["YUETO_HANDOFF_ATTEMPT"] = "0"
             with self.assertRaisesRegex(ValueError, "invalid handoff"):
-                module.workflow_identity()
+                workflow_identity()
         finally:
             for key, value in previous.items():
                 if value is None:

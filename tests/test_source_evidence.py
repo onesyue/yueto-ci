@@ -1,5 +1,4 @@
 """Real temporary signing keys exercise Git object admission, never owner keys."""
-import importlib.util
 import json
 import os
 import shutil
@@ -12,12 +11,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from pytest_shards.cli import expand, export_source_baseline, join
+from pytest_shards.config import NATIVE_TARGETS
+from pytest_shards.reporting import envelope
+from pytest_shards.skip_baseline import skip_baseline
+from pytest_shards.support import seal, source_evidence, verify_source_evidence
 import source_evidence as E
 
-SPEC = importlib.util.spec_from_file_location("source_admission_policy",
-                                             E.ROOT / "scripts/pytest-shards.py")
-P = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(P)
 
 
 class SourceEvidence(unittest.TestCase):
@@ -85,6 +85,9 @@ class SourceEvidence(unittest.TestCase):
             (public / "scripts").mkdir()
             for name in ("pytest-shards.py", "source_evidence.py", "brand_literals.py"):
                 shutil.copyfile(E.ROOT / "scripts" / name, public / "scripts" / name)
+            shutil.copytree(
+                E.ROOT / "scripts" / "pytest_shards", public / "scripts" / "pytest_shards",
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
             shutil.copytree(self.policy, public / "policy")
 
             def command(head):
@@ -212,12 +215,12 @@ class SourceEvidence(unittest.TestCase):
         bound = self.load()
         value = {"source_revision": self.head, "source_evidence": bound}
         with self.assertRaisesRegex(ValueError, "source checkout required"):
-            P.verify_source_evidence(value, None)
-        with patch.object(P.source_evidence, "ROOT", self.policy.parent):
-            P.verify_source_evidence(value, self.repo)
+            verify_source_evidence(value, None)
+        with patch.object(source_evidence, "ROOT", self.policy.parent):
+            verify_source_evidence(value, self.repo)
             value["source_evidence"] = bound | {"inputs_sha256": "0" * 64}
             with self.assertRaisesRegex(ValueError, "differs from original"):
-                P.verify_source_evidence(value, self.repo)
+                verify_source_evidence(value, self.repo)
 
     def test_real_signed_source_planner_envelope_and_missing_roles(self):
         (self.repo / "tests").mkdir()
@@ -241,27 +244,27 @@ class SourceEvidence(unittest.TestCase):
                "GITHUB_REPOSITORY": "onesyue/yueto-ci", "RUNNER_OS": "Linux", "RUNNER_ARCH": "X64",
                "ImageVersion": "fixture"}
         ops = {"repo": "onesyue/yueops", "ref": head, "validation": "yueops"}
-        with patch.dict(os.environ, env), patch.object(P.source_evidence, "ROOT", self.policy.parent):
-            value = P.expand({"validation_matrix": [ops], "matrix": [ops]}, self.repo, "b" * 40,
+        with patch.dict(os.environ, env), patch.object(source_evidence, "ROOT", self.policy.parent):
+            value = expand({"validation_matrix": [ops], "matrix": [ops]}, self.repo, "b" * 40,
                              "ubuntu-24.04", 2, 1)
-            self.assertEqual(P.envelope(value), value)
+            self.assertEqual(envelope(value), value)
             # Re-seal both layers: rejection must enforce the public approval
             # scope, not merely notice a stale digest after candidate mutation.
             for field, wrong in (("runner_arch", "ARM64"), ("runner_os", "Windows")):
                 changed = json.loads(json.dumps(value))
                 changed["ops_plan"]["context"][field] = wrong
                 changed["ops_plan"].pop("plan_sha256")
-                P.seal(changed["ops_plan"], "plan_sha256")
+                seal(changed["ops_plan"], "plan_sha256")
                 changed.pop("admission_sha256")
-                P.seal(changed, "admission_sha256")
+                seal(changed, "admission_sha256")
                 with self.subTest(field=field), self.assertRaisesRegex(
                         ValueError, "runner differs from reviewed hosted scope"):
-                    P.envelope(changed)
-            P.verify_source_evidence(value, self.repo)
+                    envelope(changed)
+            verify_source_evidence(value, self.repo)
             with self.assertRaisesRegex(ValueError, "missing evidence"):
-                P.join(value, self.repo / "absent", "success", value["admission_sha256"], self.repo)
+                join(value, self.repo / "absent", "success", value["admission_sha256"], self.repo)
             with self.assertRaisesRegex(ValueError, "did not succeed"):
-                P.join(value, self.repo / "absent", "skipped", value["admission_sha256"], self.repo)
+                join(value, self.repo / "absent", "skipped", value["admission_sha256"], self.repo)
 
     def skip_fixture(self):
         module = "tests/test_fixture.py"
@@ -322,12 +325,12 @@ class SourceEvidence(unittest.TestCase):
         # fixture; source-owned admission must not invent a broader approval.
         workflow.baseline["reviewed_hosted"] = {
             "schema": 1, "context": workflow.baseline["context"], "cases": {},
-            "runner": P.skip_baseline()["reviewed_hosted"]["runner"],
+            "runner": skip_baseline()["reviewed_hosted"]["runner"],
         }
         (workflow.policy / "ops-pytest-skip-baseline.json").write_text(json.dumps(workflow.baseline))
         workflow.fixture.git(workflow.policy, "add", "ops-pytest-skip-baseline.json")
         workflow.fixture.commit(workflow.policy)
-        migration = workflow.consumer.export_source_baseline(workflow.source, workflow.source_sha)
+        migration = workflow.consumer.cli.export_source_baseline(workflow.source, workflow.source_sha)
         self.assertTrue(migration["baseline"]["cases"])
         self.assertFalse(migration["unmatched"])
         for path, value in ((E.BASELINE, migration["baseline"]), (E.INPUTS, migration["shared_inputs"])):
@@ -354,12 +357,12 @@ class SourceEvidence(unittest.TestCase):
             workflow.policy, "rev-parse", "HEAD").stdout.strip()
         for row in workflow.targets["matrix"] + workflow.targets["validation_matrix"]:
             row["ref"] = workflow.source_sha
-        workflow.admission = workflow.call(workflow.consumer.expand, workflow.targets,
+        workflow.admission = workflow.call(workflow.consumer.cli.expand, workflow.targets,
                                             workflow.source, workflow.board_sha, "ubuntu-24.04", 4, 4)
         self.assertIn("source_evidence", workflow.admission)
 
         def join(result="success", expected=None):
-            return workflow.call(workflow.consumer.join, workflow.admission, workflow.artifacts, result,
+            return workflow.call(workflow.consumer.cli.join, workflow.admission, workflow.artifacts, result,
                                  expected or workflow.admission["admission_sha256"], workflow.source)
 
         with patch.object(workflow, "join", side_effect=join):
@@ -375,15 +378,15 @@ class SourceEvidence(unittest.TestCase):
         # only the private checkout's tree/ancestry is a discovery fixture.
         modules = {"tests/test_node_systemd_pilot_20261018.py",
                    "tests/test_schema_contract_receipt_20261020.py"}
-        approved = {n: case for n, case in P.skip_baseline()["cases"].items()
+        approved = {n: case for n, case in skip_baseline()["cases"].items()
                     if n.split("::", 1)[0] in modules}
         files = {n.split("::", 1)[0]: {"mode": "100644", "kind": "blob",
                                       "git_blob": case["module_blob"]}
                  for n, case in approved.items()}
-        with patch.object(P.source_evidence, "tree_inputs", return_value=files):
-            exported = P.export_source_baseline(self.repo, "a" * 40)
+        with patch.object(source_evidence, "tree_inputs", return_value=files):
+            exported = export_source_baseline(self.repo, "a" * 40)
         baseline = exported["baseline"]
-        expected_count = sum(P.NATIVE_TARGETS[module][0] for module in modules)
+        expected_count = sum(NATIVE_TARGETS[module][0] for module in modules)
         self.assertEqual(sum(n.split("::", 1)[0] in modules for n in baseline["cases"]), expected_count)
         outcomes, obligations = [], {}
         for nodeid, variants in baseline["cases"].items():

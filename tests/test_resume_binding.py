@@ -115,7 +115,7 @@ class ResumeBinding(unittest.TestCase):
         (self.workflow.policy / 'ops-pytest-skip-baseline.json').write_text(json.dumps(self.workflow.baseline))
         self.workflow.fixture.git(self.workflow.policy, 'add', 'ops-pytest-skip-baseline.json')
         self.workflow.fixture.commit(self.workflow.policy)
-        self.exported = self.workflow.consumer.export_source_baseline(self.source, self.old_source)['baseline']
+        self.exported = self.workflow.consumer.cli.export_source_baseline(self.source, self.old_source)['baseline']
         self.evidence = B.load('source_evidence')
         self.evidence.ROOT = self.owner.policy.parent
         original_load = B.load
@@ -345,9 +345,9 @@ else:
         w.env.update(GITHUB_SHA=self.policy, GITHUB_RUN_ID='202', GITHUB_RUN_ATTEMPT='1')
         for row in w.targets['matrix'] + w.targets['validation_matrix']:
             row['ref'] = self.new_source
-        w.admission = w.call(w.consumer.expand, w.targets, w.source, w.board_sha, 'ubuntu-24.04', 4, 4)
+        w.admission = w.call(w.consumer.cli.expand, w.targets, w.source, w.board_sha, 'ubuntu-24.04', 4, 4)
         def join(result='success', expected=None):
-            return w.call(w.consumer.join, w.admission, w.artifacts, result,
+            return w.call(w.consumer.cli.join, w.admission, w.artifacts, result,
                           expected or w.admission['admission_sha256'], w.source)
         with patch.object(w, 'join', side_effect=join):
             verdict = w.full_bundle()
@@ -355,7 +355,7 @@ else:
         request = B.inspect(self.args, self.api)
         with patch.dict(os.environ, GITHUB_SHA=self.policy, GITHUB_RUN_ID='202', GITHUB_RUN_ATTEMPT='1'):
             binding = B.prepare(self.args, self.api)
-        roles = w.consumer.role_order(w.admission['ops_plan'])
+        roles = w.consumer.support.role_order(w.admission['ops_plan'])
         names = ['plan', 'validation-evidence', *[f'validate-yueops-{r}' for r in roles], *sorted(B.OPS)]
         self.api.run('202', '1', self.policy, names, conclusion='success')
         self.api.add_artifact('202', self.policy, 'resume-binding-202-1', {'resume-binding.json': binding})
