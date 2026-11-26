@@ -119,7 +119,7 @@ def assert_desired_unchanged(snapshot):
                 (['yueops'], '', promoted + '\n' + explicit, None),
                 (['yueboard'], '', promoted, promoted + '|' + promoted),
                 (['yueboard', 'yueops'], explicit, promoted, explicit + '|' + promoted),
-                (['yueboard'], explicit, '', None),
+                (['yueboard'], explicit, '', explicit + '|'),
                 (['yuelink'], '', '', '|'),
             ]:
                 with self.subTest(targets=targets, override=override, available=available):

@@ -328,7 +328,21 @@ jobs:
           target_plan="$(bash scripts/plan-build-targets.sh "$SERVICE" "$REF_OVERRIDE")"
           promoted_board_ref=""
           if jq -e 'any(.validation_matrix[]; .validation == "yueboard")' <<<"$target_plan" >/dev/null; then
-            promoted_board_ref="$(python3 scripts/validate-native-node-contract.py resolve-yueboard-ref)"
+            # Prefer an explicit 40-hex contract (dispatch or validation_only
+            # candidate). ghcr.io/onesyue/yueboard:latest is best-effort here:
+            # a missing or unreadable :latest must not fail a source-only
+            # premerge that already named the board revision.
+            if promoted_board_ref="$(python3 scripts/validate-native-node-contract.py resolve-yueboard-ref)"; then
+              :
+            elif [ -n "${YUEBOARD_CONTRACT_REF:-}" ] && [[ "$YUEBOARD_CONTRACT_REF" =~ ^[0-9a-f]{40}$ ]]; then
+              promoted_board_ref=""
+            elif [ "${VALIDATION_ONLY:-false}" = true ] && [ "$SERVICE" = yueboard ] &&
+                 [[ "$REF_OVERRIDE" =~ ^[0-9a-f]{40}$ ]]; then
+              promoted_board_ref="$REF_OVERRIDE"
+            else
+              echo "cannot resolve promoted YueBoard revision" >&2
+              exit 1
+            fi
           fi
           yueboard_contract_ref="$promoted_board_ref"
           if [ -n "$YUEBOARD_CONTRACT_REF" ] || {
