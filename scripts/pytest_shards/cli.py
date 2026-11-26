@@ -203,8 +203,12 @@ def execute(value, source, board, role, output, site):
                         "PYTHONPATH": shard_pythonpath(source, site),
                         "YUEOPS_PYTEST_SERIAL": "1"}
     quarantine = source / "tests/quarantine.json"
-    if quarantine.is_symlink() or quarantine.exists() or os.environ.get("YUETO_SHARED_SELECTION", "[]") != "[]":
+    policy_quarantine = ROOT / "ci" / "quarantine.yaml"
+    if (quarantine.is_symlink() or quarantine.exists()
+            or os.environ.get("YUETO_SHARED_SELECTION", "[]") != "[]"
+            or policy_quarantine.is_file()):
         env.update(PYTEST_PLUGINS="ops_quarantine", YUETO_OPS_TEST_SOURCE=str(source.resolve()),
+                   YUETO_CI_QUARANTINE=str(policy_quarantine),
                    PYTHONPATH=str(ROOT / "scripts") + os.pathsep + env["PYTHONPATH"])
     (output / "pytest-start-unix-ns.txt").write_text(str(time.time_ns()))
     result = subprocess.run(

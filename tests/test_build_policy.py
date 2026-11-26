@@ -753,7 +753,11 @@ class BuildPolicyTest(unittest.TestCase):
         )
         cls.readme = README.read_text(encoding="utf-8")
         cls.native_contract = json.loads(NATIVE_CONTRACT.read_text(encoding="utf-8"))
-        cls.native_validator = NATIVE_VALIDATOR.read_text(encoding="utf-8")
+        package = NATIVE_VALIDATOR.parent / "native_node_contract"
+        cls.native_validator = "\n".join(
+            [NATIVE_VALIDATOR.read_text(encoding="utf-8")]
+            + [path.read_text(encoding="utf-8") for path in sorted(package.glob("*.py"))]
+        )
         cls.target_planner = TARGET_PLANNER.read_text(encoding="utf-8")
 
     def test_all_actions_are_pinned_to_full_commit_sha(self) -> None:
@@ -1122,12 +1126,15 @@ class BuildPolicyTest(unittest.TestCase):
                 "board-visual-capture.yml",
                 "build.yml",
                 "ci-toolchain.yml",
+                "client-core-matrix.yml",
                 "hy2-probe.yml",
                 "image-rescan.yml",
                 "policy-ci.yml",
                 "quality-ratchet.yml",
                 "scorecard.yml",
+                "weekly-scan-deadman.yml",
                 "weekly-vuln-sbom.yml",
+                "yueops-master-validate.yml",
             ],
         )
 
@@ -1175,6 +1182,19 @@ class BuildPolicyTest(unittest.TestCase):
         for forbidden in ("packages: write", "id-token: write", "contents: write", "build-push-action", "docker push", "imagetools create", "gh release"):
             self.assertNotIn(forbidden, probe)
 
+        matrix = (WORKFLOW_DIR / "client-core-matrix.yml").read_text(encoding="utf-8")
+        self.assertIn("permissions:\n  contents: read\n", matrix)
+        for forbidden in (
+            "packages: write",
+            "id-token: write",
+            "contents: write",
+            "build-push-action",
+            "cosign",
+            "promote",
+            "pull_request",
+        ):
+            self.assertNotIn(forbidden, matrix)
+
         capture = (WORKFLOW_DIR / "board-visual-capture.yml").read_text()
         capture_code = "\n".join(
             line for line in capture.splitlines() if not line.lstrip().startswith("#")
@@ -1204,6 +1224,35 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("cosign", deadman_code)
         self.assertNotIn("promote=true", deadman_code)
         self.assertIn("permissions:\n  contents: read", deadman)
+
+        # Nightly / hourly official validation_only against yueops master is
+        # a consumer of the existing build.yml path, never a second delivery
+        # path: it may dispatch and watch, but it must not build, sign, or
+        # promote images itself.
+        master_validate = (WORKFLOW_DIR / "yueops-master-validate.yml").read_text(
+            encoding="utf-8"
+        )
+        master_validate_code = "\n".join(
+            line
+            for line in master_validate.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        self.assertIn("permissions:\n  contents: read", master_validate)
+        self.assertIn("  actions: write", master_validate)
+        self.assertIn("  packages: read", master_validate)
+        self.assertIn("validation_only=true", master_validate_code)
+        self.assertIn("promote=false", master_validate_code)
+        for forbidden in (
+            "build-push-action",
+            "imagetools create",
+            "cosign",
+            "promote=true",
+            "packages: write",
+            "id-token: write",
+            "repository_dispatch",
+        ):
+            with self.subTest(master_validate_forbidden=forbidden):
+                self.assertNotIn(forbidden, master_validate_code)
 
         self.assertIn(
             "Authorize and promote verified default-branch digest",
@@ -1740,8 +1789,11 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("npm install --global squawk", self.workflow)
         self.assertIn('board-validation-output.py', self.workflow)
         frontend = (ROOT / 'scripts/board-validation.sh').read_text()
-        self.assertIn('corepack install --global "$web_pm"', frontend)
-        self.assertIn('[ "$web_pm" = "$admin_pm" ]', frontend)
+        self.assertIn('FRONTEND_LAYOUT=workspace', frontend)
+        self.assertIn('corepack install --global "$root_pm"', frontend)
+        self.assertNotIn('layout=legacy', frontend)
+        self.assertNotIn('corepack install --global "$web_pm"', frontend)
+        self.assertNotIn('[ "$web_pm" = "$admin_pm" ]', frontend)
 
     def test_yueboard_central_release_matches_source_quality_contract(self) -> None:
         """Private Actions being frozen must not weaken the release proof."""
@@ -1817,12 +1869,16 @@ class BuildPolicyTest(unittest.TestCase):
         frontend_wiring = self.workflow[frontend_start:design_start]
         self.assertIn('board-validation-output.py', frontend_wiring)
         frontend = executor.rsplit('case "$role:$frontend_phase" in', 1)[1]
-        # Two layouts (W9.1): legacy per-app locks and the root pnpm
-        # workspace; each verifies both embedded dists.
-        self.assertEqual(frontend.count("node scripts/verify-dist.mjs dist"), 4)
-        self.assertIn("if [ -f pnpm-workspace.yaml ]; then", frontend)
+        # Workspace layout only: one root install, both embedded dists.
+        self.assertIn("FRONTEND_LAYOUT=workspace", executor)
+        self.assertNotIn("layout=legacy", executor)
+        self.assertNotIn("pnpm --dir web install", executor)
+        self.assertNotIn("pnpm --dir web-admin", executor)
+        self.assertEqual(frontend.count("node scripts/verify-dist.mjs dist"), 2)
+        self.assertIn("require_workspace", frontend)
         self.assertIn("pnpm install --frozen-lockfile --ignore-scripts\n", frontend)
-        self.assertIn('emit_frontend_result "layout=$layout"', frontend)
+        self.assertIn('emit_frontend_result "layout=$FRONTEND_LAYOUT"', frontend)
+        self.assertIn("pnpm --filter yueboard-web --filter yueboard-web-admin run build", frontend)
         workspace_only = "steps.board_frontend.outputs.layout == 'workspace'"
         for stage, phase, gate in (
             ("Validate YueBoard frontend lint", "frontends:lint)", "pnpm run lint"),

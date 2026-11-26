@@ -83,6 +83,9 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
                 elif name == "hy2-probe.yml" and job == "build":
                     allowed = {"hysteria", "quic-go"}
                     self.assertEqual(set(repos.group(1).split(",")), allowed)
+                elif name == "client-core-matrix.yml":
+                    allowed = {"yue-node", "mihomo"}
+                    self.assertEqual(set(repos.group(1).split(",")), allowed)
                 elif name == "build.yml" and job == "release-pr":
                     self.assertEqual(set(repos.group(1).split(",")), {"yueto"})
                     permissions = re.findall(r"permission-([a-z-]+): (\w+)", step)
@@ -133,7 +136,7 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         build = (WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8")
         build_job = build[build.index("\n  build:\n") :]
         self.assertIn("      packages: write\n", build_job)
-        for name in ("image-rescan.yml",):
+        for name in ("image-rescan.yml", "yueops-master-validate.yml"):
             text = (WORKFLOW_DIR / name).read_text(encoding="utf-8")
             with self.subTest(workflow=name):
                 top = text.split("\npermissions:\n", 1)[1].split("\n\n", 1)[0]
@@ -157,16 +160,23 @@ class DependencyLifecycleScriptPolicyTest(unittest.TestCase):
     INSTALL = re.compile(r"\b(?:npm(?: --prefix \S+)? ci|pnpm(?: --dir \S+)? install)\b[^\n]*")
 
     def test_every_locked_install_skips_lifecycle_scripts(self) -> None:
-        found = 0
+        found = []
         sources = _workflows() | {"board-validation.sh": (ROOT / "scripts/board-validation.sh").read_text()}
         self.assertIn('board-validation-output.py', sources['build.yml'])
         for name, text in sources.items():
             for match in self.INSTALL.finditer(_code(text)):
-                found += 1
-                with self.subTest(workflow=name, command=match.group(0)):
-                    self.assertIn("--ignore-scripts", match.group(0))
-        # yueops miniapp + frontend, yueboard web + web-admin.
-        self.assertGreaterEqual(found, 4)
+                command = match.group(0)
+                found.append((name, command))
+                with self.subTest(workflow=name, command=command):
+                    self.assertIn("--ignore-scripts", command)
+        ignored = [item for item in found if "--ignore-scripts" in item[1]]
+        # One workspace install in board-validation.sh and one in board-visual-capture.yml.
+        self.assertEqual(len(ignored), len(found))
+        self.assertGreaterEqual(len(found), 2)
+        self.assertIn(
+            "pnpm install --frozen-lockfile --ignore-scripts",
+            sources["board-validation.sh"],
+        )
 
     def test_yueboard_npm_audit_gates_are_source_owned_and_fail_closed(self) -> None:
         workflow = (WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8")

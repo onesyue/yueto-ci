@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Execute hosted Board phases from one reusable command body.
 set -euo pipefail
+# The only legal YueBoard frontend layout. Prepare emits this exact label.
+FRONTEND_LAYOUT=workspace
 unset CDPATH
 fail() { echo "board-validation: $*" >&2; exit 2; }
 [ "$#" -ge 4 ] || fail 'usage: board-validation.sh ROLE SOURCE POLICY TEMP'
@@ -69,6 +71,7 @@ case "$role" in
     ;;
 esac
 emit_frontend_result() { (set -o noclobber; printf '%s\n' "$1" > "$result"); }
+require_workspace() { [ -f pnpm-workspace.yaml ] || fail 'pnpm-workspace.yaml is required'; }
 cd -- "$source_dir"
 case "$role" in
   quality)
@@ -156,42 +159,25 @@ case "$role" in
   frontends|components|e2e)
     case "$role:$frontend_phase" in
       *:prepare)
+        require_workspace
         corepack enable
-        if [ -f pnpm-workspace.yaml ]; then
-          layout=workspace
-          root_pm=$(node -p "require('./package.json').packageManager || ''")
-          [ -n "$root_pm" ] || {
-            echo "::error::YueBoard workspace layout without a root packageManager"
-            exit 1
-          }
-          corepack install --global "$root_pm"
-          # --ignore-scripts also skips esbuild's allow-listed postinstall; its
-          # per-platform @esbuild/* optional package already ships the binary.
-          pnpm install --frozen-lockfile --ignore-scripts
-          pnpm --filter yueboard-web --filter yueboard-web-admin run build
-          (cd web && node scripts/verify-dist.mjs dist)
-          (cd web-admin && node scripts/verify-dist.mjs dist)
-        else
-          layout=legacy
-          web_pm=$(node -p "require('./web/package.json').packageManager")
-          admin_pm=$(node -p "require('./web-admin/package.json').packageManager")
-          [ "$web_pm" = "$admin_pm" ] || {
-            echo "YueBoard frontend package-manager versions diverged" >&2
-            exit 1
-          }
-          corepack install --global "$web_pm"
-          pnpm --dir web install --frozen-lockfile --ignore-scripts
-          pnpm --dir web build
-          (cd web && node scripts/verify-dist.mjs dist)
-          pnpm --dir web-admin install --frozen-lockfile --ignore-scripts
-          pnpm --dir web-admin build
-          (cd web-admin && node scripts/verify-dist.mjs dist)
-        fi
-        emit_frontend_result "layout=$layout"
-        echo "YueBoard frontend layout: $layout"
+        root_pm=$(node -p "require('./package.json').packageManager || ''")
+        [ -n "$root_pm" ] || {
+          echo "::error::YueBoard workspace layout without a root packageManager"
+          exit 1
+        }
+        corepack install --global "$root_pm"
+        # --ignore-scripts also skips esbuild's allow-listed postinstall; its
+        # per-platform @esbuild/* optional package already ships the binary.
+        pnpm install --frozen-lockfile --ignore-scripts
+        pnpm --filter yueboard-web --filter yueboard-web-admin run build
+        (cd web && node scripts/verify-dist.mjs dist)
+        (cd web-admin && node scripts/verify-dist.mjs dist)
+        emit_frontend_result "layout=$FRONTEND_LAYOUT"
+        echo "YueBoard frontend layout: $FRONTEND_LAYOUT"
         ;;
       frontends:lint)
-        [ -f pnpm-workspace.yaml ] || fail 'workspace-only phase requires workspace layout'
+        require_workspace
         for script in lint fmt:check; do
           node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" || {
             echo "::error::YueBoard workspace layout is missing the root '$script' script"
@@ -204,7 +190,7 @@ case "$role" in
         pnpm run fmt:check
         ;;
       components:test)
-        [ -f pnpm-workspace.yaml ] || fail 'workspace-only phase requires workspace layout'
+        require_workspace
         node -e "process.exit(require('./package.json').scripts?.['test:components'] ? 0 : 1)" || {
           echo "::error::YueBoard workspace layout is missing the root 'test:components' script"
           exit 1
@@ -222,7 +208,7 @@ case "$role" in
         pnpm run test:components
         ;;
       e2e:test)
-        [ -f pnpm-workspace.yaml ] || fail 'workspace-only phase requires workspace layout'
+        require_workspace
         "$YUE_CI_PYTHON" "$policy/scripts/pg_validation_address.py" --database-adapter "$adapter" --phase e2e
         [ -f test/e2e/playwright.config.ts ] || {
           echo "::error::YueBoard workspace layout is missing the test/e2e suite"
@@ -251,20 +237,12 @@ case "$role" in
         pnpm --dir test/e2e test --update-snapshots=none
         ;;
       frontends:design)
+        require_workspace
         node scripts/ci/verify-responsive.mjs
         node scripts/ci/verify-design-tokens.mjs
         node scripts/ci/verify-page-consistency.mjs
         [ -f test/a11y/a11y-smoke.mjs ] || fail 'source-owned accessibility smoke gate is missing'
         [ "${YUEBOARD_A11Y_SKIP:-0}" != 1 ] || fail 'accessibility smoke cannot be skipped in validation'
-        if [ ! -f pnpm-workspace.yaml ]; then
-          a11y_pm=$(node -p "require('./test/a11y/package.json').packageManager || ''")
-          web_pm=$(node -p "require('./web/package.json').packageManager || ''")
-          [ -n "$web_pm" ] || fail 'built frontend package-manager is missing'
-          if [ -n "$a11y_pm" ] && [ "$a11y_pm" != "$web_pm" ]; then
-            fail 'a11y package-manager differs from built frontends'
-          fi
-          pnpm --dir test/a11y install --frozen-lockfile --ignore-scripts
-        fi
         # Use the source lock's playwright-core browser, as in the original gate.
         deps=()
         if [ "$(id -u)" -eq 0 ] || sudo -n true 2>/dev/null; then

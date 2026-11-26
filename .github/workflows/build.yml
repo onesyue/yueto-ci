@@ -892,12 +892,19 @@ jobs:
           fi
           for tool in gcc psql corepack; do command -v "$tool" >/dev/null; done
 
+      - name: Resolve sibling lock
+        id: siblings
+        if: matrix.validation == 'yueboard' || matrix.validation == 'yueops'
+        run: |
+          set -euo pipefail
+          "${YUE_CI_PYTHON:?}" .ci-policy/scripts/update-siblings-lock.py --github-output --lock .ci-policy/ci/siblings.lock >> "$GITHUB_OUTPUT"
+
       - name: Checkout the pinned yueto root
         if: matrix.validation == 'yueboard' || matrix.validation == 'yueops'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueto
-          ref: master
+          ref: ${{ steps.siblings.outputs.yueto }}
           token: ${{ steps.source_token.outputs.token }}
           path: .ci-origin-authority
           persist-credentials: false
@@ -2824,6 +2831,14 @@ jobs:
           test -f "$receipt"
           bash .ci-policy/scripts/verify-promoted-supply-chain.sh "$receipt"
 
+      - name: Resolve sibling lock
+        id: siblings
+        env:
+          YUE_CI_PYTHON: /usr/local/bin/python3
+        run: |
+          set -euo pipefail
+          "${YUE_CI_PYTHON:?}" .ci-policy/scripts/update-siblings-lock.py --github-output --lock .ci-policy/ci/siblings.lock >> "$GITHUB_OUTPUT"
+
       - name: Mint release pull request token (GitHub App)
         id: release_token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
@@ -2839,7 +2854,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueto
-          ref: master
+          ref: ${{ steps.siblings.outputs.yueto }}
           path: yueto
           token: ${{ steps.release_token.outputs.token }}
           fetch-depth: 1

@@ -197,7 +197,9 @@ def test_workflow_checks_the_producer_without_bumping_action_pins() -> None:
     assert "deadman_producer.py --check --repo .ci-yueops" in text
     assert text.count(CHECKOUT_PIN) == 2
     assert APP_PIN in text
-    assert "ref: master" in text
+    assert "ref: ${{ steps.siblings.outputs.yueops }}" in text
+    assert "update-siblings-lock.py --github-output --lock .ci-receiver/ci/siblings.lock" in text
+    assert "ref: master" not in text
 
 
 def load_tests(
