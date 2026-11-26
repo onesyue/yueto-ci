@@ -346,7 +346,10 @@ class ReleasePrTest(unittest.TestCase):
     def test_node_image_opens_without_auto_merge(self):
         self.assert_open("yue-node", expect_merge=False)
 
-    def assert_open(self, service, expect_merge):
+    def test_refused_auto_merge_leaves_the_pr_open(self):
+        self.assert_open("yue-bot", expect_merge=True, merge_rc=1)
+
+    def assert_open(self, service, expect_merge, merge_rc=0):
         with tempfile.TemporaryDirectory() as tmp:
             root = self.seed_ledger(Path(tmp), service)
             calls = []
@@ -361,7 +364,7 @@ class ReleasePrTest(unittest.TestCase):
                         url = f"https://github.com/{release_pr.YUETO_REPO}/pull/42\n"
                         return subprocess.CompletedProcess(args, 0, url, "")
                     if args[1:3] == ["pr", "merge"]:
-                        return subprocess.CompletedProcess(args, 0, "", "")
+                        return subprocess.CompletedProcess(args, merge_rc, "", "")
                     raise AssertionError(args)
                 if "ls-remote" in args:
                     calls.append(args)

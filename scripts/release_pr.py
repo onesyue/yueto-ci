@@ -574,7 +574,7 @@ def open_release(root: Path, receipt: dict[str, str]) -> str:
         raise ReleasePrError("more than one open release pull request")
     if len(existing) == 1:
         if auto_merge(service):
-            _run(pr_merge_args(existing[0]["number"]))
+            _request_auto_merge(existing[0]["number"])
         return existing[0]["url"]
     yaml_path = release_yaml_path(root, service)
     bundle_path = Path(str(yaml_path) + ".bundle")
@@ -593,8 +593,21 @@ def open_release(root: Path, receipt: dict[str, str]) -> str:
     url = _create_pr(branch, service, receipt["revision"], generation)
     if auto_merge(service):
         number = url.rsplit("/", 1)[-1]
-        _run(pr_merge_args(number))
+        _request_auto_merge(number)
     return url
+
+
+def _request_auto_merge(number: str) -> None:
+    """Ask for auto-merge; a refusal leaves the signed record PR open.
+
+    onesyue/yueto has allow_auto_merge=false (no protected-branch plan), so
+    GitHub refuses --auto. The record is already pushed and its PR open; the
+    release itself must not fail because the ledger PR waits for a lander.
+    """
+    result = _run(pr_merge_args(number), check=False, capture=True, text=True)
+    if result.returncode != 0:
+        print(f"::warning::auto-merge refused for release PR #{number}; left open for the lander",
+              file=sys.stderr)
 
 
 def cmd_record(args: argparse.Namespace) -> int:
