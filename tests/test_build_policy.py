@@ -753,7 +753,11 @@ class BuildPolicyTest(unittest.TestCase):
         )
         cls.readme = README.read_text(encoding="utf-8")
         cls.native_contract = json.loads(NATIVE_CONTRACT.read_text(encoding="utf-8"))
-        cls.native_validator = NATIVE_VALIDATOR.read_text(encoding="utf-8")
+        package = NATIVE_VALIDATOR.parent / "native_node_contract"
+        cls.native_validator = "\n".join(
+            [NATIVE_VALIDATOR.read_text(encoding="utf-8")]
+            + [path.read_text(encoding="utf-8") for path in sorted(package.glob("*.py"))]
+        )
         cls.target_planner = TARGET_PLANNER.read_text(encoding="utf-8")
 
     def test_all_actions_are_pinned_to_full_commit_sha(self) -> None:
