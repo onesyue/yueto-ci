@@ -79,10 +79,8 @@ with rows.open('a') as f:
  f.write(json.dumps({'key': key, 'cwd': os.getcwd(), 'db': bool(os.getenv('YUEBOARD_ADMIN_DATABASE_URL')),
                      'reset': bool(os.getenv('YUEBOARD_E2E_ALLOW_RESET')), 'output': bool(os.getenv('GITHUB_OUTPUT'))}) + '\\n')
 if str(index) == os.getenv('FAIL_INDEX') or key == os.getenv('FAIL_COMMAND'): sys.exit(int(os.getenv('FAIL_STATUS', '19')))
-if name == 'node' and args and args[0] == '-p' and 'test/a11y' in args[1] and os.getenv('A11Y_NO_PM'):
- print(''); sys.exit(0)
 if name == 'node' and args and args[0] == '-p':
- print('' if os.getenv('MISSING_PM') else ('pnpm@other' if os.getenv('DIVERGED_PM') and 'web-admin' in args[1] else 'pnpm@fixture'))
+ print('' if os.getenv('MISSING_PM') else 'pnpm@fixture')
 if name == 'node' and args and args[0] == '-e' and os.getenv('MISSING_SCRIPT'): sys.exit(1)
 if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
 ''')
@@ -130,26 +128,33 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
         output = self.output.read_text() if self.output.exists() else ''
         return completed, rows, output
 
-    def test_prepare_both_layouts_build_both_apps_and_output(self):
-        for layout in ('workspace', 'legacy'):
-            if layout == 'legacy': (self.source / 'pnpm-workspace.yaml').unlink()
-            for role in ('frontends', 'components', 'e2e'):
-                with self.subTest(layout=layout, role=role):
-                    result, rows, output = self.run_phase(role)
-                    self.assertEqual(result.returncode, 0, result.stderr)
-                    self.assertEqual(output, f'layout={layout}\n')
-                    keys = [row['key'] for row in rows]
-                    self.assertEqual(keys[0], 'corepack enable')
-                    self.assertFalse(any('audit' in key for key in keys))
-                    self.assertEqual(keys.count('node scripts/verify-dist.mjs dist'), 2)
-                    self.assertTrue(all('--frozen-lockfile --ignore-scripts' in key for key in keys if ' install' in key and key.startswith('pnpm')))
-                    if layout == 'workspace':
-                        self.assertIn('pnpm --filter yueboard-web --filter yueboard-web-admin run build', keys)
-                    else:
-                        self.assertIn('pnpm --dir web build', keys)
-                        self.assertIn('pnpm --dir web-admin build', keys)
-                    self.assertTrue(all(not row['db'] and not row['reset'] and not row['output'] for row in rows))
+    def test_prepare_workspace_builds_both_apps_and_output(self):
+        for role in ('frontends', 'components', 'e2e'):
+            with self.subTest(role=role):
+                result, rows, output = self.run_phase(role)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(output, f'layout={OUTPUT.FRONTEND_LAYOUT}\n')
+                keys = [row['key'] for row in rows]
+                self.assertEqual(keys[0], 'corepack enable')
+                self.assertFalse(any('audit' in key for key in keys))
+                self.assertEqual(keys.count('node scripts/verify-dist.mjs dist'), 2)
+                self.assertTrue(all('--frozen-lockfile --ignore-scripts' in key for key in keys if ' install' in key and key.startswith('pnpm')))
+                self.assertIn('pnpm --filter yueboard-web --filter yueboard-web-admin run build', keys)
+                self.assertNotIn('pnpm --dir web build', keys)
+                self.assertNotIn('pnpm --dir web-admin build', keys)
+                self.assertTrue(all(not row['db'] and not row['reset'] and not row['output'] for row in rows))
         self.assertEqual(list(self.temp.iterdir()), [])
+
+    def test_missing_workspace_fails_before_install(self):
+        (self.source / 'pnpm-workspace.yaml').unlink()
+        for role, phase in (('frontends', 'prepare'), ('components', 'prepare'), ('e2e', 'prepare'),
+                            ('frontends', 'lint'), ('frontends', 'design'), ('components', 'test'), ('e2e', 'test')):
+            with self.subTest(role=role, phase=phase):
+                result, rows, output = self.run_phase(role, phase)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(output, '')
+                self.assertEqual(rows, [])
+                self.assertIn('pnpm-workspace.yaml', result.stderr)
 
     def test_all_phase_commands_fail_closed_and_preserve_markers(self):
         for role, phase in [('frontends', 'prepare'), ('frontends', 'lint'), ('frontends', 'design'),
@@ -224,31 +229,11 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse(any(row['key'].startswith('pnpm ') for row in rows))
         (self.source / 'pnpm-workspace.yaml').unlink()
-        result, rows, _ = self.run_phase(DIVERGED_PM='1')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertFalse(any(row['key'].startswith('pnpm ') for row in rows))
-        result, rows, _ = self.run_phase('frontends', 'design')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        keys = [row['key'] for row in rows]
-        self.assertEqual(keys[:3], ['node scripts/ci/verify-responsive.mjs',
-                                    'node scripts/ci/verify-design-tokens.mjs',
-                                    'node scripts/ci/verify-page-consistency.mjs'])
-        self.assertEqual(keys[-1], 'node test/a11y/a11y-smoke.mjs')
-        result, _, _ = self.run_phase('frontends', 'design', A11Y_NO_PM='1')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        install = 'pnpm --dir test/a11y install --frozen-lockfile --ignore-scripts'
-        browser = 'pnpm --dir test/a11y exec playwright-core install chromium'
-        self.assertLess(keys.index(install), keys.index(browser))
-        result, rows, _ = self.run_phase('frontends', 'design', FAIL_COMMAND=install)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertFalse(any('playwright-core' in row['key'] for row in rows))
-        result, rows, _ = self.run_phase('frontends', 'design', MISSING_PM='1')
-        self.assertEqual(result.returncode, 2)
-        self.assertFalse(any('playwright-core' in row['key'] for row in rows))
-        for role, phase in [('frontends', 'lint'), ('components', 'test'), ('e2e', 'test')]:
+        for role, phase in (('frontends', 'prepare'), ('frontends', 'design'), ('frontends', 'lint'),
+                            ('components', 'test'), ('e2e', 'test')):
             result, rows, _ = self.run_phase(role, phase)
             self.assertNotEqual(result.returncode, 0)
-            self.assertEqual(rows, [])
+            self.assertFalse(any('install' in row['key'] or row['key'].startswith('pnpm ') for row in rows))
 
     def test_browser_install_privilege_paths_and_no_snapshot_updates(self):
         for role in ('components', 'e2e'):
@@ -362,14 +347,14 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
     def test_existing_or_foreign_result_is_refused_before_source_execution(self):
         directory = Path(tempfile.mkdtemp(prefix='board-frontend.', dir=self.temp))
         result = directory / 'result'
-        result.write_text('layout=legacy\n')
+        result.write_text('preserved-marker\n')
         args = ['bash', str(EXECUTOR), 'frontends', str(self.source), str(self.policy), str(self.temp),
                 '--frontend-phase', 'prepare', '--result']
         for path in (result, self.root / 'foreign-result'):
             process = subprocess.run([*args, str(path)], env=self.env, capture_output=True, text=True)
             self.assertEqual(process.returncode, 2)
             self.assertFalse(self.log.exists())
-        self.assertEqual(result.read_text(), 'layout=legacy\n')
+        self.assertEqual(result.read_text(), 'preserved-marker\n')
 
     def test_e2e_address_scope_and_exact_ssl_difference(self):
         from unittest.mock import patch
@@ -390,14 +375,17 @@ if os.getenv('FORGE_OUTPUT'): print('layout=evil\\nvisual=bootstrapped')
             with self.subTest(uri=changed), patch.dict(os.environ, clean_env | {'YUEBOARD_E2E_DATABASE_URL': changed}):
                 with self.assertRaises(RuntimeError): PG.check_e2e_environment('loopback')
 
-    def test_legacy_prepare_each_failure_stops(self):
-        (self.source / 'pnpm-workspace.yaml').unlink()
-        good, expected, _ = self.run_phase()
-        self.assertEqual(good.returncode, 0, good.stderr)
-        for index in range(len(expected)):
-            result, rows, _ = self.run_phase(FAIL_INDEX=str(index))
-            self.assertNotEqual(result.returncode, 0)
-            self.assertEqual([r['key'] for r in rows], [r['key'] for r in expected[:index + 1]])
+    def test_frontend_layout_constant_is_workspace_only(self):
+        shell = EXECUTOR.read_text()
+        self.assertIn('\nFRONTEND_LAYOUT=workspace\n', shell)
+        self.assertEqual(OUTPUT.FRONTEND_LAYOUT, 'workspace')
+        role = (ROOT / 'scripts/ci_check_board_role.py').read_text()
+        self.assertIn("FRONTEND_LAYOUT = 'workspace'", role)
+        self.assertNotIn('layout=legacy', shell)
+        self.assertNotIn('layout=legacy', ADAPTER.read_text())
+        self.assertNotIn('layout=legacy', role)
+        self.assertNotIn('pnpm --dir web install', shell)
+        self.assertNotIn('pnpm --dir web-admin', shell)
 
     def test_missing_e2e_suite_fails_before_any_database_command(self):
         (self.source / 'test/e2e/playwright.config.ts').unlink()
