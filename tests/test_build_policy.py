@@ -1430,7 +1430,7 @@ class BuildPolicyTest(unittest.TestCase):
             "Use the runner Docker daemon",
             "Preflight validation dependencies",
             "node-validation-preflight.sh dependencies",
-            "YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token }}",
+            "YUETO_FORK_READ_TOKEN: ${{ secrets.YUETO_CI_PAT }}",
             "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \\\n",
             "            make verify-fork-tags\n",
             "board-validation-preflight.sh dependencies",
@@ -2687,8 +2687,8 @@ class BuildPolicyTest(unittest.TestCase):
         """Root release.yaml stays on the owner key. CI opens a per-service PR.
 
         The workflow still has no git push, no contents API write, and no
-        job-level contents: write. The release-pr app token is the only
-        contents and pull-request write, and it is not the job GITHUB_TOKEN.
+        job-level contents: write. The release-pr job uses secrets.YUETO_CI_PAT
+        to open the per-service PR, not the job GITHUB_TOKEN.
         """
 
         self.assertRegex(self.workflow, r"(?m)^permissions:\n  contents: read\n")
@@ -2720,13 +2720,14 @@ class BuildPolicyTest(unittest.TestCase):
                 "contents: 'write'",
                 'contents: "write"',
             })
-        self.assertEqual(code.count("\n          permission-contents: write\n"), 1)
-        self.assertEqual(code.count("\n          permission-pull-requests: write\n"), 1)
+        self.assertNotIn("permission-contents: write", code)
+        self.assertNotIn("permission-pull-requests: write", code)
+        self.assertNotIn("create-github-app-token", code)
         release_job = code.split("\n  release-pr:\n", 1)[1].split(
             "\n  abort-on-build-failure:\n", 1
         )[0]
-        self.assertIn("permission-contents: write", release_job)
-        self.assertIn("permission-pull-requests: write", release_job)
+        self.assertIn("secrets.YUETO_CI_PAT", release_job)
+        self.assertIn("repository: onesyue/yueto", release_job)
         self.assertNotIn("needs.publish.result", release_job)
         self.assertIn("release.yaml", self.readme)
         self.assertIn("scripts/ship.sh", self.readme)

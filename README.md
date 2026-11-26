@@ -111,21 +111,19 @@ nonfatal. Configuration alone does not establish a pipeline speedup.
 
 | Credential | Purpose and boundary |
 |---|---|
-| `YUETO_CI_APP_CLIENT_ID` + secret `YUETO_CI_APP_PRIVATE_KEY` | Required. Each job mints a one-hour installation token scoped by that step's `repositories` and `permission-*` inputs. Source reads are `contents: read`. Issuance failure aborts the job. |
-| Job `GITHUB_TOKEN` | GHCR login and package API reads. Installation tokens from `actions/create-github-app-token` cannot authenticate to GHCR. The job `permissions` block is the scope (`packages: read` or `packages: write`). |
+| `YUETO_CI_PAT` | Required. Private source reads: checkout and GitHub API access to private sibling repositories. |
+| Job `GITHUB_TOKEN` | GHCR login and package API reads. The job `permissions` block is the scope (`packages: read` or `packages: write`). |
 | `DEADMAN_SSH_KEY_B64` | Dedicated read-only key forced to `command="/bin/cat /var/lib/yue-alert-heartbeat/heartbeat.json",restrict`; never a deployment key. |
 
-Grant `onesyue/yueto-ci` access under each package's **Manage Actions access**:
-Write for push/sign/provenance and at least Read for poll/rescan. App tokens need
-contents:read only on the source repositories each job consumes. The fork-tag
-verification step also reads quic-go; Node validation itself has no credentials
-and uses vendored dependencies with `GOFLAGS=-mod=vendor`. Promotion obtains a
-fresh token because a build may outlast token expiry. Failure reports use workflow summaries and error annotations without
-Issue or PR creation. Poll dispatch uses GITHUB_TOKEN with
-actions:write. Configure the App client id under repository Actions Variables.
+Do not configure a GitHub App or `YUETO_CI_APP_*` credentials for this repository.
+A policy test fails the build if a workflow mints an App installation token or names those credentials.
 
-Delete the retired Actions secret after one green week of app-token runs.
-The secret name is `YUETO_CI_PAT`.
+Grant `onesyue/yueto-ci` access under each package's **Manage Actions access**:
+Write for push/sign/provenance and at least Read for poll/rescan. The fork-tag
+verification step also reads quic-go; Node validation itself has no credentials
+and uses vendored dependencies with `GOFLAGS=-mod=vendor`. Failure reports use
+workflow summaries and error annotations without Issue or PR creation. Poll
+dispatch uses GITHUB_TOKEN with actions:write.
 Source repositories no longer need
 `YUETO_CI_DISPATCH_PAT`. The `repository_dispatch` trigger has been removed;
 builds enter through `workflow_dispatch`, including requests from the poller.
@@ -669,10 +667,10 @@ admission and the final join; it does not replace the run with a smoke test.
 Only one manual local replay runs at a time, independently of PR policy checks.
 
 Preparation uses `--local --prepare-only` to fetch standalone clones and save
-`prepared.json`. A configured GitHub App is required, with Contents:read only
-for yueops/yueboard. The job accepts only its newly minted token and revokes it
-before execution. Missing App configuration, issuance, empty token or revocation
-failure stops the job. Preparation accepts only the minted App token.
+`prepared.json`. `secrets.YUETO_CI_PAT` is required for contents:read on
+yueops/yueboard. The prepare step uses that token only to clone, then deletes
+the temporary credential directory before execution. A missing or empty PAT
+stops the job.
 
 The credential is masked and exists only in the trusted preparation step's
 environment. A temporary askpass script reads that environment; its file has no

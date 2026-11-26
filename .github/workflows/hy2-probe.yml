@@ -42,20 +42,11 @@ jobs:
             *) echo 'Unsupported Hysteria probe version' >&2; exit 1 ;;
           esac
           printf 'version=%s\nrevision=%s\n' "$version" "$revision" >> "$GITHUB_OUTPUT"
-      - name: Mint read-only source token
-        id: source
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: hysteria,quic-go
-          permission-contents: read
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/hysteria
           ref: c7c91bb398460031aeda898297a5ef4743c4c583
-          token: ${{ steps.source.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           fetch-depth: 0
           path: hysteria
           persist-credentials: false
@@ -63,7 +54,7 @@ jobs:
         with:
           repository: onesyue/quic-go
           ref: 6e04cc5812b7d1041bd0382c953149076e1a5def
-          token: ${{ steps.source.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           fetch-depth: 0
           path: quic-go
           persist-credentials: false

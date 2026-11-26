@@ -32,10 +32,8 @@ ADMISSION_MARKERS = (
     "on:\n  workflow_dispatch:\n",
     "permissions:\n  contents: read\n",
     "if: github.repository == 'onesyue/yueto-ci' && github.ref == 'refs/heads/master'",
-    "repositories: hysteria,quic-go",
-    "permission-contents: read",
-    f"repository: onesyue/hysteria\n          ref: {HYSTERIA_SHA}\n",
-    f"repository: onesyue/quic-go\n          ref: {QUIC_SHA}\n",
+    f"repository: onesyue/hysteria\n          ref: {HYSTERIA_SHA}\n          token: ${{{{ secrets.YUETO_CI_PAT }}}}\n",
+    f"repository: onesyue/quic-go\n          ref: {QUIC_SHA}\n          token: ${{{{ secrets.YUETO_CI_PAT }}}}\n",
     "gpg --batch --import policy/policy/yueops-owner.gpg",
     'HYSTERIA_VERSION: ${{ steps.reviewed.outputs.version }}',
     'HYSTERIA_REVISION: ${{ steps.reviewed.outputs.revision }}',
@@ -93,7 +91,18 @@ class Hy2ProbeAdmissionTests(unittest.TestCase):
         selector = next(step for step in steps if step.get("id") == "reviewed")
         self.assertEqual(selector["env"], {"REQUESTED_VERSION": "${{ inputs.probe_version }}"})
         self.assertEqual(self.workflow.count("inputs.probe_version"), 1)
-        self.assertLess(steps.index(selector), next(i for i, step in enumerate(steps) if step.get("id") == "source"))
+        hysteria = next(
+            i for i, step in enumerate(steps)
+            if step.get("with", {}).get("repository") == "onesyue/hysteria"
+        )
+        quic = next(
+            i for i, step in enumerate(steps)
+            if step.get("with", {}).get("repository") == "onesyue/quic-go"
+        )
+        self.assertLess(steps.index(selector), hysteria)
+        self.assertLess(hysteria, quic)
+        self.assertNotIn("create-github-app-token", self.workflow)
+        self.assertNotIn("YUETO_CI_APP_", self.workflow)
         cases = {
             "": ("v2.14.0-yue.1", HYSTERIA_SHA),
             "v2.14.0-yue.1": ("v2.14.0-yue.1", HYSTERIA_SHA),

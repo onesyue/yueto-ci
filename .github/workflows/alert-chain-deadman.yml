@@ -46,16 +46,6 @@ jobs:
           persist-credentials: false
           path: .ci-receiver
 
-      # One-hour GitHub App token, contents:read on yueops only.
-      - name: Mint read-only YueOps token (GitHub App)
-        id: yueops_read_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueops
-          permission-contents: read
 
       - name: Resolve sibling lock
         id: siblings
@@ -68,7 +58,7 @@ jobs:
         with:
           repository: onesyue/yueops
           ref: ${{ steps.siblings.outputs.yueops }}
-          token: ${{ steps.yueops_read_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           persist-credentials: false
           path: .ci-yueops
 
