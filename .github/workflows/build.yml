@@ -227,8 +227,13 @@ jobs:
           VALIDATION_ONLY: ${{ inputs.validation_only && 'true' || 'false' }}
           MANUAL_PROMOTE: ${{ github.event.inputs.promote || 'false' }}
           DISPATCH_PROMOTE: ${{ github.event.client_payload.promote || 'false' }}
-          GHCR_USER: ${{ github.actor }}
-          GHCR_PASSWORD: ${{ github.token }}
+          # Reading ghcr.io/onesyue/yueboard:latest is a cross-repository
+          # package read. This job's GITHUB_TOKEN is refused there (every plan
+          # since 09bc43b printed "cannot resolve promoted YueBoard revision"),
+          # so the read uses the same YUETO_CI_PAT as the private source reads,
+          # as it did before 09bc43b. Pushes keep the job GITHUB_TOKEN.
+          GHCR_USER: onesyue
+          GHCR_PASSWORD: ${{ secrets.YUETO_CI_PAT }}
           YUEBOARD_CONTRACT_REF: ${{ github.event.inputs.yueboard_contract_ref || github.event.client_payload.yueboard_contract_ref || '' }}
         run: |
           set -euo pipefail
