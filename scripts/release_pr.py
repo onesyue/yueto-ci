@@ -124,14 +124,22 @@ def git_push_args(branch: str) -> list[str]:
     return args
 
 
-def git_push_command(root: Path, branch: str) -> list[str]:
-    refspec = git_push_args(branch)[3]
+def authed_git(root: Path) -> list[str]:
+    """git against the private ledger origin with the gh credential helper.
+
+    The ledger checkout keeps persist-credentials: false, so every network
+    read (ls-remote, fetch) needs the same helper as the push.
+    """
     return [
         "git", "-C", str(root),
         "-c", "credential.helper=",
         "-c", "credential.helper=!gh auth git-credential",
-        "push", "origin", refspec,
     ]
+
+
+def git_push_command(root: Path, branch: str) -> list[str]:
+    refspec = git_push_args(branch)[3]
+    return [*authed_git(root), "push", "origin", refspec]
 
 
 def pr_list_args(branch: str) -> list[str]:
@@ -503,7 +511,7 @@ def _pr_list(branch: str) -> list[dict]:
 
 def _remote_branch_exists(root: Path, branch: str) -> bool:
     result = _run(
-        ["git", "-C", str(root), "ls-remote", "--exit-code", "origin", f"refs/heads/{branch}"],
+        [*authed_git(root), "ls-remote", "--exit-code", "origin", f"refs/heads/{branch}"],
         check=False, capture=True, text=True,
     )
     if result.returncode == 0:
@@ -515,7 +523,7 @@ def _remote_branch_exists(root: Path, branch: str) -> bool:
 
 def _remote_bytes(root: Path, branch: str, path: str) -> bytes:
     _run([
-        "git", "-C", str(root), "fetch", "--no-tags", "origin",
+        *authed_git(root), "fetch", "--no-tags", "origin",
         f"+refs/heads/{branch}:refs/remotes/origin/{branch}",
     ])
     result = _run(
@@ -566,7 +574,7 @@ def open_release(root: Path, receipt: dict[str, str]) -> str:
         raise ReleasePrError("more than one open release pull request")
     if len(existing) == 1:
         if auto_merge(service):
-            _run(pr_merge_args(existing[0]["number"]))
+            _request_auto_merge(existing[0]["number"])
         return existing[0]["url"]
     yaml_path = release_yaml_path(root, service)
     bundle_path = Path(str(yaml_path) + ".bundle")
@@ -585,8 +593,21 @@ def open_release(root: Path, receipt: dict[str, str]) -> str:
     url = _create_pr(branch, service, receipt["revision"], generation)
     if auto_merge(service):
         number = url.rsplit("/", 1)[-1]
-        _run(pr_merge_args(number))
+        _request_auto_merge(number)
     return url
+
+
+def _request_auto_merge(number: str) -> None:
+    """Ask for auto-merge; a refusal leaves the signed record PR open.
+
+    onesyue/yueto has allow_auto_merge=false (no protected-branch plan), so
+    GitHub refuses --auto. The record is already pushed and its PR open; the
+    release itself must not fail because the ledger PR waits for a lander.
+    """
+    result = _run(pr_merge_args(number), check=False, capture=True, text=True)
+    if result.returncode != 0:
+        print(f"::warning::auto-merge refused for release PR #{number}; left open for the lander",
+              file=sys.stderr)
 
 
 def cmd_record(args: argparse.Namespace) -> int:
