@@ -2400,6 +2400,24 @@ class BuildPolicyTest(unittest.TestCase):
             )
             validator.validate_canonical_proto_mirror(node, yueboard)
 
+            # The producer appends required "# ..." contract comments after
+            # the record (yue-node scripts/sync-proto.sh); they are not records.
+            digest.write_text(
+                f"{canonical_hash}  yuenode/v1/yuenode.proto\n"
+                "# publisher: yueboard proto/yuenode/v1/yuenode.proto\n"
+                "# package: yuenode.v1\n",
+                encoding="utf-8",
+            )
+            validator.validate_canonical_proto_mirror(node, yueboard)
+            # A second record is still refused.
+            digest.write_text(
+                f"{canonical_hash}  yuenode/v1/yuenode.proto\n"
+                f"{canonical_hash}  yuenode/v1/yuenode.proto\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "exactly one non-empty"):
+                validator.validate_canonical_proto_mirror(node, yueboard)
+
             # This is the old blind spot: mirror + local digest drift together
             # and remain repository-internally self-consistent. The separately
             # checked-out canonical bytes must still make the central gate red.
