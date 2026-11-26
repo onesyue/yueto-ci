@@ -7,6 +7,13 @@ cosign_version=$(sed -n "s/^readonly COSIGN_VERSION='\([^']*\)'$/\1/p" "$scripts
 gitleaks_version=$(sed -n "s@^release_url='https://github.com/gitleaks/gitleaks/releases/download/v\([^/]*\)/[^']*'\$@\1@p" "$scripts/ops-validation-gitleaks.sh")
 [ -n "$buildx_version" ] && [ -n "$cosign_version" ] && [ -n "$gitleaks_version" ]
 test "$(/usr/local/bin/gitleaks version)" = "$gitleaks_version"
+syft_version=$(sed -n "s/^readonly SYFT_VERSION='\([^']*\)'$/\1/p" "$scripts/install-verified-syft.sh")
+test -n "$syft_version"
+actual=$(/usr/local/bin/syft version | awk '$1 == "Version:" {print $2}')
+if [[ "$actual" != "$syft_version" ]]; then
+  echo "Syft version mismatch: expected $syft_version, got $actual" >&2
+  exit 1
+fi
 test "$(stat -c '%u' /usr/local/bin/gitleaks)" = "$(id -u)"
 test "$(cosign version | awk '/^[[:space:]]*GitVersion:/ {print $2}')" = "$cosign_version"
 actual=$(docker buildx version)
