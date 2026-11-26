@@ -892,12 +892,19 @@ jobs:
           fi
           for tool in gcc psql corepack; do command -v "$tool" >/dev/null; done
 
+      - name: Resolve sibling lock
+        id: siblings
+        if: matrix.validation == 'yueboard' || matrix.validation == 'yueops'
+        run: |
+          set -euo pipefail
+          "${YUE_CI_PYTHON:?}" .ci-policy/scripts/update-siblings-lock.py --github-output --lock .ci-policy/ci/siblings.lock >> "$GITHUB_OUTPUT"
+
       - name: Checkout the pinned yueto root
         if: matrix.validation == 'yueboard' || matrix.validation == 'yueops'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueto
-          ref: master
+          ref: ${{ steps.siblings.outputs.yueto }}
           token: ${{ steps.source_token.outputs.token }}
           path: .ci-origin-authority
           persist-credentials: false
