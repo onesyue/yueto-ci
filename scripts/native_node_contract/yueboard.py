@@ -117,6 +117,31 @@ def _read_yueboard_inputs(root: Path) -> dict[str, object]:
     }
 
 
+def check_yueboard_schema_floor(raw_floor: object, contract: dict) -> None:
+    """A candidate may raise the floor; it must not drop below the released contract.
+
+    schema-floor.txt on the YueBoard checkout is the candidate floor and must
+    be a positive integer. The central native-node-contract.json records the
+    last reviewed release floor. Equality would block official premerge of a
+    legitimate floor bump until the contract is updated, and updating the
+    contract first would fail CI of the still-shipping previous floor.
+    """
+    try:
+        candidate = int(str(raw_floor).strip())
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("YueBoard schema floor is not an integer") from exc
+    if candidate < 1:
+        raise RuntimeError("YueBoard schema floor is not an integer")
+    try:
+        released = int(contract["schema_floor"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RuntimeError("native-node contract schema floor is not an integer") from exc
+    if candidate < released:
+        raise RuntimeError(
+            "YueBoard schema floor is below the native-node contract"
+        )
+
+
 def _validate_yueboard_proto(contract: dict, sources: dict[str, object]) -> None:
     proto = sources["proto"]
     connectrpc = sources["connectrpc"]
@@ -130,10 +155,7 @@ def _validate_yueboard_proto(contract: dict, sources: dict[str, object]) -> None
         "credential_consumers",
     ]:
         raise RuntimeError("native rollout order must bootstrap locked YueBoard first")
-    if raw_floor != str(contract["schema_floor"]):
-        raise RuntimeError(
-            "YueBoard schema floor does not match the native-node contract"
-        )
+    check_yueboard_schema_floor(raw_floor, contract)
     identity = contract["device_identity"]
     if identity.get("portal_installation_authority") != "retired":
         raise RuntimeError("Portal installation authority must remain retired")
