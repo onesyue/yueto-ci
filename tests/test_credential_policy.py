@@ -79,8 +79,9 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
     def test_registry_calls_use_the_job_github_token(self) -> None:
         workflows = _workflows()
         build = workflows["build.yml"]
-        self.assertIn("GHCR_USER: ${{ github.actor }}", build)
-        self.assertIn("GHCR_PASSWORD: ${{ github.token }}", build)
+        # Toolchain image and own-package logins keep the job token; service
+        # packages owned by other repositories are covered by
+        # test_service_package_access_falls_back_to_the_source_pat.
         self.assertIn("username: ${{ github.actor }}", build)
         self.assertIn("password: ${{ github.token }}", build)
         rescan = workflows["image-rescan.yml"]
@@ -91,13 +92,20 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         self.assertIn("GHCR_USER: ${{ github.actor }}", capture)
         self.assertIn("GHCR_PASSWORD: ${{ github.token }}", capture)
 
-    def test_plan_reads_promoted_board_with_the_source_pat(self) -> None:
+    def test_service_package_access_falls_back_to_the_source_pat(self) -> None:
+        # yueboard / yue-node packages refuse this repository's GITHUB_TOKEN
+        # (403 push in 45836692565). Plan read, build push, publish, release-pr
+        # and resume readback use the PAT.
         build = _workflows()["build.yml"]
+        gated_user = "onesyue"
+        gated_pass = "${{ secrets.YUETO_CI_PAT }}"
         plan = build[build.index("      - id: plan\n"):]
         plan = plan[: plan.index("        run: |")]
-        self.assertIn("GHCR_USER: onesyue", plan)
-        self.assertIn("GHCR_PASSWORD: ${{ secrets.YUETO_CI_PAT }}", plan)
-        self.assertNotIn("GHCR_PASSWORD: ${{ github.token }}", plan)
+        self.assertIn("GHCR_USER: " + gated_user, plan)
+        self.assertIn("GHCR_PASSWORD: " + gated_pass, plan)
+        self.assertEqual(build.count("username: " + gated_user), 3)
+        self.assertEqual(build.count("password: " + gated_pass), 3)
+        self.assertEqual(build.count("GHCR_PASSWORD: " + gated_pass), 2)
 
     def test_ghcr_consumers_declare_the_package_scope_they_need(self) -> None:
         build = (WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8")
