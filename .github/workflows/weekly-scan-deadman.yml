@@ -1,0 +1,60 @@
+name: Weekly scan freshness deadman
+
+# The Monday scan can stay red for a week without another schedule firing.
+# This daily check fails when that workflow has no success inside
+# WEEKLY_SCAN_SUCCESS_MAX_AGE (scripts/weekly_scan_deadman.py). A red
+# scheduled run is the same alert path the alert-chain deadman uses.
+
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: weekly-scan-deadman
+  cancel-in-progress: false
+
+jobs:
+  deadman:
+    name: Weekly scan freshness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the freshness checker
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Require a successful weekly scan inside the freshness window
+        id: freshness
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/weekly-vuln-sbom.yml/runs?status=success&per_page=1" \
+            --jq '[.workflow_runs[] | {conclusion, createdAt: .created_at}]' \
+            > "${RUNNER_TEMP:?}/weekly-success.json"
+          python3 scripts/weekly_scan_deadman.py \
+            --runs "${RUNNER_TEMP}/weekly-success.json" \
+            --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: Report weekly scan deadman failure
+        if: ${{ always() && (failure() || cancelled()) }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' '## Weekly scan deadman failed' \
+            'The weekly dependency scan has no success inside its freshness window.' \
+            'Evaluated on the public runner, independently of production alert delivery.' \
+            "Run: ${RUN_URL}" >> "$GITHUB_STEP_SUMMARY"
+          echo '::error::Weekly scan deadman did not complete successfully.'
+          exit 1

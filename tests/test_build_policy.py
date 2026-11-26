@@ -1127,6 +1127,7 @@ class BuildPolicyTest(unittest.TestCase):
                 "policy-ci.yml",
                 "quality-ratchet.yml",
                 "scorecard.yml",
+                "weekly-scan-deadman.yml",
                 "weekly-vuln-sbom.yml",
                 "yueops-master-validate.yml",
             ],
