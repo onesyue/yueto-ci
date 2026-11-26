@@ -1,0 +1,26 @@
+{
+  "flags": [
+    {"name": "YUEOPS_REQUIRE_PRODUCER_CONTRACT", "kind": "switch", "default": "1", "workflows": ["build.yml"]},
+    {"name": "YUEBOARD_MIGRATION_TEST_PRODUCTION_SCALE", "kind": "switch", "default": "1", "workflows": ["build.yml"]},
+    {"name": "YUEBOARD_A11Y_SKIP", "kind": "switch", "default": "0", "scripts": ["board-validation.sh"]},
+    {"name": "VALIDATION_ONLY", "kind": "switch", "default": "false", "input": "validation_only", "workflows": ["build.yml"]},
+    {"name": "NPM_CONFIG_AUDIT", "kind": "switch", "default": "false", "workflows": ["build.yml"]},
+    {"name": "GOWORK", "kind": "switch", "default": "off", "workflows": ["client-core-matrix.yml", "hy2-probe.yml"]},
+    {"name": "CGO_ENABLED", "kind": "switch", "default": "1", "workflows": ["build.yml"]},
+    {"name": "CGO_ENABLED", "kind": "switch", "default": "0", "workflows": ["client-core-matrix.yml", "hy2-probe.yml"]},
+    {"name": "CI", "kind": "switch", "default": "true", "workflows": ["board-visual-capture.yml"]},
+    {
+      "name": "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24", "kind": "switch", "default": "true",
+      "workflows": ["build.yml", "client-core-matrix.yml", "image-rescan.yml", "weekly-scan-deadman.yml", "weekly-vuln-sbom.yml", "yueops-master-validate.yml"]
+    },
+    {"name": "vars.YUETO_REUSE_YUEOPS", "kind": "switch", "default": "", "workflows": ["build.yml"]},
+    {"name": "vars.YUETO_REUSE_YUE_NODE", "kind": "switch", "default": "", "workflows": ["build.yml"]},
+    {"name": "vars.YUEOPS_PYTEST_SHARDS", "kind": "value", "default": "16", "workflows": ["build.yml"]},
+    {"name": "vars.YUEOPS_VALIDATION_PARALLELISM", "kind": "value", "default": "20", "workflows": ["build.yml"]},
+    {
+      "name": "vars.YUEOPS_HOST_OPS_HOST_PUBLIC", "kind": "value", "default": "",
+      "workflows": ["alert-chain-deadman.yml"],
+      "description": "When the repository variable is unset, the workflow passes an empty string and the resolver reads the ops_host_public role from the host inventory."
+    }
+  ]
+}
