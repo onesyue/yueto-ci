@@ -6,6 +6,7 @@ fails. An empty scan fails. The sealed baseline is not rewritten and is
 not part of the live scan.
 """
 from __future__ import annotations
+import sys
 
 import importlib.util
 import json
@@ -17,6 +18,16 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards.config import (
+    RETIRED_HOST_AFTER_BLOB,
+    RETIRED_HOST_BEFORE_BLOB,
+    RETIRED_HOST_PRIOR_SHA256,
+    RETIRED_HOST_SECOND_AFTER_BLOB,
+    RETIRED_HOST_TRANSITION_SHA256,
+)
+from pytest_shards.support import RETIRED_HOST_IDS, RETIRED_HOST_SECOND_IDS
+
 CONST_HOME = Path("scripts/brand_literals.py")
 LIVE_ROOTS = ("scripts", "tests", ".github")
 MIN_LIVE_FILES = 40
@@ -104,7 +115,6 @@ class BrandLiterals(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.brand = _load("ci_brand_literals_under_test", ROOT / CONST_HOME)
-        cls.shards = _load("pytest_shards_brand_under_test", ROOT / "scripts/pytest-shards.py")
 
     def test_runtime_values_match_the_const_home_literals(self):
         found = literal_assignments((ROOT / CONST_HOME).read_text(encoding="utf-8"))
@@ -120,28 +130,27 @@ class BrandLiterals(unittest.TestCase):
                          self.brand._domain(self.brand.PANEL_MIRROR_ALTERNATE_HOST))
 
     def test_pytest_shards_composes_sealed_ids_from_the_constants(self):
-        shards = self.shards
         brand = self.brand
-        self.assertEqual(len(shards.RETIRED_HOST_IDS), 3)
-        self.assertEqual(len(shards.RETIRED_HOST_SECOND_IDS), 3)
+        self.assertEqual(len(RETIRED_HOST_IDS), 3)
+        self.assertEqual(len(RETIRED_HOST_SECOND_IDS), 3)
         self.assertTrue(all(nodeid.endswith("[" + brand.RETIRED_MINI_PRIMARY_HOST + "]")
-                            for nodeid in shards.RETIRED_HOST_IDS))
+                            for nodeid in RETIRED_HOST_IDS))
         self.assertTrue(all(nodeid.endswith("[" + brand.RETIRED_MINI_ALTERNATE_HOST + "]")
-                            for nodeid in shards.RETIRED_HOST_SECOND_IDS))
-        self.assertEqual(shards.RETIRED_HOST_PRIOR_SHA256,
+                            for nodeid in RETIRED_HOST_SECOND_IDS))
+        self.assertEqual(RETIRED_HOST_PRIOR_SHA256,
                          "927f711ddbdd4aa14012ccb687183e969610922e0c9b17b55eef06545ec86e91")
-        self.assertEqual(shards.RETIRED_HOST_BEFORE_BLOB, "812e3509c7213cf16f507271f5a1d4f8c0cefe29")
-        self.assertEqual(shards.RETIRED_HOST_AFTER_BLOB, "ba19e043309d0805710e0a2d3fc9cc76ea6ce55f")
-        self.assertEqual(shards.RETIRED_HOST_TRANSITION_SHA256,
+        self.assertEqual(RETIRED_HOST_BEFORE_BLOB, "812e3509c7213cf16f507271f5a1d4f8c0cefe29")
+        self.assertEqual(RETIRED_HOST_AFTER_BLOB, "ba19e043309d0805710e0a2d3fc9cc76ea6ce55f")
+        self.assertEqual(RETIRED_HOST_TRANSITION_SHA256,
                          "961fa6fd314c9d292e766e1cea5b8571f0d97b489adbebb63d4f35d16af6d7b0")
-        self.assertEqual(shards.RETIRED_HOST_SECOND_AFTER_BLOB,
+        self.assertEqual(RETIRED_HOST_SECOND_AFTER_BLOB,
                          "6c3e8eca2a185a9b89aedbc3abec63c7cc2eb2fd")
         baseline = json.loads((ROOT / "ops-pytest-skip-baseline.json").read_text(encoding="utf-8"))
         hosts: list[object] = []
 
         def walk(obj: object) -> None:
             if isinstance(obj, dict):
-                if obj.get("prior_baseline_sha256") == shards.RETIRED_HOST_PRIOR_SHA256:
+                if obj.get("prior_baseline_sha256") == RETIRED_HOST_PRIOR_SHA256:
                     hosts.append(obj.get("host"))
                 for value in obj.values():
                     walk(value)
@@ -152,7 +161,7 @@ class BrandLiterals(unittest.TestCase):
         walk(baseline)
         self.assertEqual(hosts, [brand.RETIRED_MINI_PRIMARY_HOST])
         sealed = (ROOT / "ops-pytest-skip-baseline.json").read_text(encoding="utf-8")
-        for nodeid in shards.RETIRED_HOST_IDS | shards.RETIRED_HOST_SECOND_IDS:
+        for nodeid in RETIRED_HOST_IDS | RETIRED_HOST_SECOND_IDS:
             self.assertIn(nodeid, sealed)
 
     def test_live_tree_keeps_brand_literals_in_the_const_home(self):

@@ -46,10 +46,9 @@ jobs:
           persist-credentials: false
           path: .ci-receiver
 
-      # 凭据切换开关：仓库变量 YUETO_CI_APP_CLIENT_ID 为空时跳过、沿用 PAT。
+      # One-hour GitHub App token, contents:read on yueops only.
       - name: Mint read-only YueOps token (GitHub App)
         id: yueops_read_token
-        if: vars.YUETO_CI_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
@@ -58,12 +57,18 @@ jobs:
           repositories: yueops
           permission-contents: read
 
+      - name: Resolve sibling lock
+        id: siblings
+        run: |
+          set -euo pipefail
+          python3 .ci-receiver/scripts/update-siblings-lock.py --github-output --lock .ci-receiver/ci/siblings.lock >> "$GITHUB_OUTPUT"
+
       - name: Check out the canonical YueOps verdict source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueops
-          ref: master
-          token: ${{ steps.yueops_read_token.outputs.token || secrets.YUETO_CI_PAT }}
+          ref: ${{ steps.siblings.outputs.yueops }}
+          token: ${{ steps.yueops_read_token.outputs.token }}
           persist-credentials: false
           path: .ci-yueops
 
@@ -95,12 +100,20 @@ jobs:
                   raise SystemExit(f'{label} checker hash mismatch: {actual}')
           print(f'deadman checker mirror: ok ({expected})')
           PY
+          python3 .ci-receiver/deadman/canonical/scripts/deadman_producer.py --check
+          pin_sha="$(python3 -c 'import json; print(json.load(open(".ci-receiver/deadman/canonical/yueops-producer.json"))["sha"])')"
+          if git -C .ci-yueops cat-file -e "${pin_sha}^{commit}"; then
+            python3 .ci-receiver/deadman/canonical/scripts/deadman_producer.py --check --repo .ci-yueops
+          fi
+          python3 .ci-receiver/deadman/canonical/scripts/ops_host_public.py \
+            --check \
+            --inventory .ci-yueops/config/hosts.json
 
       - name: Prepare deliberate missing-receipt drill
         if: github.event_name == 'workflow_dispatch' && inputs.drill_missing == true
         run: ': > receipt.json'
 
-      - name: Fetch heartbeat receipt from the bastion
+      - name: Fetch heartbeat receipt from ops_host_public
         id: fetch
         if: github.event_name != 'workflow_dispatch' || inputs.drill_missing != true
         timeout-minutes: 3
@@ -109,8 +122,8 @@ jobs:
           # receipt read; this public repository never receives a deployment,
           # fleet, root, or rotation key.
           SSH_KEY_B64: ${{ secrets.DEADMAN_SSH_KEY_B64 }}
-          BASTION_HOST: '23.80.91.14'
-          BASTION_USER: 'deadman-reader'
+          YUEOPS_HOST_OPS_HOST_PUBLIC: ${{ vars.YUEOPS_HOST_OPS_HOST_PUBLIC }}
+          DEADMAN_USER: 'deadman-reader'
         run: |
           set -Eeuo pipefail
           trap 'rm -f ~/.ssh/id_deadman ssh.err' EXIT
@@ -118,13 +131,15 @@ jobs:
             echo '::error::DEADMAN_SSH_KEY_B64 is absent; a skipped observer is not healthy.'
             exit 1
           fi
+          # Native role ops_host_public. YUEOPS_HOST_OPS_HOST_PUBLIC overrides it.
+          OPS_HOST_PUBLIC="$(python3 .ci-receiver/deadman/canonical/scripts/ops_host_public.py --inventory .ci-yueops/config/hosts.json)"
           mkdir -p ~/.ssh
           printf '%s' "${SSH_KEY_B64}" | base64 --decode > ~/.ssh/id_deadman
           chmod 600 ~/.ssh/id_deadman
 
-          # Pin the production bastion host key. TOFU / accept-new would let an
+          # Pin the ops_host_public host key. TOFU / accept-new would let an
           # intercepted first connection manufacture a healthy receipt.
-          printf '%s %s %s\n' '23.80.91.14' 'ssh-ed25519' \
+          printf '%s %s %s\n' "${OPS_HOST_PUBLIC}" 'ssh-ed25519' \
             'AAAAC3NzaC1lZDI1NTE5AAAAICo9blX1VNOv83FROQ7Bt8/meWocnC/JsUzbOZGrEZY2' \
             > ~/.ssh/known_hosts_deadman
 
@@ -141,7 +156,7 @@ jobs:
               -o ConnectTimeout=20 \
               -o ServerAliveInterval=15 \
               -o ServerAliveCountMax=2 \
-              "${BASTION_USER}@${BASTION_HOST}" \
+              "${DEADMAN_USER}@${OPS_HOST_PUBLIC}" \
               '/usr/bin/cat -- /var/lib/yue-alert-heartbeat/heartbeat.json' \
               > receipt.json 2> ssh.err || {
             echo 'ssh/receipt read failed; the canonical verdict will classify this as missing.'

@@ -245,12 +245,13 @@ class BoardRole(unittest.TestCase):
                 if role in ('postgres', 'e2e'):
                     self.assertIn(['docker', 'rm', '--force', 'f'*64], [c for c,e in calls])
 
-    def test_legacy_retains_original_phase_conditions(self):
+    def test_non_workspace_layout_is_rejected_before_later_phases(self):
         for role in ('frontends', 'components', 'e2e'):
-            status, calls, receipt, job = self.fixture(role, layout='legacy')
-            self.assertEqual(status, 0)
+            status, calls, receipt, job = self.fixture(role, layout='rejected')
+            self.assertEqual(status, 2)
+            self.assertFalse(receipt['complete'])
             phases = [c[c.index('--frontend-phase')+1] for c,e in calls if '--frontend-phase' in c]
-            self.assertEqual(phases, ['prepare', 'design'] if role == 'frontends' else ['prepare'])
+            self.assertEqual(phases, ['prepare'])
             self.assertFalse((job/'e2e-report').exists())
 
     def test_toolchain_checks_workflow_versions_and_buf_bytes(self):

@@ -1,5 +1,4 @@
 """Skip-blob precheck shares join's rule: a blob change is not a skip rejection."""
-import importlib.util
 import json
 import os
 import subprocess
@@ -10,18 +9,26 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("skip_blob_shards", ROOT / "scripts/pytest-shards.py")
-SHARDS = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(SHARDS)
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards.config import (
+    BOARD139_RENEWAL_BLOB,
+    RESTORE_DRILL_AFTER_BLOB,
+    RESTORE_DRILL_BEFORE_BLOB,
+)
+from pytest_shards.policy_history import load_policy_module, skip_blob_precheck_command
+from pytest_shards.skip_baseline import skip_baseline
+from pytest_shards.skip_bindings import load_ops_skip_evidence
+from pytest_shards.skip_report import skip_blob_report
+
 
 RESTORE = "tests/test_yueops_pg_restore_drill_20260924.py"
-RESTORE_BEFORE = "2f57ec05cab6f9af631f66650feaaf76a7770222"
-RESTORE_AFTER = "3cca4792fbd3319411901ad3588a879e7b52193f"
+RESTORE_BEFORE = RESTORE_DRILL_BEFORE_BLOB
+RESTORE_AFTER = RESTORE_DRILL_AFTER_BLOB
 RESTORE_NODE = RESTORE + "::test_e2e_real_backup_restores_and_passes"
 CDN = "tests/test_cdn_vless_autohide_20261006.py"
 CDN_NODE = CDN + "::test_real_vless_ws_tls_requires_authenticated_request"
 BOARD = "tests/test_board139_schema_acl_native_20261018.py"
-BOARD_RENEWAL = "0509528f81cd39c6e308e130650670a874b1b3df"
+BOARD_RENEWAL = BOARD139_RENEWAL_BLOB
 REJECTED_CI = "3e50d18a19aad788a7c86bc34ba3ba7885d7397d"
 ACCEPTED_CI = "5b0f22c339c0b23a2952df7eb873cc42a1da0ded"
 OPS_REV = "4ffbac5644f398473d95b4f19434949ce34a89c5"
@@ -74,12 +81,17 @@ def _object_present(revision):
 
 
 def _commit_policy(repo, source):
+    """Commit this checkout's package with one rewritten skip_bindings module."""
+    import shutil
     _git(repo, "init", "-q")
-    relative = "scripts/pytest-shards.py"
-    path = repo / relative
-    path.parent.mkdir(parents=True)
-    path.write_text(source, encoding="utf-8")
-    _git(repo, "add", "--", relative)
+    scripts = repo / "scripts"
+    scripts.mkdir(parents=True)
+    shutil.copyfile(ROOT / "scripts" / "pytest-shards.py", scripts / "pytest-shards.py")
+    shutil.copytree(
+        ROOT / "scripts" / "pytest_shards", scripts / "pytest_shards",
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    (scripts / "pytest_shards" / "skip_bindings.py").write_text(source, encoding="utf-8")
+    _git(repo, "add", "--", "scripts")
     tree = _git(repo, "write-tree")
     return _git(repo, "commit-tree", tree, input_text="policy fixture\n")
 
@@ -144,7 +156,7 @@ def _ops_evidence(before, after):
 def _restore_module_evidence(after):
     updates = {
         nodeid: {"before_blob": RESTORE_BEFORE, "after_blob": after}
-        for nodeid, case in SHARDS.skip_baseline()["cases"].items()
+        for nodeid, case in skip_baseline()["cases"].items()
         if nodeid.startswith(RESTORE + "::") and case.get("module_blob") == RESTORE_BEFORE
     }
     if len(updates) < 2:
@@ -155,11 +167,11 @@ def _restore_module_evidence(after):
 
 class SkipBlobPrecheck(unittest.TestCase):
     def test_unchanged_reviewed_blob_matches(self):
-        self.assertEqual(SHARDS.skip_blob_report(_value(RESTORE, RESTORE_BEFORE), {}), [])
+        self.assertEqual(skip_blob_report(_value(RESTORE, RESTORE_BEFORE), {}), [])
 
     def test_changed_blob_without_successor_names_module_and_blobs(self):
         mutated = "f" * 40
-        lines = SHARDS.skip_blob_report(_value(RESTORE, mutated), {})
+        lines = skip_blob_report(_value(RESTORE, mutated), {})
         self.assertEqual(len(lines), 1)
         self.assertRegex(
             lines[0],
@@ -167,37 +179,39 @@ class SkipBlobPrecheck(unittest.TestCase):
         self.assertIn(RESTORE_NODE, lines[0])
 
     def test_successor_blob_matches(self):
-        self.assertEqual(SHARDS.skip_blob_report(_value(RESTORE, RESTORE_AFTER), {}), [])
+        self.assertEqual(skip_blob_report(_value(RESTORE, RESTORE_AFTER), {}), [])
 
     def test_dated_ordinary_skip_reviews_are_not_a_precheck_allow_list(self):
         self.assertEqual(list(ROOT.glob("reviews/ops-ordinary-skip-evidence-*.json")), [])
-        source = (ROOT / "scripts/pytest-shards.py").read_text(encoding="utf-8")
+        source = "\n".join(path.read_text(encoding="utf-8")
+                           for path in (ROOT / "scripts/pytest_shards").glob("*.py"))
+        source += (ROOT / "scripts/pytest_shards/skip_bindings.py").read_text(encoding="utf-8")
         self.assertNotIn("ORDINARY_SKIP_EVIDENCE_FILES", source)
 
     def test_historical_policy_keeps_the_rejected_restore_blob(self):
         source = _drop_function(
-            (ROOT / "scripts/pytest-shards.py").read_text(encoding="utf-8"),
+            (ROOT / "scripts/pytest_shards/skip_bindings.py").read_text(encoding="utf-8"),
             "reviewed_restore_drill_blob_successor",
             "reviewed_board139_native_successor")
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             commit = _commit_policy(repo, source)
-            policy = SHARDS.load_policy_module(commit, repo)
+            policy = load_policy_module(commit, repo)
         self.assertFalse(hasattr(policy, "reviewed_restore_drill_blob_successor"))
-        lines = SHARDS.skip_blob_report(_value(RESTORE, RESTORE_AFTER), {}, policy=policy)
+        lines = skip_blob_report(_value(RESTORE, RESTORE_AFTER), {}, policy=policy)
         self.assertEqual(len(lines), 1)
         self.assertIn(RESTORE, lines[0])
         self.assertIn(RESTORE_BEFORE, lines[0])
         self.assertIn(RESTORE_AFTER, lines[0])
-        self.assertEqual(SHARDS.skip_blob_report(_value(RESTORE, RESTORE_AFTER), {}), [])
+        self.assertEqual(skip_blob_report(_value(RESTORE, RESTORE_AFTER), {}), [])
 
     def test_historical_board_renewal_does_not_need_a_native_receipt(self):
         source = _historical_native_source(
-            (ROOT / "scripts/pytest-shards.py").read_text(encoding="utf-8"))
+            (ROOT / "scripts/pytest_shards/skip_bindings.py").read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             commit = _commit_policy(repo, source)
-            policy = SHARDS.load_policy_module(commit, repo)
+            policy = load_policy_module(commit, repo)
             function = policy.reviewed_board139_native_successor
             self.assertNotIn("require_native", function.__code__.co_varnames)
             bound = policy.prepare_skip_bindings(
@@ -211,15 +225,15 @@ class SkipBlobPrecheck(unittest.TestCase):
     def test_missing_policy_commit_is_an_input_error(self):
         missing = "0" * 40
         with self.assertRaises(ValueError) as caught:
-            SHARDS.load_policy_module(missing)
+            load_policy_module(missing)
         self.assertIn("not in this clone", str(caught.exception))
-        code = SHARDS.skip_blob_precheck_command(type("Args", (), {
+        code = skip_blob_precheck_command(type("Args", (), {
             "ops_rev": "b" * 40, "ci_rev": missing, "ops_checkout": ROOT,
         })())
         self.assertEqual(code, 2)
 
     def test_usage_error_is_not_a_blob_mismatch(self):
-        code = SHARDS.skip_blob_precheck_command(type("Args", (), {
+        code = skip_blob_precheck_command(type("Args", (), {
             "ops_rev": "not-a-sha", "ci_rev": None, "ops_checkout": ROOT,
         })())
         self.assertEqual(code, 2)
@@ -275,7 +289,7 @@ class SkipBlobPrecheck(unittest.TestCase):
             missing = self._command(repo, bare)
             self.assertEqual(missing.returncode, 0, missing.stderr)
             self.assertEqual(missing.stdout.strip(), "skip-blob-precheck ok")
-            self.assertIsNone(SHARDS.load_ops_skip_evidence(repo, bare))
+            self.assertIsNone(load_ops_skip_evidence(repo, bare))
 
             wrong_after = _ops_commit(repo, {
                 RESTORE: RESTORE_SOURCE,
@@ -309,7 +323,7 @@ class SkipBlobPrecheck(unittest.TestCase):
             passed = self._command(repo, sealed)
             self.assertEqual(passed.returncode, 0, passed.stderr)
             self.assertEqual(passed.stdout.strip(), "skip-blob-precheck ok")
-            record = SHARDS.load_ops_skip_evidence(repo, sealed)
+            record = load_ops_skip_evidence(repo, sealed)
             self.assertGreater(len(record["updates"]), 1)
             self.assertEqual(record["updates"][RESTORE_NODE]["before_blob"], RESTORE_BEFORE)
             self.assertEqual(record["updates"][RESTORE_NODE]["after_blob"], blob)

@@ -23,8 +23,10 @@ if [ "$OPS_ROLE" = legacy ]; then
   pytest_rc=0
   .venv/bin/python -c 'import time; print(time.time_ns())' > "$timing_dir/pytest-start-unix-ns.txt"
   (
-    if [[ -e tests/quarantine.json || -L tests/quarantine.json || "${YUETO_SHARED_SELECTION:-[]}" != '[]' ]]; then
+    policy_quarantine="$YUETO_CI_REPO_PATH/ci/quarantine.yaml"
+    if [[ -e tests/quarantine.json || -L tests/quarantine.json || "${YUETO_SHARED_SELECTION:-[]}" != '[]' || -f "$policy_quarantine" ]]; then
       export YUETO_OPS_TEST_SOURCE="$PWD"
+      export YUETO_CI_QUARANTINE="$policy_quarantine"
       export PYTEST_PLUGINS=ops_quarantine
       export PYTHONPATH="$PWD/.ci-policy/scripts${PYTHONPATH:+:$PYTHONPATH}"
     fi

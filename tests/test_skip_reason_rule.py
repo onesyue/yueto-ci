@@ -1,4 +1,5 @@
 """A skip is admitted by its reason. The dated review chain is not an allow-list."""
+import sys
 import copy
 import importlib.util
 import inspect
@@ -8,10 +9,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    "skip_reason_shards", ROOT / "scripts/pytest-shards.py")
-SHARDS = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(SHARDS)
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards.config import NATIVE_INPUTS, SKIP_BASELINE
+from pytest_shards.skip_bindings import admit_skips
+from pytest_shards.support import sha
+
 
 MODULE = "tests/test_relay_coordinator_delivery_closure_20260905.py"
 AFTER = "3c9f5d4f5b68b458b5c7f95a4bf029828bc0c404"
@@ -62,14 +64,14 @@ class SkipReasonRule(unittest.TestCase):
                        "shards": [copy.deepcopy(session) | {"assignment_id": "ordinary-000"}]}
         self.value = {
             "skip_module_blobs": {MODULE: AFTER},
-            "skip_baseline_sha256": SHARDS.sha((ROOT / SHARDS.SKIP_BASELINE).read_bytes()),
-            "common_inputs": self.baseline["common_inputs"] | SHARDS.NATIVE_INPUTS,
+            "skip_baseline_sha256": sha((ROOT / SKIP_BASELINE).read_bytes()),
+            "common_inputs": self.baseline["common_inputs"] | NATIVE_INPUTS,
         }
 
     def test_relay_run_43024038775_is_admitted(self):
         self.assertEqual(len(RELAY_SKIPS), 31)
         self.assertTrue(all(reason.strip() for _, reason in RELAY_SKIPS))
-        verdict = SHARDS.admit_skips(self.value, self.result, {"obligations": {}})
+        verdict = admit_skips(self.value, self.result, {"obligations": {}})
         self.assertEqual(verdict["status"], "NO_NEW_SKIPS")
         self.assertIs(verdict["skips_are_passes"], False)
         accounted = sum(verdict["disposition_counts"].values()) + len(verdict.get("reported_skips", ()))
@@ -81,19 +83,19 @@ class SkipReasonRule(unittest.TestCase):
         for session in (blank["reference"], *blank["shards"]):
             session["nonpassing_outcomes"][0]["reason"] = ""
         with self.assertRaisesRegex(ValueError, "skip has no reason"):
-            SHARDS.admit_skips(self.value, blank, {"obligations": {}})
+            admit_skips(self.value, blank, {"obligations": {}})
         missing = copy.deepcopy(self.result)
         for session in (missing["reference"], *missing["shards"]):
             del session["nonpassing_outcomes"][0]["reason"]
         with self.assertRaisesRegex(ValueError, "skip has no reason"):
-            SHARDS.admit_skips(self.value, missing, {"obligations": {}})
+            admit_skips(self.value, missing, {"obligations": {}})
         fresh = copy.deepcopy(self.result)
         nodeid = MODULE + "::test_brand_new_reason"
         row = {"nodeid": nodeid, "outcome": "skipped", "when": "setup",
                "reason": "Skipped: brand new case"}
         for session in (fresh["reference"], *fresh["shards"]):
             session["nonpassing_outcomes"] = [row]
-        verdict = SHARDS.admit_skips(self.value, fresh, {"obligations": {}})
+        verdict = admit_skips(self.value, fresh, {"obligations": {}})
         self.assertEqual(verdict["status"], "NO_NEW_SKIPS")
         self.assertIn(nodeid, verdict["reported_skips"])
         self.assertIs(verdict["skips_are_passes"], False)
@@ -104,7 +106,7 @@ class SkipReasonRule(unittest.TestCase):
         for session in (reasoned["reference"], *reasoned["shards"]):
             session["nonpassing_outcomes"] = []
             session["collection_skips"] = {module: "Skipped: new missing dependency"}
-        verdict = SHARDS.admit_skips(
+        verdict = admit_skips(
             self.value | {"skip_module_blobs": {MODULE: AFTER, module: "d" * 40}},
             reasoned, {"obligations": {}})
         self.assertIn(module, verdict["reported_skips"])
@@ -112,14 +114,18 @@ class SkipReasonRule(unittest.TestCase):
         for session in (blank["reference"], *blank["shards"]):
             session["collection_skips"] = {module: "   "}
         with self.assertRaisesRegex(ValueError, "skip has no reason"):
-            SHARDS.admit_skips(self.value, blank, {"obligations": {}})
+            admit_skips(self.value, blank, {"obligations": {}})
 
     def test_allow_list_message_is_not_the_gate(self):
-        source = inspect.getsource(SHARDS.admit_skips)
+        source = inspect.getsource(admit_skips)
         self.assertNotIn("new or changed case skip", source)
         self.assertNotIn("new or changed collection skip", source)
         self.assertIn("skip has no reason", source)
-        self.assertNotIn("ORDINARY_SKIP_EVIDENCE", inspect.getsource(SHARDS))
+        policy = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted((ROOT / "scripts" / "pytest_shards").glob("*.py")))
+        policy += (ROOT / "scripts" / "pytest-shards.py").read_text(encoding="utf-8")
+        self.assertNotIn("ORDINARY_SKIP_EVIDENCE", policy)
 
 
 if __name__ == "__main__":

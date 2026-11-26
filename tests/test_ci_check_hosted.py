@@ -260,7 +260,7 @@ class ManualWorkflow(unittest.TestCase):
             'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         ])
         mint = next(step for step in steps if step.get('id') == 'source_token')
-        self.assertEqual(mint['if'], "vars.YUETO_CI_APP_CLIENT_ID != ''")
+        self.assertNotIn('if', mint)
         self.assertEqual(mint['with']['repositories'], 'yueops,yueboard')
         self.assertEqual(mint['with']['permission-contents'], 'read')
         execution = next(step for step in steps if step.get('name', '').startswith('Execute every'))

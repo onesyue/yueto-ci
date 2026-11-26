@@ -1,4 +1,5 @@
 """Owner-retired Nezha skips leave the active baseline without rewriting history."""
+import sys
 import copy
 import importlib.util
 import json
@@ -8,33 +9,49 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("nezha_shards", ROOT / "scripts/pytest-shards.py")
-assert SPEC and SPEC.loader
-M = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(M)
+sys.path.insert(0, str(ROOT / "scripts"))
+from pytest_shards.config import (
+    NEZHA_PRIOR_BASELINE_SHA256,
+    NEZHA_RETIRED_MODULE,
+    NEZHA_RETIREMENT_KEY,
+    SKIP_BASELINE,
+)
+from pytest_shards import skip_baseline as skip_baseline_mod
+from pytest_shards import skip_bindings as skip_bindings_mod
+from pytest_shards import transitions_native
+from pytest_shards.skip_baseline import skip_baseline
+from pytest_shards.skip_bindings import admit_skips
+from pytest_shards.support import baseline_bytes, sha
+from pytest_shards.transitions_native import (
+    historical_skip_baseline_bytes,
+    required_native_inputs,
+    restore_nezha_history,
+    reviewed_native_input_successor,
+)
+
 
 
 class NezhaRetirement(unittest.TestCase):
     def setUp(self):
-        self.baseline = M.skip_baseline()
-        self.prior = M.restore_nezha_history(self.baseline)
+        self.baseline = skip_baseline()
+        self.prior = restore_nezha_history(self.baseline)
         self.removed = [n for n in self.prior["cases"]
-                        if n.startswith(M.NEZHA_RETIRED_MODULE + "::")]
+                        if n.startswith(NEZHA_RETIRED_MODULE + "::")]
 
     def test_exact_deletion_preserves_format_order_and_historical_hashes(self):
-        raw = (ROOT / M.SKIP_BASELINE).read_bytes()
-        self.assertEqual(raw, M.baseline_bytes(self.baseline))
-        self.assertNotIn(M.NEZHA_RETIRED_MODULE.encode(), raw)
+        raw = (ROOT / SKIP_BASELINE).read_bytes()
+        self.assertEqual(raw, baseline_bytes(self.baseline))
+        self.assertNotIn(NEZHA_RETIRED_MODULE.encode(), raw)
         self.assertEqual(len(self.baseline["cases"]), 1000)
         self.assertEqual(len(self.removed), 2)
         expected = copy.deepcopy(self.prior)
         for nodeid in self.removed:
             del expected["cases"][nodeid]
-        expected[M.NEZHA_RETIREMENT_KEY] = self.baseline[M.NEZHA_RETIREMENT_KEY]
-        predecessor, _ = M.reviewed_native_input_successor(self.baseline)
-        self.assertEqual(M.baseline_bytes(expected), M.baseline_bytes(predecessor))
-        self.assertEqual(M.sha(M.baseline_bytes(self.prior)), M.NEZHA_PRIOR_BASELINE_SHA256)
-        self.assertEqual(M.historical_skip_baseline_bytes(), M.baseline_bytes(self.prior))
+        expected[NEZHA_RETIREMENT_KEY] = self.baseline[NEZHA_RETIREMENT_KEY]
+        predecessor, _ = reviewed_native_input_successor(self.baseline)
+        self.assertEqual(baseline_bytes(expected), baseline_bytes(predecessor))
+        self.assertEqual(sha(baseline_bytes(self.prior)), NEZHA_PRIOR_BASELINE_SHA256)
+        self.assertEqual(historical_skip_baseline_bytes(), baseline_bytes(self.prior))
         # The returned history is independent of the active case mapping.
         self.assertTrue(set(self.removed).isdisjoint(self.baseline["cases"]))
 
@@ -43,12 +60,12 @@ class NezhaRetirement(unittest.TestCase):
                              ("prior_baseline_sha256", "f" * 64)):
             changed = copy.deepcopy(self.baseline)
             if field is None:
-                del changed[M.NEZHA_RETIREMENT_KEY]
+                del changed[NEZHA_RETIREMENT_KEY]
             else:
-                changed[M.NEZHA_RETIREMENT_KEY][field] = value
-            with self.subTest(field=field), patch.object(M, "read_json", return_value=changed):
+                changed[NEZHA_RETIREMENT_KEY][field] = value
+            with self.subTest(field=field), patch.object(skip_baseline_mod, "read_json", return_value=changed):
                 with self.assertRaises(ValueError):
-                    M.skip_baseline()
+                    skip_baseline()
 
     def test_extra_deletion_or_restored_case_is_rejected(self):
         for mutation in ("extra-deletion", "changed-case", *self.removed):
@@ -60,9 +77,9 @@ class NezhaRetirement(unittest.TestCase):
                 changed["cases"][unrelated]["reason"] = "unreviewed reason"
             else:
                 changed["cases"][mutation] = self.prior["cases"][mutation]
-            with self.subTest(mutation=mutation), patch.object(M, "read_json", return_value=changed):
+            with self.subTest(mutation=mutation), patch.object(skip_baseline_mod, "read_json", return_value=changed):
                 with self.assertRaises(ValueError):
-                    M.skip_baseline()
+                    skip_baseline()
 
     def admit(self, baseline, nodeid):
         case = self.prior["cases"][nodeid]
@@ -72,12 +89,12 @@ class NezhaRetirement(unittest.TestCase):
                     {"nodeid": nodeid, "outcome": case["outcome"], "reason": case["reason"]}]}
         result = {"reference": body | {"assignment_id": "reference"},
                   "shards": [body | {"assignment_id": "ordinary-000"}]}
-        historical, inputs = M.required_native_inputs(baseline)
+        historical, inputs = required_native_inputs(baseline)
         value = {"skip_module_blobs": {module: case["module_blob"]},
-                 "skip_baseline_sha256": M.sha(M.baseline_bytes(baseline)),
+                 "skip_baseline_sha256": sha(baseline_bytes(baseline)),
                  "common_inputs": historical["common_inputs"] | inputs}
-        with patch.object(M, "skip_baseline", return_value=baseline):
-            return M.admit_skips(value, result, {})
+        with patch.object(skip_bindings_mod, "skip_baseline", return_value=baseline):
+            return admit_skips(value, result, {})
 
     def test_retired_skips_fail_admission_and_unrelated_skips_still_work(self):
         for nodeid in self.removed:
@@ -92,13 +109,13 @@ class NezhaRetirement(unittest.TestCase):
     def test_sidecar_history_rejects_changed_or_missing_baseline(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            with patch.object(M, "ROOT", root):
+            with patch.object(transitions_native, "ROOT", root):
                 with self.assertRaises(FileNotFoundError):
-                    M.historical_skip_baseline_bytes()
+                    historical_skip_baseline_bytes()
                 changed = copy.deepcopy(self.baseline)
                 changed["events_sha256"] = "f" * 64
-                (root / M.SKIP_BASELINE).write_bytes(M.baseline_bytes(changed))
+                (root / SKIP_BASELINE).write_bytes(baseline_bytes(changed))
                 with self.assertRaisesRegex(ValueError, "changed historical baseline"):
-                    M.historical_skip_baseline_bytes()
-                (root / M.SKIP_BASELINE).write_bytes(M.baseline_bytes(self.prior))
-                self.assertEqual(M.historical_skip_baseline_bytes(), M.baseline_bytes(self.prior))
+                    historical_skip_baseline_bytes()
+                (root / SKIP_BASELINE).write_bytes(baseline_bytes(self.prior))
+                self.assertEqual(historical_skip_baseline_bytes(), baseline_bytes(self.prior))

@@ -52,6 +52,18 @@ class NativeNodeMakeChainTest(unittest.TestCase):
     )
     CURRENT = "test: verify-fork-tags\n\t$(MAKE) test-vendored\ntest-vendored: check-profile-deps\n"
     LEGACY = "test: verify-fork-tags check-profile-deps\n"
+    FORK_LEDGER = (
+        "test: verify-fork-tags fork-ledger-check\n"
+        "\t$(MAKE) test-vendored\n"
+        "test-vendored: check-profile-deps\n"
+    )
+    FORK_LEDGER_PREFIX = (
+        "VALID_BUILD_PROFILES := auto hy2 vless\n"
+        ".PHONY: test test-vendored verify-fork-tags fork-ledger-check check-profile-deps\n"
+        "verify-fork-tags:\n\tbash scripts/verify-fork-tags.sh\n"
+        "fork-ledger-check:\n\tgo run ./tools/forkledger --check --release tools/forkledger/release-excerpt.yaml\n"
+        "check-profile-deps:\n\tsh scripts/check-profile-deps.sh\n"
+    )
 
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -121,6 +133,21 @@ class NativeNodeMakeChainTest(unittest.TestCase):
                 result = self.cli(self.PREFIX + topology + self.BODY)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn("verified for yue-node", result.stdout)
+
+    def test_actual_cli_accepts_fork_ledger_check_on_the_current_chain(self):
+        result = self.cli(self.FORK_LEDGER_PREFIX + self.FORK_LEDGER + self.BODY)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("verified for yue-node", result.stdout)
+        bad_recipe = self.FORK_LEDGER_PREFIX.replace(
+            "go run ./tools/forkledger --check --release tools/forkledger/release-excerpt.yaml",
+            "true",
+        )
+        self.assertNotEqual(self.cli(bad_recipe + self.FORK_LEDGER + self.BODY).returncode, 0)
+        missing_phony = self.FORK_LEDGER_PREFIX.replace(
+            ".PHONY: test test-vendored verify-fork-tags fork-ledger-check check-profile-deps\n",
+            ".PHONY: test test-vendored verify-fork-tags check-profile-deps\n",
+        )
+        self.assertNotEqual(self.cli(missing_phony + self.FORK_LEDGER + self.BODY).returncode, 0)
 
     def test_owned_prerequisites_run_exactly_the_reviewed_commands(self):
         rules = (
@@ -726,7 +753,11 @@ class BuildPolicyTest(unittest.TestCase):
         )
         cls.readme = README.read_text(encoding="utf-8")
         cls.native_contract = json.loads(NATIVE_CONTRACT.read_text(encoding="utf-8"))
-        cls.native_validator = NATIVE_VALIDATOR.read_text(encoding="utf-8")
+        package = NATIVE_VALIDATOR.parent / "native_node_contract"
+        cls.native_validator = "\n".join(
+            [NATIVE_VALIDATOR.read_text(encoding="utf-8")]
+            + [path.read_text(encoding="utf-8") for path in sorted(package.glob("*.py"))]
+        )
         cls.target_planner = TARGET_PLANNER.read_text(encoding="utf-8")
 
     def test_all_actions_are_pinned_to_full_commit_sha(self) -> None:
@@ -1098,11 +1129,15 @@ class BuildPolicyTest(unittest.TestCase):
                 "board-visual-capture.yml",
                 "build.yml",
                 "ci-toolchain.yml",
+                "client-core-matrix.yml",
                 "hy2-probe.yml",
                 "image-rescan.yml",
                 "policy-ci.yml",
                 "quality-ratchet.yml",
+                "scorecard.yml",
+                "weekly-scan-deadman.yml",
                 "weekly-vuln-sbom.yml",
+                "yueops-master-validate.yml",
             ],
         )
 
@@ -1150,6 +1185,19 @@ class BuildPolicyTest(unittest.TestCase):
         for forbidden in ("packages: write", "id-token: write", "contents: write", "build-push-action", "docker push", "imagetools create", "gh release"):
             self.assertNotIn(forbidden, probe)
 
+        matrix = (WORKFLOW_DIR / "client-core-matrix.yml").read_text(encoding="utf-8")
+        self.assertIn("permissions:\n  contents: read\n", matrix)
+        for forbidden in (
+            "packages: write",
+            "id-token: write",
+            "contents: write",
+            "build-push-action",
+            "cosign",
+            "promote",
+            "pull_request",
+        ):
+            self.assertNotIn(forbidden, matrix)
+
         capture = (WORKFLOW_DIR / "board-visual-capture.yml").read_text()
         capture_code = "\n".join(
             line for line in capture.splitlines() if not line.lstrip().startswith("#")
@@ -1179,6 +1227,35 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("cosign", deadman_code)
         self.assertNotIn("promote=true", deadman_code)
         self.assertIn("permissions:\n  contents: read", deadman)
+
+        # Nightly / hourly official validation_only against yueops master is
+        # a consumer of the existing build.yml path, never a second delivery
+        # path: it may dispatch and watch, but it must not build, sign, or
+        # promote images itself.
+        master_validate = (WORKFLOW_DIR / "yueops-master-validate.yml").read_text(
+            encoding="utf-8"
+        )
+        master_validate_code = "\n".join(
+            line
+            for line in master_validate.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        self.assertIn("permissions:\n  contents: read", master_validate)
+        self.assertIn("  actions: write", master_validate)
+        self.assertIn("  packages: read", master_validate)
+        self.assertIn("validation_only=true", master_validate_code)
+        self.assertIn("promote=false", master_validate_code)
+        for forbidden in (
+            "build-push-action",
+            "imagetools create",
+            "cosign",
+            "promote=true",
+            "packages: write",
+            "id-token: write",
+            "repository_dispatch",
+        ):
+            with self.subTest(master_validate_forbidden=forbidden):
+                self.assertNotIn(forbidden, master_validate_code)
 
         self.assertIn(
             "Authorize and promote verified default-branch digest",
@@ -1240,6 +1317,29 @@ class BuildPolicyTest(unittest.TestCase):
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, policy_lower)
+
+        # Scorecard is a private analysis workflow: it may mint an OIDC
+        # token for ossf/scorecard-action, but it must not publish
+        # results or open a product delivery path.
+        scorecard = (WORKFLOW_DIR / "scorecard.yml").read_text(encoding="utf-8")
+        scorecard_code = "\n".join(
+            line for line in scorecard.splitlines() if not line.lstrip().startswith("#")
+        )
+        self.assertIn("publish_results: false", scorecard_code)
+        self.assertIn("permissions: read-all", scorecard_code)
+        self.assertIn("id-token: write", scorecard_code)
+        self.assertIn("security-events: write", scorecard_code)
+        for forbidden in (
+            "build-push-action",
+            "imagetools create",
+            "cosign",
+            "promote=true",
+            "packages: write",
+            "docker push",
+            "gh release",
+        ):
+            with self.subTest(scorecard_forbidden=forbidden):
+                self.assertNotIn(forbidden, scorecard_code)
 
         weekly = (WORKFLOW_DIR / "weekly-vuln-sbom.yml").read_text(encoding="utf-8")
         weekly_code = "\n".join(
@@ -1307,7 +1407,7 @@ class BuildPolicyTest(unittest.TestCase):
             "Use the runner Docker daemon",
             "Preflight validation dependencies",
             "node-validation-preflight.sh dependencies",
-            "YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}",
+            "YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token }}",
             "GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \\\n",
             "            make verify-fork-tags\n",
             "board-validation-preflight.sh dependencies",
@@ -1692,8 +1792,11 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("npm install --global squawk", self.workflow)
         self.assertIn('board-validation-output.py', self.workflow)
         frontend = (ROOT / 'scripts/board-validation.sh').read_text()
-        self.assertIn('corepack install --global "$web_pm"', frontend)
-        self.assertIn('[ "$web_pm" = "$admin_pm" ]', frontend)
+        self.assertIn('FRONTEND_LAYOUT=workspace', frontend)
+        self.assertIn('corepack install --global "$root_pm"', frontend)
+        self.assertNotIn('layout=legacy', frontend)
+        self.assertNotIn('corepack install --global "$web_pm"', frontend)
+        self.assertNotIn('[ "$web_pm" = "$admin_pm" ]', frontend)
 
     def test_yueboard_central_release_matches_source_quality_contract(self) -> None:
         """Private Actions being frozen must not weaken the release proof."""
@@ -1769,12 +1872,16 @@ class BuildPolicyTest(unittest.TestCase):
         frontend_wiring = self.workflow[frontend_start:design_start]
         self.assertIn('board-validation-output.py', frontend_wiring)
         frontend = executor.rsplit('case "$role:$frontend_phase" in', 1)[1]
-        # Two layouts (W9.1): legacy per-app locks and the root pnpm
-        # workspace; each verifies both embedded dists.
-        self.assertEqual(frontend.count("node scripts/verify-dist.mjs dist"), 4)
-        self.assertIn("if [ -f pnpm-workspace.yaml ]; then", frontend)
+        # Workspace layout only: one root install, both embedded dists.
+        self.assertIn("FRONTEND_LAYOUT=workspace", executor)
+        self.assertNotIn("layout=legacy", executor)
+        self.assertNotIn("pnpm --dir web install", executor)
+        self.assertNotIn("pnpm --dir web-admin", executor)
+        self.assertEqual(frontend.count("node scripts/verify-dist.mjs dist"), 2)
+        self.assertIn("require_workspace", frontend)
         self.assertIn("pnpm install --frozen-lockfile --ignore-scripts\n", frontend)
-        self.assertIn('emit_frontend_result "layout=$layout"', frontend)
+        self.assertIn('emit_frontend_result "layout=$FRONTEND_LAYOUT"', frontend)
+        self.assertIn("pnpm --filter yueboard-web --filter yueboard-web-admin run build", frontend)
         workspace_only = "steps.board_frontend.outputs.layout == 'workspace'"
         for stage, phase, gate in (
             ("Validate YueBoard frontend lint", "frontends:lint)", "pnpm run lint"),
@@ -2560,9 +2667,8 @@ class BuildPolicyTest(unittest.TestCase):
         promote digest 且三门验签后**签名**提交推送。这里刻意不写，理由：
           * 根仓是私有免费档，ruleset/分支保护不可用，「签名提交」只能靠约定；
             CI 机器人写不出业主签名的提交，把签名私钥塞进公开仓 secrets 更糟。
-          * YUETO_CI_PAT 是 classic `repo` scope——对每个私仓**已经可写**，但本仓
-            从未用它写过任何仓。第一条「用它推私仓」的步骤会把那份 scope 从持有变成
-            在用，本公开仓一旦被改坏，写权限爆炸半径是全部私仓。
+          * 一份覆盖全部私仓的写入凭据一旦被本公开仓使用，写权限爆炸半径就是
+            全部私仓。本 workflow 不写任何仓。
           * yueops 按 group 派发时三个矩阵 job 并行 promote，三处同时提交根仓 master
             必然互撞，还得再加串行化 job；工作站那一侧三个 digest 本来就在一个进程里。
         判据：workflow 顶层与 build job 的 permissions 里 contents 只读；全 workflow

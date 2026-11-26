@@ -8,23 +8,20 @@ pytest-shards.skip_blob_precheck also has to pass.
 This is not a substitute for full build validation.
 """
 import argparse
-import importlib.util
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-from admission_diagnostics import rejection
-
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("admission_policy", ROOT / "scripts/pytest-shards.py")
-POLICY = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(POLICY)
+sys.path.insert(0, str(ROOT / "scripts"))
+from admission_diagnostics import rejection
+from pytest_shards import policy_history, support
 
 
 def skip_baseline_rejection(source, head):
     """Replay the shard skip rule. Join and this precheck share that function."""
-    lines = POLICY.skip_blob_precheck(source, head)
+    lines = policy_history.skip_blob_precheck(source, head)
     if not lines:
         return None
     return False, "skip baseline rejects the head: " + " ".join(lines)
@@ -34,22 +31,22 @@ def precheck(source, base, head):
     for revision in (base, head):
         if not re.fullmatch(r"[0-9a-f]{40}", revision):
             raise ValueError("--base and --head must be full commit SHAs")
-        POLICY.git(source, "cat-file", "-e", revision + "^{commit}")
-    after = POLICY.tree_inputs(source, head)
+        support.git(source, "cat-file", "-e", revision + "^{commit}")
+    after = support.tree_inputs(source, head)
     # Admit a signed commit on the default branch. A new helper or conftest
     # is not a separate seal. A skip rejection still wins, including when the
     # commit is unsigned, so this precheck sees the same cases join rejects.
     signature_error = None
     try:
-        bound = POLICY.source_evidence.optional(source, head)
+        bound = support.source_evidence.optional(source, head)
         if bound is not None:
-            POLICY.source_evidence.validate_baseline(bound, {p: blob for p, (_, blob) in after.items()})
+            support.source_evidence.validate_baseline(bound, {p: blob for p, (_, blob) in after.items()})
             rejected = skip_baseline_rejection(source, head)
             if rejected is not None:
                 return rejected
             return True, "owner-signed source inputs bound; runtime admission still required"
-        POLICY.admit_signed_default_branch(source, head)
-    except POLICY.EvidenceUnavailable:
+        support.admit_signed_default_branch(source, head)
+    except support.EvidenceUnavailable:
         raise
     except ValueError as error:
         signature_error = error

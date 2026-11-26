@@ -1,4 +1,4 @@
-"""Validation reads the yueto root at run time and does not freeze its SHA."""
+"""Validation checks out the yueto root at the sibling-lock SHA."""
 from __future__ import annotations
 
 import copy
@@ -39,9 +39,19 @@ class BrowserOriginAuthorityTest(unittest.TestCase):
         for step in (checkout, gate):
             self.assertEqual(step['if'], CONDITION)
             self.assertNotIn('continue-on-error', step)
+        resolve = steps[names.index('Resolve sibling lock')]
+        self.assertEqual(resolve['id'], 'siblings')
+        self.assertEqual(resolve['if'], CONDITION)
+        self.assertEqual(
+            resolve['run'].strip(),
+            'set -euo pipefail\n'
+            '"${YUE_CI_PYTHON:?}" .ci-policy/scripts/update-siblings-lock.py '
+            '--github-output --lock .ci-policy/ci/siblings.lock >> "$GITHUB_OUTPUT"',
+        )
+        self.assertLess(names.index('Resolve sibling lock'), names.index(CHECKOUT))
         self.assertEqual(checkout['with']['repository'], 'onesyue/yueto')
-        self.assertEqual(checkout['with']['ref'], 'master')
-        self.assertNotIn('${{', checkout['with']['ref'])
+        self.assertEqual(checkout['with']['ref'], '${{ steps.siblings.outputs.yueto }}')
+        self.assertNotIn('master', checkout['with']['ref'])
         self.assertEqual(checkout['with']['path'], '.ci-origin-authority')
         self.assertIs(checkout['with']['persist-credentials'], False)
         self.assertIs(checkout['with']['sparse-checkout-cone-mode'], False)
@@ -51,7 +61,7 @@ class BrowserOriginAuthorityTest(unittest.TestCase):
         )
         self.assertEqual(
             checkout['with']['token'],
-            '${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}',
+            '${{ steps.source_token.outputs.token }}',
         )
         self.assertEqual(gate['env'], {'ORIGIN_COMPONENT': '${{ matrix.validation }}'})
         self.assertIn(RESOLVE, gate['run'])
@@ -62,12 +72,13 @@ class BrowserOriginAuthorityTest(unittest.TestCase):
         self.assertNotIn('permissions', data['jobs']['validate'])
         return gate['run']
 
-    def test_runtime_root_checkout_rejects_a_frozen_sha(self):
+    def test_yueto_root_checkout_uses_the_sibling_lock(self):
         text = WORKFLOW.read_text()
         self.assertNotIn('de5477ffada2e6b1618bb798acd8f455b86102d7', text)
+        self.assertNotIn('ref: master', text)
         data = workflow()
         self.assert_contract(data)
-        for mutation in ('literal-sha', 'dispatch-ref', 'persist', 'optional', 'partial-condition', 'missing-gate', 'skip-resolve'):
+        for mutation in ('literal-sha', 'dispatch-ref', 'branch-master', 'persist', 'optional', 'partial-condition', 'missing-gate', 'skip-resolve'):
             changed = copy.deepcopy(data)
             steps = changed['jobs']['validate']['steps']
             checkout = next(s for s in steps if s.get('name') == CHECKOUT)
@@ -76,6 +87,8 @@ class BrowserOriginAuthorityTest(unittest.TestCase):
                 checkout['with']['ref'] = 'a' * 40
             elif mutation == 'dispatch-ref':
                 checkout['with']['ref'] = '${{ inputs.ref }}'
+            elif mutation == 'branch-master':
+                checkout['with']['ref'] = 'master'
             elif mutation == 'persist':
                 checkout['with']['persist-credentials'] = True
             elif mutation == 'optional':
@@ -136,7 +149,7 @@ print(os.environ['EXPECTED_AUTHORITY'])
 
     def test_root_token_scope_cannot_leak_into_build_or_plan(self):
         texts = credentials._workflows()
-        credentials.CredentialSwitchPolicyTest().test_every_app_token_is_switched_pinned_and_least_privilege()
+        credentials.CredentialSwitchPolicyTest().test_every_app_token_is_pinned_and_least_privilege()
         for job in ('plan', 'build', 'publish'):
             changed = dict(texts)
             prefix, tail = texts['build.yml'].split('\n  ' + job + ':\n', 1)
@@ -148,4 +161,4 @@ print(os.environ['EXPECTED_AUTHORITY'])
                 repos.group(0), repos.group(0) + ',yueto', 1)
             with self.subTest(job=job), mock.patch.object(credentials, '_workflows', return_value=changed):
                 with self.assertRaises(AssertionError):
-                    credentials.CredentialSwitchPolicyTest().test_every_app_token_is_switched_pinned_and_least_privilege()
+                    credentials.CredentialSwitchPolicyTest().test_every_app_token_is_pinned_and_least_privilege()

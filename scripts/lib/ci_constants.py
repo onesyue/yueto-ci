@@ -53,6 +53,7 @@ RATE_LIMIT_RETRY_CEILING_SECONDS = 300
 
 LOG_HEADER_BYTE_LIMIT = 65536
 VALIDATION_IMAGE_WORKERS = 5
+CI_FAILURE_CLUSTER_WORKERS = 4
 POSTGRES_HEALTH_ATTEMPTS = 60
 MAX_VERSION_PAGES = 100
 
@@ -79,8 +80,8 @@ COMPLEXITY_NLOC_LIMIT = 200
 
 # Needles matched against published image and generator source.
 NODE_IMAGE_BIN_COPY = "COPY --from=builder /build/yue-node* /usr/local/bin/"
-NODE_ENTRYPOINT_NEEDLE = 'entrypoint: ["/usr/local/bin/yue-node-{role}"]'
-NODE_EXPECTED_PATH_NEEDLE = 'expected_path = f"/usr/local/bin/yue-node-{role}"'
+NODE_ENTRYPOINT_NEEDLE = 'entrypoint: ["{BIN_YUE_NODE_PREFIX}{role}"]'
+NODE_EXPECTED_PATH_NEEDLE = 'expected_path = f"{BIN_YUE_NODE_PREFIX}{role}"'
 
 # --- Ports. 5432 is the PostgreSQL assigned port, not an env override. ---
 
