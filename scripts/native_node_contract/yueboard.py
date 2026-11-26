@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path as _ConstantsPath
 _CI_LIB = str(_ConstantsPath(__file__).resolve().parents[1] / "lib")
@@ -114,29 +115,87 @@ def _read_yueboard_inputs(root: Path) -> dict[str, object]:
         "retirement_test": retirement_test,
         "migration": migration,
         "raw_floor": raw_floor,
+        "board_root": root,
     }
 
 
-def check_yueboard_schema_floor(raw_floor: object, contract: dict) -> None:
-    """A candidate may raise the floor; it must not drop below the released contract.
-
-    schema-floor.txt on the YueBoard checkout is the candidate floor and must
-    be a positive integer. The central native-node-contract.json records the
-    last reviewed release floor. Equality would block official premerge of a
-    legitimate floor bump until the contract is updated, and updating the
-    contract first would fail CI of the still-shipping previous floor.
-    """
+def parse_schema_floor(raw: object, *, label: str) -> int:
+    """Read a positive integer floor from schema-floor.txt or a contract projection."""
     try:
-        candidate = int(str(raw_floor).strip())
+        value = int(str(raw).strip())
     except (TypeError, ValueError) as exc:
-        raise RuntimeError("YueBoard schema floor is not an integer") from exc
-    if candidate < 1:
-        raise RuntimeError("YueBoard schema floor is not an integer")
+        raise RuntimeError(f"{label} is not an integer") from exc
+    if value < 1:
+        raise RuntimeError(f"{label} is not an integer")
+    return value
+
+
+def schema_floor_from_git(board_root: Path, revision: str) -> int:
+    """Derive the reviewed floor from schema-floor.txt at a YueBoard revision.
+
+    The number is never hand-written: it comes from the board checkout itself.
+    """
+    import subprocess
+
+    result = subprocess.run(
+        ["git", "-C", str(board_root), "show", f"{revision}:schema-floor.txt"],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"cannot read schema-floor.txt at reviewed YueBoard revision {revision}"
+        )
+    return parse_schema_floor(result.stdout.decode(), label="reviewed schema-floor.txt")
+
+
+def derive_released_schema_floor(
+    board_root: Path | None = None,
+    *,
+    contract: dict | None = None,
+    promoted_ref: str | None = None,
+) -> int:
+    """Released floor is the promoted/reviewed board's schema-floor.txt.
+
+    Prefer git-show of PROMOTED_BOARD_REF (or an explicit revision) from the
+    YueBoard checkout under validation. Fall back to the contract projection
+    only when no reviewed revision is available. The projection itself must
+    be produced by this derivation, never edited by hand.
+    """
+    revision = (promoted_ref if promoted_ref is not None else os.environ.get("PROMOTED_BOARD_REF", "")).strip()
+    if revision:
+        if board_root is None:
+            raise RuntimeError("reviewed YueBoard revision is set but the board checkout is missing")
+        return schema_floor_from_git(board_root, revision)
+    if contract is None:
+        raise RuntimeError("native-node contract schema floor is not available")
     try:
-        released = int(contract["schema_floor"])
-    except (KeyError, TypeError, ValueError) as exc:
+        return parse_schema_floor(contract["schema_floor"], label="native-node contract schema floor")
+    except KeyError as exc:
         raise RuntimeError("native-node contract schema floor is not an integer") from exc
-    if candidate < released:
+
+
+def check_yueboard_schema_floor(
+    raw_floor: object,
+    contract: dict | None = None,
+    *,
+    released: object | None = None,
+    board_root: Path | None = None,
+    promoted_ref: str | None = None,
+) -> None:
+    """A candidate may raise the floor; it must not drop below the released floor.
+
+    The released floor is derived automatically from the reviewed YueBoard
+    revision's schema-floor.txt when that revision is available. The
+    contract JSON is only a projection of that derivation.
+    """
+    candidate = parse_schema_floor(raw_floor, label="YueBoard schema floor")
+    if released is None:
+        released = derive_released_schema_floor(
+            board_root, contract=contract, promoted_ref=promoted_ref
+        )
+    released_floor = parse_schema_floor(released, label="released schema floor")
+    if candidate < released_floor:
         raise RuntimeError(
             "YueBoard schema floor is below the native-node contract"
         )
@@ -155,7 +214,7 @@ def _validate_yueboard_proto(contract: dict, sources: dict[str, object]) -> None
         "credential_consumers",
     ]:
         raise RuntimeError("native rollout order must bootstrap locked YueBoard first")
-    check_yueboard_schema_floor(raw_floor, contract)
+    check_yueboard_schema_floor(raw_floor, contract=contract, board_root=sources.get("board_root"))
     identity = contract["device_identity"]
     if identity.get("portal_installation_authority") != "retired":
         raise RuntimeError("Portal installation authority must remain retired")
