@@ -320,7 +320,7 @@ exit 0
         self.assertIn(reviewed, source)
         self.assertIn("readonly COSIGN_VERSION='v3.1.3'", source)
         workflow = workflow_text()
-        self.assertEqual(workflow.count("run: bash .ci-policy/scripts/install-cosign.sh"), 2)
+        self.assertEqual(workflow.count("run: bash .ci-policy/scripts/install-cosign.sh"), 3)
         self.assertNotIn("sigstore/cosign-installer@", workflow)
         (self.base / "ci-retry.sh").write_text(HELPER.read_text())
         fixture = self.base / "artifact"
