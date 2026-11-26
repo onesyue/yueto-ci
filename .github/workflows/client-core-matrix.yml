@@ -1,0 +1,137 @@
+name: Client core interop matrix
+# Release pins are verified by scripts/client_matrix/catalog.py before extract.
+# sing-box v1.14.4 c005f35300ce76427dc285481ec5695f5b179cd2 sha256 699a1b510aa4396b2176d32d1181920399ebf1e267835da6f3b598d0f7c24968
+# mihomo v1.19.34 0455d0d28c4526937380505153e65a843d8612e8 sha256 223fab877e5795ce780ba39902e5f0b1113c1256ae244a7160f1165e017e9ccc
+# xray v26.11.9 676eaf66f8f05d4d558ee7a74b4736623d3feeb9 sha256 b651f7e1d9966ee2c1b1ee1bf8b52c72771824d3065dce96bbc8bcc19ed95f82
+# yue-mihomo b6ea58108a90e4c710cc431d5a3a4f376284302f
+
+on:
+  workflow_dispatch:
+    inputs:
+      yue_node_ref:
+        description: Exact yue-node commit
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: client-core-matrix
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  matrix:
+    if: github.repository == 'onesyue/yueto-ci'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate yue-node ref
+        id: node
+        env:
+          YUE_NODE_REF: ${{ inputs.yue_node_ref }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$YUE_NODE_REF" | grep -Eq '^[0-9a-f]{40}$'
+          printf 'ref=%s\n' "$YUE_NODE_REF" >> "$GITHUB_OUTPUT"
+
+      - name: Mint read-only source token
+        id: source
+        if: vars.YUETO_CI_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
+          owner: onesyue
+          repositories: yue-node,mihomo
+          permission-contents: read
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yue-node
+          ref: ${{ steps.node.outputs.ref }}
+          token: ${{ steps.source.outputs.token || secrets.YUETO_CI_PAT }}
+          fetch-depth: 1
+          path: node
+          persist-credentials: false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/mihomo
+          ref: b6ea58108a90e4c710cc431d5a3a4f376284302f
+          token: ${{ steps.source.outputs.token || secrets.YUETO_CI_PAT }}
+          fetch-depth: 1
+          path: fork-mihomo
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.4'
+          cache: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: Build yue-node profiles and the mihomo fork
+        env:
+          CGO_ENABLED: "0"
+          GOTOOLCHAIN: local
+          GOWORK: "off"
+          GOPRIVATE: github.com/onesyue/*
+        run: |
+          set -euo pipefail
+          mkdir -p bins
+          make -C node BUILD_PROFILE=hy2 build
+          cp node/yue-node bins/yue-node-hy2
+          make -C node BUILD_PROFILE=vless build
+          cp node/yue-node bins/yue-node-vless
+          (
+            cd fork-mihomo
+            go build -trimpath -buildvcs=false -o "$GITHUB_WORKSPACE/bins/yue-mihomo" .
+          )
+
+      - name: Install the local hop redirect tool
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nftables
+
+      - name: Run the interop matrix
+        env:
+          PYTHONPATH: scripts
+          YUE_NODE_REF: ${{ steps.node.outputs.ref }}
+        run: |
+          set -euo pipefail
+          python3 -m client_matrix run \
+            --report-only \
+            --yue-node-ref "$YUE_NODE_REF" \
+            --node-hy2 bins/yue-node-hy2 \
+            --node-vless bins/yue-node-vless \
+            --source-client "yue-mihomo=bins/yue-mihomo" \
+            --cache "$RUNNER_TEMP/client-matrix" \
+            --output matrix-report/matrix
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: client-core-matrix
+          path: |
+            matrix-report/matrix.json
+            matrix-report/matrix.md
+          if-no-files-found: error
+
+      - name: Publish the matrix summary
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -f matrix-report/matrix.md ]; then
+            cat matrix-report/matrix.md >> "$GITHUB_STEP_SUMMARY"
+          fi
