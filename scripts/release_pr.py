@@ -17,12 +17,21 @@ import subprocess
 import sys
 from pathlib import Path
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import (
+    ACTIONS_OIDC_ISSUER,
+    GITHUB_HTTPS_ORIGIN,
+    SLSA_PROVENANCE_PREDICATE,
+)
+
 
 WORKFLOW_IDENTITY = (
-    "https://github.com/onesyue/yueto-ci/.github/workflows/build.yml@refs/heads/master"
+    f"{GITHUB_HTTPS_ORIGIN}/onesyue/yueto-ci/.github/workflows/build.yml@refs/heads/master"
 )
-OIDC_ISSUER = "https://token.actions.githubusercontent.com"
-PROVENANCE_PREDICATE = "https://slsa.dev/provenance/v1"
+OIDC_ISSUER = ACTIONS_OIDC_ISSUER
+PROVENANCE_PREDICATE = SLSA_PROVENANCE_PREDICATE
 SIGNER_WORKFLOW = "github.com/onesyue/yueto-ci/.github/workflows/build.yml"
 YUETO_REPO = "onesyue/yueto"
 CI_REPO = "onesyue/yueto-ci"
@@ -32,8 +41,8 @@ AUTHOR_NAME = "yueto-ci"
 AUTHOR_EMAIL = "yueto-ci@users.noreply.github.com"
 NODE_IMAGE_SERVICES = frozenset({"yue-node"})
 ALLOWED_REMOTES = frozenset({
-    "https://github.com/onesyue/yueto",
-    "https://github.com/onesyue/yueto.git",
+    f"{GITHUB_HTTPS_ORIGIN}/onesyue/yueto",
+    f"{GITHUB_HTTPS_ORIGIN}/onesyue/yueto.git",
 })
 SHA12 = 12
 ARCHITECTURES = frozenset({"amd64", "arm64"})
@@ -47,7 +56,7 @@ GENERATION_RE = re.compile(r"^[1-9][0-9]{0,17}$")
 BRANCH_RE = re.compile(r"^release/[a-z0-9][a-z0-9-]*-[0-9a-f]{12}$")
 PR_NUMBER_RE = re.compile(r"^[1-9][0-9]{0,9}$")
 INVOCATION_RE = re.compile(
-    rf"^https://github.com/{re.escape(CI_REPO)}/actions/runs/([1-9][0-9]*)/attempts/([1-9][0-9]*)$"
+    rf"^{GITHUB_HTTPS_ORIGIN}/{re.escape(CI_REPO)}/actions/runs/([1-9][0-9]*)/attempts/([1-9][0-9]*)$"
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -529,7 +538,7 @@ def _create_pr(branch: str, service: str, revision: str, generation: str) -> str
     body_file.write_text(body, encoding="utf-8")
     result = _run(pr_create_args(branch, title, body_file), capture=True, text=True)
     url = result.stdout.strip().splitlines()[-1]
-    prefix = f"https://github.com/{YUETO_REPO}/pull/"
+    prefix = f"{GITHUB_HTTPS_ORIGIN}/{YUETO_REPO}/pull/"
     if not url.startswith(prefix) or not PR_NUMBER_RE.fullmatch(url[len(prefix):]):
         raise ReleasePrError("pull request create did not return a pull request url")
     return url
