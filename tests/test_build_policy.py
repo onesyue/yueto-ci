@@ -936,8 +936,9 @@ class BuildPolicyTest(unittest.TestCase):
             "'[\"ubuntu-24.04\"]')"
         )
         # plan, validate, freshness, validation-evidence, candidate build,
-        # owned ops selection, and publish. The toolchain image is not a runner.
-        self.assertEqual(self.workflow.count(selector), 7)
+        # owned ops selection, publish, and release-pr. The toolchain image
+        # is not a runner.
+        self.assertEqual(self.workflow.count(selector), 8)
         self.assertIn(
             "`self-hosted`, `Linux`, `X64` and add `yue-local-release`.",
             self.readme,
@@ -2656,21 +2657,12 @@ class BuildPolicyTest(unittest.TestCase):
             },
         )
 
-    def test_promotion_records_nothing_in_the_workspace_root_repo(self) -> None:
-        """release.yaml 的写者是工作站 ship.sh，不是这里（2026-09-14 决定）。
+    def test_promotion_opens_a_signed_per_service_release_pr(self) -> None:
+        """Root release.yaml stays on the owner key. CI opens a per-service PR.
 
-        根仓 onesyue/yueto 的 promote 记录（release.yaml）由 scripts/ship.sh 在拿到
-        promote digest 且三门验签后**签名**提交推送。这里刻意不写，理由：
-          * 根仓是私有免费档，ruleset/分支保护不可用，「签名提交」只能靠约定；
-            CI 机器人写不出业主签名的提交，把签名私钥塞进公开仓 secrets 更糟。
-          * 一份覆盖全部私仓的写入凭据一旦被本公开仓使用，写权限爆炸半径就是
-            全部私仓。本 workflow 不写任何仓。
-          * yueops 按 group 派发时三个矩阵 job 并行 promote，三处同时提交根仓 master
-            必然互撞，还得再加串行化 job；工作站那一侧三个 digest 本来就在一个进程里。
-        判据：workflow 顶层与 build job 的 permissions 里 contents 只读；全 workflow
-        没有任何 git commit/push、没有对 onesyue/yueto 的 contents API 写、没有提到
-        release.yaml；而 ship.sh 赖以扒 digest 的 promote 步骤 env 锚点（DIGEST /
-        SOURCE_SHA / IMAGE）必须仍在——那是工作站写者的输入。
+        The workflow still has no git push, no contents API write, and no
+        job-level contents: write. The release-pr app token is the only
+        contents and pull-request write, and it is not the job GITHUB_TOKEN.
         """
 
         self.assertRegex(self.workflow, r"(?m)^permissions:\n  contents: read\n")
@@ -2696,8 +2688,20 @@ class BuildPolicyTest(unittest.TestCase):
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotRegex(code, forbidden)
-        for permission in ("contents: write", "contents: 'write'", 'contents: "write"'):
-            self.assertNotIn(permission, code)
+        for line in code.splitlines():
+            self.assertNotIn(line.strip(), {
+                "contents: write",
+                "contents: 'write'",
+                'contents: "write"',
+            })
+        self.assertEqual(code.count("\n          permission-contents: write\n"), 1)
+        self.assertEqual(code.count("\n          permission-pull-requests: write\n"), 1)
+        release_job = code.split("\n  release-pr:\n", 1)[1].split(
+            "\n  abort-on-build-failure:\n", 1
+        )[0]
+        self.assertIn("permission-contents: write", release_job)
+        self.assertIn("permission-pull-requests: write", release_job)
+        self.assertNotIn("needs.publish.result", release_job)
         self.assertIn("release.yaml", self.readme)
         self.assertIn("scripts/ship.sh", self.readme)
 

@@ -1,10 +1,11 @@
 """Central credential and dependency-install policy.
 
 Private source reads use a GitHub App installation token minted in the job.
-The token names its repositories and carries ``contents: read`` only. GHCR
-cannot accept that installation token, so registry login and package API
-reads use the job ``GITHUB_TOKEN``. The job ``permissions`` block is that
-scope.
+Source tokens name their repositories and carry ``contents: read`` only.
+The release-pr job is the exception: its token names yueto and can write
+contents and pull requests. GHCR cannot accept an installation token, so
+registry login and package API reads use the job ``GITHUB_TOKEN``. The job
+``permissions`` block is that scope.
 
 Dependency lifecycle scripts never run in a credential-holding job:
 every ``npm ci`` and ``pnpm install`` carries ``--ignore-scripts``.
@@ -85,6 +86,15 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
                 elif name == "client-core-matrix.yml":
                     allowed = {"yue-node", "mihomo"}
                     self.assertEqual(set(repos.group(1).split(",")), allowed)
+                elif name == "build.yml" and job == "release-pr":
+                    self.assertEqual(set(repos.group(1).split(",")), {"yueto"})
+                    permissions = re.findall(r"permission-([a-z-]+): (\w+)", step)
+                    self.assertEqual(len(permissions), 2, permissions)
+                    self.assertEqual(
+                        set(permissions),
+                        {("contents", "write"), ("pull-requests", "write")},
+                    )
+                    continue
                 else:
                     allowed = SOURCE_REPOS | (
                         {"yueto"} if name == "build.yml" and job == "validate" else set()
