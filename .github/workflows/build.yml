@@ -2777,11 +2777,13 @@ jobs:
 
       - name: Resolve sibling lock
         id: siblings
-        # release-pr runs on the bare hosted runner (no toolchain container),
-        # where /usr/local/bin/python3 does not exist (run 45839983512 exit 127).
+        env:
+          # release-pr runs on the bare runner, not in the toolchain container;
+          # /usr/local/bin/python3 does not exist there (run 45839983512 exit 127).
+          YUE_CI_PYTHON: /usr/bin/python3
         run: |
           set -euo pipefail
-          python3 .ci-policy/scripts/update-siblings-lock.py --github-output --lock .ci-policy/ci/siblings.lock >> "$GITHUB_OUTPUT"
+          "${YUE_CI_PYTHON:?}" .ci-policy/scripts/update-siblings-lock.py --github-output --lock .ci-policy/ci/siblings.lock >> "$GITHUB_OUTPUT"
 
 
       - name: Checkout release ledger
