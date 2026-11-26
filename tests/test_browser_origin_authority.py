@@ -61,7 +61,7 @@ class BrowserOriginAuthorityTest(unittest.TestCase):
         )
         self.assertEqual(
             checkout['with']['token'],
-            '${{ steps.source_token.outputs.token }}',
+            '${{ secrets.YUETO_CI_PAT }}',
         )
         self.assertEqual(gate['env'], {'ORIGIN_COMPONENT': '${{ matrix.validation }}'})
         self.assertIn(RESOLVE, gate['run'])
@@ -147,18 +147,12 @@ print(os.environ['EXPECTED_AUTHORITY'])
                     self.assertIn(old, script)
                     self.assertNotEqual(execute(script.replace(old, new, 1), 'yueboard').returncode, 0)
 
-    def test_root_token_scope_cannot_leak_into_build_or_plan(self):
+    def test_root_checkout_stays_out_of_build_and_plan(self):
         texts = credentials._workflows()
-        credentials.CredentialSwitchPolicyTest().test_every_app_token_is_pinned_and_least_privilege()
+        credentials.CredentialSwitchPolicyTest().test_workflows_forbid_github_app_credentials()
         for job in ('plan', 'build', 'publish'):
-            changed = dict(texts)
             prefix, tail = texts['build.yml'].split('\n  ' + job + ':\n', 1)
-            repos = re.search(r'repositories: ([A-Za-z0-9_.,-]+)', tail)
-            self.assertIsNotNone(repos)
-            assert repos is not None
-            self.assertNotIn('yueto', repos.group(1).split(','))
-            changed['build.yml'] = prefix + '\n  ' + job + ':\n' + tail.replace(
-                repos.group(0), repos.group(0) + ',yueto', 1)
-            with self.subTest(job=job), mock.patch.object(credentials, '_workflows', return_value=changed):
-                with self.assertRaises(AssertionError):
-                    credentials.CredentialSwitchPolicyTest().test_every_app_token_is_pinned_and_least_privilege()
+            # The next job header ends this job body.
+            body = tail.split('\n  ', 1)[0]
+            with self.subTest(job=job):
+                self.assertNotIn('repository: onesyue/yueto', body)

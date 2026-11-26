@@ -2,8 +2,8 @@ name: Build & publish images
 run-name: ${{ github.event_name == 'workflow_dispatch' && format('Build & publish images {0} {1}{2}', github.event.inputs.service, github.event.inputs.ref, inputs.nonce != '' && format(' [nonce:{0}]', inputs.nonce) || '') || 'Build & publish images' }}
 
 # 统一构建仓（公开仓 = Actions 免费无上限）。
-# 私有代码仓由 GitHub App 签发的一小时只读 token checkout（contents:read，仅限该
-# job 列出的源码仓）。镜像推 ghcr.io/onesyue/<service>，登录用本 job 的 GITHUB_TOKEN。
+# 私有代码仓用 secrets.YUETO_CI_PAT 做 contents:read checkout。镜像推
+# ghcr.io/onesyue/<service>，登录用本 job 的 GITHUB_TOKEN。
 # 触发方式：
 #   1) 手动: workflow_dispatch，默认只产出已验证/签名的 candidate；显式 promote
 #      才能更新 sha-* / latest，且候选必须在对应源码仓默认分支上、本镜像构建输入与
@@ -197,17 +197,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # One-hour GitHub App installation token. contents:read only, and only
-      # the repositories named below. A mint failure fails the job.
-      - name: Mint read-only source token (GitHub App)
-        id: source_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueboard,yue-node,yueops,quic-go
-          permission-contents: read
       - name: Preflight planning dependencies
         run: |
           set -euo pipefail
@@ -219,7 +208,7 @@ jobs:
           done
       - id: plan
         env:
-          GH_API_TOKEN: ${{ steps.source_token.outputs.token }}
+          GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}
           RESUME_BUILD_RUN_ID: ${{ github.event.inputs.resume_build_run_id || '' }}
           RESUME_BUILD_ATTEMPT: ${{ github.event.inputs.resume_build_attempt || '' }}
           RESUME_BUILD_SOURCE: ${{ github.event.inputs.resume_build_source || '' }}
@@ -471,7 +460,7 @@ jobs:
         with:
           repository: onesyue/yueops
           ref: ${{ steps.plan.outputs.ops_source }}
-          token: ${{ steps.source_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           path: .ops-shard-source
           # Full history of this SHA, plus the default branch fetched below,
           # so admission can prove the commit is on master. Never uploaded.
@@ -481,7 +470,7 @@ jobs:
       - name: Fetch the default branch for admission
         if: steps.plan.outputs.ops_source != '' && github.event.inputs.runner != 'yue-local-release'
         env:
-          GIT_TOKEN: ${{ steps.source_token.outputs.token }}
+          GIT_TOKEN: ${{ secrets.YUETO_CI_PAT }}
         run: |
           set -euo pipefail
           auth=$(printf 'x-access-token:%s' "$GIT_TOKEN" | base64 -w0)
@@ -707,8 +696,6 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      # One-hour GitHub App installation token. contents:read only, and only
-      # the repositories named below. A mint failure fails the job.
       - name: Use the runner Docker daemon
         run: |
           set -euo pipefail
@@ -717,21 +704,12 @@ jobs:
           fi
           docker version >/dev/null
 
-      - name: Mint read-only source token (GitHub App)
-        id: source_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueboard,yue-node,yueops,quic-go,yueto
-          permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.ref }}
-          token: ${{ steps.source_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           # repository_dispatch carries the source push's `before` SHA so a
           # multi-commit push cannot hide an earlier SQL migration from lint.
           fetch-depth: 0
@@ -746,7 +724,7 @@ jobs:
         with:
           repository: onesyue/yueboard
           ref: ${{ needs.plan.outputs.yueboard_contract_ref }}
-          token: ${{ steps.source_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           path: .ci-yueboard
           fetch-depth: 0
           persist-credentials: false
@@ -905,7 +883,7 @@ jobs:
         with:
           repository: onesyue/yueto
           ref: ${{ steps.siblings.outputs.yueto }}
-          token: ${{ steps.source_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           path: .ci-origin-authority
           persist-credentials: false
           sparse-checkout-cone-mode: false
@@ -1092,7 +1070,7 @@ jobs:
       - name: Verify yue-node signed fork tags
         if: matrix.validation == 'yue-node'
         env:
-          YUETO_FORK_READ_TOKEN: ${{ steps.source_token.outputs.token }}
+          YUETO_FORK_READ_TOKEN: ${{ secrets.YUETO_CI_PAT }}
         run: |
           set -euo pipefail
           [ -n "$YUETO_FORK_READ_TOKEN" ] || {
@@ -1495,23 +1473,13 @@ jobs:
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs?filter=latest&per_page=100" |
             python3 scripts/service-validation.py collect "$RUNNER_TEMP/ops-admission/ops-admission.json" >> "$GITHUB_OUTPUT"
 
-      - name: Mint read-only source evidence token (GitHub App)
-        id: evidence_source_token
-        if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded'
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueops
-          permission-contents: read
       - name: Checkout exact Ops objects for independent evidence verification
         if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueops
           ref: ${{ needs.plan.outputs.ops_source }}
-          token: ${{ steps.evidence_source_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           path: .admission-source
           # Case-scoped skip admission reads earlier blobs of a test module.
           fetch-depth: 0
@@ -1520,7 +1488,7 @@ jobs:
       - name: Fetch the default branch for evidence admission
         if: needs.plan.outputs.evidence_run == '' && needs.plan.outputs.ops_mode == 'sharded'
         env:
-          GIT_TOKEN: ${{ steps.evidence_source_token.outputs.token }}
+          GIT_TOKEN: ${{ secrets.YUETO_CI_PAT }}
         run: |
           set -euo pipefail
           auth=$(printf 'x-access-token:%s' "$GIT_TOKEN" | base64 -w0)
@@ -1662,23 +1630,12 @@ jobs:
       cancel-in-progress: false
     name: candidate-${{ matrix.service }}
     steps:
-      # One-hour GitHub App installation token. contents:read only, and only
-      # the repositories named below. A mint failure fails the job.
-      - name: Mint read-only source token (GitHub App)
-        id: source_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueboard,yue-node,yueops,quic-go
-          permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.ref }}
-          token: ${{ steps.source_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -1721,8 +1678,7 @@ jobs:
         with:
           registry: ghcr.io
           # Central builder publishes packages owned by several private source
-          # repositories. GitHub App installation tokens cannot authenticate to
-          # GHCR, so this job logs in with its own GITHUB_TOKEN (packages: write
+          # repositories. GHCR login uses this job's GITHUB_TOKEN (packages: write
           # above). Every package in services.json must grant onesyue/yueto-ci
           # Write under "Manage Actions access".
           username: ${{ github.actor }}
@@ -2117,23 +2073,12 @@ jobs:
           fi
           docker version >/dev/null
 
-      # One-hour GitHub App installation token. contents:read only, and only
-      # the repositories named below. A mint failure fails the job.
-      - name: Mint read-only source token (GitHub App)
-        id: source_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueboard,yue-node,yueops,quic-go
-          permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.ref }}
-          token: ${{ steps.source_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -2267,23 +2212,12 @@ jobs:
           SERVICES: ${{ needs.validation-evidence.outputs.services }}
         run: jq -en --argjson services "$SERVICES" --arg service "$SERVICE" '$services[$service] == true'
 
-      # One-hour GitHub App installation token. contents:read only, and only
-      # the repositories named below. A mint failure fails the job.
-      - name: Mint read-only source token (GitHub App)
-        id: source_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueboard,yue-node,yueops,quic-go
-          permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.ref }}
-          token: ${{ steps.source_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -2304,7 +2238,7 @@ jobs:
         with:
           repository: onesyue/yueops
           ref: ${{ github.event.inputs.ref }}
-          token: ${{ steps.source_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           path: .resume-evidence
           fetch-depth: 0
           persist-credentials: false
@@ -2327,8 +2261,7 @@ jobs:
         with:
           registry: ghcr.io
           # Central builder publishes packages owned by several private source
-          # repositories. GitHub App installation tokens cannot authenticate to
-          # GHCR, so this job logs in with its own GITHUB_TOKEN (packages: write
+          # repositories. GHCR login uses this job's GITHUB_TOKEN (packages: write
           # above). Every package in services.json must grant onesyue/yueto-ci
           # Write under "Manage Actions access".
           username: ${{ github.actor }}
@@ -2479,27 +2412,13 @@ jobs:
             --tag "${IMAGE}:built-${SOURCE_SHA}" "${IMAGE}@${DIGEST}"
           echo "marked ${IMAGE}:built-${SOURCE_SHA} -> ${DIGEST}"
 
-      # The App token minted at job start lives one hour and this job may run
-      # up to two (multi-arch build + Trivy + signing). Mint a fresh read-only
-      # one immediately before the default-branch HEAD re-check instead.
-      - name: Mint read-only promotion token (GitHub App)
-        id: promote_token
-        if: needs.plan.outputs.promote == 'true'
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueboard,yue-node,yueops
-          permission-contents: read
-
       # Authorization and tag mutation intentionally share one shell step:
       # splitting them creates a wider check/use window in which source HEAD
       # can move after approval but before :latest is changed.
       - name: Authorize and promote verified default-branch digest
         if: needs.plan.outputs.promote == 'true'
         env:
-          GH_API_TOKEN: ${{ steps.promote_token.outputs.token }}
+          GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}
           SOURCE_REPO: ${{ matrix.repo }}
           VALIDATION_KIND: ${{ matrix.validation }}
           SOURCE_SHA: ${{ steps.meta.outputs.source_sha }}
@@ -2839,16 +2758,6 @@ jobs:
           set -euo pipefail
           "${YUE_CI_PYTHON:?}" .ci-policy/scripts/update-siblings-lock.py --github-output --lock .ci-policy/ci/siblings.lock >> "$GITHUB_OUTPUT"
 
-      - name: Mint release pull request token (GitHub App)
-        id: release_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueto
-          permission-contents: write
-          permission-pull-requests: write
 
       - name: Checkout release ledger
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -2856,7 +2765,7 @@ jobs:
           repository: onesyue/yueto
           ref: ${{ steps.siblings.outputs.yueto }}
           path: yueto
-          token: ${{ steps.release_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -2883,7 +2792,7 @@ jobs:
       - name: Open release pull request
         if: steps.render.outputs.status == 'rendered'
         env:
-          GH_TOKEN: ${{ steps.release_token.outputs.token }}
+          GH_TOKEN: ${{ secrets.YUETO_CI_PAT }}
           RECEIPT: ${{ runner.temp }}/promoted/promoted.json
         run: |
           set -euo pipefail
@@ -2931,21 +2840,12 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.freshness_matrix) }}
     steps:
-      - name: Mint read-only source token (GitHub App)
-        id: source_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yueboard,yue-node,yueops
-          permission-contents: read
       - name: Checkout source repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.ref }}
-          token: ${{ steps.source_token.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           persist-credentials: false
       - name: Checkout immutable central native-node policy
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

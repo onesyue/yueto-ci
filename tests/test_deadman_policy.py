@@ -85,9 +85,11 @@ def test_public_deadman_checks_both_mirror_and_private_canonical_bytes() -> None
     assert "update-siblings-lock.py --github-output --lock .ci-receiver/ci/siblings.lock" in text
     assert "ref: master" not in text
     assert (
-        "token: ${{ steps.yueops_read_token.outputs.token }}"
+        "token: ${{ secrets.YUETO_CI_PAT }}"
         in text
     )
+    assert "create-github-app-token" not in text
+    assert "YUETO_CI_APP_" not in text
     assert text.count("persist-credentials: false") == 2
     assert text.count(
         "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"

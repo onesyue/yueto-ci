@@ -72,8 +72,6 @@ def secret_findings(workflow):
                 continue
             if "uses: actions/checkout@" in body and "persist-credentials: false" in body:
                 continue
-            if "uses: actions/create-github-app-token@" in body:
-                continue
             findings.append(f"{name} step {step_name} references a secret")
     return findings
 

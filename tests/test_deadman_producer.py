@@ -21,11 +21,6 @@ CONTRACT = (
 WORKFLOW = ROOT / ".github" / "workflows" / "alert-chain-deadman.yml"
 YUEOPS = Path("/Users/j/Projects/yueto/yueops")
 CHECKOUT_PIN = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1"
-APP_PIN = (
-    "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0"
-)
-
-
 def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
@@ -196,7 +191,9 @@ def test_workflow_checks_the_producer_without_bumping_action_pins() -> None:
     assert "deadman/canonical/scripts/deadman_producer.py --check" in text
     assert "deadman_producer.py --check --repo .ci-yueops" in text
     assert text.count(CHECKOUT_PIN) == 2
-    assert APP_PIN in text
+    assert "create-github-app-token" not in text
+    assert "YUETO_CI_APP_" not in text
+    assert "token: ${{ secrets.YUETO_CI_PAT }}" in text
     assert "ref: ${{ steps.siblings.outputs.yueops }}" in text
     assert "update-siblings-lock.py --github-output --lock .ci-receiver/ci/siblings.lock" in text
     assert "ref: master" not in text

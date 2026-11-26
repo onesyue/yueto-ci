@@ -1,11 +1,9 @@
 """Central credential and dependency-install policy.
 
-Private source reads use a GitHub App installation token minted in the job.
-Source tokens name their repositories and carry ``contents: read`` only.
-The release-pr job is the exception: its token names yueto and can write
-contents and pull requests. GHCR cannot accept an installation token, so
-registry login and package API reads use the job ``GITHUB_TOKEN``. The job
-``permissions`` block is that scope.
+Private source reads use ``secrets.YUETO_CI_PAT``. Workflows must not mint a
+GitHub App installation token or reference ``YUETO_CI_APP_*``. GHCR login and
+package API reads use the job ``GITHUB_TOKEN``. The job ``permissions`` block
+is that scope.
 
 Dependency lifecycle scripts never run in a credential-holding job:
 every ``npm ci`` and ``pnpm install`` carries ``--ignore-scripts``.
@@ -19,11 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
-APP_ACTION = (
-    "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1"
-)
-SOURCE_REPOS = {"yueboard", "yue-node", "yueops", "quic-go"}
-WEEKLY_SOURCE_REPOS = {"yueops", "yueboard", "yue-node", "yueto", "yuelink"}
+FORBIDDEN_APP = ("create-github-app-token", "YUETO_CI_APP_")
 
 
 def _code(text: str) -> str:
@@ -39,82 +33,47 @@ def _workflows() -> dict[str, str]:
     }
 
 
-def _mint_steps(text: str) -> list[str]:
-    """Return every create-github-app-token step body (up to the next step)."""
-
-    steps = re.split(r"(?m)^\s+- (?=name:|uses:|id:)", text)
-    return [step for step in steps if "create-github-app-token@" in step]
-
-
-def _jobs(text: str) -> dict[str, str]:
-    parts = re.split(r"(?m)^  ([A-Za-z0-9_-]+):\s*$", text.split("\njobs:\n", 1)[1])
-    return {parts[i]: parts[i + 1] for i in range(1, len(parts), 2)}
-
-
 class CredentialSwitchPolicyTest(unittest.TestCase):
-    def test_workflows_do_not_reference_the_personal_access_token(self) -> None:
+    def test_workflows_forbid_github_app_credentials(self) -> None:
+        workflows = _workflows()
+        self.assertGreaterEqual(len(workflows), 8)
+        for name, text in workflows.items():
+            with self.subTest(workflow=name):
+                for needle in FORBIDDEN_APP:
+                    self.assertNotIn(needle, text)
+
+    def test_private_source_reads_use_the_personal_access_token(self) -> None:
+        workflows = _workflows()
+        for name in (
+            "alert-chain-deadman.yml",
+            "board-visual-capture.yml",
+            "build.yml",
+            "client-core-matrix.yml",
+            "hy2-probe.yml",
+            "policy-ci.yml",
+            "weekly-vuln-sbom.yml",
+            "yueops-master-validate.yml",
+        ):
+            with self.subTest(workflow=name):
+                self.assertIn("secrets.YUETO_CI_PAT", workflows[name])
+        # GHCR jobs stay on the job token, not the PAT.
+        self.assertNotIn("YUETO_CI_PAT", workflows["image-rescan.yml"])
+
+    def test_retired_ghcr_pat_switch_stays_gone(self) -> None:
         for name, text in _workflows().items():
             with self.subTest(workflow=name):
-                self.assertNotIn("YUETO_CI_PAT", text)
                 self.assertNotIn("YUETO_CI_GHCR_VIA_GITHUB_TOKEN", text)
 
-    def test_every_app_token_is_pinned_and_least_privilege(self) -> None:
-        steps = [
-            (name, job, step)
-            for name, text in _workflows().items()
-            for job, body in _jobs(text).items()
-            for step in _mint_steps(body)
-        ]
-        self.assertGreaterEqual(len(steps), 5)
-        for name, job, step in steps:
-            with self.subTest(workflow=name, step=step.splitlines()[0]):
-                self.assertIn(APP_ACTION, step)
-                self.assertNotIn("vars.YUETO_CI_APP_CLIENT_ID != ''", step)
-                self.assertIn("client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}", step)
-                self.assertIn(
-                    "private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}", step
-                )
-                self.assertIn("owner: onesyue", step)
-                repos = re.search(r"repositories: ([A-Za-z0-9_.,-]+)", step)
-                self.assertIsNotNone(repos, "token must name its repositories")
-                assert repos is not None
-                if name == "weekly-vuln-sbom.yml":
-                    allowed = WEEKLY_SOURCE_REPOS
-                elif name == "hy2-probe.yml" and job == "build":
-                    allowed = {"hysteria", "quic-go"}
-                    self.assertEqual(set(repos.group(1).split(",")), allowed)
-                elif name == "client-core-matrix.yml":
-                    allowed = {"yue-node", "mihomo"}
-                    self.assertEqual(set(repos.group(1).split(",")), allowed)
-                elif name == "build.yml" and job == "release-pr":
-                    self.assertEqual(set(repos.group(1).split(",")), {"yueto"})
-                    permissions = re.findall(r"permission-([a-z-]+): (\w+)", step)
-                    self.assertEqual(len(permissions), 2, permissions)
-                    self.assertEqual(
-                        set(permissions),
-                        {("contents", "write"), ("pull-requests", "write")},
-                    )
-                    continue
-                else:
-                    allowed = SOURCE_REPOS | (
-                        {"yueto"} if name == "build.yml" and job == "validate" else set()
-                    )
-                self.assertLessEqual(set(repos.group(1).split(",")), allowed)
-                permissions = re.findall(r"permission-([a-z-]+): (\w+)", step)
-                self.assertEqual(len(permissions), 1, permissions)
-                self.assertEqual(permissions[0], ("contents", "read"))
-
-    def test_promotion_mints_a_fresh_token_right_before_the_head_recheck(self) -> None:
+    def test_promotion_uses_the_pat_for_the_head_recheck(self) -> None:
         workflow = (WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8")
-        mint = workflow.index("- name: Mint read-only promotion token (GitHub App)")
         promote = workflow.index(
             "- name: Authorize and promote verified default-branch digest"
         )
-        self.assertLess(workflow.index("- name: Build & push"), mint)
-        self.assertLess(mint, promote)
+        self.assertLess(workflow.index("- name: Build & push"), promote)
+        self.assertNotIn("Mint read-only promotion token", workflow)
         self.assertIn(
-            "GH_API_TOKEN: ${{ steps.promote_token.outputs.token }}",
-            workflow[promote:],
+            "GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}",
+            workflow[promote : promote + 800],
         )
 
     def test_registry_calls_use_the_job_github_token(self) -> None:
@@ -144,16 +103,18 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
                 self.assertNotIn("packages: write", top)
                 self.assertNotIn("contents: write", top)
 
-    def test_readme_documents_the_cut_over(self) -> None:
+    def test_readme_documents_pat_and_forbids_app_credentials(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        for anchor in (
+        self.assertIn("`YUETO_CI_PAT`", readme)
+        self.assertIn("GITHUB_TOKEN", readme)
+        for forbidden in (
             "YUETO_CI_APP_CLIENT_ID",
             "YUETO_CI_APP_PRIVATE_KEY",
-            "Manage Actions access",
+            "create-github-app-token",
             "Delete the retired Actions secret after one green week",
         ):
-            with self.subTest(anchor=anchor):
-                self.assertIn(anchor, readme)
+            with self.subTest(anchor=forbidden):
+                self.assertNotIn(forbidden, readme)
 
 
 class DependencyLifecycleScriptPolicyTest(unittest.TestCase):

@@ -42,21 +42,12 @@ jobs:
           printf '%s\n' "$YUE_NODE_REF" | grep -Eq '^[0-9a-f]{40}$'
           printf 'ref=%s\n' "$YUE_NODE_REF" >> "$GITHUB_OUTPUT"
 
-      - name: Mint read-only source token
-        id: source
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
-          private-key: ${{ secrets.YUETO_CI_APP_PRIVATE_KEY }}
-          owner: onesyue
-          repositories: yue-node,mihomo
-          permission-contents: read
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yue-node
           ref: ${{ steps.node.outputs.ref }}
-          token: ${{ steps.source.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           fetch-depth: 1
           path: node
           persist-credentials: false
@@ -65,7 +56,7 @@ jobs:
         with:
           repository: onesyue/mihomo
           ref: b6ea58108a90e4c710cc431d5a3a4f376284302f
-          token: ${{ steps.source.outputs.token }}
+          token: ${{ secrets.YUETO_CI_PAT }}
           fetch-depth: 1
           path: fork-mihomo
           persist-credentials: false

@@ -256,13 +256,9 @@ class ManualWorkflow(unittest.TestCase):
         self.assertEqual([step['uses'] for step in steps if 'uses' in step], [
             'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
             'actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97',
-            'actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1',
             'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         ])
-        mint = next(step for step in steps if step.get('id') == 'source_token')
-        self.assertNotIn('if', mint)
-        self.assertEqual(mint['with']['repositories'], 'yueops,yueboard')
-        self.assertEqual(mint['with']['permission-contents'], 'read')
+        self.assertFalse(any(step.get('id') == 'source_token' for step in steps))
         execution = next(step for step in steps if step.get('name', '').startswith('Execute every'))
         self.assertNotIn('env', execution)
         self.assertIn('ci_check_hosted.py', execution['run'])
@@ -310,42 +306,39 @@ class ManualWorkflow(unittest.TestCase):
     def test_credential_selection_and_step_scope_are_fail_closed(self):
         steps = self.job['steps']
         prepare = next(step for step in steps if step.get('name', '').startswith('Prepare exact'))
-        self.assertEqual(prepare['env']['GH_TOKEN'],
-                         "${{ steps.source_token.outputs.token }}")
-        self.assertEqual(prepare['env']['REPLAY_APP_CLIENT_ID'], '${{ vars.YUETO_CI_APP_CLIENT_ID }}')
-        mint = next(step for step in steps if step.get('id') == 'source_token')
-        self.assertNotIn('continue-on-error', mint)
-        self.assertNotIn('skip-token-revoke', mint['with'])
-        self.assertNotIn('if', prepare)  # Default success() blocks after mint failure.
+        self.assertEqual(prepare['env']['GH_TOKEN'], '${{ secrets.YUETO_CI_PAT }}')
+        self.assertNotIn('REPLAY_APP_CLIENT_ID', prepare.get('env', {}))
+        self.assertFalse(any(step.get('id') == 'source_token' for step in steps))
+        self.assertNotIn('if', prepare)
+        self.assertEqual(list(prepare['env']), ['GH_TOKEN'])
         for step in steps[steps.index(prepare) + 1:]:
             self.assertNotIn('secrets.', str(step))
             self.assertNotIn('source_token.outputs.token', str(step))
+            self.assertNotIn('YUETO_CI_PAT', str(step))
         self.assertNotIn('GH_TOKEN', self.job['env'])
-        self.assertNotIn('secrets.YUETO_CI_PAT', str(self.job))
         self.assertNotIn('secrets.YUETO_CI_CLONE_PAT', str(self.job))
+        self.assertNotIn('YUETO_CI_APP_', str(self.job))
+        self.assertNotIn('create-github-app-token', str(self.job))
         self.assertIn('set +x', prepare['run'])
         self.assertNotIn('gh auth setup-git', prepare['run'])
+        self.assertNotIn('/installation/token', prepare['run'])
         self.assertIn('GIT_ASKPASS', prepare['run'])
         self.assertNotIn('$GH_TOKEN', prepare['run'].split('ASKPASS\n')[-1])
         self.assertNotIn('gh repo clone', (ROOT / 'scripts/ci-check.sh').read_text())
 
-    def test_real_preparation_shell_requires_app_and_cleans_then_revokes(self):
+    def test_real_preparation_shell_requires_the_pat_and_cleans_the_auth_dir(self):
         preparation = next(step for step in self.job['steps'] if step.get('name', '').startswith('Prepare exact'))
         cases = [
-            ('app', 'fixture-secret', 0, 0, 0, 0),
-            ('app', 'fixture-secret', 17, 0, 0, 17),
-            ('app', 'fixture-secret', 0, 1, 0, 2),
-            ('app', 'fixture-secret', 0, 0, 1, 2),
-            ('app', 'fixture-secret', 0, 0, 3, 2),
-            ('', 'fixture-secret', 0, 0, 0, 2),
-            ('', 'fixture-secret', 17, 0, 0, 2),
-            ('', 'fixture-secret', 0, 0, 1, 2),
-            ('', 'fixture-secret', 0, 0, 3, 2),
-            ('', '', 0, 0, 0, 2),
-            ('app', '', 0, 0, 0, 2),
+            ('fixture-secret', 0, 0, 0),
+            ('fixture-secret', 17, 0, 17),
+            ('fixture-secret', 0, 1, 2),
+            ('fixture-secret', 0, 3, 2),
+            ('', 0, 0, 2),
+            ('', 17, 0, 2),
+            ('', 0, 1, 2),
         ]
-        for app, token, clone_code, revoke_code, remove_code, expected in cases:
-            with self.subTest(app=bool(app), token=bool(token), clone=clone_code, revoke=revoke_code, remove=remove_code), tempfile.TemporaryDirectory() as directory:
+        for token, clone_code, remove_code, expected in cases:
+            with self.subTest(token=bool(token), clone=clone_code, remove=remove_code), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 binpath = root / 'bin'
                 binpath.mkdir()
@@ -376,22 +369,18 @@ class ManualWorkflow(unittest.TestCase):
                     path.chmod(0o755)
                 env = os.environ | {'PATH': str(binpath) + os.pathsep + os.environ['PATH'],
                                     'RUNNER_TEMP': str(root), 'CI_CHECK_OUTPUT': str(output),
-                                    'CALLS': str(calls), 'CLONE_CODE': str(clone_code), 'REVOKE_CODE': str(revoke_code),
-                                    'REMOVE_CODE': str(remove_code), 'REPLAY_APP_CLIENT_ID': app,
+                                    'CALLS': str(calls), 'CLONE_CODE': str(clone_code),
+                                    'REMOVE_CODE': str(remove_code),
                                     'GH_TOKEN': token, 'SOURCE_REF': 'a' * 40, 'BOARD_REF': 'b' * 40}
                 result = subprocess.run(['/bin/bash', '-c', preparation['run']], cwd=root, env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, expected, result.stderr)
-                expected_calls = []
-                if token and app:
-                    expected_calls = ['prepare']
-                    if app:
-                        expected_calls.append('gh api --method DELETE /installation/token')
+                expected_calls = ['prepare'] if token else []
                 self.assertEqual(calls.read_text().splitlines() if calls.exists() else [], expected_calls)
-                self.assertEqual(bool(list(root.glob('ci-check-auth.*'))), bool(remove_code and token and app))
+                self.assertEqual(bool(list(root.glob('ci-check-auth.*'))), bool(remove_code and token))
                 receipt = (output / 'preparation-status.json').read_text()
                 self.assertEqual(json.loads(receipt)['exit_code'], expected)
                 mask_command = '::add-mask::fixture-secret\n'
-                self.assertEqual(result.stdout.count(mask_command), 1 if token and app else 0)
+                self.assertEqual(result.stdout.count(mask_command), 1 if token else 0)
                 # GitHub consumes the mask command; no other output may contain it.
                 self.assertNotIn('fixture-secret', receipt + result.stdout.replace(mask_command, '') + result.stderr)
                 self.assertFalse(helper_marker.exists())
@@ -416,7 +405,7 @@ class ManualWorkflow(unittest.TestCase):
                 gh = binpath / 'gh'; gh.write_text('#!/bin/sh\nexit 0\n'); gh.chmod(0o755)
                 env = os.environ | {'PATH': str(binpath) + os.pathsep + os.environ['PATH'],
                                     'RUNNER_TEMP': str(root), 'CI_CHECK_OUTPUT': str(output),
-                                    'REPLAY_APP_CLIENT_ID': 'app', 'GH_TOKEN': 'fixture-secret'}
+                                    'GH_TOKEN': 'fixture-secret'}
                 result = subprocess.run(['/bin/bash', '-c', preparation['run']], cwd=root, env=env,
                                         capture_output=True, text=True)
                 self.assertEqual(result.returncode, 2)
