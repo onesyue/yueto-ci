@@ -1,0 +1,35 @@
+title = "yueto-ci current-tree gitleaks"
+
+# Default rules stay in force. These entries ignore two reviewed current-tree
+# false positives only. They do not ignore history, and they do not name any
+# live or historical credential.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "2026-11-26 reviewed false positive. scripts/pytest_shards/config.py NEZHA_RETIREMENT_KEY is a baseline dictionary key, not a credential. See /workspace/handoff/r6-data/SEC-TRIAGE.md."
+condition = "AND"
+paths = ['''(^|/)scripts/pytest_shards/config\.py$''']
+regexTarget = "line"
+regexes = ['''NEZHA_RETIREMENT_KEY = "owner_nezha_retirement_20261103"''']
+
+[[allowlists]]
+description = "2026-11-26 reviewed false positive. ops-pytest-skip-baseline.json maps tests/_http_auth_matrix.py to a 40-character git blob id; generic-api-key matches the filename token auth. See /workspace/handoff/r6-data/SEC-TRIAGE.md."
+condition = "AND"
+paths = ['''(^|/)ops-pytest-skip-baseline\.json$''']
+regexTarget = "line"
+regexes = ['''"tests/_http_auth_matrix\.py": "[0-9a-f]{40}"''']
+
+[[allowlists]]
+description = "2026-11-26 reviewed false positive. KEY_SHARE_HYBRID names the public X25519MLKEM768 hybrid group, not a credential."
+condition = "AND"
+paths = ['''(^|/)scripts/client_matrix/catalog\.py$''']
+regexTarget = "line"
+regexes = ['''KEY_SHARE_HYBRID = "X25519MLKEM768"''']
+
+[[allowlists]]
+description = "2026-11-26 reviewed false positive. The client-core matrix test uses a repeating TEST-NET obfs password, not a live credential."
+condition = "AND"
+paths = ['''(^|/)tests/test_client_core_matrix\.py$''']
+regexTarget = "line"
+regexes = ['''obfs_password="0123456789abcdef0123456789abcdef"''']

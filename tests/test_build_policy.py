@@ -1127,6 +1127,7 @@ class BuildPolicyTest(unittest.TestCase):
                 "build.yml",
                 "ci-toolchain.yml",
                 "client-core-matrix.yml",
+                "gitleaks.yml",
                 "hy2-probe.yml",
                 "image-rescan.yml",
                 "policy-ci.yml",
@@ -1137,6 +1138,27 @@ class BuildPolicyTest(unittest.TestCase):
                 "yueops-master-validate.yml",
             ],
         )
+
+        gitleaks = (WORKFLOW_DIR / "gitleaks.yml").read_text(encoding="utf-8")
+        gitleaks_code = "\n".join(
+            line for line in gitleaks.splitlines() if not line.lstrip().startswith("#")
+        )
+        self.assertIn("permissions:\n  contents: read\n", gitleaks)
+        self.assertIn("pull_request:", gitleaks_code)
+        self.assertIn("bash scripts/scan-yueto-ci-gitleaks.sh", gitleaks_code)
+        self.assertNotIn("continue-on-error", gitleaks_code)
+        for forbidden in (
+            "build-push-action",
+            "cosign",
+            "promote",
+            "packages: write",
+            "id-token: write",
+            "secrets.",
+            "--all",
+            "pull_request_target",
+        ):
+            with self.subTest(gitleaks_forbidden=forbidden):
+                self.assertNotIn(forbidden, gitleaks_code)
 
         report = (WORKFLOW_DIR / "quality-ratchet.yml").read_text(encoding="utf-8")
         self.assertIn("permissions:\n  contents: read\n", report)

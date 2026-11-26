@@ -1,0 +1,37 @@
+name: Gitleaks
+
+# Required secret scan for this repository. build.yml only installs gitleaks
+# for yueops credential-evidence contracts; this job scans yueto-ci.
+# Current tree always. Pull requests and master pushes also scan the commits
+# unique to that range. Full history is intentionally not scanned.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The range scan needs both endpoints. It still passes an explicit
+          # base..head log range and never walks --all.
+          fetch-depth: 0
+
+      - name: Scan current tree and commit range
+        env:
+          SCAN_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          SCAN_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/scan-yueto-ci-gitleaks.sh
