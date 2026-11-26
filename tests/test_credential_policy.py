@@ -91,6 +91,14 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         self.assertIn("GHCR_USER: ${{ github.actor }}", capture)
         self.assertIn("GHCR_PASSWORD: ${{ github.token }}", capture)
 
+    def test_plan_reads_promoted_board_with_the_source_pat(self) -> None:
+        build = _workflows()["build.yml"]
+        plan = build[build.index("      - id: plan\n"):]
+        plan = plan[: plan.index("        run: |")]
+        self.assertIn("GHCR_USER: onesyue", plan)
+        self.assertIn("GHCR_PASSWORD: ${{ secrets.YUETO_CI_PAT }}", plan)
+        self.assertNotIn("GHCR_PASSWORD: ${{ github.token }}", plan)
+
     def test_ghcr_consumers_declare_the_package_scope_they_need(self) -> None:
         build = (WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8")
         build_job = build[build.index("\n  build:\n") :]
