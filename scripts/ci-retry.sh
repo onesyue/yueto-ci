@@ -43,6 +43,34 @@ ci_fetch_token() {
 }
 
 ci_keyless_once() {
+  local command="$1" fresh log rc
+  # An attestation whose Rekor upload was retried inside cosign comes back 409
+  # with nothing pushed to the registry (run 45871235771: amd64 CycloneDX
+  # missing). A new invocation signs with a new ephemeral key, so it is a
+  # different log entry. Try fresh twice before keeping an existing entry.
+  if [[ "$command" == attest ]]; then
+    log=$(mktemp) || return 1
+    for fresh in 1 2; do
+      if ci_keyless_attempt "$@" 2>"$log"; then
+        cat "$log" >&2
+        if ! grep -Fq 'keeping the existing signature' "$log"; then
+          rm -f -- "$log"
+          return 0
+        fi
+        echo "attestation hit an existing Rekor entry; re-signing with a fresh key (${fresh}/2)" >&2
+      else
+        rc=$?
+        cat "$log" >&2
+        rm -f -- "$log"
+        return "$rc"
+      fi
+    done
+    rm -f -- "$log"
+  fi
+  ci_keyless_attempt "$@"
+}
+
+ci_keyless_attempt() {
   local command="$1" token rc scratch
   shift
   token=$(ci_fetch_token) || return "$?"
