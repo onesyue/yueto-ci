@@ -141,13 +141,28 @@ exit 22
             "[409] createLogEntryConflict "
             "an equivalent entry already exists in the transparency log"
         )
-        for command in ("keyless_cosign sign image", "keyless_cosign attest image"):
+        # An attestation re-signs with fresh keys twice before keeping the
+        # existing entry (a 409 can mean nothing reached the registry).
+        for command, calls in (("keyless_cosign sign image", 1),
+                               ("keyless_cosign attest image", 3)):
             with self.subTest(command=command):
                 result = self.run_helper(command, ERROR=error)
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(len(self.lines("calls")), 1)
+                self.assertEqual(len(self.lines("calls")), calls)
+                self.assertEqual(len(self.lines("tokens")), calls)
                 self.assertEqual(self.lines("sleeps"), [])
                 self.assertIn("keeping the existing signature", result.stderr)
+
+    def test_attest_409_then_fresh_key_success_pushes_the_attestation(self):
+        error = (
+            "[409] createLogEntryConflict "
+            "an equivalent entry already exists in the transparency log"
+        )
+        result = self.run_helper("keyless_cosign attest image", ERROR=error, SUCCEED_AT="2")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.lines("calls")), 2)
+        self.assertIn("verified", result.stdout)
+        self.assertIn("fresh key (1/2)", result.stderr)
 
     def test_other_rekor_conflicts_still_fail_once(self):
         result = self.run_helper(
