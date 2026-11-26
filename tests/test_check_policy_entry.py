@@ -15,10 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 ENTRY = Path("scripts/check-policy.sh")
 WORKFLOW = Path(".github/workflows/policy-ci.yml")
 
-# Validate central policy, from git show a403860d806569d7f491cf6664152b606f00c49e:
-# .github/workflows/policy-ci.yml. Keep the oracle available in shallow checkouts.
+# Validate the central policy commands, including the reviewed flag check.
+# Keep the oracle available in shallow checkouts.
 BASE_BODY = """
 set -euo pipefail
+python3 scripts/check_flag_manifest.py
 python3 scripts/run-policy-tests.py
 python3 -m compileall -q scripts tests
 for script in scripts/*.sh; do
