@@ -459,7 +459,7 @@ class WorkflowPolicyTest(unittest.TestCase):
         self.assertIn("cp -a .ci-policy sources/yueto-ci", steps["Materialize the yueto-ci policy checkout"])
         private = steps["Checkout yueops"]
         self.assertIn(
-            "token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}",
+            "token: ${{ steps.source_token.outputs.token }}",
             private,
         )
 
@@ -547,8 +547,13 @@ class VerifiedScannerInstallerTest(unittest.TestCase):
     def write_govulncheck_zip(self) -> None:
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w") as archive:
+            version = "v1.8.0"
             archive.writestr(
-                "golang.org/x/vuln@v1.8.0/cmd/govulncheck/main.go",
+                f"golang.org/x/vuln@{version}/go.mod",
+                "module golang.org/x/vuln\n\ngo 1.22\n",
+            )
+            archive.writestr(
+                f"golang.org/x/vuln@{version}/cmd/govulncheck/main.go",
                 "package main\nfunc main() {}\n",
             )
         self.artifact.write_bytes(buffer.getvalue())
@@ -562,15 +567,10 @@ class VerifiedScannerInstallerTest(unittest.TestCase):
             textwrap.dedent(
                 """
                 printf 'go %s\\n' "$*" >> "$CALLS"
-                while [ "$#" -gt 0 ]; do
-                  if [ "$1" = -o ]; then
-                    printf '#!/bin/bash\\necho govulncheck version v1.8.0\\n' > "$2"
-                    chmod +x "$2"
-                    exit 0
-                  fi
-                  shift
-                done
-                exit 97
+                [ "$1" = install ] || exit 97
+                mkdir -p "${GOBIN:?}"
+                printf '#!/bin/bash\\necho govulncheck version v1.8.0\\n' > "$GOBIN/govulncheck"
+                chmod +x "$GOBIN/govulncheck"
                 """
             ).lstrip(),
         )

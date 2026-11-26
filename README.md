@@ -109,11 +109,10 @@ nonfatal. Configuration alone does not establish a pipeline speedup.
 
 ## Credentials and publication boundaries
 
-| Credential or switch | Purpose and boundary |
+| Credential | Purpose and boundary |
 |---|---|
-| `YUETO_CI_PAT` | Legacy `repo`/`write:packages` fallback while App/registry switches are absent. |
-| `YUETO_CI_APP_CLIENT_ID` + secret `YUETO_CI_APP_PRIVATE_KEY` | App tokens for private source reads. Issuance failure aborts; no silent PAT fallback. |
-| `YUETO_CI_GHCR_VIA_GITHUB_TOKEN=true` | GHCR login with this repository's GITHUB_TOKEN. App tokens cannot authenticate GHCR. |
+| `YUETO_CI_APP_CLIENT_ID` + secret `YUETO_CI_APP_PRIVATE_KEY` | Required. Each job mints a one-hour installation token scoped by that step's `repositories` and `permission-*` inputs. Source reads are `contents: read`. Issuance failure aborts the job. |
+| Job `GITHUB_TOKEN` | GHCR login and package API reads. Installation tokens from `actions/create-github-app-token` cannot authenticate to GHCR. The job `permissions` block is the scope (`packages: read` or `packages: write`). |
 | `DEADMAN_SSH_KEY_B64` | Dedicated read-only key forced to `command="/bin/cat /var/lib/yue-alert-heartbeat/heartbeat.json",restrict`; never a deployment key. |
 
 Grant `onesyue/yueto-ci` access under each package's **Manage Actions access**:
@@ -123,10 +122,11 @@ verification step also reads quic-go; Node validation itself has no credentials
 and uses vendored dependencies with `GOFLAGS=-mod=vendor`. Promotion obtains a
 fresh token because a build may outlast token expiry. Failure reports use workflow summaries and error annotations without
 Issue or PR creation. Poll dispatch uses GITHUB_TOKEN with
-actions:write. Configure switches under repository Actions Variables.
+actions:write. Configure the App client id under repository Actions Variables.
 
-After both switches and successful poll/build/promotion/rescan/deadman drills,
-remove and revoke the legacy PAT. Source repositories no longer need
+Delete the retired Actions secret after one green week of app-token runs.
+The secret name is `YUETO_CI_PAT`.
+Source repositories no longer need
 `YUETO_CI_DISPATCH_PAT`. The `repository_dispatch` trigger has been removed;
 builds enter through `workflow_dispatch`, including requests from the poller.
 Retained compatibility guards in the plan do not expose a dispatch entry point.
@@ -667,7 +667,7 @@ Preparation uses `--local --prepare-only` to fetch standalone clones and save
 `prepared.json`. A configured GitHub App is required, with Contents:read only
 for yueops/yueboard. The job accepts only its newly minted token and revokes it
 before execution. Missing App configuration, issuance, empty token or revocation
-failure stops the job. There is no PAT fallback, including dedicated clone PATs.
+failure stops the job. Preparation accepts only the minted App token.
 
 The credential is masked and exists only in the trusted preparation step's
 environment. A temporary askpass script reads that environment; its file has no

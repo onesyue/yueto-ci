@@ -44,7 +44,6 @@ jobs:
 
       - name: Mint read-only source token (GitHub App)
         id: source_token
-        if: vars.YUETO_CI_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
@@ -56,8 +55,8 @@ jobs:
       - name: Plan official validation inputs
         id: plan
         env:
-          GH_SOURCE_TOKEN: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
-          GH_API_TOKEN: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+          GH_SOURCE_TOKEN: ${{ steps.source_token.outputs.token }}
+          GH_API_TOKEN: ${{ github.token }}
           YUEOPS_VALIDATE_REF: ${{ inputs.ref || 'master' }}
         run: |
           set -euo pipefail

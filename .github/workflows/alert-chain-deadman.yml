@@ -46,10 +46,9 @@ jobs:
           persist-credentials: false
           path: .ci-receiver
 
-      # 凭据切换开关：仓库变量 YUETO_CI_APP_CLIENT_ID 为空时跳过、沿用 PAT。
+      # One-hour GitHub App token, contents:read on yueops only.
       - name: Mint read-only YueOps token (GitHub App)
         id: yueops_read_token
-        if: vars.YUETO_CI_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
@@ -58,12 +57,18 @@ jobs:
           repositories: yueops
           permission-contents: read
 
+      - name: Resolve sibling lock
+        id: siblings
+        run: |
+          set -euo pipefail
+          python3 .ci-receiver/scripts/update-siblings-lock.py --github-output --lock .ci-receiver/ci/siblings.lock >> "$GITHUB_OUTPUT"
+
       - name: Check out the canonical YueOps verdict source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueops
-          ref: master
-          token: ${{ steps.yueops_read_token.outputs.token || secrets.YUETO_CI_PAT }}
+          ref: ${{ steps.siblings.outputs.yueops }}
+          token: ${{ steps.yueops_read_token.outputs.token }}
           persist-credentials: false
           path: .ci-yueops
 

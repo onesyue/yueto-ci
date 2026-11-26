@@ -19,3 +19,17 @@ condition = "AND"
 paths = ['''(^|/)ops-pytest-skip-baseline\.json$''']
 regexTarget = "line"
 regexes = ['''"tests/_http_auth_matrix\.py": "[0-9a-f]{40}"''']
+
+[[allowlists]]
+description = "2026-11-26 reviewed false positive. KEY_SHARE_HYBRID names the public X25519MLKEM768 hybrid group, not a credential."
+condition = "AND"
+paths = ['''(^|/)scripts/client_matrix/catalog\.py$''']
+regexTarget = "line"
+regexes = ['''KEY_SHARE_HYBRID = "X25519MLKEM768"''']
+
+[[allowlists]]
+description = "2026-11-26 reviewed false positive. The client-core matrix test uses a repeating TEST-NET obfs password, not a live credential."
+condition = "AND"
+paths = ['''(^|/)tests/test_client_core_matrix\.py$''']
+regexTarget = "line"
+regexes = ['''obfs_password="0123456789abcdef0123456789abcdef"''']

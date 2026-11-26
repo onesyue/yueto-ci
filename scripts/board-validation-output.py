@@ -10,9 +10,12 @@ import subprocess
 import sys
 import tempfile
 
+# Prepare may emit only this layout. There is no per-app fallback.
+FRONTEND_LAYOUT = 'workspace'
+
 
 def read_result(path: Path, role: str, phase: str, status: int) -> str:
-    allowed = {'layout=workspace\n', 'layout=legacy\n'} if phase == 'prepare' else (
+    allowed = {f'layout={FRONTEND_LAYOUT}\n'} if phase == 'prepare' else (
         {'visual=compared\n'} if (role, phase) == ('e2e', 'test') else set())
     if not path.exists() and not path.is_symlink():
         if allowed and status == 0:

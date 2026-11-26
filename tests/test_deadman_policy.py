@@ -81,9 +81,11 @@ def test_public_deadman_checks_both_mirror_and_private_canonical_bytes() -> None
     assert "receiver mirror" in verify
     assert "YueOps canonical" in verify
     assert "repository: onesyue/yueops" in text
-    assert "ref: master" in text
+    assert "ref: ${{ steps.siblings.outputs.yueops }}" in text
+    assert "update-siblings-lock.py --github-output --lock .ci-receiver/ci/siblings.lock" in text
+    assert "ref: master" not in text
     assert (
-        "token: ${{ steps.yueops_read_token.outputs.token || secrets.YUETO_CI_PAT }}"
+        "token: ${{ steps.yueops_read_token.outputs.token }}"
         in text
     )
     assert text.count("persist-credentials: false") == 2
@@ -100,7 +102,7 @@ def test_public_deadman_trigger_permissions_and_missing_drill_are_fail_closed() 
     assert "type: boolean" in text and "default: false" in text
     assert "contents: read" in text
     # Incidents are created in private YueOps with a separately minted App
-    # token (or the legacy YUETO_CI_PAT). The public repository's own
+    # token. The public repository's own
     # GITHUB_TOKEN never needs write permission to either repository.
     permissions = text.split("\npermissions:\n", 1)[1].split("\n\n", 1)[0]
     assert "write" not in permissions
