@@ -19,6 +19,7 @@ version=$(actionlint -version) && version=${version#v} && [[ ${version%%$'\n'*} 
 python3 scripts/run-policy-tests.py --check-tools
 
 if [[ "$mode" == ci ]]; then
+  python3 scripts/check_flag_manifest.py
   python3 scripts/run-policy-tests.py
   # compileall writes .pyc; keep that cache off a read-only checkout
   # (local official docker replay mounts the tree ro).
