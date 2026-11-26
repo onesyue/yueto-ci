@@ -230,11 +230,10 @@ jobs:
           # Service packages owned by other private repositories (yueboard,
           # yue-node) do not grant this repository's GITHUB_TOKEN access: since
           # 09bc43b every plan printed "cannot resolve promoted YueBoard
-          # revision" and pushes got 403 (run 45836692565). Until package
-          # access is granted and YUETO_CI_GHCR_VIA_GITHUB_TOKEN=true is set,
-          # GHCR uses YUETO_CI_PAT exactly as before 09bc43b.
-          GHCR_USER: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
-          GHCR_PASSWORD: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+          # revision" and pushes got 403 (run 45836692565). Service-package
+          # GHCR access uses YUETO_CI_PAT as it did before 09bc43b.
+          GHCR_USER: onesyue
+          GHCR_PASSWORD: ${{ secrets.YUETO_CI_PAT }}
           YUEBOARD_CONTRACT_REF: ${{ github.event.inputs.yueboard_contract_ref || github.event.client_payload.yueboard_contract_ref || '' }}
         run: |
           set -euo pipefail
@@ -1706,8 +1705,8 @@ jobs:
           # repositories. GHCR login uses this job's GITHUB_TOKEN (packages: write
           # above). Every package in services.json must grant onesyue/yueto-ci
           # Write under "Manage Actions access".
-          username: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
-          password: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+          username: onesyue
+          password: ${{ secrets.YUETO_CI_PAT }}
 
       - name: Preflight build and promotion dependencies
         run: |
@@ -2290,8 +2289,8 @@ jobs:
           # repositories. GHCR login uses this job's GITHUB_TOKEN (packages: write
           # above). Every package in services.json must grant onesyue/yueto-ci
           # Write under "Manage Actions access".
-          username: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
-          password: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+          username: onesyue
+          password: ${{ secrets.YUETO_CI_PAT }}
 
       - name: Preflight build and promotion dependencies
         run: |
@@ -2702,8 +2701,8 @@ jobs:
         if: needs.plan.outputs.resume == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          GHCR_USER: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
-          GHCR_PASSWORD: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+          GHCR_USER: onesyue
+          GHCR_PASSWORD: ${{ secrets.YUETO_CI_PAT }}
           SERVICE: ${{ matrix.service }}
         run: |
           set -euo pipefail
@@ -2764,8 +2763,8 @@ jobs:
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
-          username: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}
-          password: ${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}
+          username: onesyue
+          password: ${{ secrets.YUETO_CI_PAT }}
 
       - name: Verify promoted supply chain
         env:

@@ -95,10 +95,10 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
     def test_service_package_access_falls_back_to_the_source_pat(self) -> None:
         # yueboard / yue-node packages refuse this repository's GITHUB_TOKEN
         # (403 push in 45836692565). Plan read, build push, publish, release-pr
-        # and resume readback use the PAT unless the switch is set.
+        # and resume readback use the PAT.
         build = _workflows()["build.yml"]
-        gated_user = "${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.actor || 'onesyue' }}"
-        gated_pass = "${{ vars.YUETO_CI_GHCR_VIA_GITHUB_TOKEN == 'true' && github.token || secrets.YUETO_CI_PAT }}"
+        gated_user = "onesyue"
+        gated_pass = "${{ secrets.YUETO_CI_PAT }}"
         plan = build[build.index("      - id: plan\n"):]
         plan = plan[: plan.index("        run: |")]
         self.assertIn("GHCR_USER: " + gated_user, plan)
