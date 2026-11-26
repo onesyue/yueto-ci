@@ -41,7 +41,15 @@ def load(name: str, filename: str):
     return module
 
 
-FP = load("input_fingerprint", "input-fingerprint.py")
+def load_fingerprint():
+    scripts = str(ROOT / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    import input_fingerprint.fingerprint as module
+    return module
+
+
+FP = load_fingerprint()
 EV = load("verification_evidence", "verification-evidence.py")
 
 ENTRY = {
