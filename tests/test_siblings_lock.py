@@ -28,8 +28,10 @@ DYNAMIC_REFS = {
     "${{ github.event.inputs.ref }}",
     "${{ github.sha }}",
     "${{ steps.source.outputs.revision }}",
+    # client-core-matrix validates this output is a 40-character revision before checkout.
+    "${{ steps.node.outputs.ref }}",
 }
-LITERAL_SHA_REPOS = {"hysteria", "quic-go"}
+LITERAL_SHA_REPOS = {"hysteria", "mihomo", "quic-go"}
 RESOLVE_COMMAND = {
     "alert-chain-deadman.yml": (
         "python3 .ci-receiver/scripts/update-siblings-lock.py "

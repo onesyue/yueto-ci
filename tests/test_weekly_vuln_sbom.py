@@ -459,7 +459,7 @@ class WorkflowPolicyTest(unittest.TestCase):
         self.assertIn("cp -a .ci-policy sources/yueto-ci", steps["Materialize the yueto-ci policy checkout"])
         private = steps["Checkout yueops"]
         self.assertIn(
-            "token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}",
+            "token: ${{ steps.source_token.outputs.token }}",
             private,
         )
 

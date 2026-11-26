@@ -70,7 +70,6 @@ jobs:
           command -v npm
 
       - name: Mint read-only source token (GitHub App)
-        if: vars.YUETO_CI_APP_CLIENT_ID != ''
         id: source_token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
@@ -91,7 +90,7 @@ jobs:
         with:
           repository: onesyue/yueops
           ref: ${{ steps.siblings.outputs.yueops }}
-          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source_token.outputs.token }}
           persist-credentials: false
           path: sources/yueops
 
@@ -100,7 +99,7 @@ jobs:
         with:
           repository: onesyue/yueboard
           ref: ${{ steps.siblings.outputs.yueboard }}
-          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source_token.outputs.token }}
           persist-credentials: false
           path: sources/yueboard
 
@@ -109,7 +108,7 @@ jobs:
         with:
           repository: onesyue/yue-node
           ref: ${{ steps.siblings.outputs.yue_node }}
-          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source_token.outputs.token }}
           persist-credentials: false
           path: sources/yue-node
 
@@ -118,7 +117,7 @@ jobs:
         with:
           repository: onesyue/yueto
           ref: ${{ steps.siblings.outputs.yueto }}
-          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source_token.outputs.token }}
           persist-credentials: false
           path: sources/yueto
 
@@ -127,7 +126,7 @@ jobs:
         with:
           repository: onesyue/yuelink
           ref: ${{ steps.siblings.outputs.yuelink }}
-          token: ${{ steps.source_token.outputs.token || secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source_token.outputs.token }}
           persist-credentials: false
           path: sources/yuelink
 

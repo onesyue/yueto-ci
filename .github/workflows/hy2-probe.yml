@@ -44,7 +44,6 @@ jobs:
           printf 'version=%s\nrevision=%s\n' "$version" "$revision" >> "$GITHUB_OUTPUT"
       - name: Mint read-only source token
         id: source
-        if: vars.YUETO_CI_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
@@ -56,7 +55,7 @@ jobs:
         with:
           repository: onesyue/hysteria
           ref: c7c91bb398460031aeda898297a5ef4743c4c583
-          token: ${{ steps.source.outputs.token || secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source.outputs.token }}
           fetch-depth: 0
           path: hysteria
           persist-credentials: false
@@ -64,7 +63,7 @@ jobs:
         with:
           repository: onesyue/quic-go
           ref: 6e04cc5812b7d1041bd0382c953149076e1a5def
-          token: ${{ steps.source.outputs.token || secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source.outputs.token }}
           fetch-depth: 0
           path: quic-go
           persist-credentials: false

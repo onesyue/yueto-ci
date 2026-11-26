@@ -44,7 +44,6 @@ jobs:
 
       - name: Mint read-only source token
         id: source
-        if: vars.YUETO_CI_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.YUETO_CI_APP_CLIENT_ID }}
@@ -57,7 +56,7 @@ jobs:
         with:
           repository: onesyue/yue-node
           ref: ${{ steps.node.outputs.ref }}
-          token: ${{ steps.source.outputs.token || secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source.outputs.token }}
           fetch-depth: 1
           path: node
           persist-credentials: false
@@ -66,7 +65,7 @@ jobs:
         with:
           repository: onesyue/mihomo
           ref: b6ea58108a90e4c710cc431d5a3a4f376284302f
-          token: ${{ steps.source.outputs.token || secrets.YUETO_CI_PAT }}
+          token: ${{ steps.source.outputs.token }}
           fetch-depth: 1
           path: fork-mihomo
           persist-credentials: false
