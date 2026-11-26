@@ -365,6 +365,9 @@ class ReleasePrTest(unittest.TestCase):
                     raise AssertionError(args)
                 if "ls-remote" in args:
                     calls.append(args)
+                    # The ledger checkout has no persisted credentials (run
+                    # 45849605624: unauthenticated ls-remote exit 128).
+                    self.assertIn("credential.helper=!gh auth git-credential", args)
                     return subprocess.CompletedProcess(args, 2, "", "")
                 if args[0] == "git" and "push" in args:
                     calls.append(args)

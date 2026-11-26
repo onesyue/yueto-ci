@@ -124,14 +124,22 @@ def git_push_args(branch: str) -> list[str]:
     return args
 
 
-def git_push_command(root: Path, branch: str) -> list[str]:
-    refspec = git_push_args(branch)[3]
+def authed_git(root: Path) -> list[str]:
+    """git against the private ledger origin with the gh credential helper.
+
+    The ledger checkout keeps persist-credentials: false, so every network
+    read (ls-remote, fetch) needs the same helper as the push.
+    """
     return [
         "git", "-C", str(root),
         "-c", "credential.helper=",
         "-c", "credential.helper=!gh auth git-credential",
-        "push", "origin", refspec,
     ]
+
+
+def git_push_command(root: Path, branch: str) -> list[str]:
+    refspec = git_push_args(branch)[3]
+    return [*authed_git(root), "push", "origin", refspec]
 
 
 def pr_list_args(branch: str) -> list[str]:
@@ -503,7 +511,7 @@ def _pr_list(branch: str) -> list[dict]:
 
 def _remote_branch_exists(root: Path, branch: str) -> bool:
     result = _run(
-        ["git", "-C", str(root), "ls-remote", "--exit-code", "origin", f"refs/heads/{branch}"],
+        [*authed_git(root), "ls-remote", "--exit-code", "origin", f"refs/heads/{branch}"],
         check=False, capture=True, text=True,
     )
     if result.returncode == 0:
@@ -515,7 +523,7 @@ def _remote_branch_exists(root: Path, branch: str) -> bool:
 
 def _remote_bytes(root: Path, branch: str, path: str) -> bytes:
     _run([
-        "git", "-C", str(root), "fetch", "--no-tags", "origin",
+        *authed_git(root), "fetch", "--no-tags", "origin",
         f"+refs/heads/{branch}:refs/remotes/origin/{branch}",
     ])
     result = _run(
