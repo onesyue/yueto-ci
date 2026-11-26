@@ -206,6 +206,17 @@ exec "$plugin" version''',
                     self.assertFalse((destination / 'gitleaks').exists())
                 self.assertEqual(list((root / 'scratch').iterdir()), [])
 
+    def test_build_jobs_never_download_image_tools_directly(self):
+        workflow = yaml.safe_load((ROOT / '.github/workflows/build.yml').read_text())
+        downloads = re.compile(r'\b(?:curl|wget|ci_download|ci_release_asset_api)\s+[^\n]*', re.I)
+        tools = re.compile(r'\b(?:gitleaks|syft|buildx)\b', re.I)
+        for job, definition in workflow['jobs'].items():
+            for step in definition.get('steps', []):
+                script = step.get('run', '').replace('\\\n', ' ')
+                for command in downloads.findall(script):
+                    if tools.search(command):
+                        self.fail(f"{job} / {step.get('name', 'unnamed step')}: per-job tool download: {command}")
+
     def test_context_is_explicit_and_both_builders_use_the_same_recipe(self):
         recipe = (IMAGE / 'Dockerfile').read_text()
         sources = set()
