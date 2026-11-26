@@ -441,7 +441,7 @@ class WorkflowPolicyTest(unittest.TestCase):
         self.assertGreaterEqual(len(uses), 8)
         for action in uses:
             self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$")
-        self.assertEqual(self.code.count("persist-credentials: false"), 7)
+        self.assertEqual(self.code.count("persist-credentials: false"), 11)
         self.assertIn(
             "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", self.code
         )

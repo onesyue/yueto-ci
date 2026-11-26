@@ -1,12 +1,14 @@
 name: Weekly dependency vulnerability and SBOM report
 
-# Report-only first-party source scan in the public CI repository. Native
-# scanners may record findings. Missing checkouts, missing pins, or a scan
-# floor miss fails the job. This workflow never blocks build.yml, never
-# opens pull requests, and never publishes images.
+# The Monday SBOM job records findings and does not fail on vulnerabilities.
+# The daily head-scan job builds each shipped service image from the resolved
+# master SHA and fails on a fixed HIGH or CRITICAL, using the same Trivy gate
+# as build.yml. This workflow never blocks build.yml, never opens pull requests,
+# and never publishes images.
 
 on:
   schedule:
+    - cron: '17 3 * * *'
     - cron: '17 3 * * 1'
   workflow_dispatch:
 
@@ -22,6 +24,7 @@ concurrency:
 
 jobs:
   report:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 3 * * 1'
     name: Scan first-party sources
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -151,3 +154,75 @@ jobs:
           if-no-files-found: error
           overwrite: false
           retention-days: 90
+
+  head-scan:
+    name: Scan master head images
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 3 * * *'
+    runs-on: ubuntu-24.04
+    # HEAD_SCAN_JOB_TIMEOUT_MINUTES in scripts/head_scan_policy.py
+    timeout-minutes: 140
+    steps:
+      - name: Checkout head scan policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: .ci-policy
+
+      - name: Resolve master heads
+        id: heads
+        env:
+          YUETO_CI_PAT: ${{ secrets.YUETO_CI_PAT }}
+        run: |
+          set -euo pipefail
+          python3 .ci-policy/scripts/head_scan_policy.py resolve-heads >> "$GITHUB_OUTPUT"
+
+      - name: Checkout yueops head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueops
+          ref: ${{ steps.heads.outputs.yueops }}
+          token: ${{ secrets.YUETO_CI_PAT }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: sources/yueops
+
+      - name: Checkout yueboard head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueboard
+          ref: ${{ steps.heads.outputs.yueboard }}
+          token: ${{ secrets.YUETO_CI_PAT }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: sources/yueboard
+
+      - name: Checkout yue-node head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yue-node
+          ref: ${{ steps.heads.outputs.yue_node }}
+          token: ${{ secrets.YUETO_CI_PAT }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: sources/yue-node
+
+      - name: Install verified Trivy
+        run: bash .ci-policy/scripts/install-verified-trivy.sh
+
+      - name: Check head scan policy parity
+        run: python3 .ci-policy/scripts/head_scan_policy.py parity
+
+      - name: Block fixed HIGH/CRITICAL vulnerabilities
+        run: |
+          set -euo pipefail
+          python3 .ci-policy/scripts/head_scan_policy.py scan-heads \
+            --sources sources \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed true \
+            --vuln-type os,library \
+            --scanners vuln \
+            --exit-code 1 \
+            --timeout 15m \
+            --trivyignores .ci-policy/.trivyignore \
+            --skip-setup-trivy true \
+            --format table
