@@ -1769,8 +1769,11 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertNotIn("npm install --global squawk", self.workflow)
         self.assertIn('board-validation-output.py', self.workflow)
         frontend = (ROOT / 'scripts/board-validation.sh').read_text()
-        self.assertIn('corepack install --global "$web_pm"', frontend)
-        self.assertIn('[ "$web_pm" = "$admin_pm" ]', frontend)
+        self.assertIn('FRONTEND_LAYOUT=workspace', frontend)
+        self.assertIn('corepack install --global "$root_pm"', frontend)
+        self.assertNotIn('layout=legacy', frontend)
+        self.assertNotIn('corepack install --global "$web_pm"', frontend)
+        self.assertNotIn('[ "$web_pm" = "$admin_pm" ]', frontend)
 
     def test_yueboard_central_release_matches_source_quality_contract(self) -> None:
         """Private Actions being frozen must not weaken the release proof."""
