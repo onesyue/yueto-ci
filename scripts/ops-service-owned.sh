@@ -27,8 +27,10 @@ if [ "${#modules[@]}" -eq 0 ]; then
 fi
 
 cd -- "$OPS_SOURCE"
-if [[ -e tests/quarantine.json || -L tests/quarantine.json || "${YUETO_SHARED_SELECTION:-[]}" != '[]' ]]; then
+policy_quarantine="$policy_root/ci/quarantine.yaml"
+if [[ -e tests/quarantine.json || -L tests/quarantine.json || "${YUETO_SHARED_SELECTION:-[]}" != '[]' || -f "$policy_quarantine" ]]; then
   export YUETO_OPS_TEST_SOURCE="$PWD"
+  export YUETO_CI_QUARANTINE="$policy_quarantine"
   export PYTEST_PLUGINS=ops_quarantine
   export PYTHONPATH="$script_dir${PYTHONPATH:+:$PYTHONPATH}"
 fi
