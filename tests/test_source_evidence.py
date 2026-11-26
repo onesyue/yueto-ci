@@ -89,6 +89,9 @@ class SourceEvidence(unittest.TestCase):
                 E.ROOT / "scripts" / "pytest_shards", public / "scripts" / "pytest_shards",
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
             shutil.copytree(self.policy, public / "policy")
+            lib = public / "scripts" / "lib"
+            lib.mkdir(exist_ok=True)
+            (lib / "ci_constants.py").write_bytes((E.ROOT / "scripts/lib/ci_constants.py").read_bytes())
 
             def command(head):
                 return subprocess.run([

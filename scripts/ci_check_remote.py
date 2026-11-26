@@ -12,6 +12,11 @@ from pathlib import Path
 
 from ci_check_failures import failure_ids
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GITHUB_HTTPS_ORIGIN, RUN_DISCOVERY_DEADLINE_SECONDS, RUN_DISCOVERY_POLL_SECONDS
+
 REPO = "onesyue/yueto-ci"
 
 
@@ -70,18 +75,18 @@ def dispatch(branch: str, policy: str, source: str, base: str, output: Path, *, 
     if board:
         fields += ["-f", f"yueboard_contract_ref={board}"]
     gh("workflow", "run", "build.yml", "--repo", REPO, "--ref", branch, *fields)
-    deadline = time.monotonic() + 180
+    deadline = time.monotonic() + RUN_DISCOVERY_DEADLINE_SECONDS
     row = None
     while time.monotonic() < deadline:
         row = select_run(runs(branch), before, title, policy)
         if row:
             break
-        time.sleep(5)
+        time.sleep(RUN_DISCOVERY_POLL_SECONDS)
     if row is None:
         raise ValueError(f"no run matched request {request}; intent retained at {receipt}")
     run_id = str(row["databaseId"])
     receipt.write_text(json.dumps(intent | {"run_id": run_id}, indent=2) + "\n")
-    print(f"ci-check: https://github.com/{REPO}/actions/runs/{run_id}", file=sys.stderr)
+    print(f"ci-check: {GITHUB_HTTPS_ORIGIN}/{REPO}/actions/runs/{run_id}", file=sys.stderr)
     # A failed watch is not a successful validation, nor a reason to discard logs.
     subprocess.run(["gh", "run", "watch", run_id, "--repo", REPO, "--exit-status"],
                    stdout=sys.stderr, check=False)

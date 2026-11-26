@@ -19,6 +19,11 @@ import sys
 import tempfile
 import time
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import RATE_LIMIT_BACKOFF_SECONDS, RATE_LIMIT_RETRY_CEILING_SECONDS
+
 REPOS = ("yueops", "yueboard", "yueto", "yueto-ci", "yuelink", "yuelink-ci", "yue-node")
 # Owner decision 2026-11-23 10:26 SGT (t1396u): independent PR approval is
 # optional in every repository. Signed no-ff merges and check evidence are required.
@@ -69,7 +74,7 @@ def response_parts(output):
 
 
 def retry_delay(headers, attempt):
-    delay = 60 * 2 ** attempt
+    delay = RATE_LIMIT_BACKOFF_SECONDS * 2 ** attempt
     if "retry-after" in headers:
         value = headers["retry-after"]
         delay = float(value) if value.isdigit() else parsedate_to_datetime(value).timestamp() - time.time()
@@ -123,7 +128,7 @@ def api(endpoint):
             delay = retry_delay(headers, attempt)
             # Avoid holding a premerge gate for an entire hourly reset window.
             # Exiting incomplete is preferable to retrying before GitHub allows it.
-            if delay > 300:
+            if delay > RATE_LIMIT_RETRY_CEILING_SECONDS:
                 break
             time.sleep(delay)
             continue

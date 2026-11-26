@@ -1095,7 +1095,11 @@ class BuildPolicyTest(unittest.TestCase):
             'prop.get("name") == "onesyue:sbom:platform:architecture"', verifier
         )
         self.assertIn('prop.get("name") == "onesyue:sbom:subject:digest"', verifier)
-        self.assertIn('"spdxjson": "https://spdx.dev/Document"', verifier)
+        self.assertIn('"spdxjson": SPDX_DOCUMENT_PREDICATE', verifier)
+        self.assertIn(
+            'SPDX_DOCUMENT_PREDICATE = "https://spdx.dev/Document"',
+            (ROOT / "scripts/lib/ci_constants.py").read_text(encoding="utf-8"),
+        )
         self.assertIn('markers.get("onesyue:sbom:platform:digest"', verifier)
         self.assertIn('subject[0] != {"name": image', verifier)
         self.assertIn("--digest \"$DIGEST\"", workflow)

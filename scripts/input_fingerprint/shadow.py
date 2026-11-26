@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path as _ConstantsPath
+_CI_LIB = str(_ConstantsPath(__file__).resolve().parents[1] / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GHCR_ORIGIN, GITHUB_HTTPS_ORIGIN, GITHUB_HTTP_TIMEOUT_SECONDS
+
 import base64
 import json
 import os
@@ -18,11 +25,11 @@ def ghcr_latest(service: str, user: str, password: str) -> tuple[str, str]:
     repo = f"onesyue/{service}"
     auth = base64.b64encode(f"{user}:{password}".encode()).decode()
     token_req = urllib.request.Request(
-        f"https://ghcr.io/token?scope=repository:{repo}:pull&service=ghcr.io",
+        f"{GHCR_ORIGIN}/token?scope=repository:{repo}:pull&service=ghcr.io",
         headers={"Authorization": f"Basic {auth}"},
     )
     try:
-        with urllib.request.urlopen(token_req, timeout=30) as response:
+        with urllib.request.urlopen(token_req, timeout=GITHUB_HTTP_TIMEOUT_SECONDS) as response:
             token = json.load(response)["token"]
         accept = ", ".join([
             "application/vnd.oci.image.index.v1+json",
@@ -33,10 +40,10 @@ def ghcr_latest(service: str, user: str, password: str) -> tuple[str, str]:
 
         def get(path: str, accept_header: str = accept):
             req = urllib.request.Request(
-                f"https://ghcr.io/v2/{repo}/{path}",
+                f"{GHCR_ORIGIN}/v2/{repo}/{path}",
                 headers={"Authorization": f"Bearer {token}", "Accept": accept_header},
             )
-            return urllib.request.urlopen(req, timeout=30)
+            return urllib.request.urlopen(req, timeout=GITHUB_HTTP_TIMEOUT_SECONDS)
 
         with get("manifests/latest") as response:
             digest = response.headers.get("Docker-Content-Digest", "")
@@ -76,7 +83,7 @@ def provenance_builder(digest: str, token: str, repo: str = "onesyue/yueto-ci") 
             builder = statement["predicate"]["runDetails"]["builder"]["id"]
         except (KeyError, ValueError, TypeError):
             continue
-        if not builder.startswith(f"https://github.com/{repo}/.github/workflows/build.yml@"):
+        if not builder.startswith(f"{GITHUB_HTTPS_ORIGIN}/{repo}/.github/workflows/build.yml@"):
             continue
         for dep in deps:
             commit = dep.get("digest", {}).get("gitCommit", "")

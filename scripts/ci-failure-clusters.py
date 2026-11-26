@@ -18,6 +18,11 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import CI_FAILURE_CLUSTER_WORKERS
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ci_check_failures  # noqa: E402
 
@@ -134,7 +139,7 @@ def _json_loads(text: str):
     return json.loads(strip_ansi(text))
 
 
-def collect(gh, repo: str, workflow: str, limit: int, workers: int = 4) -> tuple[list[dict], dict]:
+def collect(gh, repo: str, workflow: str, limit: int, workers: int = CI_FAILURE_CLUSTER_WORKERS) -> tuple[list[dict], dict]:
     runs = _json_loads(gh([
         "run", "list", "--repo", repo, "--workflow", workflow, "--status", "failure",
         "--limit", str(limit),

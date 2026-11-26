@@ -8,6 +8,11 @@ import re
 import subprocess
 import sys
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GITHUB_ONESYUE_PREFIX
+
 
 def git(path: Path, *args: str) -> str:
     return subprocess.check_output(['git', '--no-replace-objects', '-C', str(path), *args],
@@ -24,7 +29,7 @@ def validate(output: Path, checkouts: Path, identities: dict) -> dict:
             raise ValueError('prepared checkout must be an independent clone')
         if git(path, 'rev-parse', 'HEAD') != identities[name] or git(path, 'status', '--porcelain', '--untracked-files=no'):
             raise ValueError('prepared checkout differs or is dirty')
-        if git(path, 'config', '--local', '--get', 'remote.origin.url') != f'https://github.com/onesyue/{repo}.git':
+        if git(path, 'config', '--local', '--get', 'remote.origin.url') != f'{GITHUB_ONESYUE_PREFIX}{repo}.git':
             raise ValueError('prepared origin differs')
         keys = git(path, 'config', '--local', '--name-only', '--list').splitlines()
         if any(key.lower().startswith(('credential.', 'include.', 'includeif.')) or key.lower().endswith('.extraheader') for key in keys):

@@ -4,6 +4,12 @@ import os
 import re
 from datetime import date, datetime, timezone
 from pathlib import Path
+import sys
+
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GITHUB_HTTPS_ORIGIN
 
 import pytest
 
@@ -12,7 +18,7 @@ POLICY_FILE = Path(__file__).resolve().parents[1] / "ci" / "quarantine.yaml"
 _ENTRY_KEYS = ("id", "owner", "expires", "commit", "failed", "passed")
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
-_RUN = re.compile(r"^https://github\.com/onesyue/[^/\s]+/actions/runs/[1-9][0-9]*$")
+_RUN = re.compile("^" + re.escape(GITHUB_HTTPS_ORIGIN) + r"/onesyue/[^/\s]+/actions/runs/[1-9][0-9]*$")
 
 
 class _Document:

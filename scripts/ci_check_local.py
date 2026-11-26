@@ -14,6 +14,11 @@ from pathlib import Path
 
 from ci_check_failures import node_ids
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import DOCKER_LIFECYCLE_TIMEOUT_SECONDS, DOCKER_WAIT_TIMEOUT_SECONDS
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -44,20 +49,20 @@ def execute_container(command: list[str], log: Path, receipt: Path) -> int:
         with log.open('w') as handle:
             try:
                 subprocess.run(['docker', 'start', container], check=True, stdout=handle,
-                               stderr=subprocess.STDOUT, timeout=120)
+                               stderr=subprocess.STDOUT, timeout=DOCKER_LIFECYCLE_TIMEOUT_SECONDS)
                 status = subprocess.check_output(['docker', 'wait', container], text=True,
-                                                 stderr=handle, timeout=7200).strip()
+                                                 stderr=handle, timeout=DOCKER_WAIT_TIMEOUT_SECONDS).strip()
                 return int(status)
             except subprocess.SubprocessError as error:
                 handle.write(f'ci-check infrastructure failure: {error}\n')
                 raise
             finally:
                 subprocess.run(['docker', 'logs', container], stdout=handle,
-                               stderr=subprocess.STDOUT, check=True, timeout=120)
+                               stderr=subprocess.STDOUT, check=True, timeout=DOCKER_LIFECYCLE_TIMEOUT_SECONDS)
     finally:
         # This exact ID was created by this call, and is retained in its receipt.
         subprocess.run(['docker', 'rm', '--force', container], stdout=subprocess.DEVNULL,
-                       check=True, timeout=120)
+                       check=True, timeout=DOCKER_LIFECYCLE_TIMEOUT_SECONDS)
 
 
 def run(source: Path, board: Path, policy: Path, admission: Path, output: Path, base: str) -> int:

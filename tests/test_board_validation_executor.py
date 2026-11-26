@@ -210,6 +210,9 @@ class PostgresExecutor(unittest.TestCase):
         (self.source / 'go.mod').write_text('module fixture\n')
         (self.policy / 'scripts/install-board-quality-tools.sh').write_text('unused\n')
         (self.policy / 'scripts/pg_validation_address.py').write_text((ROOT / 'scripts/pg_validation_address.py').read_text())
+        _lib = self.policy / 'scripts' / 'lib'
+        _lib.mkdir(exist_ok=True)
+        (_lib / 'ci_constants.py').write_bytes((ROOT / 'scripts/lib/ci_constants.py').read_bytes())
         self.log = self.root / 'calls.jsonl'
         self.environment = dict(os.environ, PATH=str(self.bin) + os.pathsep + os.environ['PATH'],
                                 YUE_CI_PYTHON=sys.executable, CALL_LOG=str(self.log),

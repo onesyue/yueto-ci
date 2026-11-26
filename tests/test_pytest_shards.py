@@ -102,6 +102,9 @@ class ShardPrimitives(unittest.TestCase):
             ROOT / "scripts" / "pytest_shards",
             self.policy / "scripts" / "pytest_shards",
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        lib = self.policy / "scripts" / "lib"
+        lib.mkdir(exist_ok=True)
+        (lib / "ci_constants.py").write_bytes((ROOT / "scripts/lib/ci_constants.py").read_bytes())
         self.env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", TZ="UTC",
                         PYTEST_ADDOPTS="", PYTHONPATH=str(self.site),
                         GITHUB_REPOSITORY="onesyue/yueto-ci", GITHUB_RUN_ID="42",

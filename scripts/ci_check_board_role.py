@@ -11,6 +11,11 @@ import subprocess
 import sys
 import time
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import DOCKER_LIFECYCLE_TIMEOUT_SECONDS, POSTGRES_HEALTH_ATTEMPTS, POSTGRES_PORT
+
 # Must match scripts/board-validation-output.py FRONTEND_LAYOUT.
 FRONTEND_LAYOUT = 'workspace'
 
@@ -92,15 +97,15 @@ def run(report: dict) -> int:
         if role in ('postgres', 'migration', 'e2e'):
             pg_id = capture(['docker', 'create', '--platform', 'linux/amd64',
                              '-e', 'POSTGRES_PASSWORD=ci', '-e', 'POSTGRES_DB=yueboard_test',
-                             '-p', '127.0.0.1:5432:5432', *contract['postgres_health'],
+                             '-p', f'127.0.0.1:{POSTGRES_PORT}:{POSTGRES_PORT}', *contract['postgres_health'],
                              contract['postgres_image']], env)
             if not re.fullmatch(r'[a-f0-9]{64}', pg_id):
                 pg_id = ''
                 raise ValueError('PostgreSQL create returned no exact identity')
             (temp / 'postgres-container.id').write_text(pg_id + '\n')
-            subprocess.run(['docker', 'start', pg_id], env=env, check=True, timeout=120)
+            subprocess.run(['docker', 'start', pg_id], env=env, check=True, timeout=DOCKER_LIFECYCLE_TIMEOUT_SECONDS)
             healthy = False
-            for _ in range(60):
+            for _ in range(POSTGRES_HEALTH_ATTEMPTS):
                 state = capture(['docker', 'inspect', '--format', '{{.State.Health.Status}}', pg_id], env)
                 if state == 'healthy':
                     healthy = True
@@ -165,12 +170,12 @@ def run(report: dict) -> int:
         if pg_id:
             try:
                 with (temp / 'yueboard-postgres.log').open('w') as log:
-                    subprocess.run(['docker', 'logs', pg_id], env=env, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=120)
+                    subprocess.run(['docker', 'logs', pg_id], env=env, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=DOCKER_LIFECYCLE_TIMEOUT_SECONDS)
             except (OSError, subprocess.SubprocessError) as error:
                 errors.append('PostgreSQL log retention failed: ' + str(error))
             finally:
                 try:
-                    subprocess.run(['docker', 'rm', '--force', pg_id], env=env, check=True, timeout=120)
+                    subprocess.run(['docker', 'rm', '--force', pg_id], env=env, check=True, timeout=DOCKER_LIFECYCLE_TIMEOUT_SECONDS)
                 except (OSError, subprocess.SubprocessError) as error:
                     errors.append('PostgreSQL cleanup failed: ' + str(error))
         if errors:

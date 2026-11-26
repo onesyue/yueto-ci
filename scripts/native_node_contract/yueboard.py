@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path as _ConstantsPath
+_CI_LIB = str(_ConstantsPath(__file__).resolve().parents[1] / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import BOARD_DEVICE_IDENTITY_MIN_FILES, BOARD_MODULE_MIN_FILES, BOARD_NODESYNC_MIN_FILES, BOARD_SUBSCRIBE_MIN_FILES, BOARD_WEB_MIN_FILES
+
 from pathlib import Path
 
 from .fragments import (
@@ -22,7 +29,7 @@ def _read_yueboard_inputs(root: Path) -> dict[str, object]:
     # 两者都改读整个 nodesync 包（下面的 require/forbid 原本就是对
     # connectrpc+builders 的并集做的，并集换成整包只会更严，不会更松）。
     nodesync_pkg = read_package(
-        root / "internal/modules/nodesync", "*.go", min_files=30,
+        root / "internal/modules/nodesync", "*.go", min_files=BOARD_NODESYNC_MIN_FILES,
         exclude_suffixes=("_test.go",),
     )
     connectrpc = nodesync_pkg
@@ -40,25 +47,25 @@ def _read_yueboard_inputs(root: Path) -> dict[str, object]:
     subscribe_runtime = read_package(
         root / "internal/modules/subscribe",
         "*.go",
-        min_files=10,
+        min_files=BOARD_SUBSCRIBE_MIN_FILES,
         exclude_suffixes=("_test.go",),
     )
     device_identity_runtime = read_package(
         root / "internal/platform/deviceidentity",
         "*.go",
-        min_files=2,
+        min_files=BOARD_DEVICE_IDENTITY_MIN_FILES,
         exclude_suffixes=("_test.go",),
     )
     module_runtime = read_tree(
         root / "internal/modules",
         ("*.go",),
-        min_files=100,
+        min_files=BOARD_MODULE_MIN_FILES,
         exclude_suffixes=("_test.go",),
     )
     web_runtime = read_tree(
         root / "web/src",
         ("*.ts", "*.tsx"),
-        min_files=50,
+        min_files=BOARD_WEB_MIN_FILES,
         exclude_suffixes=(".test.ts", ".test.tsx"),
     )
     handoff = read(root / "internal/modules/handoff/handoff.go")

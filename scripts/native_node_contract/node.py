@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path as _ConstantsPath
+_CI_LIB = str(_ConstantsPath(__file__).resolve().parents[1] / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import NODE_CONFIG_MIN_FILES, NODE_CONTROLPLANE_MIN_FILES, NODE_HYSTERIA_MIN_FILES, NODE_HYSTERIA_TEST_MIN_FILES, NODE_IMAGE_BIN_COPY, NODE_MODEL_MIN_FILES, NODE_SERVICE_MIN_FILES, NODE_SERVICE_TEST_MIN_FILES, NODE_XRAY_MIN_FILES, NODE_XRAY_TEST_MIN_FILES
+
 import re
 from pathlib import Path
 
@@ -122,17 +129,17 @@ def _read_node_inputs(root: Path, contract: dict) -> dict[str, object]:
     capability = read(root / "internal/capability/manifest.go")
     # 同 §上：主语是包不是文件。这两个包 2026-09-20 也各被拆成 5–8 个文件。
     config = read_package(
-        root / "internal/config", "*.go", min_files=5, exclude_suffixes=("_test.go",)
+        root / "internal/config", "*.go", min_files=NODE_CONFIG_MIN_FILES, exclude_suffixes=("_test.go",)
     )
     controlplane = read_package(
-        root / "internal/controlplane", "*.go", min_files=5, exclude_suffixes=("_test.go",)
+        root / "internal/controlplane", "*.go", min_files=NODE_CONTROLPLANE_MIN_FILES, exclude_suffixes=("_test.go",)
     )
     proto = read(root / "proto/yuenode/v1/yuenode.proto")
     # The whole package, not one file — see read_package. yue-node's service
     # package is deliberately split by responsibility (service/state/sync/
     # transaction/users/kernel/reporting/observability/devices/validate).
-    service = read_package(root / "internal/service", "*.go", min_files=8)
-    service_test = read_package(root / "internal/service", "*_test.go", min_files=3)
+    service = read_package(root / "internal/service", "*.go", min_files=NODE_SERVICE_MIN_FILES)
+    service_test = read_package(root / "internal/service", "*_test.go", min_files=NODE_SERVICE_TEST_MIN_FILES)
     # 🚨 2026-09-20：下面四条此前是单文件 read()，而 read_package 的 docstring 里
     # 早就记着同一件事（上一次拆 internal/service/service.go 时这条守卫把
     # credential-generation 边界报成"缺失"）。那次的修法**只应用到了 service**，
@@ -142,17 +149,17 @@ def _read_node_inputs(root: Path, contract: dict) -> dict[str, object]:
     # dispatcher_session.go / device_limit.go / traffic_presence.go）。
     # 契约片段的主语是**包**，不是文件；地板负责让"扫到空气"不被当成通过。
     model_types = read_package(
-        root / "internal/model", "*.go", min_files=8, exclude_suffixes=("_test.go",)
+        root / "internal/model", "*.go", min_files=NODE_MODEL_MIN_FILES, exclude_suffixes=("_test.go",)
     )
     xray_dispatcher = read_package(
-        root / "internal/kernel/xray", "*.go", min_files=20, exclude_suffixes=("_test.go",)
+        root / "internal/kernel/xray", "*.go", min_files=NODE_XRAY_MIN_FILES, exclude_suffixes=("_test.go",)
     )
-    xray_test = read_package(root / "internal/kernel/xray", "*_test.go", min_files=10)
+    xray_test = read_package(root / "internal/kernel/xray", "*_test.go", min_files=NODE_XRAY_TEST_MIN_FILES)
     hysteria = read_package(
-        root / "internal/kernel/hysteria", "*.go", min_files=8, exclude_suffixes=("_test.go",)
+        root / "internal/kernel/hysteria", "*.go", min_files=NODE_HYSTERIA_MIN_FILES, exclude_suffixes=("_test.go",)
     )
     hysteria_test = read_package(
-        root / "internal/kernel/hysteria", "*_test.go", min_files=10
+        root / "internal/kernel/hysteria", "*_test.go", min_files=NODE_HYSTERIA_TEST_MIN_FILES
     )
     artifacts = [slot["artifact"] for slot in contract["layout"].values()]
     presence = contract["presence"]
@@ -203,7 +210,7 @@ def _check_node_contract(root: Path, contract: dict, sources: dict[str, object])
             "-o yue-node-hy2 ./cmd/yue-node",
             "-o yue-node-vless ./cmd/yue-node",
             "-o yue-node ./cmd/yue-node-launcher",
-            "COPY --from=builder /build/yue-node* /usr/local/bin/",
+            NODE_IMAGE_BIN_COPY,
         ],
         "yue-node Dockerfile",
     )

@@ -42,6 +42,7 @@ class FrontendExecutor(unittest.TestCase):
         lib = self.policy / 'scripts' / 'lib'
         lib.mkdir()
         shutil.copy(ROOT / 'scripts/lib/apt-mirror-fallback.sh', lib)
+        (lib / 'ci_constants.py').write_bytes((ROOT / 'scripts/lib/ci_constants.py').read_bytes())
         self.os_release = self.root / 'os-release'
         self.os_release.write_text('VERSION_CODENAME=noble\n')
         self.curl_log = self.root / 'curl.log'

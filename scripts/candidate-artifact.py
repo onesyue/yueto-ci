@@ -14,6 +14,12 @@ import re
 import subprocess
 import time
 from pathlib import Path
+import sys
+
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import ARTIFACT_RETRY_DELAY_SECONDS, GITHUB_HTTP_TIMEOUT_SECONDS
 
 REPOSITORY = "onesyue/yueto-ci"
 RUN_ID = re.compile(r"[1-9][0-9]*")
@@ -36,7 +42,7 @@ def load_artifacts(path: Path | None, run_id: str) -> list:
         ["gh", "api", "--paginate",
          f"repos/{REPOSITORY}/actions/runs/{run_id}/artifacts",
          "--jq", ".artifacts"],
-        check=False, capture_output=True, text=True, timeout=30)
+        check=False, capture_output=True, text=True, timeout=GITHUB_HTTP_TIMEOUT_SECONDS)
     if proc.returncode != 0:
         raise ValueError("artifact list is unreadable")
     items: list = []
@@ -151,7 +157,7 @@ def main() -> None:
             last = error
             if str(error) not in RETRYABLE or attempt == 3:
                 break
-            time.sleep(2)
+            time.sleep(ARTIFACT_RETRY_DELAY_SECONDS)
     raise ValueError(str(last) if last else "no handoff artifact for this run")
 
 

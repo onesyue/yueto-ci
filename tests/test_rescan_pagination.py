@@ -235,9 +235,9 @@ class RescanPaginationTest(unittest.TestCase):
         calls: list[int] = []
 
         def request(req, timeout):
-            if timeout != PLANNER.REQUEST_TIMEOUT_SECONDS:
+            if timeout != PLANNER.GITHUB_HTTP_TIMEOUT_SECONDS:
                 raise AssertionError(f"per-request timeout {timeout}")
-            self.assertEqual(PLANNER.REQUEST_TIMEOUT_SECONDS, 30)
+            self.assertEqual(PLANNER.GITHUB_HTTP_TIMEOUT_SECONDS, 30)
             page = int(parse_qs(urlsplit(req.full_url).query)["page"][0])
             if req.get_header("Authorization") != "Bearer test-read-only":
                 raise AssertionError("registry request lost its read token")

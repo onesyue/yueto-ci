@@ -12,6 +12,11 @@ import subprocess
 import sys
 import tempfile
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GITHUB_HTTPS_ORIGIN
+
 POLICY = Path(__file__).resolve().parents[1]
 
 
@@ -64,7 +69,7 @@ def run(source: Path, sha: str, board: Path, output: Path, home: str) -> int:
     token = os.environ.get('YUETO_FORK_READ_TOKEN')
     if token:
         auth = base64.b64encode(('x-access-token:' + token).encode()).decode()
-        fork_env.update(GIT_CONFIG_COUNT='1', GIT_CONFIG_KEY_0='http.https://github.com/.extraheader',
+        fork_env.update(GIT_CONFIG_COUNT='1', GIT_CONFIG_KEY_0='http.' + GITHUB_HTTPS_ORIGIN + '/.extraheader',
                         GIT_CONFIG_VALUE_0='AUTHORIZATION: basic ' + auth)
     if role('verify-fork-tags', ['make', 'verify-fork-tags'], fork_env):
         return 1

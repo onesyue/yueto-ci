@@ -14,6 +14,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GITHUB_HTTPS_ORIGIN, GITHUB_HTTP_TIMEOUT_SECONDS
+
 OWNER = "onesyue"
 REF = "refs/heads/master"
 REPOS = (
@@ -43,7 +48,7 @@ def output_key(repo: str) -> str:
 def remote_argv(repo: str) -> list[str]:
     if repo not in REPOS:
         raise ValueError(f"unknown sibling {repo}")
-    return ["git", "ls-remote", f"https://github.com/{OWNER}/{repo}.git", REF]
+    return ["git", "ls-remote", f"{GITHUB_HTTPS_ORIGIN}/{OWNER}/{repo}.git", REF]
 
 
 def render(pins: dict[str, str]) -> str:
@@ -92,7 +97,7 @@ def _ls_remote(repo: str) -> str:
         check=False,
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=GITHUB_HTTP_TIMEOUT_SECONDS,
     )
     if proc.returncode != 0:
         raise RuntimeError(f"ls-remote failed for {OWNER}/{repo}")

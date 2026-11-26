@@ -15,6 +15,15 @@ import sys
 from ci_check_local import execute_container, image_from_workflow
 from ci_check_failures import failure_ids
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import (
+    BOARD_E2E_PUBLISHED_POSTGRES_PORT,
+    GITHUB_ONESYUE_PREFIX,
+    POSTGRES_PORT,
+)
+
 STEPS = {
     'postgres': 'Validate YueBoard PostgreSQL integration',
     'migration': 'Validate YueBoard PostgreSQL module and migration integration',
@@ -40,7 +49,7 @@ def checkout(path: Path, repo: str, sha: str) -> None:
         raise ValueError('independent checkout required')
     if git(path, 'rev-parse', 'HEAD') != sha or git(path, 'status', '--porcelain'):
         raise ValueError('checkout identity or cleanliness differs')
-    if git(path, 'config', '--local', '--get', 'remote.origin.url') != f'https://github.com/onesyue/{repo}.git':
+    if git(path, 'config', '--local', '--get', 'remote.origin.url') != f'{GITHUB_ONESYUE_PREFIX}{repo}.git':
         raise ValueError('checkout origin differs')
     git(path, 'rev-parse', '--verify', 'refs/remotes/origin/master^{commit}')
     keys = git(path, 'config', '--local', '--name-only', '--list').splitlines()
@@ -69,14 +78,19 @@ def workflow_contract(policy: Path) -> dict:
             return value
         match = re.fullmatch(r"\$\{\{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'yue-local-release' && '([^']+)' \|\| '([^']+)' \}\}", value)
         if match:
-            if match[1] == match[2] and match[1].startswith('postgres://postgres:ci@postgres:5432/'):
-                return match[1].replace('@postgres:5432/', '@127.0.0.1:5432/', 1)
+            service_prefix = f'postgres://postgres:ci@postgres:{POSTGRES_PORT}/'
+            service_host = f'@postgres:{POSTGRES_PORT}/'
+            loopback_host = f'@127.0.0.1:{POSTGRES_PORT}/'
+            if match[1] == match[2] and match[1].startswith(service_prefix):
+                return match[1].replace(service_host, loopback_host, 1)
             # Host e2e uses different published ports on hosted/manual runners.
             # Local replay owns port 5432; recognize only these literal pairs.
+            container_port = f':{POSTGRES_PORT}/'
+            published_port = f':{BOARD_E2E_PUBLISHED_POSTGRES_PORT}/'
             if role == 'e2e' and match[2] in {
-                    'postgres://postgres:ci@127.0.0.1:5432/postgres',
-                    'postgres://postgres:ci@127.0.0.1:5432/yueboard_e2e?sslmode=disable'}:
-                if match[1] == match[2].replace(':5432/', ':55434/', 1):
+                    f'postgres://postgres:ci@127.0.0.1:{POSTGRES_PORT}/postgres',
+                    f'postgres://postgres:ci@127.0.0.1:{POSTGRES_PORT}/yueboard_e2e?sslmode=disable'}:
+                if match[1] == match[2].replace(container_port, published_port, 1):
                     return match[2]
         raise ValueError('unsupported workflow environment expression')
 

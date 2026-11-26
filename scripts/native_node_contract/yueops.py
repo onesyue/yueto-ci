@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path as _ConstantsPath
+_CI_LIB = str(_ConstantsPath(__file__).resolve().parents[1] / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import NODE_ENTRYPOINT_NEEDLE, NODE_EXPECTED_PATH_NEEDLE, NODE_SUBPROCESS_TIMEOUT_SECONDS, OPS_DEPLOY_MIN_FILES
+
 import hashlib
 import json
 import re
@@ -43,7 +50,7 @@ for (const [input, expected] of [
 """
     try:
         subprocess.run(["node", "-e", script], input=model, text=True,
-                       capture_output=True, check=True, timeout=10)
+                       capture_output=True, check=True, timeout=NODE_SUBPROCESS_TIMEOUT_SECONDS)
     except (OSError, subprocess.SubprocessError) as exc:
         raise RuntimeError("published widget identity behavior failed") from exc
 
@@ -60,7 +67,7 @@ def validate_widget_projection(root: Path) -> str:
     script = "import { inputsDigest } from './site/scripts/lib.mjs'; process.stdout.write(await inputsDigest());"
     try:
         result = subprocess.run(["node", "--input-type=module", "-e", script],
-                                cwd=root, capture_output=True, text=True, check=True, timeout=10)
+                                cwd=root, capture_output=True, text=True, check=True, timeout=NODE_SUBPROCESS_TIMEOUT_SECONDS)
     except (OSError, subprocess.SubprocessError) as exc:
         raise RuntimeError("published widget input digest could not be verified") from exc
     if manifest.get("inputs_sha256") != result.stdout:
@@ -92,7 +99,7 @@ def _read_yueops_inputs(
     validate_board_schema_input(yueboard_contract_root)
     # 2026-09-20：deploy.py 3004 → 513 行 + 8 个 deploy_*.py。片段的主语是**部署生成器
     # 这个模块族**，不是那一个文件。地板让"glob 写错扫到空气"不能被当成通过。
-    deploy = read_package(root / "yueops", "deploy*.py", min_files=5)
+    deploy = read_package(root / "yueops", "deploy*.py", min_files=OPS_DEPLOY_MIN_FILES)
     nodeauth = read(root / "yueops/nodeauth.py")
     agent = read(root / "scripts/agent.sh")
     guard = read(root / "scripts/assert-node-recreate-safe.sh")
@@ -172,7 +179,7 @@ def _validate_yueops_rollout(contract: dict, sources: dict[str, object]) -> None
             f'expected_kernel = {{1: "{layout["node-1"]["kernel"]}", 2: "{layout["node-2"]["kernel"]}"}}',
             "kernel aliases and role swaps are retired",
             "panel.url must be a root YueBoard ConnectRPC base URL",
-            'entrypoint: ["{BIN_YUE_NODE_PREFIX}{role}"]',
+            NODE_ENTRYPOINT_NEEDLE,
         ],
         "YueOps deployment generator",
     )
@@ -301,7 +308,7 @@ def _validate_yueops_runtime(root: Path, sources: dict[str, object]) -> None:
         [
             "native_healthy",
             "/readyz",
-            'expected_path = f"{BIN_YUE_NODE_PREFIX}{role}"',
+            NODE_EXPECTED_PATH_NEEDLE,
         ],
         "YueOps native status",
     )

@@ -25,12 +25,16 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GITHUB_API_ORIGIN, GITHUB_HTTP_TIMEOUT_SECONDS
+
 SCRIPTS = Path(__file__).resolve().parent
 OWNER = "onesyue"
 YUEOPS_REPO = f"{OWNER}/yueops"
 PROMOTED_SERVICE = "yueops-web"
 SHA = re.compile(r"^[0-9a-f]{40}$")
-REQUEST_TIMEOUT_SECONDS = 30
 PROMOTED_TAG = re.compile(r"^promoted-([0-9a-f]{40})-([0-9a-f]{64})$")
 
 
@@ -59,7 +63,7 @@ def request_json(url: str, token: str) -> object:
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:  # noqa: S310
+        with urllib.request.urlopen(request, timeout=GITHUB_HTTP_TIMEOUT_SECONDS) as response:  # noqa: S310
             return json.load(response)
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise PlanError(f"cannot read {url.split('?', 1)[0]}: {exc}") from exc
@@ -70,7 +74,7 @@ def resolve_source_sha(token: str, *, ref: str = "master") -> str:
         return ref
     encoded = urllib.request.quote(ref, safe="")
     payload = request_json(
-        f"https://api.github.com/repos/{YUEOPS_REPO}/commits/{encoded}",
+        f"{GITHUB_API_ORIGIN}/repos/{YUEOPS_REPO}/commits/{encoded}",
         token,
     )
     if not isinstance(payload, dict):

@@ -16,6 +16,16 @@ import subprocess
 import sys
 from typing import Callable
 
+_CI_LIB = str(Path(__file__).resolve().parent / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import (
+    COREPACK_ENABLE_TIMEOUT_SECONDS,
+    COREPACK_PREPARE_TIMEOUT_SECONDS,
+    GIT_REV_PARSE_TIMEOUT_SECONDS,
+    SCAN_COMMAND_TIMEOUT_SECONDS,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CATALOG = ROOT / "policy" / "weekly-vuln-scan-targets.json"
 DEFAULT_SCANNER_PINS = ROOT / "scripts" / "scanner-tool-versions.sh"
@@ -134,7 +144,7 @@ def run_command(
     argv: list[str],
     *,
     cwd: Path | None = None,
-    timeout: int = 600,
+    timeout: int = SCAN_COMMAND_TIMEOUT_SECONDS,
     runner: Runner | None = None,
 ) -> subprocess.CompletedProcess[str]:
     execute = runner or subprocess.run
@@ -176,7 +186,7 @@ def find_files(root: Path, name: str) -> list[Path]:
 
 
 def git_revision(source: Path, runner: Runner | None) -> str:
-    result = run_command(["git", "-C", str(source), "rev-parse", "HEAD"], runner=runner, timeout=30)
+    result = run_command(["git", "-C", str(source), "rev-parse", "HEAD"], runner=runner, timeout=GIT_REV_PARSE_TIMEOUT_SECONDS)
     revision = (result.stdout or "").strip()
     if result.returncode != 0 or FULL_SHA.fullmatch(revision) is None:
         raise ScanError(f"{source}: cannot resolve a full commit SHA")
@@ -410,13 +420,13 @@ def run_pnpm_audit(source: Path, pins: dict[str, str], runner: Runner | None) ->
     if not lock.is_file():
         raise ScanError(f"{source}: pnpm-audit required but no pnpm-lock.yaml")
     package_manager = pins["PNPM_PACKAGE_MANAGER"]
-    enable = run_command(["corepack", "enable"], runner=runner, timeout=60)
+    enable = run_command(["corepack", "enable"], runner=runner, timeout=COREPACK_ENABLE_TIMEOUT_SECONDS)
     if enable.returncode != 0:
         raise ScanError("corepack enable failed")
     prepare = run_command(
         ["corepack", "prepare", package_manager, "--activate"],
         runner=runner,
-        timeout=180,
+        timeout=COREPACK_PREPARE_TIMEOUT_SECONDS,
     )
     if prepare.returncode != 0:
         raise ScanError("corepack prepare of pinned pnpm failed")
@@ -443,7 +453,7 @@ def run_dart_outdated(source: Path, runner: Runner | None) -> list[dict]:
         ["dart", "pub", "get", "--enforce-lockfile"],
         cwd=source,
         runner=runner,
-        timeout=600,
+        timeout=SCAN_COMMAND_TIMEOUT_SECONDS,
     )
     if gotten.returncode != 0:
         raise ScanError(f"{source}: dart pub get --enforce-lockfile failed")
@@ -451,7 +461,7 @@ def run_dart_outdated(source: Path, runner: Runner | None) -> list[dict]:
         ["dart", "pub", "outdated", "--json"],
         cwd=source,
         runner=runner,
-        timeout=600,
+        timeout=SCAN_COMMAND_TIMEOUT_SECONDS,
     )
     if not (result.stdout or "").strip():
         raise ScanError(f"{source}: dart pub outdated produced no JSON")
@@ -489,7 +499,7 @@ def run_syft(source: Path, destination: Path, runner: Runner | None) -> dict:
         ],
         cwd=source,
         runner=runner,
-        timeout=600,
+        timeout=SCAN_COMMAND_TIMEOUT_SECONDS,
     )
     if result.returncode != 0 or not destination.is_file() or destination.stat().st_size < 2:
         raise ScanError(f"{source}: syft did not write an SBOM")

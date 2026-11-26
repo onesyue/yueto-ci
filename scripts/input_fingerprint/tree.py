@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path as _ConstantsPath
+_CI_LIB = str(_ConstantsPath(__file__).resolve().parents[1] / "lib")
+if _CI_LIB not in sys.path:
+    sys.path.insert(0, _CI_LIB)
+from ci_constants import GITHUB_API_ORIGIN, GITHUB_HTTP_TIMEOUT_SECONDS
+
 import base64
 import json
 import os
@@ -55,7 +62,7 @@ class LocalGit:
 class GitHubTree:
     """The same data through the GitHub REST API (CI planning job)."""
 
-    def __init__(self, repo: str, token: str, api: str = "https://api.github.com"):
+    def __init__(self, repo: str, token: str, api: str = GITHUB_API_ORIGIN):
         if not re.fullmatch(r"[A-Za-z0-9._-]+/[A-Za-z0-9._-]+", repo):
             raise Unknown(f"invalid repository name {repo!r}")
         self.repo, self.token, self.api = repo, token, api.rstrip("/")
@@ -70,7 +77,7 @@ class GitHubTree:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=GITHUB_HTTP_TIMEOUT_SECONDS) as response:
                 return json.load(response)
         except (urllib.error.URLError, TimeoutError, ValueError) as exc:
             raise Unknown(f"GitHub API {path.split('?')[0]} unavailable: {exc}") from exc
