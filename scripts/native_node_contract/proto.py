@@ -13,9 +13,18 @@ PROTO_RELATIVE_PATH = Path("proto/yuenode/v1/yuenode.proto")
 PROTO_DIGEST_PATH = Path("proto/CANONICAL.sha256")
 
 def canonical_digest(node_root: Path) -> str:
-    """Read the yue-node mirror pin in its committed sha256sum format."""
+    """Read the yue-node mirror pin in its committed sha256sum format.
+
+    The producer (yue-node scripts/sync-proto.sh) writes one sha256sum record
+    followed by required ``# publisher/consumer/lockstep/...`` contract
+    comments. Comments are not records; exactly one record must remain.
+    """
     digest_path = node_root / PROTO_DIGEST_PATH
-    lines = [line for line in read(digest_path).splitlines() if line.strip()]
+    lines = [
+        line
+        for line in read(digest_path).splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
     if len(lines) != 1:
         raise RuntimeError(
             f"{PROTO_DIGEST_PATH} must contain exactly one non-empty sha256sum line"
