@@ -11,9 +11,11 @@ touch "$GITHUB_PATH"
 bash "$policy/.ci-policy/scripts/ops-validation-gitleaks.sh"
 bash "$policy/.ci-policy/scripts/install-cosign.sh"
 bash "$policy/.ci-policy/scripts/install-verified-buildx.sh"
+bash "$policy/.ci-policy/scripts/install-verified-syft.sh"
 bash "$policy/.ci-policy/scripts/install-board-quality-tools.sh" "$scratch/board-tools"
 # Keep only verified outputs; runtime does not depend on build-stage HOME.
 sudo -n install -m 0755 "$scratch/cosign-bin/cosign" /usr/local/bin/cosign
+sudo -n install -m 0755 "$scratch/syft-bin/syft" /usr/local/bin/syft
 sudo -n install -d -m 0755 /usr/local/lib/docker/cli-plugins
 sudo -n install -m 0755 "$DOCKER_CONFIG/cli-plugins/docker-buildx" /usr/local/lib/docker/cli-plugins/docker-buildx
 # Gitleaks stays owned by the evidence user, as its existing installer requires.

@@ -30,6 +30,10 @@ DYNAMIC_REFS = {
     "${{ steps.source.outputs.revision }}",
     # client-core-matrix validates this output is a 40-character revision before checkout.
     "${{ steps.node.outputs.ref }}",
+    # daily head scan resolves refs/heads/master to a full SHA, then checks that SHA out.
+    "${{ steps.heads.outputs.yueops }}",
+    "${{ steps.heads.outputs.yueboard }}",
+    "${{ steps.heads.outputs.yue_node }}",
 }
 LITERAL_SHA_REPOS = {"hysteria", "mihomo", "quic-go"}
 RESOLVE_COMMAND = {
