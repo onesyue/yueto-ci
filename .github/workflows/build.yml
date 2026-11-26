@@ -74,6 +74,10 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # One hung test must not hold a hosted runner for the whole job budget.
+  # Healthy sharded pytest steps finish in under 11 minutes; a hang used to
+  # keep its runner for 120 and starved every queued premerge (2026-11-26).
+  OPS_PYTEST_STEP_TIMEOUT_MINUTES: "25"
 
 # One queue per (target, source ref). A duplicate dispatch for the same ref
 # waits behind the running one (a newer pending duplicate replaces an older
@@ -1312,6 +1316,7 @@ jobs:
 
       - name: Execute owned Ops pytest selection
         if: matrix.validation == 'yueops' && matrix.ops_role != 'legacy' && matrix.ops_role != 'native'
+        timeout-minutes: ${{ fromJSON(env.OPS_PYTEST_STEP_TIMEOUT_MINUTES) }}
         env:
           YUETO_SHARED_SELECTION: ${{ !inputs.validation_only && needs.plan.outputs.has_builds == 'true' && needs.plan.outputs.ops_selection_matrix || '[]' }}
           PYTEST_ADDOPTS: --durations=25
@@ -2170,6 +2175,7 @@ jobs:
 
       - name: Run service-owned pytest selection
         id: owned
+        timeout-minutes: ${{ fromJSON(env.OPS_PYTEST_STEP_TIMEOUT_MINUTES) }}
         env:
           SERVICE: ${{ matrix.service }}
           UV_PYTHON_DOWNLOADS: never
