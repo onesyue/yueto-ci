@@ -158,9 +158,10 @@ class GoCachePolicyTest(unittest.TestCase):
 
     def test_lint_authority_alone_changes_cache_identity(self):
         policy = self.root / "isolated-policy"
-        (policy / "scripts").mkdir(parents=True)
+        (policy / "scripts" / "lib").mkdir(parents=True)
         (policy / ".github/workflows").mkdir(parents=True)
         for relative in ("scripts/go-cache-plan.py", "scripts/lint-tool-versions.sh",
+                         "scripts/lib/ci_constants.py",
                          ".github/workflows/build.yml"):
             (policy / relative).write_text((ROOT / relative).read_text())
         (self.source / ".ci-policy").unlink()
