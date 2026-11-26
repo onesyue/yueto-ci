@@ -15,7 +15,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE = ROOT / 'images/yueops-ci-toolchain'
-INSTALLERS = ('ops-validation-gitleaks.sh', 'install-cosign.sh', 'install-verified-buildx.sh')
+INSTALLERS = ('ops-validation-gitleaks.sh', 'install-cosign.sh', 'install-verified-buildx.sh', 'install-verified-syft.sh')
 BOARD_INPUTS = ('install-board-quality-tools.sh', 'lint-tool-versions.sh')
 
 
@@ -45,14 +45,19 @@ class VerifiedImageTools(unittest.TestCase):
         for name in INSTALLERS:
             source = (ROOT / 'scripts' / name).read_text()
             digest = self.capture(r'[0-9a-f]{64}', source, group=0)
-            if name == 'ops-validation-gitleaks.sh':
-                version = self.capture(r"release_url='https://github.com/gitleaks/gitleaks/releases/download/v([^/]+)/", source)
-                artifact = artifacts / 'gitleaks'
-                artifact.write_text(f'#!/bin/sh\necho {version}\n')
+            if name in ('ops-validation-gitleaks.sh', 'install-verified-syft.sh'):
+                if name == 'install-verified-syft.sh':
+                    version = self.capture(r"readonly SYFT_VERSION='([^']+)'", source)
+                    tool, output = 'syft', f'Version: {version}'
+                else:
+                    version = self.capture(r"release_url='https://github.com/gitleaks/gitleaks/releases/download/v([^/]+)/", source)
+                    tool, output = 'gitleaks', version
+                artifact = artifacts / tool
+                artifact.write_text(f'#!/bin/sh\necho "{output}"\n')
                 artifact.chmod(0o755)
-                archive = artifacts / 'gitleaks.tgz'
+                archive = artifacts / f'{tool}.tgz'
                 with tarfile.open(archive, 'w:gz') as handle:
-                    handle.add(artifact, arcname='gitleaks')
+                    handle.add(artifact, arcname=tool)
                 artifact = archive
             else:
                 variable = 'COSIGN_VERSION' if 'cosign' in name else 'BUILDX_VERSION'
@@ -96,6 +101,7 @@ while [ "$#" -gt 0 ]; do
 done
 case "$url" in
  */gitleaks/*) artifact=gitleaks.tgz;;
+ */syft/*) artifact=syft.tgz;;
  */cosign/*) artifact=cosign;;
  */buildx/*) artifact=buildx;;
  */golangci-lint/*) artifact=golangci-lint.tgz;;
@@ -138,7 +144,7 @@ exec "$plugin" version''',
         root, destination, plugins, env = self.fixture()
         installed = self.run_script(root, env, 'install-verified-tools.sh')
         self.assertEqual(installed.returncode, 0, installed.stderr)
-        for binary in (destination / 'gitleaks', destination / 'cosign', plugins / 'docker-buildx', destination / 'govulncheck', destination / 'golangci-lint'):
+        for binary in (destination / 'gitleaks', destination / 'cosign', destination / 'syft', plugins / 'docker-buildx', destination / 'govulncheck', destination / 'golangci-lint'):
             self.assertEqual(binary.stat().st_mode & 0o777, 0o755)
         self.assertEqual((destination / 'gitleaks').stat().st_uid, os.getuid())
         self.assertEqual(list((root / 'scratch').iterdir()), [])
@@ -162,6 +168,15 @@ exec "$plugin" version''',
         (destination / 'gitleaks').write_text('#!/bin/sh\necho wrong-version\n')
         wrong = self.run_script(root, env, 'check-verified-tools.sh')
         self.assertNotEqual(wrong.returncode, 0)
+
+    def test_syft_selfcheck_rejects_wrong_version(self):
+        root, destination, _, env = self.fixture()
+        installed = self.run_script(root, env, 'install-verified-tools.sh')
+        self.assertEqual(installed.returncode, 0, installed.stderr)
+        (destination / 'syft').write_text('#!/bin/sh\necho "Version: unexpected"\n')
+        checked = self.run_script(root, env, 'check-verified-tools.sh')
+        self.assertNotEqual(checked.returncode, 0)
+        self.assertIn('Syft version mismatch', checked.stderr)
 
     def test_quality_selfcheck_rejects_missing_or_wrong_tool(self):
         for tool in ('govulncheck', 'golangci-lint'):
