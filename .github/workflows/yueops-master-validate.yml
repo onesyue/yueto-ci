@@ -12,7 +12,7 @@ name: Validate yueops master
 on:
   schedule:
     - cron: '30 16 * * *' # 00:30 Asia/Singapore nightly catch-all
-    - cron: '7 * * * *' # hourly; skipped when that SHA already validated
+    - cron: '7 * * * *' # hourly; never re-dispatches a SHA that already ran (green, red or in flight)
   workflow_dispatch:
     inputs:
       ref:
@@ -87,6 +87,12 @@ jobs:
               echo "Official validation already in flight for ${SOURCE}: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
               gh run watch "$run_id" --repo "${GITHUB_REPOSITORY}" --exit-status
               exit $?
+              ;;
+            failed\ [1-9]*)
+              # The SHA already has a red verdict. Report it; never re-dispatch
+              # the same SHA (the next master SHA gets its own single run).
+              echo "::error::Official validation already failed for ${SOURCE}: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${decision#failed }"
+              exit 1
               ;;
             none)
               ;;

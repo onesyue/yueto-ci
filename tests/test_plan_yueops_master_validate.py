@@ -128,5 +128,17 @@ class PlanYueopsMasterValidateTest(unittest.TestCase):
         ]
         self.assertEqual(self.select_existing.select(source, runs), ("success", 3))
         self.assertEqual(self.select_existing.select(source, runs[:2] + runs[3:]), ("pending", 4))
-        self.assertEqual(self.select_existing.select(source, runs[:1]), ("none", None))
+        self.assertEqual(self.select_existing.select(source, runs[:1]), ("failed", 1))
+
+    def test_select_existing_never_redispatches_a_red_sha(self) -> None:
+        source = "e" * 40
+        title = f"Build & publish images yueops {source} [nonce:{'a' * 32}]"
+        red = [{"databaseId": 7, "displayTitle": title, "status": "completed", "conclusion": "failure"}]
+        cancelled = [{"databaseId": 8, "displayTitle": title, "status": "completed", "conclusion": "cancelled"}]
+        self.assertEqual(self.select_existing.select(source, red), ("failed", 7))
+        self.assertEqual(self.select_existing.select(source, cancelled), ("none", None))
+        workflow = (ROOT / ".github/workflows/yueops-master-validate.yml").read_text()
+        branch = workflow.split("failed\\ [1-9]*)", 1)[1].split(";;", 1)[0]
+        self.assertIn("exit 1", branch)
+        self.assertNotIn("gh workflow run", branch)
 
