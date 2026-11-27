@@ -1712,6 +1712,10 @@ jobs:
 
       - name: Install verified Docker Buildx
         run: bash .ci-policy/scripts/install-verified-buildx.sh
+        env:
+          # Read-only release-asset API fallback. Unauthenticated calls share the
+          # runner IP's 60/h limit and returned 403 in ship build 45993781283.
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
@@ -2296,6 +2300,10 @@ jobs:
 
       - name: Install verified Docker Buildx
         run: bash .ci-policy/scripts/install-verified-buildx.sh
+        env:
+          # Read-only release-asset API fallback. Unauthenticated calls share the
+          # runner IP's 60/h limit and returned 403 in ship build 45993781283.
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0

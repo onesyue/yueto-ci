@@ -32,6 +32,7 @@ NOT_REPRODUCED_BY_IDENTITY = (
     "wall-clock dates, expiry and timezone windows in product tests",
     "PyPI, npm/pnpm and Go module downloads on a cold cache, including locked dependencies",
     "Node 24 and host Python 3.13 patch selection, browser downloads and apt package indexes",
+    "which ordinary group each module ran in (timing-balanced; the module set is bound)",
 )
 
 
@@ -61,8 +62,27 @@ def inputs_digest(admission, selection, service, migration_base):
         del value["ops_plan"]["plan_sha256"]
     for context in contexts:
         del context["run_id"], context["run_attempt"]
-    # Timing weights only choose assignments. The actual assignments are bound.
+    # Timing weights only choose assignments.
     value.pop("ordinary_weights", None)
+    # How this run was admitted is checked again by this run's own plan before
+    # any reuse (a premerge is admitted by owner signature with validation_only;
+    # the ship of the same SHA by signed-default-branch). It is not a test input.
+    # Binding it meant a ship could never reuse its exact-SHA premerge
+    # (11-27: 45973093931 vs 45970257532, t1520u/t1525u).
+    value.pop("validation_only", None)
+    value.pop("admission_rule", None)
+    if value["ops_plan"] is not None:
+        # Ordinary groups are re-balanced from the latest timings on every run,
+        # so the same module set lands in different groups. Bind the exact
+        # ordinary module set and group count; every non-ordinary assignment
+        # (serial, ...) stays bound exactly. Cross-module order inside a group
+        # is a residual, listed in NOT_REPRODUCED_BY_IDENTITY.
+        assignments = value["ops_plan"]["assignments"]
+        ordinary = [a for a in assignments if str(a["id"]).startswith("ordinary-")]
+        value["ops_plan"]["assignments"] = (
+            [a for a in assignments if not str(a["id"]).startswith("ordinary-")]
+            + [{"id": "ordinary-*", "groups": len(ordinary),
+                "modules": sorted(m for a in ordinary for m in a["modules"])}])
     data = json.dumps([value, selection, service, migration_base],
                       sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(data).hexdigest()
@@ -168,7 +188,13 @@ def main():
     matrix = admission["validation_matrix"]
     group = {row["validation"] for row in matrix}
     flags = {"yue-node": "REUSE_YUE_NODE", "yueops": "REUSE_YUEOPS"}
-    enabled = len(group) == 1 and env.get(flags.get(next(iter(group)), "")) == "true"
+    # Default ON (owner t1520u/t1525u, 2026-11-27): a ship must not re-run the
+    # 40-job validation its exact SHA already passed as a premerge. The binding
+    # (source SHA, yueto-ci commit, workflow SHA-256, runner image, effective
+    # inputs, 24h, hosted) is unchanged and freshness still runs every time.
+    # The repository variable is now only a kill switch: "false" turns it off.
+    flag = flags.get(next(iter(group)), "") if len(group) == 1 else ""
+    enabled = bool(flag) and env.get(flag, "").strip().lower() != "false"
     builds = json.loads(env["EVIDENCE_BUILDS"])
     planned_ops = {row["service"] for row in builds if row["validation"] == "yueops"}
     covered = (bool(builds) and all(row["validation"] in group and row["ref"] == env["EVIDENCE_REF"]

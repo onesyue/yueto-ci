@@ -251,8 +251,9 @@ inputs for polling and publication admission. Its optional feedback CLI retains
 complete/unknown reports. Hosted promotion can reuse a successful validation from
 the previous 24 hours when the source SHA, yueto-ci commit, workflow SHA-256,
 hosted runner image version and effective validation inputs match. Set the repository
-variable `YUETO_REUSE_YUE_NODE` or `YUETO_REUSE_YUEOPS` to `true` to opt in for
-that service group. Both default to off. Missing evidence, a changed input, or a
+variable `YUETO_REUSE_YUE_NODE` or `YUETO_REUSE_YUEOPS` to `false` to force full
+validation for that service group. Both default to on (2026-11-27, t1525u): a ship
+of the exact SHA a premerge already validated no longer re-runs that validation. Missing evidence, a changed input, or a
 lookup failure runs full validation. Freshness runs on every promotion. The plan
 summary records the original run and attempt when evidence is reused.
 The former non-gating `input-shadow` reporting job is retired. No release job

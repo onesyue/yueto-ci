@@ -676,7 +676,10 @@ class EvidenceProbeTest(unittest.TestCase):
     def test_bound_inputs_survive_only_run_bookkeeping_changes(self):
         context = {"run_id": "1", "run_attempt": "1", "policy_revision": "c" * 40}
         admission = {"identity": dict(context), "admission_sha256": "old",
-                     "ops_plan": {"context": dict(context), "plan_sha256": "old", "assignments": ["a"]},
+                     "ops_plan": {"context": dict(context), "plan_sha256": "old",
+                                  "assignments": [{"id": "ordinary-000", "modules": ["a", "b"]},
+                                                  {"id": "ordinary-001", "modules": ["c"]},
+                                                  {"id": "serial", "modules": ["s"]}]},
                      "board_revision": "a" * 40, "validation_matrix": ["native"]}
         def digest(value, selection=None, migration="base"):
             return EV.inputs_digest(value, selection or [], "yueops", migration)
@@ -685,13 +688,32 @@ class EvidenceProbeTest(unittest.TestCase):
         other["identity"]["run_id"] = other["ops_plan"]["context"]["run_id"] = "2"
         other["admission_sha256"] = other["ops_plan"]["plan_sha256"] = "new"
         self.assertEqual(expected, digest(other))
-        for key, value in (("board_revision", "b" * 40), ("validation_matrix", ["serial"]),
-                           ("validation_only", True)):
+        for key, value in (("board_revision", "b" * 40), ("validation_matrix", ["serial"])):
             self.assertNotEqual(expected, digest(other | {key: value}))
         self.assertNotEqual(expected, digest(other, ["different-service"]))
         self.assertNotEqual(expected, digest(other, migration="different-base"))
-        other["ops_plan"]["assignments"] = ["b"]
-        self.assertNotEqual(expected, digest(other))
+        # A premerge (validation_only, owner-signature admission) and the ship of
+        # the same SHA (signed-default-branch) bind the same test inputs; each
+        # run re-checks its own admission.
+        self.assertEqual(expected, digest(other | {"validation_only": True}))
+        self.assertEqual(expected, digest(other | {"admission_rule": "signed-default-branch"}))
+        # Timing re-balances ordinary groups; the module set and group count stay bound.
+        rebalanced = copy.deepcopy(other)
+        rebalanced["ops_plan"]["assignments"][:2] = [{"id": "ordinary-000", "modules": ["c", "a"]},
+                                                     {"id": "ordinary-001", "modules": ["b"]}]
+        self.assertEqual(expected, digest(rebalanced))
+        for changed in ([{"id": "ordinary-000", "modules": ["a", "b"]}, {"id": "ordinary-001", "modules": []},
+                         {"id": "serial", "modules": ["s"]}],
+                        [{"id": "ordinary-000", "modules": ["a", "b", "c"]}, {"id": "serial", "modules": ["s"]}],
+                        [{"id": "ordinary-000", "modules": ["a", "b"]}, {"id": "ordinary-001", "modules": ["s"]},
+                         {"id": "serial", "modules": ["c"]}]):
+            mutated = copy.deepcopy(other)
+            mutated["ops_plan"]["assignments"] = changed
+            self.assertNotEqual(expected, digest(mutated))
+        for key in ("modules", "pytest_ini_sha256"):
+            mutated = copy.deepcopy(other)
+            mutated["ops_plan"][key] = "changed"
+            self.assertNotEqual(expected, digest(mutated))
 
     def test_workflow_decision_and_publish_receipt(self):
         jobs = yaml.safe_load(WORKFLOW.read_text())["jobs"]
@@ -729,7 +751,14 @@ class EvidenceProbeTest(unittest.TestCase):
                 self.assertEqual(outfile.read_text().splitlines(), ["attempt=1", "run=7"])
                 self.assertIn("REPRODUCED_BY_IDENTITY", (root / "summary").read_text())
                 outfile.unlink()
-                for override in ({"REUSE_YUEOPS": ""}, {"REUSE_YUE_NODE": "true", "REUSE_YUEOPS": ""},
+                # Unset or empty variable = default ON (t1525u): reuse is found again.
+                for override in ({"REUSE_YUEOPS": ""}, {"REUSE_YUEOPS": "TRUE"}):
+                    with mock.patch.dict(os.environ, override):
+                        EV.main()
+                    self.assertEqual(outfile.read_text().splitlines(), ["attempt=1", "run=7"])
+                    outfile.unlink()
+                for override in ({"REUSE_YUEOPS": "false"}, {"REUSE_YUEOPS": " False "},
+                                 {"REUSE_YUE_NODE": "true", "REUSE_YUEOPS": "false"},
                                  {"EVIDENCE_PROMOTE": "false"}, {"EVIDENCE_SELECTION": "[]"}):
                     with mock.patch.dict(os.environ, override), mock.patch.object(self, "get") as lookup:
                         EV.main()

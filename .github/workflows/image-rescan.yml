@@ -68,6 +68,10 @@ jobs:
 
       - name: Install verified Docker Buildx
         run: bash scripts/install-verified-buildx.sh
+        env:
+          # Read-only release-asset API fallback. Unauthenticated calls share the
+          # runner IP's 60/h limit and returned 403 in ship build 45993781283.
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Install verified Trivy
         run: bash scripts/install-verified-trivy.sh
