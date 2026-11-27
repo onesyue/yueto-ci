@@ -2143,21 +2143,33 @@ class BuildPolicyTest(unittest.TestCase):
 
     def test_yue_node_and_yueops_use_the_resolved_yueboard_contract(self) -> None:
         self.assertIn(
-            "Checkout pinned YueBoard canonical contract",
+            "Checkout the locked YueBoard sibling",
             self.workflow,
         )
         checkout_start = self.workflow.index(
-            "- name: Checkout pinned YueBoard canonical contract"
+            "- name: Checkout the locked YueBoard sibling"
         )
         checkout_end = self.workflow.index(
-            "- name: Checkout immutable central native-node policy"
+            "- name: Verify YueBoard checkout matches siblings.lock"
         )
         checkout_step = self.workflow[checkout_start:checkout_end]
         self.assertIn(
             "if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'",
             checkout_step,
         )
-        self.assertIn('ref: ${{ needs.plan.outputs.yueboard_contract_ref }}', checkout_step)
+        self.assertIn('ref: ${{ steps.siblings.outputs.yueboard }}', checkout_step)
+        self.assertNotIn('needs.plan.outputs.yueboard_contract_ref', checkout_step)
+        resolve_start = self.workflow.index("- name: Resolve sibling lock")
+        resolve_end = self.workflow.index("- name: Checkout the locked YueBoard sibling")
+        resolve_step = self.workflow[resolve_start:resolve_end]
+        self.assertIn("matrix.validation == 'yue-node'", resolve_step)
+        self.assertLess(resolve_start, checkout_start)
+        verify_start = checkout_end
+        verify_end = self.workflow.index("- name: Checkout the pinned yueto root")
+        verify_step = self.workflow[verify_start:verify_end]
+        self.assertIn('echo "resolved YueBoard sibling SHA=${from_lock} (siblings.lock)"', verify_step)
+        self.assertIn('echo "checked out YueBoard sibling SHA=${actual}"', verify_step)
+        self.assertIn('differs from siblings.lock', verify_step)
         self.assertIn('yueboard_contract_ref: ${{ steps.plan.outputs.yueboard_contract_ref }}', self.workflow)
         self.assertIn('resolve-yueboard-ref --explicit="$YUEBOARD_CONTRACT_REF"', self.workflow)
         self.assertNotIn('yueboard_contract_pin', self.workflow)

@@ -27,7 +27,7 @@ class NoticesContractGateTest(unittest.TestCase):
 
     def test_step_follows_pinned_board_checkout_and_dependency_install(self):
         at = self.text.index(STEP)
-        self.assertLess(self.text.index("Checkout pinned YueBoard canonical contract"), at)
+        self.assertLess(self.text.index("Checkout the locked YueBoard sibling"), at)
         self.assertLess(self.text.index("- name: Install yueops dependencies"), at)
         self.assertLess(at, self.text.index("- name: Execute owned Ops pytest selection"))
 

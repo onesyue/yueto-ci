@@ -18,6 +18,7 @@ import test_credential_policy as credentials
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / '.github/workflows/build.yml'
 CONDITION = "matrix.validation == 'yueboard' || matrix.validation == 'yueops'"
+RESOLVE_CONDITION = CONDITION + " || matrix.validation == 'yue-node'"
 CHECKOUT = 'Checkout the pinned yueto root'
 GATE = 'Require exact browser origin projections'
 RESOLVE = 'authority=$(git -C .ci-origin-authority rev-parse HEAD)'
@@ -41,7 +42,7 @@ class BrowserOriginAuthorityTest(unittest.TestCase):
             self.assertNotIn('continue-on-error', step)
         resolve = steps[names.index('Resolve sibling lock')]
         self.assertEqual(resolve['id'], 'siblings')
-        self.assertEqual(resolve['if'], CONDITION)
+        self.assertEqual(resolve['if'], RESOLVE_CONDITION)
         self.assertEqual(
             resolve['run'].strip(),
             'set -euo pipefail\n'

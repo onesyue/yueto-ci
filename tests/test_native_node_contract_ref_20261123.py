@@ -67,7 +67,13 @@ class NativeNodeContractRef(unittest.TestCase):
         assert 'echo "yueboard_contract_ref=$yueboard_contract_ref"' in plan["run"]
         board = next(s for s in build["validate"]["steps"] if s.get("with", {}).get("path") == ".ci-yueboard")
         assert board["if"] == "matrix.validation == 'yue-node' || matrix.validation == 'yueops'"
-        assert board["with"]["ref"] == "${{ needs.plan.outputs.yueboard_contract_ref }}"
+        assert board["with"]["ref"] == "${{ steps.siblings.outputs.yueboard }}"
+        siblings = next(s for s in build["validate"]["steps"] if s.get("id") == "siblings")
+        assert "matrix.validation == 'yue-node'" in siblings["if"]
+        verify = next(s for s in build["validate"]["steps"] if s.get("name") == "Verify YueBoard checkout matches siblings.lock")
+        assert verify["if"] == board["if"]
+        assert 'differs from siblings.lock' in verify["run"]
+        assert 'checked out YueBoard sibling SHA=' in verify["run"]
         capture = yaml.safe_load((workflows / "board-visual-capture.yml").read_text())["jobs"]["capture"]
         source = next(s for s in capture["steps"] if s.get("id") == "source")
         assert 'resolve-yueboard-ref --explicit="$YUEBOARD_CONTRACT_REF"' in source["run"]

@@ -191,7 +191,7 @@ class SiblingCheckoutTest(unittest.TestCase):
                     self.assertNotIn("master", resolve["run"])
                 elif resolve is not None:
                     self.fail(f"{path.name} resolves a sibling lock it does not checkout")
-        self.assertEqual(lock_refs, 9)
+        self.assertEqual(lock_refs, 10)
 
     def test_resolve_output_keys_match_the_constant(self) -> None:
         self.assertEqual(

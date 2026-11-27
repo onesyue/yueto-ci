@@ -738,20 +738,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # yue-node's local CANONICAL.sha256 proves only repository-internal
-      # consistency.  Check out the separately reviewed canonical tree so the
-      # validator can compare real bytes and all three hashes before build.
-      - name: Checkout pinned YueBoard canonical contract
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: onesyue/yueboard
-          ref: ${{ needs.plan.outputs.yueboard_contract_ref }}
-          token: ${{ secrets.YUETO_CI_PAT }}
-          path: .ci-yueboard
-          fetch-depth: 0
-          persist-credentials: false
-
       - name: Checkout immutable central native-node policy
         if: matrix.validation == 'yue-node' || matrix.validation == 'yueops' || matrix.validation == 'yueboard'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -895,10 +881,50 @@ jobs:
 
       - name: Resolve sibling lock
         id: siblings
-        if: matrix.validation == 'yueboard' || matrix.validation == 'yueops'
+        if: matrix.validation == 'yueboard' || matrix.validation == 'yueops' || matrix.validation == 'yue-node'
         run: |
           set -euo pipefail
           "${YUE_CI_PYTHON:?}" .ci-policy/scripts/update-siblings-lock.py --github-output --lock .ci-policy/ci/siblings.lock >> "$GITHUB_OUTPUT"
+
+      # yue-node's local CANONICAL.sha256 proves only repository-internal
+      # consistency. Check out the sibling SHA from ci/siblings.lock — never
+      # the dispatch or promoted contract pin — so premerge schema and
+      # contract tests judge the same locked tree.
+      - name: Checkout the locked YueBoard sibling
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueboard
+          ref: ${{ steps.siblings.outputs.yueboard }}
+          token: ${{ secrets.YUETO_CI_PAT }}
+          path: .ci-yueboard
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify YueBoard checkout matches siblings.lock
+        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'
+        env:
+          LOCKED_YUEBOARD: ${{ steps.siblings.outputs.yueboard }}
+        run: |
+          set -euo pipefail
+          locked="${LOCKED_YUEBOARD:?}"
+          [[ "$locked" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::siblings.lock YueBoard pin is not a 40-hex SHA: ${locked}" >&2
+            exit 1
+          }
+          lock_file="${GITHUB_WORKSPACE:?}/.ci-policy/ci/siblings.lock"
+          from_lock="$("${YUE_CI_PYTHON:?}" "${GITHUB_WORKSPACE}/.ci-policy/scripts/update-siblings-lock.py" --resolve onesyue/yueboard --lock "$lock_file")"
+          echo "resolved YueBoard sibling SHA=${from_lock} (siblings.lock)"
+          [ "$from_lock" = "$locked" ] || {
+            echo "::error::resolved YueBoard sibling ${locked} differs from siblings.lock ${from_lock}" >&2
+            exit 1
+          }
+          actual="$(git -C "${GITHUB_WORKSPACE}/.ci-yueboard" rev-parse HEAD)"
+          echo "checked out YueBoard sibling SHA=${actual}"
+          [ "$actual" = "$locked" ] || {
+            echo "::error::checked-out YueBoard ${actual} differs from siblings.lock ${locked}" >&2
+            exit 1
+          }
 
       - name: Checkout the pinned yueto root
         if: matrix.validation == 'yueboard' || matrix.validation == 'yueops'
