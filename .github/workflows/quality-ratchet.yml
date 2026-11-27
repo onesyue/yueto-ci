@@ -23,6 +23,12 @@ on:
 permissions:
   contents: read
 
+# One report per ref: a new push to a PR or master supersedes the older one
+# (t1520u). Manual reports for an explicit revision keep their own group.
+concurrency:
+  group: quality-ratchet-${{ github.event_name == 'workflow_dispatch' && inputs.revision || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
 jobs:
   report:
     name: Complexity and dead-code report

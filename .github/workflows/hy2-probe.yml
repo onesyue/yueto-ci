@@ -14,6 +14,11 @@ on:
 permissions:
   contents: read
 
+# One probe build at a time; a second dispatch queues (t1520u).
+concurrency:
+  group: hy2-probe
+  cancel-in-progress: false
+
 jobs:
   build:
     if: github.repository == 'onesyue/yueto-ci' && github.ref == 'refs/heads/master'
