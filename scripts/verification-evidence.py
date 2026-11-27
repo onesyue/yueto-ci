@@ -33,7 +33,17 @@ NOT_REPRODUCED_BY_IDENTITY = (
     "PyPI, npm/pnpm and Go module downloads on a cold cache, including locked dependencies",
     "Node 24 and host Python 3.13 patch selection, browser downloads and apt package indexes",
     "which ordinary group each module ran in (timing-balanced; the module set is bound)",
+    "the hosted VM image under jobs that ran inside the digest-pinned toolchain container",
 )
+
+# These jobs run on the hosted VM itself, so its image version is an input.
+# Every other required job (validate-*, select-*) runs inside the toolchain
+# container pinned by digest in build.yml, which the workflow SHA-256 in the
+# binding already fixes. GitHub rolls a new VM image out per job, so one green
+# premerge can span two VM versions (11-27: 46008995415 had 5 of 40 jobs on
+# 20261116.133.1, the rest and the ship plan on 20261122.23.1), and an exact
+# VM match on container jobs made its ship re-run all 40 jobs.
+HOST_IMAGE_JOBS = frozenset({"plan", "validation-evidence", "validate-yueboard-e2e"})
 
 
 def env_value(log: str, key: str) -> str | None:
@@ -125,6 +135,8 @@ def matching_candidate(current, run, api):
         return False
 
     def same_image(job):
+        if job["name"] not in HOST_IMAGE_JOBS:
+            return True
         header = api.get(f"actions/jobs/{job['id']}/logs", raw=True, limit=LOG_HEADER_BYTE_LIMIT)
         return image_version(header) == current["image_version"]
 

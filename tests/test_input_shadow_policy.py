@@ -673,6 +673,37 @@ class EvidenceProbeTest(unittest.TestCase):
             with mock.patch.object(self, "log", self.log + next(line for line in self.log.splitlines() if key in line)):
                 self.assertIsNone(self.decide())
 
+    def test_host_image_binds_only_jobs_on_the_hosted_vm(self):
+        # 11-27 46008995415: a staged VM image rollout put 5 of 40 container
+        # validation jobs on an older VM image; the ship then re-ran everything.
+        seen = []
+        older = self.log.replace("20260907.300.1", "20260901.100.1")
+
+        def get(path, raw=False, limit=None):
+            if path.startswith("actions/jobs/") and path.endswith("/logs") and limit:
+                job = next(j for j in self.jobs if path == f"actions/jobs/{j['id']}/logs")
+                seen.append(job["name"])
+                return older if job["name"].startswith(("validate-", "select-")) else self.log
+            return self.get(path, raw, limit)
+        self.assertEqual(EV.reusable_run(self.current, mock.Mock(get=get), self.NOW), self.run)
+        self.assertEqual(sorted(seen), ["plan", "validation-evidence"])
+        for host_job in ("plan", "validation-evidence"):
+            def drifted(path, raw=False, limit=None, host_job=host_job):
+                if limit:
+                    job = next(j for j in self.jobs if path == f"actions/jobs/{j['id']}/logs")
+                    return older if job["name"] == host_job else self.log
+                return self.get(path, raw, limit)
+            with self.subTest(host_job=host_job):
+                self.assertIsNone(EV.reusable_run(self.current, mock.Mock(get=drifted), self.NOW))
+
+    def test_container_jobs_exempt_from_host_image_are_digest_pinned(self):
+        workflow = (Path(__file__).resolve().parents[1] / EV.WORKFLOW_PATH).read_text()
+        for job in ("validate", "ops-service-selection"):
+            block = workflow.split(f"\n  {job}:\n", 1)[1].split("\n    runs-on", 1)[0]
+            self.assertRegex(block, r"ghcr\.io/onesyue/yueops-ci-toolchain@sha256:[0-9a-f]{64}")
+        self.assertIn("matrix.board_role != 'e2e'", workflow)
+        self.assertIn("validate-yueboard-e2e", EV.HOST_IMAGE_JOBS)
+
     def test_bound_inputs_survive_only_run_bookkeeping_changes(self):
         context = {"run_id": "1", "run_attempt": "1", "policy_revision": "c" * 40}
         admission = {"identity": dict(context), "admission_sha256": "old",
