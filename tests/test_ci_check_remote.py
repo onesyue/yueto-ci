@@ -16,6 +16,11 @@ SPEC.loader.exec_module(REMOTE)
 
 
 class DispatchBinding(unittest.TestCase):
+    def setUp(self):
+        patcher = patch.object(REMOTE, 'pending_dispatches', return_value=[])
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def row(self, id=2, title='expected', policy='a' * 40):
         return dict(databaseId=id, displayTitle=title, headSha=policy,
                     event='workflow_dispatch', status='completed', conclusion='success')
@@ -144,6 +149,58 @@ class DispatchBinding(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     REMOTE.dispatch('branch', 'a'*40, 'c'*40, '', Path(directory), repo='yueboard')
                 self.assertEqual(json.loads((Path(directory) / 'result.json').read_text()), final)
+
+
+class DispatchGuard(unittest.TestCase):
+    """t1520u: one official run per service; a pending run for the same SHA is reused."""
+    POLICY, SOURCE, NONCE = 'a' * 40, 'c' * 40, 'f' * 32
+
+    def pending(self, id, repo, source, policy=None, status='queued'):
+        return dict(databaseId=id, displayTitle=f'Build & publish images {repo} {source} [nonce:{self.NONCE}]',
+                    headSha=policy or self.POLICY, event='workflow_dispatch', status=status, conclusion=None)
+
+    def test_admit_table(self):
+        p = self.pending
+        self.assertIsNone(REMOTE.admit([], 'yueops', self.SOURCE, self.POLICY))
+        self.assertIsNone(REMOTE.admit([p(1, 'yueboard', 'd' * 40)], 'yueops', self.SOURCE, self.POLICY))
+        self.assertIsNone(REMOTE.admit([p(1, 'yueops', 'd' * 40, status='completed')], 'yueops',
+                                       self.SOURCE, self.POLICY))
+        self.assertEqual(REMOTE.admit([p(7, 'yueops', self.SOURCE)], 'yueops', self.SOURCE, self.POLICY)['databaseId'], 7)
+        with self.assertRaisesRegex(ValueError, 'already has a pending official run 8; wait for it, not dispatched'):
+            REMOTE.admit([p(8, 'yueops', 'd' * 40)], 'yueops', self.SOURCE, self.POLICY)
+        with self.assertRaisesRegex(ValueError, 'another policy revision'):
+            REMOTE.admit([p(9, 'yueops', self.SOURCE, policy='b' * 40)], 'yueops', self.SOURCE, self.POLICY)
+
+    def test_pending_same_request_is_reused_without_dispatch(self):
+        row = self.pending(5, 'yueboard', self.SOURCE)
+        final = row | {'status': 'completed', 'conclusion': 'success'}
+        calls = []
+
+        def gh(*args):
+            calls.append(args)
+            if args[0] == 'api':
+                return self.POLICY
+            return 'ok\n' if '--log' in args else json.dumps(final)
+
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(REMOTE, 'gh', side_effect=gh), \
+                patch.object(REMOTE, 'pending_dispatches', return_value=[row]), \
+                patch.object(REMOTE, 'runs', side_effect=[[row], [row]]), \
+                patch.object(REMOTE.subprocess, 'run'):
+            self.assertEqual(REMOTE.dispatch('branch', self.POLICY, self.SOURCE, '', Path(directory),
+                                             repo='yueboard'), 0)
+            receipt = json.loads((Path(directory) / 'dispatch.json').read_text())
+        self.assertEqual((receipt['request'], receipt['reused'], receipt['run_id']), (self.NONCE, True, '5'))
+        self.assertFalse(any(args[:2] == ('workflow', 'run') for args in calls))
+
+    def test_busy_service_refuses_before_dispatch(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(REMOTE, 'gh', return_value=self.POLICY) as gh, \
+                patch.object(REMOTE, 'pending_dispatches', return_value=[self.pending(8, 'yueops', 'd' * 40)]), \
+                patch.object(REMOTE, 'runs', return_value=[]):
+            with self.assertRaisesRegex(ValueError, 'not dispatched'):
+                REMOTE.dispatch('branch', self.POLICY, self.SOURCE, 'e' * 40, Path(directory), board='b' * 40)
+        self.assertFalse(any(call.args[:2] == ('workflow', 'run') for call in gh.call_args_list))
 
 
 if __name__ == '__main__':
