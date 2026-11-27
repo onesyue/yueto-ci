@@ -26,6 +26,7 @@ from .config import (
     _BINDING_KEYS,
 )
 from .skip_baseline import retired_host_case_admitted, skip_baseline
+from .support import RETIRED_HOST_SECOND_IDS
 from .support import (
     EvidenceUnavailable,
     ROOT,
@@ -527,6 +528,30 @@ def derive_prior_skips(value, source, pending):
     return accepted
 
 
+def retired_host_row_admitted(retirement, sealed_cases, nodeid, row, live_blob, source):
+    """Admit one surviving retired-host skip.
+
+    The reviewed transition binds exact module blobs. Every later edit
+    elsewhere in the module (a fixture include, another host's retirement)
+    used to need a new hand-pinned successor blob (2026-11-27: #1192 and the
+    靠谱云 retirement both moved it). A survivor is still the same case when
+    its own definition digest is unchanged and it keeps the sealed outcome
+    and reason (``case_scope_successor``), exactly as for other modules.
+    Cases retired by the second transition never come back this way.
+    """
+    if retired_host_case_admitted(retirement, sealed_cases, nodeid, row, live_blob):
+        return True
+    if nodeid not in retirement["surviving_ids"] or nodeid in RETIRED_HOST_SECOND_IDS:
+        return False
+    sealed = sealed_cases.get(nodeid)
+    if not isinstance(sealed, dict):
+        return False
+    observed = (row.get("outcome"), row.get("reason"))
+    return case_scope_successor(
+        source, nodeid, live_blob, [sealed],
+        lambda record: (record.get("outcome"), record.get("reason")) == observed) is not None
+
+
 def skip_has_reason(reason):
     """A skip is admitted only when pytest recorded a non-empty reason."""
     return isinstance(reason, str) and bool(reason.strip())
@@ -547,9 +572,9 @@ def _admit_skip_row(row, *, value, source, session, sealed_baseline, retirement,
     require(NEZHA_RETIREMENT_KEY not in sealed_baseline or module != NEZHA_RETIRED_MODULE,
             "retired Nezha test cannot inherit a historical skip: " + nodeid)
     if retirement is not None and module == RETIRED_HOST_MODULE:
-        require(retired_host_case_admitted(
+        require(retired_host_row_admitted(
                     retirement, sealed_baseline["cases"], nodeid, row,
-                    value["skip_module_blobs"].get(module)),
+                    value["skip_module_blobs"].get(module), source),
                 "retired host case or successor blob differs: " + nodeid)
         return "HISTORICAL_UNEXECUTED"
     specific = reviewed.get("cases", {}).get(nodeid)
