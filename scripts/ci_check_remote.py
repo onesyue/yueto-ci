@@ -30,6 +30,40 @@ def runs(branch: str) -> list[dict]:
                          "--json", "databaseId,displayTitle,headSha,event,status,conclusion"))
 
 
+PENDING = frozenset({"queued", "requested", "pending", "waiting", "in_progress"})
+# One official run per service in flight (owner rule t1520u, 2026-11-27). A
+# YueOps validation alone fills the account's ~20 hosted job slots; a second
+# concurrent one only queues behind it and doubles everyone's wait.
+MAX_PENDING_PER_SERVICE = 1
+
+
+def pending_dispatches() -> list[dict]:
+    """Pending build.yml dispatches on every branch (master premerges included)."""
+    rows = json.loads(gh("run", "list", "--repo", REPO, "--workflow", "build.yml",
+                         "--event", "workflow_dispatch", "--limit", "100",
+                         "--json", "databaseId,displayTitle,headSha,event,status,conclusion"))
+    return [row for row in rows if row.get("status") in PENDING]
+
+
+def admit(rows: list[dict], repo: str, source: str, policy: str) -> dict | None:
+    """Reuse a pending run for this exact request, or refuse while the service is busy."""
+    prefix = f"Build & publish images {repo} "
+    mine = [row for row in rows if row.get("status") in PENDING
+            and str(row.get("displayTitle", "")).startswith(prefix)]
+    same = [row for row in mine if re.fullmatch(
+        rf"{re.escape(prefix)}{source} \[nonce:[0-9a-f]{{32}}\]", row["displayTitle"])]
+    for row in same:
+        if row.get("headSha") == policy:
+            return row
+    if same:
+        raise ValueError(f"run {same[0]['databaseId']} already validates {source} on another policy "
+                         "revision; wait for it, not dispatched")
+    if len(mine) >= MAX_PENDING_PER_SERVICE:
+        raise ValueError(f"{repo} already has a pending official run {mine[0]['databaseId']}; "
+                         "wait for it, not dispatched")
+    return None
+
+
 def select_run(rows: list[dict], before: set[int], title: str, policy: str) -> dict | None:
     matches = [row for row in rows if row["databaseId"] not in before
                and row["displayTitle"] == title and row["event"] == "workflow_dispatch"]
@@ -60,11 +94,16 @@ def dispatch(branch: str, policy: str, source: str, base: str, output: Path, *, 
     if remote != policy:
         raise ValueError("push the exact local policy commit before dispatching")
     before = {row["databaseId"] for row in runs(branch)}
-    request = uuid.uuid4().hex
+    reused = admit(pending_dispatches(), repo, source, policy)
+    if reused:
+        request = reused["displayTitle"].rsplit("[nonce:", 1)[1].rstrip("]")
+        before.discard(reused["databaseId"])
+    else:
+        request = uuid.uuid4().hex
     title = f"Build & publish images {repo} {source} [nonce:{request}]"
     output.mkdir(parents=True, exist_ok=True)
     receipt = output / "dispatch.json"
-    intent = {"repository": repo, "request": request, "policy_revision": policy, "source_revision": source,
+    intent = {"repository": repo, "request": request, "reused": bool(reused), "policy_revision": policy, "source_revision": source,
               "migration_base": base, "board_revision": board, "branch": branch, "prior_runs": sorted(before)}
     receipt.write_text(json.dumps(intent, indent=2) + "\n")
     fields = ["-f", f"service={repo}", "-f", f"ref={source}",
@@ -74,7 +113,8 @@ def dispatch(branch: str, policy: str, source: str, base: str, output: Path, *, 
         fields += ["-f", f"migration_base={base}"]
     if board:
         fields += ["-f", f"yueboard_contract_ref={board}"]
-    gh("workflow", "run", "build.yml", "--repo", REPO, "--ref", branch, *fields)
+    if not reused:
+        gh("workflow", "run", "build.yml", "--repo", REPO, "--ref", branch, *fields)
     deadline = time.monotonic() + RUN_DISCOVERY_DEADLINE_SECONDS
     row = None
     while time.monotonic() < deadline:
