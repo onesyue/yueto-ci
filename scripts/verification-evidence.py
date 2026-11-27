@@ -168,7 +168,13 @@ def main():
     matrix = admission["validation_matrix"]
     group = {row["validation"] for row in matrix}
     flags = {"yue-node": "REUSE_YUE_NODE", "yueops": "REUSE_YUEOPS"}
-    enabled = len(group) == 1 and env.get(flags.get(next(iter(group)), "")) == "true"
+    # Default ON (owner t1520u/t1525u, 2026-11-27): a ship must not re-run the
+    # 40-job validation its exact SHA already passed as a premerge. The binding
+    # (source SHA, yueto-ci commit, workflow SHA-256, runner image, effective
+    # inputs, 24h, hosted) is unchanged and freshness still runs every time.
+    # The repository variable is now only a kill switch: "false" turns it off.
+    flag = flags.get(next(iter(group)), "") if len(group) == 1 else ""
+    enabled = bool(flag) and env.get(flag, "").strip().lower() != "false"
     builds = json.loads(env["EVIDENCE_BUILDS"])
     planned_ops = {row["service"] for row in builds if row["validation"] == "yueops"}
     covered = (bool(builds) and all(row["validation"] in group and row["ref"] == env["EVIDENCE_REF"]

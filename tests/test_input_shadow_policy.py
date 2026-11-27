@@ -729,7 +729,14 @@ class EvidenceProbeTest(unittest.TestCase):
                 self.assertEqual(outfile.read_text().splitlines(), ["attempt=1", "run=7"])
                 self.assertIn("REPRODUCED_BY_IDENTITY", (root / "summary").read_text())
                 outfile.unlink()
-                for override in ({"REUSE_YUEOPS": ""}, {"REUSE_YUE_NODE": "true", "REUSE_YUEOPS": ""},
+                # Unset or empty variable = default ON (t1525u): reuse is found again.
+                for override in ({"REUSE_YUEOPS": ""}, {"REUSE_YUEOPS": "TRUE"}):
+                    with mock.patch.dict(os.environ, override):
+                        EV.main()
+                    self.assertEqual(outfile.read_text().splitlines(), ["attempt=1", "run=7"])
+                    outfile.unlink()
+                for override in ({"REUSE_YUEOPS": "false"}, {"REUSE_YUEOPS": " False "},
+                                 {"REUSE_YUE_NODE": "true", "REUSE_YUEOPS": "false"},
                                  {"EVIDENCE_PROMOTE": "false"}, {"EVIDENCE_SELECTION": "[]"}):
                     with mock.patch.dict(os.environ, override), mock.patch.object(self, "get") as lookup:
                         EV.main()
