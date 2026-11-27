@@ -26,7 +26,7 @@ from .config import (
     _BINDING_KEYS,
 )
 from .skip_baseline import retired_host_case_admitted, skip_baseline
-from .support import RETIRED_HOST_SECOND_IDS
+from .support import RETIRED_HOST_SECOND_IDS, RETIRED_HOST_THIRD_IDS
 from .support import (
     EvidenceUnavailable,
     ROOT,
@@ -541,7 +541,8 @@ def retired_host_row_admitted(retirement, sealed_cases, nodeid, row, live_blob, 
     """
     if retired_host_case_admitted(retirement, sealed_cases, nodeid, row, live_blob):
         return True
-    if nodeid not in retirement["surviving_ids"] or nodeid in RETIRED_HOST_SECOND_IDS:
+    if (nodeid not in retirement["surviving_ids"] or nodeid in RETIRED_HOST_SECOND_IDS
+            or nodeid in RETIRED_HOST_THIRD_IDS):
         return False
     sealed = sealed_cases.get(nodeid)
     if not isinstance(sealed, dict):

@@ -9,11 +9,13 @@ from .config import (
     NATIVE_INPUTS,
     RETIRED_HOST_AFTER_BLOB,
     RETIRED_HOST_SECOND_AFTER_BLOB,
+    RETIRED_HOST_THIRD_AFTER_BLOB,
     SHA,
     SKIP_BASELINE,
 )
 from .support import (
     RETIRED_HOST_SECOND_IDS,
+    RETIRED_HOST_THIRD_IDS,
     ROOT,
     read_json,
     require,
@@ -29,8 +31,10 @@ def retired_host_case_admitted(retirement, sealed_cases, nodeid, row, live_blob)
     if nodeid not in retirement["surviving_ids"]:
         return False
     sealed = sealed_cases.get(nodeid)
-    if live_blob == RETIRED_HOST_SECOND_AFTER_BLOB:
-        return (nodeid not in RETIRED_HOST_SECOND_IDS and isinstance(sealed, dict)
+    if live_blob in (RETIRED_HOST_SECOND_AFTER_BLOB, RETIRED_HOST_THIRD_AFTER_BLOB):
+        absent = RETIRED_HOST_SECOND_IDS | (
+            RETIRED_HOST_THIRD_IDS if live_blob == RETIRED_HOST_THIRD_AFTER_BLOB else set())
+        return (nodeid not in absent and isinstance(sealed, dict)
                 and sealed.get("module_blob") == RETIRED_HOST_AFTER_BLOB
                 and {"outcome": row["outcome"], "reason": row.get("reason")}
                 == {"outcome": sealed.get("outcome"), "reason": sealed.get("reason")})

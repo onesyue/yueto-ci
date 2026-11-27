@@ -9,11 +9,12 @@ from .config import (
     RETIRED_HOST_AFTER_BLOB,
     RETIRED_HOST_MODULE,
     RETIRED_HOST_SECOND_AFTER_BLOB,
+    RETIRED_HOST_THIRD_AFTER_BLOB,
     SHA,
     _SKIP_UNKNOWN,
 )
 from .skip_bindings import case_scope_successor, prepare_skip_bindings
-from .support import RETIRED_HOST_SECOND_IDS
+from .support import RETIRED_HOST_SECOND_IDS, RETIRED_HOST_THIRD_IDS
 
 
 def _case_blob(case):
@@ -433,6 +434,9 @@ def _retired_blob_admitted(bound, nodeid, live):
     sealed_blob = sealed.get("module_blob")
     if live == sealed_blob:
         return True
+    if live == RETIRED_HOST_THIRD_AFTER_BLOB:
+        return (nodeid not in RETIRED_HOST_SECOND_IDS | RETIRED_HOST_THIRD_IDS
+                and sealed_blob == RETIRED_HOST_AFTER_BLOB)
     return (live == RETIRED_HOST_SECOND_AFTER_BLOB and nodeid not in RETIRED_HOST_SECOND_IDS
             and sealed_blob == RETIRED_HOST_AFTER_BLOB)
 

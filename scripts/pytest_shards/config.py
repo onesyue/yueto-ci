@@ -207,6 +207,17 @@ RETIRED_HOST_TRANSITION_SHA256 = "961fa6fd314c9d292e766e1cea5b8571f0d97b489adbeb
 RETIRED_HOST_SECOND_AFTER_BLOB = "6c3e8eca2a185a9b89aedbc3abec63c7cc2eb2fd"
 
 
+# 2026-11-27 (owner t1528u, yueops #1240): the 靠谱云.com panel mirror
+# brand_literals.PANEL_MIRROR_ALTERNATE_HOST was retired and its nginx vhost
+# deleted, so the module dropped that host and the apex probe in
+# test_native_unchanged_panel_site_url_bearer_and_default444 now covers only
+# the remaining mirror. Code-reviewed successor on top of the second one; it
+# changes no baseline bytes. With exactly this module blob, the second
+# transition's absences hold, the three alternate-panel cases must be absent
+# too, and every other survivor keeps its sealed outcome and reason.
+RETIRED_HOST_THIRD_AFTER_BLOB = "2e7ad9e66349f16a144e43082d9cdcc9f2190cfc"
+
+
 NEZHA_RETIREMENT_KEY = "owner_nezha_retirement_20261103"
 
 

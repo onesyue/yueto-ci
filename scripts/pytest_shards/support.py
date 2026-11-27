@@ -43,6 +43,16 @@ RETIRED_HOST_SECOND_IDS = {
 }
 
 
+RETIRED_HOST_THIRD_IDS = {
+    RETIRED_HOST_MODULE + "::" + name + "[" + _brand.PANEL_MIRROR_ALTERNATE_HOST + "]"
+    for name in (
+        "test_native_mini_index_assets_and_telegram_frame_policy",
+        "test_native_auth_is_not_panel_cookie_or_bearer_and_secret_paths_do_not_log",
+        "test_native_alias_upload_method_body_limits_and_cache",
+    )
+}
+
+
 def require(condition, message):
     if not condition:
         raise ValueError(message)
