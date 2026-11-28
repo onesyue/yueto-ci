@@ -17,7 +17,14 @@ from pathlib import Path
 _CI_LIB = str(Path(__file__).resolve().parent / "lib")
 if _CI_LIB not in sys.path:
     sys.path.insert(0, _CI_LIB)
-from ci_constants import GITHUB_API_ORIGIN, GITHUB_HTTP_TIMEOUT_SECONDS, LOG_HEADER_BYTE_LIMIT, VALIDATION_IMAGE_WORKERS
+from ci_constants import (
+    EVIDENCE_COMPARE_FILE_LIMIT,
+    EVIDENCE_MAX_CANDIDATES,
+    GITHUB_API_ORIGIN,
+    GITHUB_HTTP_TIMEOUT_SECONDS,
+    LOG_HEADER_BYTE_LIMIT,
+    VALIDATION_IMAGE_WORKERS,
+)
 
 WORKFLOW_PATH = ".github/workflows/build.yml"
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
@@ -45,6 +52,19 @@ NOT_REPRODUCED_BY_IDENTITY = (
 # VM match on container jobs made its ship re-run all 40 jobs.
 HOST_IMAGE_JOBS = frozenset({"plan", "validation-evidence", "validate-yueboard-e2e"})
 
+# yueto-ci files that no reused job (plan, validate-*, select-*, validation-
+# evidence) reads: they run only after validation, in publish/release-pr. A
+# policy commit that changes nothing else cannot change a validation verdict.
+# 11-28: premerge 46140696890 (policy 9ebce91c) and the ship of the same yueops
+# SHA (policy 926b47c, a release_pr.py-only merge in between) bound identical
+# inputs apart from the policy commit, and the ship re-ran all 40 jobs.
+# tests/test_input_shadow_policy.py proves every entry stays post-validation.
+POST_VALIDATION_PATHS = frozenset({
+    "scripts/release_pr.py",
+    "tests/test_release_pr.py",
+})
+REUSE_WINDOW = dt.timedelta(hours=24)
+
 
 def env_value(log: str, key: str) -> str | None:
     """The single runner-printed value of ``key``; None if absent or duplicated."""
@@ -71,7 +91,9 @@ def inputs_digest(admission, selection, service, migration_base):
         contexts.append(value["ops_plan"]["context"])
         del value["ops_plan"]["plan_sha256"]
     for context in contexts:
-        del context["run_id"], context["run_attempt"]
+        # The policy commit is bound by reusable_run instead: the same commit,
+        # or a descendant whose only changes are POST_VALIDATION_PATHS.
+        del context["run_id"], context["run_attempt"], context["policy_revision"]
     # Timing weights only choose assignments.
     value.pop("ordinary_weights", None)
     # How this run was admitted is checked again by this run's own plan before
@@ -103,9 +125,29 @@ def eligible_run(current, run, now):
             and (run.get("head_repository") or {}).get("full_name") == current["repository"]
             and run.get("path") == WORKFLOW_PATH and run.get("event") == "workflow_dispatch"
             and run.get("head_branch") == current["default_branch"]
-            and run.get("head_sha") == current["head_sha"]
+            and SHA40.fullmatch(run.get("head_sha") or "") is not None
             and run.get("status") == "completed" and run.get("conclusion") == "success"
-            and dt.timedelta() <= now - _ts(run["created_at"]) <= dt.timedelta(hours=24))
+            and dt.timedelta() <= now - _ts(run["created_at"]) <= REUSE_WINDOW)
+
+
+def same_validation_policy(current, run, api):
+    """The prior run's yueto-ci commit validates exactly like this run's.
+
+    Same commit, or an ancestor whose diff to this commit touches only
+    POST_VALIDATION_PATHS (renames count both names). Anything else, a
+    diverged or truncated comparison, or an API error, means full validation.
+    """
+    prior, head = run["head_sha"], current["head_sha"]
+    if prior == head:
+        return True
+    diff = api.get(f"compare/{prior}...{head}")
+    files = diff.get("files")
+    if (diff.get("status") != "ahead" or diff.get("behind_by") != 0
+            or not isinstance(files, list) or not files or len(files) >= EVIDENCE_COMPARE_FILE_LIMIT
+            or diff.get("total_commits") != len(diff.get("commits") or [])):
+        return False
+    touched = {f.get("filename") for f in files} | {f["previous_filename"] for f in files if f.get("previous_filename")}
+    return touched <= POST_VALIDATION_PATHS
 
 
 def hosted_success(job):
@@ -149,10 +191,20 @@ def reusable_run(current, api, now):
             or not SHA40.fullmatch(current["head_sha"]) or not current["image_version"]
             or not re.fullmatch(r"[0-9a-f]{64}:[0-9a-f]{64}", current["binding"])):
         return None
-    runs = api.get(f"actions/workflows/build.yml/runs?head_sha={current['head_sha']}"
-                   "&event=workflow_dispatch&status=success&per_page=30")["workflow_runs"]
-    for run in runs:
-        if eligible_run(current, run, now) and matching_candidate(current, run, api):
+    # Any yueto-ci commit of the last 24h may hold the evidence; the run name
+    # (service + exact source SHA) only narrows the candidates, the plan log
+    # and same_validation_policy decide. Same-commit runs are tried first.
+    since = (now - REUSE_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
+    runs = api.get(f"actions/workflows/build.yml/runs?branch={current['default_branch']}"
+                   f"&event=workflow_dispatch&status=success&created=%3E%3D{since}"
+                   "&per_page=100")["workflow_runs"]
+    title = f"Build & publish images {current['service']} {current['ref']}"
+    named = [run for run in runs
+             if run.get("display_title") == title or (run.get("display_title") or "").startswith(title + " [nonce:")]
+    named.sort(key=lambda run: run.get("head_sha") != current["head_sha"])
+    for run in named[:EVIDENCE_MAX_CANDIDATES]:
+        if (eligible_run(current, run, now) and same_validation_policy(current, run, api)
+                and matching_candidate(current, run, api)):
             return run
     return None
 
@@ -199,7 +251,9 @@ def main():
         raise ValueError("unknown command")
     matrix = admission["validation_matrix"]
     group = {row["validation"] for row in matrix}
-    flags = {"yue-node": "REUSE_YUE_NODE", "yueops": "REUSE_YUEOPS"}
+    # yueboard joined 2026-11-28 (t1553u root fix): its ship rebuilt the full
+    # 9-job validation of fbcf3f72 that premerge 46154766867 had just passed.
+    flags = {"yue-node": "REUSE_YUE_NODE", "yueops": "REUSE_YUEOPS", "yueboard": "REUSE_YUEBOARD"}
     # Default ON (owner t1520u/t1525u, 2026-11-27): a ship must not re-run the
     # 40-job validation its exact SHA already passed as a premerge. The binding
     # (source SHA, yueto-ci commit, workflow SHA-256, runner image, effective

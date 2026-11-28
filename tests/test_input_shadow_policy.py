@@ -629,7 +629,9 @@ class EvidenceProbeTest(unittest.TestCase):
         self.run = {"id": 7, "head_repository": {"full_name": "onesyue/yueto-ci"},
                     "path": EV.WORKFLOW_PATH, "event": "workflow_dispatch", "head_branch": "master",
                     "head_sha": "c" * 40, "status": "completed", "conclusion": "success",
-                    "created_at": "2026-09-24T01:00:00Z", "run_attempt": 1}
+                    "created_at": "2026-09-24T01:00:00Z", "run_attempt": 1,
+                    "display_title": f"Build & publish images yueops {self.REF} [nonce:{'0' * 32}]"}
+        self.compare = None
         self.jobs = [dict(name=name, conclusion="success", status="completed", run_attempt=1,
                           labels=["ubuntu-24.04"], runner_group_name="GitHub Actions", id=i)
                      for i, name in enumerate(["plan", "validate-yueops", "select-yue-bot", "validation-evidence"])]
@@ -638,6 +640,11 @@ class EvidenceProbeTest(unittest.TestCase):
     def get(self, path, raw=False, limit=None):
         if path.startswith("actions/workflows/"):
             return {"workflow_runs": [self.run]}
+        if path.startswith("compare/"):
+            self.assertEqual(path, f"compare/{self.run['head_sha']}...{self.current['head_sha']}")
+            if self.compare is None:
+                raise OSError("unexpected compare")
+            return self.compare
         if path == "actions/runs/7/attempts/1/jobs?per_page=100":
             return {"jobs": self.jobs, "total_count": len(self.jobs)}
         self.assertTrue(raw)
@@ -648,7 +655,7 @@ class EvidenceProbeTest(unittest.TestCase):
 
     def test_match_and_each_single_mismatch(self):
         self.assertEqual(self.decide(), self.run)
-        for key, value in (("ref", "e" * 40), ("head_sha", "d" * 40), ("image_version", "unknown"),
+        for key, value in (("ref", "e" * 40), ("image_version", "unknown"),
                            ("binding", "c" * 64 + BINDING[64:]), ("binding", BINDING[:65] + "c" * 64),
                            ("enabled", False), ("service", "yueboard"), ("ref", "master"),
                            ("binding", ""), ("image_version", ""), ("validation_jobs", [])):
@@ -657,6 +664,9 @@ class EvidenceProbeTest(unittest.TestCase):
 
     def test_only_original_green_hosted_jobs_from_a_recent_trusted_run(self):
         for key, value in (("head_repository", {"full_name": "example/fork"}), ("path", "other.yml"),
+                           ("head_sha", None), ("head_sha", "C" * 40),
+                           ("display_title", f"Build & publish images yueops {'e' * 40}"),
+                           ("display_title", f"Build & publish images yueboard {self.REF}"),
                            ("event", "push"), ("head_branch", "feature"), ("status", "in_progress"),
                            ("created_at", "2026-09-22T01:00:00Z"), ("id", 99), ("conclusion", "failure")):
             with self.subTest(key=key), mock.patch.dict(self.run, {key: value}):
@@ -672,6 +682,92 @@ class EvidenceProbeTest(unittest.TestCase):
         for key in ("REF_OVERRIDE", "VALIDATION_IDENTITY"):
             with mock.patch.object(self, "log", self.log + next(line for line in self.log.splitlines() if key in line)):
                 self.assertIsNone(self.decide())
+
+    def release_only(self, files=("scripts/release_pr.py",)):
+        return {"status": "ahead", "ahead_by": 1, "behind_by": 0, "total_commits": 1,
+                "commits": [{"sha": "d" * 40}], "files": [{"filename": f, "status": "modified"} for f in files]}
+
+    def test_release_only_policy_descendant_reuses_the_premerge(self):
+        # 11-28: premerge 46140696890 ran on yueto-ci 9ebce91c; a release_pr.py-only
+        # merge (926b47c) landed before the ship of the same yueops SHA, and the
+        # ship re-ran all 40 validation jobs.
+        self.current["head_sha"] = "d" * 40
+        self.compare = self.release_only(("scripts/release_pr.py", "tests/test_release_pr.py"))
+        self.assertEqual(self.decide(), self.run)
+
+    def test_policy_change_that_validation_reads_forces_full_validation(self):
+        self.current["head_sha"] = "d" * 40
+        unsafe = (
+            self.release_only(("scripts/release_pr.py", "scripts/verification-evidence.py")),
+            self.release_only((EV.WORKFLOW_PATH,)),
+            self.release_only(("scripts/ops-service-scope.py",)),
+            self.release_only(()),
+            self.release_only(("scripts/release_pr.py",) * EV.EVIDENCE_COMPARE_FILE_LIMIT),
+            self.release_only() | {"status": "diverged"},
+            self.release_only() | {"status": "behind"},
+            self.release_only() | {"status": "identical"},
+            self.release_only() | {"behind_by": 1},
+            self.release_only() | {"total_commits": 251},
+            self.release_only() | {"files": None},
+            self.release_only() | {"files": [{"filename": "scripts/release_pr.py", "status": "renamed",
+                                              "previous_filename": "scripts/ops-service-scope.py"}]},
+        )
+        for compare in unsafe:
+            with self.subTest(compare=compare), mock.patch.object(self, "compare", compare):
+                self.assertIsNone(self.decide())
+        with mock.patch.object(self, "compare", None), self.assertRaises(OSError):  # compare API error
+            self.decide()
+
+    def test_same_commit_needs_no_compare_and_is_tried_first(self):
+        older = dict(self.run, id=6, head_sha="a" * 40)
+        seen = []
+
+        def get(path, raw=False, limit=None):
+            if path.startswith("actions/workflows/"):
+                seen.append(path)
+                return {"workflow_runs": [older, self.run]}
+            self.assertFalse(path.startswith("compare/"))
+            return self.get(path, raw, limit)
+        self.assertEqual(EV.reusable_run(self.current, mock.Mock(get=get), self.NOW), self.run)
+        self.assertIn("branch=master", seen[0])
+        self.assertIn("created=%3E%3D2026-09-23T03:00:00Z", seen[0])
+        self.assertNotIn("head_sha=", seen[0])
+
+    def test_post_validation_paths_are_read_only_after_validation(self):
+        root = Path(__file__).resolve().parents[1]
+        jobs = yaml.safe_load(WORKFLOW.read_text())["jobs"]
+        reused = {"toolchain-image", "plan", "validate", "ops-service-selection", "validation-evidence", "freshness"}
+        self.assertTrue(reused <= set(jobs))
+        def code(text):
+            return "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+        # verification-evidence.py names the entries as data (the allowlist).
+        scripts = {p: code(p.read_text(errors="replace")) for p in (root / "scripts").rglob("*")
+                   if p.is_file() and p.suffix in {".py", ".sh", ""} and p.name != "verification-evidence.py"}
+
+        def pattern(path):
+            found = rf"{re.escape(path.name)}\b"
+            if path.suffix == ".py":
+                found += rf"|\bimport\s+{re.escape(path.stem)}\b|\bfrom\s+{re.escape(path.stem)}\s+import\b"
+            return found
+        for entry in EV.POST_VALIDATION_PATHS:
+            target = root / entry
+            self.assertTrue(target.is_file(), entry)
+            # Every script that can reach the entry, transitively (11-28:
+            # sign-release-blob.sh calls release_pr.py).
+            reach, frontier = {target}, [target]
+            while frontier and entry.startswith("scripts/"):
+                current = frontier.pop()
+                for script, text in scripts.items():
+                    if script not in reach and re.search(pattern(current), text):
+                        reach.add(script)
+                        frontier.append(script)
+            for job in reused:
+                body = json.dumps(jobs[job])
+                for path in reach:
+                    self.assertNotRegex(body, pattern(path), f"reused job {job} reaches {entry} via {path.name}")
+        # yueto-ci's own tests are never run by a reused job.
+        for job in reused:
+            self.assertNotRegex(json.dumps(jobs[job]), r"\.ci-policy/tests|pytest[^\n]*\btests/test_release_pr")
 
     def test_host_image_binds_only_jobs_on_the_hosted_vm(self):
         # 11-27 46008995415: a staged VM image rollout put 5 of 40 container
@@ -719,6 +815,10 @@ class EvidenceProbeTest(unittest.TestCase):
         other["identity"]["run_id"] = other["ops_plan"]["context"]["run_id"] = "2"
         other["admission_sha256"] = other["ops_plan"]["plan_sha256"] = "new"
         self.assertEqual(expected, digest(other))
+        # 11-28 46140696890 vs 46143358241: only the yueto-ci commit differed.
+        # It is bound by same_validation_policy, not by the input digest.
+        other["identity"]["policy_revision"] = other["ops_plan"]["context"]["policy_revision"] = "d" * 40
+        self.assertEqual(expected, digest(other))
         for key, value in (("board_revision", "b" * 40), ("validation_matrix", ["serial"])):
             self.assertNotEqual(expected, digest(other | {key: value}))
         self.assertNotEqual(expected, digest(other, ["different-service"]))
@@ -751,6 +851,7 @@ class EvidenceProbeTest(unittest.TestCase):
         steps = {step.get("id"): step for step in jobs["plan"]["steps"]}
         self.assertEqual(steps["evidence"]["env"]["REUSE_YUE_NODE"], "${{ vars.YUETO_REUSE_YUE_NODE }}")
         self.assertEqual(steps["evidence"]["env"]["REUSE_YUEOPS"], "${{ vars.YUETO_REUSE_YUEOPS }}")
+        self.assertEqual(steps["evidence"]["env"]["REUSE_YUEBOARD"], "${{ vars.YUETO_REUSE_YUEBOARD }}")
         self.assertIn("steps.plan.outputs.resume != 'true'", steps["identity"]["if"])
         self.assertIn("evidence_run == ''", jobs["validate"]["if"])
         self.assertIn("evidence_run == ''", jobs["ops-service-selection"]["if"])
@@ -805,6 +906,48 @@ class EvidenceProbeTest(unittest.TestCase):
                 self.assertEqual((root / "ops-validation-evidence-99-1.json").exists(), status == "success")
             subprocess.run(["bash", "-c", admit["run"]], check=True, env=os.environ | env | {"BUILDS": json.dumps([row])})
             self.assertEqual(outfile.read_text().strip(), 'services={"yue-bot":true}')
+
+    def test_yueboard_promotion_reuses_its_exact_premerge(self):
+        # 2026-11-28: the yueboard ship of fbcf3f72 re-ran the 9-job
+        # validation premerge 46154766867 had just passed. yueboard now uses the
+        # same exact-SHA binding as yueops/yue-node, with the same kill switch.
+        roles = ["components", "e2e", "frontends", "migration", "postgres", "quality", "race"]
+        matrix = [{"service": "yueboard", "validation": "yueboard", "board_role": r, "ref": self.REF}
+                  for r in roles]
+        self.jobs = [dict(name=name, conclusion="success", status="completed", run_attempt=1,
+                          labels=["ubuntu-24.04"], runner_group_name="GitHub Actions", id=i)
+                     for i, name in enumerate(["plan", "validation-evidence",
+                                               *EV.validation_job_names(matrix)])]
+        self.log = PLAN_LOG.format(ref=self.REF).replace("SERVICE: yueops", "SERVICE: yueboard")
+        self.run["created_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
+        self.run["display_title"] = f"Build & publish images yueboard {self.REF} [nonce:{'0' * 32}]"
+        build = {"service": "yueboard", "validation": "yueboard", "ref": self.REF}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outfile = root / "output"
+            (root / "ops-admission.json").write_text(json.dumps({"validation_matrix": matrix}))
+            env = dict(RUNNER_TEMP=tmp, GITHUB_OUTPUT=str(outfile), GITHUB_STEP_SUMMARY=str(root / "summary"),
+                       GH_TOKEN="fake", VALIDATION_IDENTITY=BINDING, EVIDENCE_SELECTION="[]",
+                       EVIDENCE_BUILDS=json.dumps([build]), EVIDENCE_SERVICE="yueboard", EVIDENCE_REF=self.REF,
+                       EVIDENCE_PROMOTE="true", GITHUB_REPOSITORY=self.current["repository"],
+                       GITHUB_RUN_ID="99", GITHUB_RUN_ATTEMPT="1", GITHUB_REF="refs/heads/master",
+                       GITHUB_SHA=self.current["head_sha"], DEFAULT_BRANCH="master",
+                       ImageVersion=self.current["image_version"], REUSE_YUEBOARD="")
+            with mock.patch.dict(os.environ, env), mock.patch.object(sys, "argv", ["script", "decide"]), \
+                    mock.patch.object(EV, "Api", return_value=self):
+                EV.main()
+                self.assertEqual(outfile.read_text().splitlines(), ["attempt=1", "run=7"])
+                outfile.unlink()
+                for override in ({"REUSE_YUEBOARD": "false"}, {"REUSE_YUEOPS": "false", "REUSE_YUEBOARD": " False "},
+                                 {"EVIDENCE_PROMOTE": "false"}):
+                    with mock.patch.dict(os.environ, override), mock.patch.object(self, "get") as lookup:
+                        EV.main()
+                        lookup.assert_not_called()
+                        self.assertFalse(outfile.exists())
+                # A yueops kill switch does not disable yueboard reuse.
+                with mock.patch.dict(os.environ, {"REUSE_YUEOPS": "false"}):
+                    EV.main()
+                self.assertEqual(outfile.read_text().splitlines(), ["attempt=1", "run=7"])
 
     def test_log_parsers(self) -> None:
         log = PLAN_LOG.format(ref=self.REF)

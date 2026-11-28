@@ -43,7 +43,7 @@ def _ops_host():
     return module
 
 
-def _registry(ip: str, *, name: str = "ops_host_public", extra: list | None = None) -> str:
+def _registry(ip: str, *, name: str = "panel_host_public", extra: list | None = None) -> str:
     roles = [{"name": name, "kind": "ipv4", "current": ip}]
     if extra:
         roles.extend(extra)
@@ -263,10 +263,12 @@ def test_mirrored_checker_cli_rejects_zero_max_age() -> None:
 
 def test_ops_host_public_resolves_from_the_native_role() -> None:
     module = _ops_host()
-    assert module.ROLE == "ops_host_public"
-    assert module.ENV_NAME == "YUEOPS_HOST_OPS_HOST_PUBLIC"
+    assert module.ROLE == "panel_host_public"
+    assert module.ENV_NAME == "YUEOPS_HOST_PANEL_HOST_PUBLIC"
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
-    host = contract["transport"]["host"]
+    host = "203.0.113.8"
+    assert contract["transport"]["host_role"] == "panel_host_public"
+    assert "host" not in contract["transport"]
     assert "host_name" not in contract["transport"]
     assert "bastion" not in CONTRACT.read_text(encoding="utf-8")
     assert not (MIRROR / "config" / "hosts.json").exists()
@@ -275,13 +277,14 @@ def test_ops_host_public_resolves_from_the_native_role() -> None:
     assert "ops_host_public.py" in workflow
     assert "--check" in workflow
     assert "--inventory .ci-yueops/config/hosts.json" in workflow
-    assert "YUEOPS_HOST_OPS_HOST_PUBLIC" in workflow
+    assert "YUEOPS_HOST_PANEL_HOST_PUBLIC" in workflow
+    assert "YUEOPS_HOST_OPS_HOST_PUBLIC" not in workflow
     assert "YUEOPS_HOST_BASTION" not in workflow
     fetch = workflow.split("Fetch heartbeat receipt", 1)[1]
-    assert f"${{OPS_HOST_PUBLIC}}" in fetch
+    assert f"${{PANEL_HOST}}" in fetch
     key = contract["transport"]["host_key"]
     assert key["algorithm"] in fetch and key["public_key"] in fetch
-    assert f"{host} {key['algorithm']} {key['public_key']}".startswith(host + " ssh-ed25519 ")
+    assert key["public_key"].startswith("AAAAC3NzaC1lZDI1NTE5")
     with tempfile.TemporaryDirectory() as directory:
         inventory = Path(directory) / "hosts.json"
         inventory.write_text(_registry(host), encoding="utf-8")
@@ -346,16 +349,20 @@ def test_ops_host_public_override_and_drift_fail_closed() -> None:
         try:
             module.resolve_ops_host_public(env={module.ENV_NAME: "not-an-address"})
         except SystemExit as exc:
-            assert exc.code == "ops_host_public must be an IPv4 address"
+            assert exc.code == "panel_host_public must be an IPv4 address"
         else:
             raise AssertionError("invalid override must fail closed")
-        pinned = json.loads(CONTRACT.read_text(encoding="utf-8"))["transport"]["host"]
+        pinned_contract = root / "pinned-host.json"
+        pinned_contract.write_text(
+            json.dumps({"transport": {"host": "203.0.113.9"}}),
+            encoding="utf-8",
+        )
         drifted = root / "drift.json"
         drifted.write_text(_registry("203.0.113.20"), encoding="utf-8")
         try:
-            module.check_ops_host_public(drifted, CONTRACT)
+            module.check_ops_host_public(drifted, pinned_contract)
         except SystemExit as exc:
-            assert exc.code == "observer contract drifted from ops_host_public"
+            assert exc.code == "observer contract drifted from panel_host_public"
         else:
             raise AssertionError("drift must fail closed")
         both = root / "both.json"
@@ -363,7 +370,7 @@ def test_ops_host_public_override_and_drift_fail_closed() -> None:
             _registry(
                 "203.0.113.21",
                 name="pg_standby_host",
-                extra=[{"name": "ops_host_public", "kind": "ipv4", "current": "203.0.113.10"}],
+                extra=[{"name": "panel_host_public", "kind": "ipv4", "current": "203.0.113.10"}],
             ),
             encoding="utf-8",
         )
@@ -384,7 +391,7 @@ def test_ops_host_public_override_and_drift_fail_closed() -> None:
         try:
             module.check_ops_host_public(both, standby_contract)
         except SystemExit as exc:
-            assert exc.code == "observer contract drifted from ops_host_public"
+            assert exc.code == "observer contract drifted from panel_host_public"
         else:
             raise AssertionError("pg_standby_host must not satisfy the contract")
         standby_only = root / "standby-only.json"
@@ -396,9 +403,10 @@ def test_ops_host_public_override_and_drift_fail_closed() -> None:
                 inventory=standby_only, contract=absent_contract, env={}
             )
         except SystemExit as exc:
-            assert exc.code == "host inventory has no ops_host_public role"
+            assert exc.code == "host inventory has no panel_host_public role"
         else:
-            raise AssertionError("pg_standby_host must not satisfy ops_host_public")
+            raise AssertionError("pg_standby_host must not satisfy panel_host_public")
+        pinned = "203.0.113.9"
         historic = root / "old.json"
         historic.write_text(
             json.dumps({"schema_version": 1, "hosts": [{"name": "bastion", "ip": pinned}]}),
@@ -447,20 +455,13 @@ def test_ops_host_public_override_and_drift_fail_closed() -> None:
     assert overridden.stdout == "203.0.113.10\n"
 
 
-def test_ops_host_address_stays_in_the_mirrored_contract() -> None:
-    host = json.loads(CONTRACT.read_text(encoding="utf-8"))["transport"]["host"]
-    assert host not in WORKFLOW.read_text(encoding="utf-8")
-    assert host not in OPS_HOST.read_text(encoding="utf-8")
-    result = subprocess.run(
-        ["git", "grep", "-F", "-l", "--", host],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-    )
-    assert result.returncode in (0, 1), result.stderr
-    assert set(result.stdout.splitlines()) == HOST_LITERAL_ALLOWED
+def test_ops_host_address_is_not_baked_outside_the_inventory() -> None:
+    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    assert "host" not in contract["transport"]
+    assert contract["transport"]["host_role"] == "panel_host_public"
+    for blob in (WORKFLOW.read_text(encoding="utf-8"), OPS_HOST.read_text(encoding="utf-8")):
+        assert "23.80.91.14" not in blob
+        assert "66.55.76.208" not in blob
     tracked = subprocess.run(
         [
             "git", "ls-files", "--",

@@ -31,8 +31,20 @@ cleanup() {
   if [ -d "$RUNNER_TEMP/ops-shard-evidence" ]; then
     mv "$RUNNER_TEMP/ops-shard-evidence" "$CI_CHECK_EVIDENCE/ops-shard-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$OPS_ROLE"
   fi
-  # Preserve receipts and diagnostics, discard only this role's own checkout.
-  rm -rf -- "$GITHUB_WORKSPACE"
+  # Preserve receipts and diagnostics, discard this role's own checkout and
+  # scratch. Fixtures under the private root daemon leave root- and
+  # runner-owned trees the host uid cannot delete, so reclaim them here, as
+  # root, before the container exits (one ops run left ~370k inodes behind).
+  reclaim_role_scratch
+}
+reclaim_role_scratch() {
+  local reclaim=(rm -rf --)
+  if sudo -n true 2>/dev/null; then reclaim=(sudo -n rm -rf --); fi
+  "${reclaim[@]}" "$GITHUB_WORKSPACE" || true
+  if [ -d "$RUNNER_TEMP" ]; then
+    find "$RUNNER_TEMP" -mindepth 1 -maxdepth 1 ! -name docker-daemon.log -print0 |
+      xargs -0 -r "${reclaim[@]}" || true
+  fi
 }
 trap cleanup EXIT
 cd "$GITHUB_WORKSPACE"

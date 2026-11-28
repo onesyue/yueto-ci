@@ -133,6 +133,27 @@ class LocalReplay(unittest.TestCase):
         self.assertNotIn('-m pytest', local)
         self.assertIn('pytest-shards.py" join', local)
 
+    def test_role_exit_reclaims_root_owned_scratch_but_keeps_daemon_log(self):
+        local = (ROOT / 'scripts/ci-check-container.sh').read_text()
+        cleanup = local.split('cleanup() {', 1)[1].split('\n}', 1)[0]
+        self.assertIn('reclaim_role_scratch', cleanup)
+        body = local.split('reclaim_role_scratch() {', 1)[1].split('\n}', 1)[0]
+        self.assertIn('sudo -n rm -rf --', body)
+        self.assertIn('! -name docker-daemon.log', body)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            job = root / 'job'
+            (job / 'source/deep').mkdir(parents=True)
+            (job / 'temp/pytest-of-runner/x').mkdir(parents=True)
+            (job / 'temp/docker-daemon.log').write_text('diag\n')
+            (job / 'temp/tool.tar.gz').write_text('bulk\n')
+            func = 'reclaim_role_scratch() {' + body + '\n}\n'
+            env = dict(os.environ, GITHUB_WORKSPACE=str(job / 'source'), RUNNER_TEMP=str(job / 'temp'),
+                       PATH=os.environ.get('PATH', '/usr/bin:/bin'))
+            subprocess.run(['bash', '-c', func + 'reclaim_role_scratch'], check=True, env=env)
+            self.assertFalse((job / 'source').exists())
+            self.assertEqual(sorted(p.name for p in (job / 'temp').iterdir()), ['docker-daemon.log'])
+
     def test_failed_role_does_not_hide_later_role_or_skip_join(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

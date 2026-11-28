@@ -1,11 +1,11 @@
-"""Resolve the alert-chain deadman address from the native ops_host_public role.
+"""Resolve the alert-chain deadman address from the native panel_host_public role.
 
 YueOps ``config/hosts.json`` is the inventory. This receiver does not keep a
-second copy. ``--project`` prints the generated ``YUEOPS_HOST_OPS_HOST_PUBLIC``
-line. ``--check`` fails when the observer contract's ``transport.host`` is not
-that role's current address. The contract field stays until YueOps replaces it,
-so the scheduled byte compare still matches. ``YUEOPS_HOST_OPS_HOST_PUBLIC``
-overrides the address used for the receipt read. Historic names are rejected.
+second copy. ``--project`` prints the generated ``YUEOPS_HOST_PANEL_HOST_PUBLIC``
+line. ``--check`` fails when the observer contract's ``host_role`` is not this
+role, or when a leftover ``transport.host`` is not that role's current address.
+``YUEOPS_HOST_PANEL_HOST_PUBLIC`` overrides the address used for the receipt
+read. Historic names are rejected.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ import os
 import sys
 from pathlib import Path
 
-ROLE = "ops_host_public"
+ROLE = "panel_host_public"
 ENV_NAME = "YUEOPS_HOST_" + ROLE.upper()
 HISTORIC_NAMES = frozenset({
     "bastion",
@@ -73,21 +73,34 @@ def _role_current(inventory: Path) -> str:
     return _ipv4(row["current"])
 
 
-def _contract_host(contract: Path) -> str | None:
-    """Return ``transport.host`` when the contract file exists.
+def _contract_role_and_host(contract: Path) -> tuple[str | None, str | None]:
+    """Return ``(host_role, transport.host)`` when the contract file exists.
 
-    ``transport.host`` is the producer field. A ``host_name`` alias is rejected.
+    Official contracts pin ``host_role`` and omit a baked address. A leftover
+    ``transport.host`` is still accepted so a test fixture can check drift.
+    A ``host_name`` alias is rejected.
     """
     if not contract.is_file():
-        return None
+        return None, None
     payload = json.loads(contract.read_text(encoding="utf-8"))
     transport = payload.get("transport")
     if not isinstance(transport, dict) or "host_name" in transport:
         raise SystemExit("deadman transport uses a historic host name")
+    role = transport.get("host_role")
+    if role is not None and role != ROLE:
+        raise SystemExit(f"observer contract drifted from {ROLE}")
     host = transport.get("host")
-    if not isinstance(host, str):
+    if host is None and role is None:
         raise SystemExit(f"deadman transport.host is not {ROLE}")
-    return _ipv4(host)
+    if host is not None and not isinstance(host, str):
+        raise SystemExit(f"deadman transport.host is not {ROLE}")
+    return (role if isinstance(role, str) else None, _ipv4(host) if isinstance(host, str) else None)
+
+
+def _contract_host(contract: Path) -> str | None:
+    """Return ``transport.host`` when present (legacy baked address)."""
+    _role, host = _contract_role_and_host(contract)
+    return host
 
 
 def project_ops_host_public(inventory: Path) -> str:
@@ -96,14 +109,18 @@ def project_ops_host_public(inventory: Path) -> str:
 
 
 def check_ops_host_public(inventory: Path, contract: Path | None = None) -> None:
-    """Fail when the contract address is not the ops_host_public projection."""
+    """Fail when the contract does not describe the panel_host_public projection."""
     contract_path = CONTRACT if contract is None else contract
     if not contract_path.is_file():
         raise SystemExit("observer contract is absent")
-    pinned = _contract_host(contract_path)
+    role, pinned = _contract_role_and_host(contract_path)
     projected = project_ops_host_public(inventory).split("=", 1)[1].strip()
-    if projected != pinned:
+    if role is not None and role != ROLE:
         raise SystemExit(f"observer contract drifted from {ROLE}")
+    if pinned is not None and projected != pinned:
+        raise SystemExit(f"observer contract drifted from {ROLE}")
+    if pinned is None and role is None:
+        raise SystemExit(f"deadman transport.host is not {ROLE}")
 
 
 def resolve_ops_host_public(
@@ -111,7 +128,7 @@ def resolve_ops_host_public(
     contract: Path | None = None,
     env: dict[str, str] | None = None,
 ) -> str:
-    """Return the ops_host_public IPv4 the observer probes."""
+    """Return the panel_host_public IPv4 the observer probes."""
     environment = os.environ if env is None else env
     pinned = _contract_host(CONTRACT if contract is None else contract)
     override = environment.get(ENV_NAME, "").strip()
