@@ -86,6 +86,18 @@ class PlanYueopsMasterValidateTest(unittest.TestCase):
             },
         )
 
+    def test_package_read_denial_surfaces_as_a_named_plan_error(self) -> None:
+        planner = self.planner
+        rescan = _load("plan_rescan_targets_for_master_validate", "plan-rescan-targets.py")
+        denied = rescan.PlanError("yueops-web: package versions page 1 returned HTTP 404")
+
+        def versions_for(_name):
+            raise denied
+
+        with mock.patch.object(planner, "resolve_source_sha", lambda *a, **k: "c" * 40):
+            with self.assertRaisesRegex(planner.PlanError, "yueops-web.*HTTP 404"):
+                planner.plan(token="t", ref="master", versions_for=versions_for)
+
     def test_plan_without_token_fails_closed(self) -> None:
         with self.assertRaisesRegex(self.planner.PlanError, "GH_API_TOKEN"):
             self.planner.plan(token="", ref="master", versions_for=lambda _name: [])

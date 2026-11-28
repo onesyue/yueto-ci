@@ -126,7 +126,13 @@ def plan(*, token: str, ref: str, source_token: str | None = None, versions_for=
         rescan = load_sibling("plan-rescan-targets.py")
         versions_for = rescan.fetch_versions
     source = resolve_source_sha(commit_token, ref=ref)
-    migration_base = newest_promoted_revision(versions_for(PROMOTED_SERVICE))
+    try:
+        versions = versions_for(PROMOTED_SERVICE)
+    except Exception as exc:  # the rescan planner raises its own PlanError type
+        if type(exc).__name__ == "PlanError":
+            raise PlanError(str(exc)) from exc
+        raise
+    migration_base = newest_promoted_revision(versions)
     return {
         "source": source,
         "migration_base": migration_base,

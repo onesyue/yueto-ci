@@ -56,8 +56,10 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         ):
             with self.subTest(workflow=name):
                 self.assertIn("secrets.YUETO_CI_PAT", workflows[name])
-        # GHCR jobs stay on the job token, not the PAT.
-        self.assertNotIn("YUETO_CI_PAT", workflows["image-rescan.yml"])
+        # Service packages are linked to their source repositories; the job
+        # token gets 404 for them (run 46124316634), so the rescan reads and
+        # pulls them with the PAT too.
+        self.assertIn("secrets.YUETO_CI_PAT", workflows["image-rescan.yml"])
 
     def test_retired_ghcr_pat_switch_stays_gone(self) -> None:
         for name, text in _workflows().items():
@@ -85,9 +87,13 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         self.assertIn("username: ${{ github.actor }}", build)
         self.assertIn("password: ${{ github.token }}", build)
         rescan = workflows["image-rescan.yml"]
-        self.assertIn("GH_API_TOKEN: ${{ github.token }}", rescan)
-        self.assertIn("username: ${{ github.actor }}", rescan)
-        self.assertIn("password: ${{ github.token }}", rescan)
+        self.assertIn("GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}", rescan)
+        self.assertIn("username: onesyue", rescan)
+        self.assertIn("password: ${{ secrets.YUETO_CI_PAT }}", rescan)
+        self.assertNotIn("password: ${{ github.token }}", rescan)
+        validate = workflows["yueops-master-validate.yml"]
+        self.assertIn("GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}", validate)
+        self.assertNotIn("GH_API_TOKEN: ${{ github.token }}", validate)
         capture = workflows["board-visual-capture.yml"]
         self.assertIn("GHCR_USER: ${{ github.actor }}", capture)
         self.assertIn("GHCR_PASSWORD: ${{ github.token }}", capture)
