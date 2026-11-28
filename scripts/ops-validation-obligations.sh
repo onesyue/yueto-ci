@@ -92,8 +92,20 @@ sudo -n env PATH="$PATH" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" TZ=UTC YUEBOARD_
   "$native_evidence/test_schema_contract_receipt_20261020.json"
 # These complete modules cover ordinary root/checkout skips. Opt-in is
 # explicit; the tests still require Linux root and isolated fixtures.
-nginx_lab='nginx@sha256:9bf97bd7714f5e24c1ccd545ecb9eb5435cb6d109c97cebb15e7e455e0239edb'
-docker pull "$nginx_lab"
+# Digest-pinned, so the bytes are identical from any registry. Docker Hub's
+# anonymous pull limit failed the native job on 2026-11-29 (yueops official
+# 46164820360: toomanyrequests). mirror.gcr.io is Google's Docker Hub mirror
+# without that limit; Docker Hub stays the fallback. The pull verifies the
+# digest, so a mirror cannot substitute other content.
+nginx_digest='sha256:9bf97bd7714f5e24c1ccd545ecb9eb5435cb6d109c97cebb15e7e455e0239edb'
+nginx_lab=
+for nginx_repo in mirror.gcr.io/library/nginx docker.io/library/nginx; do
+  if docker pull "$nginx_repo@$nginx_digest"; then
+    nginx_lab="$nginx_repo@$nginx_digest"
+    break
+  fi
+done
+test -n "$nginx_lab"
 docker tag "$nginx_lab" nginx:1.30.5
 test "$(docker image inspect --format '{{.Id}}' "$nginx_lab")" = \
   "$(docker image inspect --format '{{.Id}}' nginx:1.30.5)"
