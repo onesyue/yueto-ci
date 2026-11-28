@@ -851,6 +851,7 @@ class EvidenceProbeTest(unittest.TestCase):
         steps = {step.get("id"): step for step in jobs["plan"]["steps"]}
         self.assertEqual(steps["evidence"]["env"]["REUSE_YUE_NODE"], "${{ vars.YUETO_REUSE_YUE_NODE }}")
         self.assertEqual(steps["evidence"]["env"]["REUSE_YUEOPS"], "${{ vars.YUETO_REUSE_YUEOPS }}")
+        self.assertEqual(steps["evidence"]["env"]["REUSE_YUEBOARD"], "${{ vars.YUETO_REUSE_YUEBOARD }}")
         self.assertIn("steps.plan.outputs.resume != 'true'", steps["identity"]["if"])
         self.assertIn("evidence_run == ''", jobs["validate"]["if"])
         self.assertIn("evidence_run == ''", jobs["ops-service-selection"]["if"])
@@ -905,6 +906,48 @@ class EvidenceProbeTest(unittest.TestCase):
                 self.assertEqual((root / "ops-validation-evidence-99-1.json").exists(), status == "success")
             subprocess.run(["bash", "-c", admit["run"]], check=True, env=os.environ | env | {"BUILDS": json.dumps([row])})
             self.assertEqual(outfile.read_text().strip(), 'services={"yue-bot":true}')
+
+    def test_yueboard_promotion_reuses_its_exact_premerge(self):
+        # 2026-11-28: the yueboard ship of fbcf3f72 re-ran the 9-job
+        # validation premerge 46154766867 had just passed. yueboard now uses the
+        # same exact-SHA binding as yueops/yue-node, with the same kill switch.
+        roles = ["components", "e2e", "frontends", "migration", "postgres", "quality", "race"]
+        matrix = [{"service": "yueboard", "validation": "yueboard", "board_role": r, "ref": self.REF}
+                  for r in roles]
+        self.jobs = [dict(name=name, conclusion="success", status="completed", run_attempt=1,
+                          labels=["ubuntu-24.04"], runner_group_name="GitHub Actions", id=i)
+                     for i, name in enumerate(["plan", "validation-evidence",
+                                               *EV.validation_job_names(matrix)])]
+        self.log = PLAN_LOG.format(ref=self.REF).replace("SERVICE: yueops", "SERVICE: yueboard")
+        self.run["created_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
+        self.run["display_title"] = f"Build & publish images yueboard {self.REF} [nonce:{'0' * 32}]"
+        build = {"service": "yueboard", "validation": "yueboard", "ref": self.REF}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outfile = root / "output"
+            (root / "ops-admission.json").write_text(json.dumps({"validation_matrix": matrix}))
+            env = dict(RUNNER_TEMP=tmp, GITHUB_OUTPUT=str(outfile), GITHUB_STEP_SUMMARY=str(root / "summary"),
+                       GH_TOKEN="fake", VALIDATION_IDENTITY=BINDING, EVIDENCE_SELECTION="[]",
+                       EVIDENCE_BUILDS=json.dumps([build]), EVIDENCE_SERVICE="yueboard", EVIDENCE_REF=self.REF,
+                       EVIDENCE_PROMOTE="true", GITHUB_REPOSITORY=self.current["repository"],
+                       GITHUB_RUN_ID="99", GITHUB_RUN_ATTEMPT="1", GITHUB_REF="refs/heads/master",
+                       GITHUB_SHA=self.current["head_sha"], DEFAULT_BRANCH="master",
+                       ImageVersion=self.current["image_version"], REUSE_YUEBOARD="")
+            with mock.patch.dict(os.environ, env), mock.patch.object(sys, "argv", ["script", "decide"]), \
+                    mock.patch.object(EV, "Api", return_value=self):
+                EV.main()
+                self.assertEqual(outfile.read_text().splitlines(), ["attempt=1", "run=7"])
+                outfile.unlink()
+                for override in ({"REUSE_YUEBOARD": "false"}, {"REUSE_YUEOPS": "false", "REUSE_YUEBOARD": " False "},
+                                 {"EVIDENCE_PROMOTE": "false"}):
+                    with mock.patch.dict(os.environ, override), mock.patch.object(self, "get") as lookup:
+                        EV.main()
+                        lookup.assert_not_called()
+                        self.assertFalse(outfile.exists())
+                # A yueops kill switch does not disable yueboard reuse.
+                with mock.patch.dict(os.environ, {"REUSE_YUEOPS": "false"}):
+                    EV.main()
+                self.assertEqual(outfile.read_text().splitlines(), ["attempt=1", "run=7"])
 
     def test_log_parsers(self) -> None:
         log = PLAN_LOG.format(ref=self.REF)

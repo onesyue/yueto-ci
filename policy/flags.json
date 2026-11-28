@@ -15,6 +15,7 @@
     },
     {"name": "vars.YUETO_REUSE_YUEOPS", "kind": "switch", "default": "", "workflows": ["build.yml"], "description": "Kill switch only. Unset or empty = validation reuse ON (t1525u); set to false to force full validation on promotion."},
     {"name": "vars.YUETO_REUSE_YUE_NODE", "kind": "switch", "default": "", "workflows": ["build.yml"], "description": "Kill switch only. Unset or empty = validation reuse ON (t1525u); set to false to force full validation on promotion."},
+    {"name": "vars.YUETO_REUSE_YUEBOARD", "kind": "switch", "default": "", "workflows": ["build.yml"], "description": "Kill switch only. Unset or empty = validation reuse ON (t1525u); set to false to force full validation on promotion."},
     {"name": "vars.YUEOPS_PYTEST_SHARDS", "kind": "value", "default": "16", "workflows": ["build.yml"]},
     {"name": "vars.YUEOPS_VALIDATION_PARALLELISM", "kind": "value", "default": "20", "workflows": ["build.yml"]},
     {
