@@ -201,7 +201,10 @@ def inspect(args, api=None):
     require(all(SHA.fullmatch(s or "") for s in (args.evidence_source, args.policy_sha, args.board, args.migration_base)),
             "resume identities must be exact commits")
     source_evidence = load("source_evidence")
-    source_evidence.load(args.source, args.evidence_source)
+    # Same rule as admission: a tree without enrolled evidence stays on the
+    # historical policy (None); a partially enrolled tree still raises. yueops
+    # has no ci/evidence yet, so a strict load made every resume refuse.
+    source_evidence.optional(args.source, args.evidence_source)
     fp = load("input-fingerprint")
     git_source = exact_source(fp, args.source)
     current_entries = fp.load_services()
@@ -315,7 +318,7 @@ def validation_proof(api, binding, source):
             == {f"validate-yueops-{role}" for role in roles}, "missing or unexpected validation jobs")
     for role in roles:
         successful_job(jobs, f"validate-yueops-{role}")
-    bound = load("source_evidence").load(source, identity["source_revision"])
+    bound = load("source_evidence").optional(source, identity["source_revision"])
     require(bound == admission.get("source_evidence"), "signed source evidence differs from complete join")
     filename = f"ops-validation-evidence-{run_id}-{run_attempt}.json"
     documents, authority = artifact(api, artifacts, f"ops-validation-evidence-{run_id}-{run_attempt}",

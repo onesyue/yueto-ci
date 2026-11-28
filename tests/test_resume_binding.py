@@ -189,6 +189,14 @@ class ResumeBinding(unittest.TestCase):
         self.assertEqual(prepared['validation']['run_id'], '202')
         self.assertEqual(prepared['original_build']['run_id'], '101')
 
+    def test_tree_without_enrolled_evidence_resumes_on_the_historical_policy(self):
+        # yueops has never carried ci/evidence: admission treats it as legacy.
+        legacy = dict(vars(self.args), evidence_source=self.old_source)
+        value = B.inspect(argparse.Namespace(**legacy), self.api)
+        self.assertEqual(value['original_build']['source_revision'], self.old_source)
+        self.assertEqual(value['validation']['source_revision'], self.old_source)
+        self.assertEqual(set(value['services']), B.OPS)
+
     def test_wrong_run_attempt_service_context_and_provenance_refused(self):
         for change in ({'build_source': 'f' * 40}, {'build_attempt': '3'}, {'service': 'yueboard'},
                        {'board': 'c' * 40}, {'migration_base': 'd' * 40}):

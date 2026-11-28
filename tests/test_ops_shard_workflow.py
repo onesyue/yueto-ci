@@ -28,6 +28,25 @@ TAIL = ["tests/test_telegram_locale_ordering_20260821.py",
         "tests/test_miniapp_http_e2e_20260802.py"]
 
 
+def link_runtime_venv(link, prefix, executable):
+    """Give the fixture a ``.venv/bin/python`` whichever interpreter runs the tests.
+
+    A real virtualenv prefix already has ``bin/python``. The system interpreter
+    (the box gate, a distro runner) only has ``bin/python3``, so linking the
+    prefix would leave the fixture entry's ``.venv/bin/python`` missing (exit 127).
+    """
+    if (prefix / "bin/python").exists():
+        link.symlink_to(prefix, target_is_directory=True)
+        return
+    bindir = link / "bin"
+    bindir.mkdir(parents=True)
+    for name in ("python", "python3"):
+        (bindir / name).symlink_to(executable)
+    for tool in (prefix / "bin").iterdir():
+        if not (bindir / tool.name).exists():
+            (bindir / tool.name).symlink_to(tool)
+
+
 def assert_only_named_caches_are_optional(case, text):
     validation = text[text.index("  validate:\n"):text.index("  build:\n")]
     cache_action = "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"
@@ -71,6 +90,35 @@ class OptionalCacheContract(unittest.TestCase):
                 self.assertIn(old, text)
                 with self.assertRaises(AssertionError):
                     assert_only_named_caches_are_optional(self, text.replace(old, new))
+
+
+class RuntimeVenvLink(unittest.TestCase):
+    def test_system_prefix_without_python_gets_a_python_shim(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            prefix = tmp / "usr"
+            (prefix / "bin").mkdir(parents=True)
+            real = prefix / "bin/python3.13"
+            real.write_text("#!/bin/sh\necho shim-ok\n")
+            real.chmod(0o755)
+            (prefix / "bin/python3").symlink_to("python3.13")
+            (prefix / "bin/pytest").write_text("#!/bin/sh\n")
+            link_runtime_venv(tmp / ".venv", prefix, real)
+            ran = subprocess.run([str(tmp / ".venv/bin/python")], capture_output=True, text=True)
+            self.assertEqual((ran.returncode, ran.stdout.strip()), (0, "shim-ok"))
+            self.assertTrue((tmp / ".venv/bin/pytest").exists())
+
+    def test_virtualenv_prefix_is_still_linked_whole(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            prefix = tmp / "venv"
+            (prefix / "bin").mkdir(parents=True)
+            (prefix / "bin/python").write_text("")
+            link_runtime_venv(tmp / ".venv", prefix, prefix / "bin/python")
+            self.assertTrue((tmp / ".venv").is_symlink())
+            self.assertEqual((tmp / ".venv").resolve(), prefix.resolve())
 
 
 class OpsShardWorkflow(unittest.TestCase):
@@ -136,7 +184,7 @@ class OpsShardWorkflow(unittest.TestCase):
         self.source_sha = self.fixture.git(self.source, "rev-parse", "HEAD").stdout.strip()
         (self.source / ".ci-policy").symlink_to(self.policy, target_is_directory=True)
         (self.source / ".ci-yueboard").symlink_to(self.board, target_is_directory=True)
-        (self.source / ".venv").symlink_to(Path(sys.prefix), target_is_directory=True)
+        link_runtime_venv(self.source / ".venv", Path(sys.prefix), Path(sys.executable))
         # Git mutation controls must not commit or reset the fixture's runtime links.
         exclude = self.source / ".git/info/exclude"
         exclude.write_text(exclude.read_text() + "\n/.ci-policy\n/.ci-yueboard\n/.venv\n")
