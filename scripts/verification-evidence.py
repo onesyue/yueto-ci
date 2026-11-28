@@ -251,7 +251,9 @@ def main():
         raise ValueError("unknown command")
     matrix = admission["validation_matrix"]
     group = {row["validation"] for row in matrix}
-    flags = {"yue-node": "REUSE_YUE_NODE", "yueops": "REUSE_YUEOPS"}
+    # yueboard joined 2026-11-28 (t1553u root fix): its ship rebuilt the full
+    # 9-job validation of fbcf3f72 that premerge 46154766867 had just passed.
+    flags = {"yue-node": "REUSE_YUE_NODE", "yueops": "REUSE_YUEOPS", "yueboard": "REUSE_YUEBOARD"}
     # Default ON (owner t1520u/t1525u, 2026-11-27): a ship must not re-run the
     # 40-job validation its exact SHA already passed as a premerge. The binding
     # (source SHA, yueto-ci commit, workflow SHA-256, runner image, effective

@@ -1229,8 +1229,9 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn('ref: ${{ steps.source.outputs.revision }}', capture_code)
         self.assertNotIn('yueboard_contract_pin', capture_code)
         self.assertIn('playwright test "specs/${VISUAL_SPEC}.spec.ts" --update-snapshots=changed', capture_code)
-        self.assertIn("case \"$VISUAL_SPEC\" in plan-change-confirm|gift-ledger) ;; *) exit 1 ;; esac", capture_code)
-        self.assertIn("assert len(files) == 4", capture_code)
+        self.assertIn("case \"$VISUAL_SPEC\" in plan-change-confirm|gift-ledger|help-center) ;; *) exit 1 ;; esac", capture_code)
+        self.assertIn("expected = {'plan-change-confirm': 4, 'gift-ledger': 4, 'help-center': 12}[spec]", capture_code)
+        self.assertIn("assert len(files) == expected", capture_code)
         for forbidden in ("build-push-action", "imagetools create", "cosign", "promote=true", "packages: write"):
             self.assertNotIn(forbidden, capture_code)
 
