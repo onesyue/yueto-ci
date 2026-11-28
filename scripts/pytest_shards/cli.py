@@ -464,6 +464,33 @@ def join(value, evidence, validation_result, expected_sha, source=None):
             "native_and_source_gates": native, "host_linux_skip_policy": "ROOT_GATE_UNCHANGED"}
 
 
+def admitted_board_revision(value, expect_sha256):
+    """The Board commit a sealed Ops admission names, or a ValueError.
+
+    The admission is the signed plan: `envelope` re-derives its digest and
+    identity, and the digest must equal the one the plan job published, so a
+    swapped or stale artifact cannot choose the Board a test job executes.
+    """
+    envelope(value)
+    require(isinstance(expect_sha256, str) and len(expect_sha256) == 64
+            and value.get("admission_sha256") == expect_sha256,
+            "admission digest differs from the plan job")
+    require(value.get("mode") in ("legacy", "sharded"), "admission selects no Ops validation")
+    board = value.get("board_revision")
+    require(isinstance(board, str) and SHA.fullmatch(board), "admission names no exact Board commit")
+    return board
+
+
+def board_revision_command(args):
+    try:
+        print(admitted_board_revision(read_json(args.admission), args.expect_sha256))
+    except (ValueError, OSError, KeyError, TypeError) as error:
+        print(json.dumps({"status": "REJECTED", "release_acceptance": False,
+                          "problem": str(error)}), file=sys.stderr)
+        return 1
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -524,6 +551,11 @@ def main():
     weights_cli = sub.add_parser("previous-ordinary-weights")
     weights_cli.add_argument("--output", type=Path, required=True)
     weights_cli.add_argument("--timing-output", type=Path, required=True)
+    board_cli = sub.add_parser(
+        "board-revision",
+        help="print the Board SHA a sealed admission names, after verifying the seal")
+    board_cli.add_argument("--admission", type=Path, required=True)
+    board_cli.add_argument("--expect-sha256", required=True)
     publish_cli = sub.add_parser("publish-ordinary-weights")
     publish_cli.add_argument("--admission", type=Path, required=True)
     publish_cli.add_argument("--evidence", type=Path, required=True)
@@ -535,6 +567,8 @@ def main():
         return previous_ordinary_weights_command(args)
     if args.command == "publish-ordinary-weights":
         return publish_ordinary_weights_command(args)
+    if args.command == "board-revision":
+        return board_revision_command(args)
     try:
         if args.command == "plan":
             result = plan(args.source, read_json(args.context), args.shards, args.serial_module)
