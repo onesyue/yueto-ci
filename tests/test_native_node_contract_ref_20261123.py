@@ -66,7 +66,7 @@ class NativeNodeContractRef(unittest.TestCase):
         assert 'resolve-yueboard-ref --explicit="$YUEBOARD_CONTRACT_REF"' in plan["run"]
         assert 'echo "yueboard_contract_ref=$yueboard_contract_ref"' in plan["run"]
         board = next(s for s in build["validate"]["steps"] if s.get("with", {}).get("path") == ".ci-yueboard")
-        assert board["if"] == "matrix.validation == 'yue-node' || matrix.validation == 'yueops'"
+        assert board["if"] == "matrix.validation == 'yue-node'"
         assert board["with"]["ref"] == "${{ steps.siblings.outputs.yueboard }}"
         siblings = next(s for s in build["validate"]["steps"] if s.get("id") == "siblings")
         assert "matrix.validation == 'yue-node'" in siblings["if"]

@@ -25,6 +25,8 @@ DYNAMIC_REFS = {
     "${{ steps.plan.outputs.ops_source }}",
     "${{ needs.plan.outputs.ops_source }}",
     "${{ needs.plan.outputs.yueboard_contract_ref }}",
+    # Ops tests run the Board the sealed admission names (test_board_from_signed_plan).
+    "${{ steps.board.outputs.board }}",
     "${{ github.event.inputs.ref }}",
     "${{ github.sha }}",
     "${{ steps.source.outputs.revision }}",
