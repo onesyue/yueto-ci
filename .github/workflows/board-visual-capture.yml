@@ -10,12 +10,17 @@ on:
         type: string
         required: false
       spec:
-        description: Reviewed four-view visual spec to capture at the selected Board revision
+        description: Reviewed visual spec to capture at the selected Board revision
         type: choice
         default: plan-change-confirm
         options:
           - plan-change-confirm
           - gift-ledger
+          # help-center: 12 views (home + one article x 360/768/1440 x light/dark).
+          # Help body edits land from the yueto help source; their baselines are
+          # authored here, never from a red release validation (yueboard #415,
+          # b211f4af 2026-11-28).
+          - help-center
 
 permissions:
   contents: read
@@ -83,7 +88,7 @@ jobs:
           VISUAL_SPEC: ${{ inputs.spec }}
         run: |
           set -euo pipefail
-          case "$VISUAL_SPEC" in plan-change-confirm|gift-ledger) ;; *) exit 1 ;; esac
+          case "$VISUAL_SPEC" in plan-change-confirm|gift-ledger|help-center) ;; *) exit 1 ;; esac
           test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE"
           command -v psql
           corepack enable
@@ -97,7 +102,8 @@ jobs:
           from pathlib import Path
           spec = os.environ['VISUAL_SPEC']
           files = sorted(Path(f'test/e2e/specs/__screenshots__/{spec}.spec.ts').glob('*-linux.png'))
-          assert len(files) == 4
+          expected = {'plan-change-confirm': 4, 'gift-ledger': 4, 'help-center': 12}[spec]
+          assert len(files) == expected
           receipt = {'source': os.environ['EXPECTED_SOURCE'], 'workflow': os.environ['GITHUB_SHA'],
                      'run': os.environ['GITHUB_RUN_ID'], 'scope': f'{spec} only; capture, not release acceptance',
                      'files': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}
