@@ -109,7 +109,10 @@ def newest_promoted_revision(versions: list[dict]) -> str:
 
 def resolve_board_revision() -> str:
     contract = load_sibling("validate-native-node-contract.py")
-    revision = contract.resolve_yueboard_contract_ref("")
+    try:
+        revision = contract.resolve_yueboard_contract_ref("")
+    except ValueError as exc:
+        raise PlanError(f"cannot resolve the promoted Board revision: {exc}") from exc
     if not isinstance(revision, str) or SHA.fullmatch(revision) is None:
         raise PlanError("reviewed Board contract pin is missing or malformed")
     return revision

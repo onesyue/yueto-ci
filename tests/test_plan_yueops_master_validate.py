@@ -98,6 +98,15 @@ class PlanYueopsMasterValidateTest(unittest.TestCase):
             with self.assertRaisesRegex(planner.PlanError, "yueops-web.*HTTP 404"):
                 planner.plan(token="t", ref="master", versions_for=versions_for)
 
+    def test_unresolvable_board_is_a_named_plan_error(self) -> None:
+        planner = self.planner
+        with mock.patch.object(planner, "load_sibling") as load:
+            load.return_value.resolve_yueboard_contract_ref.side_effect = ValueError(
+                "cannot resolve promoted YueBoard revision"
+            )
+            with self.assertRaisesRegex(planner.PlanError, "promoted Board revision"):
+                planner.resolve_board_revision()
+
     def test_plan_without_token_fails_closed(self) -> None:
         with self.assertRaisesRegex(self.planner.PlanError, "GH_API_TOKEN"):
             self.planner.plan(token="", ref="master", versions_for=lambda _name: [])

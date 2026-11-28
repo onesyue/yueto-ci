@@ -52,6 +52,11 @@ jobs:
           # package, because they are linked to the source repositories, not
           # to this one (diagnostic run 46124316634: job token 404, PAT 200).
           GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}
+          # Promoted Board revision: the same GHCR reader the build plan job
+          # uses (GHCR_USER / GHCR_PASSWORD; without them the plan could not
+          # resolve the Board at all, run 46124761100).
+          GHCR_USER: onesyue
+          GHCR_PASSWORD: ${{ secrets.YUETO_CI_PAT }}
           YUEOPS_VALIDATE_REF: ${{ inputs.ref || 'master' }}
         run: |
           set -euo pipefail

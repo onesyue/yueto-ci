@@ -94,6 +94,9 @@ class CredentialSwitchPolicyTest(unittest.TestCase):
         validate = workflows["yueops-master-validate.yml"]
         self.assertIn("GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}", validate)
         self.assertNotIn("GH_API_TOKEN: ${{ github.token }}", validate)
+        # The promoted Board reader needs the registry credentials as well.
+        self.assertIn("GHCR_USER: onesyue", validate)
+        self.assertIn("GHCR_PASSWORD: ${{ secrets.YUETO_CI_PAT }}", validate)
         capture = workflows["board-visual-capture.yml"]
         self.assertIn("GHCR_USER: ${{ github.actor }}", capture)
         self.assertIn("GHCR_PASSWORD: ${{ github.token }}", capture)
