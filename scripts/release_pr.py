@@ -53,7 +53,9 @@ TS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 RUN_RE = re.compile(r"^[1-9][0-9]{0,19}$")
 SERVICE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 GENERATION_RE = re.compile(r"^[1-9][0-9]{0,17}$")
-BRANCH_RE = re.compile(r"^release/[a-z0-9][a-z0-9-]*-[0-9a-f]{12}$")
+BRANCH_RE = re.compile(
+    r"^release/[a-z0-9][a-z0-9-]*-[0-9a-f]{12}(?:-r[1-9][0-9]{0,19}-[1-9][0-9]{0,19})?$"
+)
 PR_NUMBER_RE = re.compile(r"^[1-9][0-9]{0,9}$")
 INVOCATION_RE = re.compile(
     rf"^{GITHUB_HTTPS_ORIGIN}/{re.escape(CI_REPO)}/actions/runs/([1-9][0-9]*)/attempts/([1-9][0-9]*)$"
@@ -101,11 +103,29 @@ def auto_merge(service: str) -> bool:
     return True
 
 
-def release_branch(service: str, revision: str) -> str:
+def release_branch_prefix(service: str, revision: str) -> str:
     require_service(service)
     if not SHA_RE.fullmatch(revision):
         raise ReleasePrError("revision is not 40 hex characters")
-    branch = f"release/{service}-{revision[:SHA12]}"
+    return f"release/{service}-{revision[:SHA12]}"
+
+
+def release_branch(service: str, revision: str, run_id: str = "", run_attempt: str = "") -> str:
+    """One branch per promote run and attempt.
+
+    A promote that built images but failed to push its release branch (11-28,
+    GitHub-side index-pack error) leaves a branch whose record carries that
+    run's id and promote time. A later promote of the same revision renders
+    different bytes, so reusing the name made it refuse for ever and a
+    force-push is forbidden. The run id and attempt make the name unique.
+    """
+    prefix = release_branch_prefix(service, revision)
+    if not (run_id or run_attempt):
+        branch = prefix
+    else:
+        if not RUN_RE.fullmatch(run_id) or not RUN_RE.fullmatch(run_attempt):
+            raise ReleasePrError("run id and attempt are required for a release branch")
+        branch = f"{prefix}-r{run_id}-{run_attempt}"
     git_push_args(branch)
     return branch
 
@@ -152,6 +172,26 @@ def pr_list_args(branch: str) -> list[str]:
         "--state", "open",
         "--json", "number,url",
     ]
+
+
+def pr_open_release_list_args() -> list[str]:
+    return [
+        "gh", "pr", "list",
+        "--repo", YUETO_REPO,
+        "--base", "master",
+        "--state", "open",
+        "--limit", "200",
+        "--json", "number,url,headRefName",
+    ]
+
+
+def pr_close_args(number: str, comment: str) -> list[str]:
+    if not PR_NUMBER_RE.fullmatch(number):
+        raise ReleasePrError("pull request number is not a positive integer")
+    if "\n" in comment or comment.strip() == "":
+        raise ReleasePrError("close comment is empty")
+    # Never --delete-branch: the superseded branch stays for audit.
+    return ["gh", "pr", "close", number, "--repo", YUETO_REPO, "--comment", comment]
 
 
 def pr_create_args(branch: str, title: str, body_file: Path) -> list[str]:
@@ -533,6 +573,35 @@ def _remote_bytes(root: Path, branch: str, path: str) -> bytes:
     return result.stdout
 
 
+def _require_remote_matches(root, branch, yaml_path, bundle_path, relative_yaml, relative_bundle) -> None:
+    remote_yaml = _remote_bytes(root, branch, relative_yaml)
+    remote_bundle = _remote_bytes(root, branch, relative_bundle)
+    if remote_yaml != yaml_path.read_bytes() or remote_bundle != bundle_path.read_bytes():
+        raise ReleasePrError("existing release branch content differs")
+
+
+def _supersede_stale_prs(service: str, revision: str, keep_branch: str, run_id: str) -> None:
+    """Close open release PRs of this service and revision from other runs.
+
+    They record a different promote of the same revision; two open records
+    would race for the same generation. The branches are left in place.
+    """
+    prefix = release_branch_prefix(service, revision)
+    result = _run(pr_open_release_list_args(), capture=True, text=True)
+    try:
+        payload = json.loads(result.stdout or "[]")
+    except json.JSONDecodeError:
+        raise ReleasePrError("pull request list is not valid JSON") from None
+    for item in payload:
+        head = str(item.get("headRefName", "")) if isinstance(item, dict) else ""
+        if head == keep_branch or not (head == prefix or head.startswith(prefix + "-r")):
+            continue
+        _run(pr_close_args(
+            str(item.get("number", "")),
+            f"superseded by the release record of promote run {run_id}; branch kept",
+        ))
+
+
 def _create_pr(branch: str, service: str, revision: str, generation: str) -> str:
     title = f"release {service} {revision[:SHA12]}"
     body = (
@@ -567,26 +636,27 @@ def _generation_of(root: Path, service: str) -> str:
 
 def open_release(root: Path, receipt: dict[str, str]) -> str:
     service = receipt["service"]
-    branch = release_branch(service, receipt["revision"])
+    branch = release_branch(service, receipt["revision"], receipt["run_id"], receipt["run_attempt"])
     assert_push_remote(root)
-    existing = _pr_list(branch)
-    if len(existing) > 1:
-        raise ReleasePrError("more than one open release pull request")
-    if len(existing) == 1:
-        if auto_merge(service):
-            _request_auto_merge(existing[0]["number"])
-        return existing[0]["url"]
     yaml_path = release_yaml_path(root, service)
     bundle_path = Path(str(yaml_path) + ".bundle")
     if not yaml_path.is_file() or not bundle_path.is_file() or bundle_path.stat().st_size == 0:
         raise ReleasePrError("rendered release record and bundle are required")
-    generation = _generation_of(root, service)
     relative_yaml, relative_bundle = release_paths(service)
+    existing = _pr_list(branch)
+    if len(existing) > 1:
+        raise ReleasePrError("more than one open release pull request")
+    if len(existing) == 1:
+        # An open PR is reused only when its branch carries exactly this run's
+        # record (same digest); anything else must never be auto-merged.
+        _require_remote_matches(root, branch, yaml_path, bundle_path, relative_yaml, relative_bundle)
+        if auto_merge(service):
+            _request_auto_merge(existing[0]["number"])
+        return existing[0]["url"]
+    _supersede_stale_prs(service, receipt["revision"], branch, receipt["run_id"])
+    generation = _generation_of(root, service)
     if _remote_branch_exists(root, branch):
-        remote_yaml = _remote_bytes(root, branch, relative_yaml)
-        remote_bundle = _remote_bytes(root, branch, relative_bundle)
-        if remote_yaml != yaml_path.read_bytes() or remote_bundle != bundle_path.read_bytes():
-            raise ReleasePrError("existing release branch content differs")
+        _require_remote_matches(root, branch, yaml_path, bundle_path, relative_yaml, relative_bundle)
     else:
         commit_release(root, service, f"release {service} {receipt['revision'][:SHA12]}")
         _run(git_push_command(root, branch))
