@@ -109,7 +109,10 @@ def newest_promoted_revision(versions: list[dict]) -> str:
 
 def resolve_board_revision() -> str:
     contract = load_sibling("validate-native-node-contract.py")
-    revision = contract.resolve_yueboard_contract_ref("")
+    try:
+        revision = contract.resolve_yueboard_contract_ref("")
+    except ValueError as exc:
+        raise PlanError(f"cannot resolve the promoted Board revision: {exc}") from exc
     if not isinstance(revision, str) or SHA.fullmatch(revision) is None:
         raise PlanError("reviewed Board contract pin is missing or malformed")
     return revision
@@ -126,7 +129,13 @@ def plan(*, token: str, ref: str, source_token: str | None = None, versions_for=
         rescan = load_sibling("plan-rescan-targets.py")
         versions_for = rescan.fetch_versions
     source = resolve_source_sha(commit_token, ref=ref)
-    migration_base = newest_promoted_revision(versions_for(PROMOTED_SERVICE))
+    try:
+        versions = versions_for(PROMOTED_SERVICE)
+    except Exception as exc:  # the rescan planner raises its own PlanError type
+        if type(exc).__name__ == "PlanError":
+            raise PlanError(str(exc)) from exc
+        raise
+    migration_base = newest_promoted_revision(versions)
     return {
         "source": source,
         "migration_base": migration_base,

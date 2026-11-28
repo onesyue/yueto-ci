@@ -212,6 +212,17 @@ class RescanPaginationTest(unittest.TestCase):
         with self.assertRaises(URLError):
             self.fetch([(filler(1), next_link(2)), URLError("unavailable")])
 
+    def test_http_404_names_the_package_and_fails_closed(self) -> None:
+        from urllib.error import HTTPError
+        err = HTTPError("https://api.github.com/x", 404, "Not Found", {}, None)
+        with patch.dict(os.environ, {"GH_API_TOKEN": "test-read-only"}), \
+             patch.object(PLANNER.urllib.request, "urlopen", side_effect=err):
+            with self.assertRaises(PLANNER.PlanError) as caught:
+                PLANNER.fetch_versions("yueops-web")
+        self.assertIn("yueops-web", str(caught.exception))
+        self.assertIn("HTTP 404", str(caught.exception))
+        self.assertIn("token cannot read", str(caught.exception))
+
     def test_bounded_concurrent_pages_and_one_resolution_per_shared_digest(self) -> None:
         """Fake registry: in-flight reads stay at the cap, and one index digest
         is resolved once even when amd64 and arm64 both reference it.

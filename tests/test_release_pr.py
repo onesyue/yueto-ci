@@ -163,8 +163,9 @@ class ReleasePrTest(unittest.TestCase):
 
     def test_push_refuses_master_and_force(self):
         body = receipt()
-        branch = release_pr.release_branch(body["service"], body["revision"])
-        self.assertEqual(branch, "release/yue-bot-" + body["revision"][:12])
+        branch = release_pr.release_branch(
+            body["service"], body["revision"], body["run_id"], body["run_attempt"])
+        self.assertEqual(branch, "release/yue-bot-" + body["revision"][:12] + "-r1001-1")
         args = release_pr.git_push_args(branch)
         self.assertEqual(args, ["git", "push", "origin", f"HEAD:refs/heads/{branch}"])
         self.assertNotIn("--force", args)
@@ -423,6 +424,95 @@ class ReleasePrTest(unittest.TestCase):
                 release_pr._run = original
                 sys.modules.pop("release_yaml", None)
             self.assertEqual(pushed, [])
+
+    def test_branch_is_unique_per_run_and_attempt(self):
+        base = receipt()
+        names = {
+            release_pr.release_branch(base["service"], base["revision"], run, attempt)
+            for run, attempt in (("1001", "1"), ("1001", "2"), ("1002", "1"))
+        }
+        self.assertEqual(len(names), 3)
+        for name in names:
+            release_pr.git_push_args(name)
+        with self.assertRaises(release_pr.ReleasePrError):
+            release_pr.release_branch(base["service"], base["revision"], "1001", "")
+
+    def test_leftover_branch_of_an_earlier_run_does_not_block_and_its_pr_is_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.seed_ledger(Path(tmp), "yue-bot")
+            body = receipt()
+            prefix = "release/yue-bot-" + body["revision"][:12]
+            calls = []
+            original = release_pr._run
+
+            def runner(args, check=True, capture=False, text=False):
+                if args[0] == "gh":
+                    calls.append(args)
+                    if args[1:3] == ["pr", "list"] and "--head" in args:
+                        return subprocess.CompletedProcess(args, 0, "[]\n", "")
+                    if args[1:3] == ["pr", "list"]:
+                        listing = [
+                            {"number": 7, "url": "u7", "headRefName": prefix},
+                            {"number": 8, "url": "u8", "headRefName": prefix + "-r999-1"},
+                            {"number": 9, "url": "u9", "headRefName": "release/yue-bot-" + "f" * 12},
+                        ]
+                        return subprocess.CompletedProcess(args, 0, json.dumps(listing), "")
+                    if args[1:3] == ["pr", "close"]:
+                        return subprocess.CompletedProcess(args, 0, "", "")
+                    if args[1:3] == ["pr", "create"]:
+                        return subprocess.CompletedProcess(
+                            args, 0, f"https://github.com/{release_pr.YUETO_REPO}/pull/42\n", "")
+                    if args[1:3] == ["pr", "merge"]:
+                        return subprocess.CompletedProcess(args, 0, "", "")
+                    raise AssertionError(args)
+                if "ls-remote" in args:
+                    return subprocess.CompletedProcess(args, 2, "", "")
+                if args[0] == "git" and "push" in args:
+                    calls.append(args)
+                    self.assertTrue(args[-1].endswith("-r1001-1"))
+                    return subprocess.CompletedProcess(args, 0, "", "")
+                return original(args, check=check, capture=capture, text=text)
+
+            release_pr._run = runner
+            try:
+                url = release_pr.open_release(root, body)
+            finally:
+                release_pr._run = original
+                sys.modules.pop("release_yaml", None)
+            self.assertTrue(url.endswith("/42"))
+            closed = [item[3] for item in calls if item[1:3] == ["pr", "close"]]
+            self.assertEqual(closed, ["7", "8"])
+            for item in calls:
+                if item[1:3] == ["pr", "close"]:
+                    self.assertNotIn("--delete-branch", item)
+
+    def test_open_pr_with_different_bytes_is_not_reused_or_merged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.seed_ledger(Path(tmp), "yue-bot")
+            original = release_pr._run
+            merged = []
+
+            def runner(args, check=True, capture=False, text=False):
+                if args[0] == "gh" and args[1:3] == ["pr", "list"]:
+                    return subprocess.CompletedProcess(
+                        args, 0, json.dumps([{"number": 5, "url": "u5"}]), "")
+                if args[0] == "gh" and args[1:3] == ["pr", "merge"]:
+                    merged.append(args)
+                    return subprocess.CompletedProcess(args, 0, "", "")
+                if "fetch" in args:
+                    return subprocess.CompletedProcess(args, 0, "", "")
+                if "show" in args:
+                    return subprocess.CompletedProcess(args, 0, b"different", b"")
+                return original(args, check=check, capture=capture, text=text)
+
+            release_pr._run = runner
+            try:
+                with self.assertRaises(release_pr.ReleasePrError):
+                    release_pr.open_release(root, receipt())
+            finally:
+                release_pr._run = original
+                sys.modules.pop("release_yaml", None)
+            self.assertEqual(merged, [])
 
     def test_supply_chain_script_retries_provenance_and_signs_with_keyless_identity(self):
         verify = (ROOT / "scripts/verify-promoted-supply-chain.sh").read_text(encoding="utf-8")

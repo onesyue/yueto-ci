@@ -761,7 +761,7 @@ jobs:
           persist-credentials: false
 
       - name: Download exact Ops admission plan
-        if: matrix.validation == 'yueops' && matrix.ops_role != 'legacy'
+        if: matrix.validation == 'yueops'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: ops-admission-${{ github.run_id }}-${{ github.run_attempt }}
@@ -891,7 +891,7 @@ jobs:
       # the dispatch or promoted contract pin — so premerge schema and
       # contract tests judge the same locked tree.
       - name: Checkout the locked YueBoard sibling
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'
+        if: matrix.validation == 'yue-node'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: onesyue/yueboard
@@ -902,7 +902,7 @@ jobs:
           persist-credentials: false
 
       - name: Verify YueBoard checkout matches siblings.lock
-        if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'
+        if: matrix.validation == 'yue-node'
         env:
           LOCKED_YUEBOARD: ${{ steps.siblings.outputs.yueboard }}
         run: |
@@ -923,6 +923,53 @@ jobs:
           echo "checked out YueBoard sibling SHA=${actual}"
           [ "$actual" = "$locked" ] || {
             echo "::error::checked-out YueBoard ${actual} differs from siblings.lock ${locked}" >&2
+            exit 1
+          }
+
+      # Ops tests execute against the Board commit the sealed admission (the
+      # signed plan) names, never against ci/siblings.lock: each repository
+      # promotes on its own, so a Board promote must not need a lockstep pin
+      # bump here. The Board SHA is read from the downloaded admission only
+      # after its seal and its digest from the plan job verify, and the
+      # fixture integrity checks (HEAD == admitted SHA, clean tree, signed
+      # tree) still run at execution.
+      - name: Resolve the YueBoard commit the signed Ops plan names
+        id: board
+        if: matrix.validation == 'yueops'
+        env:
+          ADMISSION_SHA256: ${{ needs.plan.outputs.admission_sha256 }}
+        run: |
+          set -euo pipefail
+          board="$("${YUE_CI_PYTHON:?}" "${GITHUB_WORKSPACE}/.ci-policy/scripts/pytest-shards.py" board-revision \
+            --admission "${RUNNER_TEMP:?}/ops-admission/ops-admission.json" \
+            --expect-sha256 "${ADMISSION_SHA256:?}")"
+          [[ "$board" =~ ^[0-9a-f]{40}$ ]]
+          echo "signed plan names YueBoard SHA=${board}"
+          echo "board=${board}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout the YueBoard commit named by the signed Ops plan
+        if: matrix.validation == 'yueops'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: onesyue/yueboard
+          ref: ${{ steps.board.outputs.board }}
+          token: ${{ secrets.YUETO_CI_PAT }}
+          path: .ci-yueboard
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify YueBoard checkout matches the signed Ops plan
+        if: matrix.validation == 'yueops'
+        env:
+          PLANNED_YUEBOARD: ${{ steps.board.outputs.board }}
+        run: |
+          set -euo pipefail
+          planned="${PLANNED_YUEBOARD:?}"
+          [[ "$planned" =~ ^[0-9a-f]{40}$ ]]
+          actual="$(git -C "${GITHUB_WORKSPACE}/.ci-yueboard" rev-parse HEAD)"
+          echo "checked out YueBoard SHA=${actual}"
+          [ "$actual" = "$planned" ] || {
+            echo "::error::checked-out YueBoard ${actual} differs from the signed Ops plan ${planned}" >&2
             exit 1
           }
 

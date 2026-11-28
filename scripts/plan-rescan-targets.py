@@ -29,6 +29,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
@@ -102,8 +103,16 @@ def read_version_page(service: str, page: int, token: str) -> tuple[object, str]
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
-    with urllib.request.urlopen(request, timeout=GITHUB_HTTP_TIMEOUT_SECONDS) as response:  # noqa: S310 - fixed https URL
-        return json.load(response), response.headers.get("Link", "")
+    try:
+        with urllib.request.urlopen(request, timeout=GITHUB_HTTP_TIMEOUT_SECONDS) as response:  # noqa: S310 - fixed https URL
+            return json.load(response), response.headers.get("Link", "")
+    except urllib.error.HTTPError as exc:
+        # Name the package and status instead of a bare traceback; a 404 here
+        # means the token cannot see the package (not that it does not exist).
+        hint = " (the token cannot read this package)" if exc.code in (401, 403, 404) else ""
+        raise PlanError(
+            f"{service}: package versions page {page} returned HTTP {exc.code}{hint}"
+        ) from exc
 
 
 def fetch_versions(service: str) -> list[dict]:
