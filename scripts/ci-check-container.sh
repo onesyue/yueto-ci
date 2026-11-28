@@ -80,6 +80,7 @@ run_step node-toolchain
 run_step dependencies
 run_step gitleaks
 if [ "$OPS_ROLE" != native ]; then
+  run_step lab-images
   run_step selection
 else
   run_step notices

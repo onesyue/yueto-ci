@@ -1393,6 +1393,12 @@ jobs:
         if: matrix.validation == 'yueops'
         run: echo "YUETO_OWNED_FAILURES=$(mktemp -d)" >> "$GITHUB_ENV"
 
+      - name: Seed digest-pinned Ops lab images
+        if: matrix.validation == 'yueops' && matrix.ops_role != 'legacy' && matrix.ops_role != 'native'
+        timeout-minutes: 5
+        run: |
+          bash "$GITHUB_WORKSPACE/.ci-policy/scripts/ops-validation-lab-images.sh"
+
       - name: Execute owned Ops pytest selection
         if: matrix.validation == 'yueops' && matrix.ops_role != 'legacy' && matrix.ops_role != 'native'
         timeout-minutes: ${{ fromJSON(env.OPS_PYTEST_STEP_TIMEOUT_MINUTES) }}

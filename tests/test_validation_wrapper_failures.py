@@ -141,6 +141,39 @@ class ValidationWrapperFailureTests(unittest.TestCase):
                     args[3], str(self.runner_temp / "ops-admission/ops-admission.json"),
                 )
 
+    def test_lab_images_fall_back_to_docker_hub_and_tag_the_pinned_digest(self):
+        # 2026-11-29 official 46172687868: anonymous Docker Hub pulls of the
+        # lab tags hit toomanyrequests. Mirror first, Hub only as fallback.
+        self.stub("bin/docker", "\n".join([
+            'printf "%s\\n" "$*" >> "$CALLS"',
+            'case "$1 ${3:-}" in "pull mirror.gcr.io/library/python"*) exit 1;; esac',
+            '[ "$1" = image ] && echo sha256:same',
+            'exit 0',
+        ]))
+        self.assert_exit(self.run_script("ops-validation-lab-images.sh"), 0)
+        calls = self.calls.read_text().splitlines()
+        pulls = [c for c in calls if c.startswith("pull ")]
+        self.assertTrue(all("@sha256:" in c for c in pulls), pulls)
+        self.assertTrue(pulls[0].startswith("pull --quiet mirror.gcr.io/library/nginx@"))
+        self.assertTrue(pulls[-1].startswith("pull --quiet docker.io/library/python@"))
+        tags = [c.split()[-1] for c in calls if c.startswith("tag ")]
+        self.assertEqual(tags, ["nginx:1.28-alpine", "python:3.13-alpine"])
+
+    def test_lab_images_fail_when_no_registry_serves_the_digest(self):
+        self.stub("bin/docker", 'printf "%s\\n" "$*" >> "$CALLS"\n[ "$1" = pull ] && exit 1\nexit 0')
+        result = self.run_script("ops-validation-lab-images.sh")
+        self.assert_exit(result, 1)
+        self.assertIn("cannot pull nginx:1.28-alpine", result.stderr)
+        self.assertNotIn("tag ", self.calls.read_text())
+
+    def test_lab_images_refuse_a_tag_that_is_not_the_pulled_digest(self):
+        self.stub("bin/docker", "\n".join([
+            'printf "%s\\n" "$*" >> "$CALLS"',
+            'if [ "$1" = image ]; then case "$*" in *@sha256:*) echo a;; *) echo b;; esac; fi',
+            'exit 0',
+        ]))
+        self.assertNotEqual(self.run_script("ops-validation-lab-images.sh").returncode, 0)
+
     def test_migrations_does_not_mask_selector_failure_as_empty(self):
         self.env["MIGRATION_BASE"] = "fixture-base"
         self.stub("bin/python3", 'printf "%s\\n" "$*" >> "$CALLS"\nexit 27')
