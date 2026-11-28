@@ -18,9 +18,9 @@
     {"name": "vars.YUEOPS_PYTEST_SHARDS", "kind": "value", "default": "16", "workflows": ["build.yml"]},
     {"name": "vars.YUEOPS_VALIDATION_PARALLELISM", "kind": "value", "default": "20", "workflows": ["build.yml"]},
     {
-      "name": "vars.YUEOPS_HOST_OPS_HOST_PUBLIC", "kind": "value", "default": "",
+      "name": "vars.YUEOPS_HOST_PANEL_HOST_PUBLIC", "kind": "value", "default": "",
       "workflows": ["alert-chain-deadman.yml"],
-      "description": "When the repository variable is unset, the workflow passes an empty string and the resolver reads the ops_host_public role from the host inventory."
+      "description": "When the repository variable is unset, the workflow passes an empty string and the resolver reads the panel_host_public role from the host inventory."
     }
   ]
 }

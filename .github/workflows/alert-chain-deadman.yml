@@ -103,7 +103,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.drill_missing == true
         run: ': > receipt.json'
 
-      - name: Fetch heartbeat receipt from ops_host_public
+      - name: Fetch heartbeat receipt from panel_host_public
         id: fetch
         if: github.event_name != 'workflow_dispatch' || inputs.drill_missing != true
         timeout-minutes: 3
@@ -112,7 +112,7 @@ jobs:
           # receipt read; this public repository never receives a deployment,
           # fleet, root, or rotation key.
           SSH_KEY_B64: ${{ secrets.DEADMAN_SSH_KEY_B64 }}
-          YUEOPS_HOST_OPS_HOST_PUBLIC: ${{ vars.YUEOPS_HOST_OPS_HOST_PUBLIC }}
+          YUEOPS_HOST_PANEL_HOST_PUBLIC: ${{ vars.YUEOPS_HOST_PANEL_HOST_PUBLIC }}
           DEADMAN_USER: 'deadman-reader'
         run: |
           set -Eeuo pipefail
@@ -121,16 +121,16 @@ jobs:
             echo '::error::DEADMAN_SSH_KEY_B64 is absent; a skipped observer is not healthy.'
             exit 1
           fi
-          # Native role ops_host_public. YUEOPS_HOST_OPS_HOST_PUBLIC overrides it.
-          OPS_HOST_PUBLIC="$(python3 .ci-receiver/deadman/canonical/scripts/ops_host_public.py --inventory .ci-yueops/config/hosts.json)"
+          # Native role panel_host_public. YUEOPS_HOST_PANEL_HOST_PUBLIC overrides it.
+          PANEL_HOST="$(python3 .ci-receiver/deadman/canonical/scripts/ops_host_public.py --inventory .ci-yueops/config/hosts.json)"
           mkdir -p ~/.ssh
           printf '%s' "${SSH_KEY_B64}" | base64 --decode > ~/.ssh/id_deadman
           chmod 600 ~/.ssh/id_deadman
 
-          # Pin the ops_host_public host key. TOFU / accept-new would let an
+          # Pin the panel_host_public host key. TOFU / accept-new would let an
           # intercepted first connection manufacture a healthy receipt.
-          printf '%s %s %s\n' "${OPS_HOST_PUBLIC}" 'ssh-ed25519' \
-            'AAAAC3NzaC1lZDI1NTE5AAAAICo9blX1VNOv83FROQ7Bt8/meWocnC/JsUzbOZGrEZY2' \
+          printf '%s %s %s\n' "${PANEL_HOST}" 'ssh-ed25519' \
+            'AAAAC3NzaC1lZDI1NTE5AAAAIAwnW9MXRFAcqubJgDgQTvJT0PMGerA7/+yMdyf2P4eS' \
             > ~/.ssh/known_hosts_deadman
 
           timeout --signal=TERM --kill-after=5s 75s \
@@ -146,7 +146,7 @@ jobs:
               -o ConnectTimeout=20 \
               -o ServerAliveInterval=15 \
               -o ServerAliveCountMax=2 \
-              "${DEADMAN_USER}@${OPS_HOST_PUBLIC}" \
+              "${DEADMAN_USER}@${PANEL_HOST}" \
               '/usr/bin/cat -- /var/lib/yue-alert-heartbeat/heartbeat.json' \
               > receipt.json 2> ssh.err || {
             echo 'ssh/receipt read failed; the canonical verdict will classify this as missing.'

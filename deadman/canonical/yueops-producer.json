@@ -1,6 +1,6 @@
 {
   "repository": "onesyue/yueops",
-  "sha": "b48ca65d1acbfe55c3751d160258e6e39e370a9a",
+  "sha": "eff9a01b51626feec983e559e2da0846b7545da3",
   "copies": [
     {
       "source": "scripts/alert-chain-deadman-check.py",
@@ -10,7 +10,7 @@
     {
       "source": "config/alert-chain-deadman-observer-contract.json",
       "copy": "config/alert-chain-deadman-observer-contract.json",
-      "sha256": "4ec294e06f710e37a26ebd32a0fab480b6bc855b5a9856b20b63e02dee0d2966"
+      "sha256": "ced926c41a0dd6bba2c91f26ad08f0ad00be621fe180e397e8a9eeb550b02559"
     }
   ]
 }
