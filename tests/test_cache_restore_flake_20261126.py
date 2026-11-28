@@ -37,7 +37,7 @@ ACTION_PINS = {
     "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2": 1,
     "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0": 5,
     "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1": 1,
-    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1": 17,
+    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1": 18,
     "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333": 2,
     "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8": 6,
     "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0": 2,

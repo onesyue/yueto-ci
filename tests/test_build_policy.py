@@ -2153,10 +2153,8 @@ class BuildPolicyTest(unittest.TestCase):
             "- name: Verify YueBoard checkout matches siblings.lock"
         )
         checkout_step = self.workflow[checkout_start:checkout_end]
-        self.assertIn(
-            "if: matrix.validation == 'yue-node' || matrix.validation == 'yueops'",
-            checkout_step,
-        )
+        self.assertIn("if: matrix.validation == 'yue-node'\n", checkout_step)
+        self.assertNotIn("yueops", checkout_step)
         self.assertIn('ref: ${{ steps.siblings.outputs.yueboard }}', checkout_step)
         self.assertNotIn('needs.plan.outputs.yueboard_contract_ref', checkout_step)
         resolve_start = self.workflow.index("- name: Resolve sibling lock")
@@ -2165,7 +2163,8 @@ class BuildPolicyTest(unittest.TestCase):
         self.assertIn("matrix.validation == 'yue-node'", resolve_step)
         self.assertLess(resolve_start, checkout_start)
         verify_start = checkout_end
-        verify_end = self.workflow.index("- name: Checkout the pinned yueto root")
+        # Ops rows follow the signed plan, not the lock (tests/test_board_from_signed_plan.py).
+        verify_end = self.workflow.index("- name: Resolve the YueBoard commit the signed Ops plan names")
         verify_step = self.workflow[verify_start:verify_end]
         self.assertIn('echo "resolved YueBoard sibling SHA=${from_lock} (siblings.lock)"', verify_step)
         self.assertIn('echo "checked out YueBoard sibling SHA=${actual}"', verify_step)
