@@ -21,7 +21,7 @@ WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 MANIFEST = ROOT / "ops-service-scope.json"
 SERVICES = ROOT / "services.json"
 TARGETS = ROOT / "validation-targets.json"
-POSTGRES = "postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280"
+POSTGRES = "mirror.gcr.io/library/postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280"
 
 _SPEC = importlib.util.spec_from_file_location("ops_service_scope", SCRIPT)
 assert _SPEC is not None and _SPEC.loader is not None

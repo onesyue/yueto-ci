@@ -1497,15 +1497,19 @@ class BuildPolicyTest(unittest.TestCase):
 
     def test_privileged_builder_images_are_immutable(self) -> None:
         qemu_image = (
-            "docker.io/tonistiigi/binfmt:latest@sha256:"
+            "mirror.gcr.io/tonistiigi/binfmt:latest@sha256:"
             "400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0"
         )
         buildkit_image = (
-            "moby/buildkit:buildx-stable-1@sha256:"
+            "mirror.gcr.io/moby/buildkit:buildx-stable-1@sha256:"
             "2f5adac4ecd194d9f8c10b7b5d7bceb5186853db1b26e5abd3a657af0b7e26ec"
         )
         self.assertIn(f"image: {qemu_image}", self.workflow)
         self.assertIn(f"driver-opts: image={buildkit_image}", self.workflow)
+        self.assertEqual(self.workflow.count(f"driver-opts: image={buildkit_image}"),
+                         self.workflow.count('buildkitd-config-inline: |\n'
+                                             '            [registry."docker.io"]\n'
+                                             '              mirrors = ["mirror.gcr.io"]\n'))
         self.assertNotRegex(
             self.workflow,
             r"(?m)^\s+image:\s+(?:docker\.io/)?tonistiigi/binfmt:[^@\s]+\s*$",

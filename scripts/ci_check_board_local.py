@@ -95,7 +95,7 @@ def workflow_contract(policy: Path) -> dict:
         raise ValueError('unsupported workflow environment expression')
 
     service = job['services']['postgres']
-    if not re.fullmatch(r'postgres:18@sha256:[a-f0-9]{64}', service['image']):
+    if not re.fullmatch(r'mirror\.gcr\.io/library/postgres:18@sha256:[a-f0-9]{64}', service['image']):
         raise ValueError('immutable PostgreSQL 18 service required')
     if service['env'] != {'POSTGRES_PASSWORD': 'ci', 'POSTGRES_DB': 'yueboard_test'}:
         raise ValueError('unexpected disposable service identity')

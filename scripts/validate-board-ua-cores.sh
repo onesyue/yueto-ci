@@ -2,7 +2,7 @@
 # Prepare only verified public archives online; execute every parser offline.
 set -euo pipefail
 readonly UA_GO_VERSION=go1.27.4
-readonly UA_GO_IMAGE='golang@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea'
+readonly UA_GO_IMAGE='mirror.gcr.io/library/golang@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea'
 
 fail() { echo "::error::$1" >&2; exit 1; }
 for tool in docker go python3 timeout; do

@@ -425,7 +425,7 @@ image, in addition to the native services. It also checks the PostgreSQL Alpine
 Run that guard from an assembled workspace containing the companion PR revisions;
 a single central-CI checkout cannot establish cross-repository agreement.
 
-Central validation retains its reviewed `postgres:18@sha256:…` service image.
+Central validation retains its reviewed `mirror.gcr.io/library/postgres:18@sha256:…` service image (same digest as Docker Hub; anonymous Hub pulls are rate-limited).
 It is digest-pinned and uses a different image variant from the Alpine helpers;
 changing its tag to Alpine while retaining that digest would mislabel the bytes.
 `python3 -m unittest discover -s tests -p 'test_postgres_image_pin.py'` rejects
@@ -849,7 +849,7 @@ and requires an unprivileged process before forcing offline core
 verification. There is no host parser execution or connected fallback.
 
 The runtime is the reviewed Go 1.27.4 multiarch index
-`golang@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea`.
+`mirror.gcr.io/library/golang@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea`.
 The source toolchain, host cache toolchain and container must agree; a toolchain
 change requires reviewing the image pin. Go auto-download and module-network
 access are disabled inside the gate. The source is read-only; verified core,
