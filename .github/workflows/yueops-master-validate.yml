@@ -47,7 +47,11 @@ jobs:
         id: plan
         env:
           GH_SOURCE_TOKEN: ${{ secrets.YUETO_CI_PAT }}
-          GH_API_TOKEN: ${{ github.token }}
+          # Package versions of the service images. The job token gets
+          # "Package not found" (404) for every ghcr.io/onesyue/<service>
+          # package, because they are linked to the source repositories, not
+          # to this one (diagnostic run 46124316634: job token 404, PAT 200).
+          GH_API_TOKEN: ${{ secrets.YUETO_CI_PAT }}
           YUEOPS_VALIDATE_REF: ${{ inputs.ref || 'master' }}
         run: |
           set -euo pipefail
